@@ -7,10 +7,7 @@
       </div>
       <ul class="mt-4">
         <li v-for="item in navItems" :key="item.path" class="mb-2">
-          <router-link
-            :to="item.path"
-            class="block px-4 py-2 text-gray-700 hover:bg-blue-100 hover:text-blue-600"
-          >
+          <router-link :to="item.path" class="block px-4 py-2 text-gray-700 hover:bg-blue-100 hover:text-blue-600">
             {{ item.name }}
           </router-link>
         </li>
@@ -21,13 +18,9 @@
     <div class="flex-1 flex flex-col overflow-hidden">
       <!-- Header -->
       <header class="bg-white shadow-sm">
-        <div
-          class="max-w-7xl mx-auto py-4 px-4 sm:px-6 lg:px-8 flex justify-between items-center"
-        >
+        <div class="max-w-7xl mx-auto py-4 px-4 sm:px-6 lg:px-8 flex justify-between items-center">
           <h2 class="text-xl font-semibold text-gray-800">{{ currentPage }}</h2>
-          <button
-            class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
-          >
+          <button class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700">
             Log out
           </button>
         </div>
@@ -42,8 +35,8 @@
     </div>
   </div>
 </template>
-  
-  <script>
+
+<script>
 export default {
   name: "Layout",
   data() {

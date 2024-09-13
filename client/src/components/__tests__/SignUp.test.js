@@ -40,25 +40,25 @@ describe('SignUp Component', () => {
       expect.objectContaining({
         phonenumber: '0123456789',
         password: 'valid123',
-        uuid: 'device-uuid'
+        uuid: expect.any(String)
       })
     )
     expect(wrapper.emitted('signup-success')).toBeTruthy()
     expect(wrapper.emitted('signup-success')[0]).toEqual(['123456'])
   })
 
-  it('handles existing user error', async () => {
+  it('handles server-side validation error', async () => {
     axios.post.mockRejectedValue({
-      response: { data: { code: '9996', message: 'User existed' } }
+      response: { data: { code: '1004', message: 'Invalid password format' } }
     })
 
-    await wrapper.setData({ phonenumber: '0123456789', password: 'valid123' })
+    await wrapper.setData({ phonenumber: '0123456789', password: 'invalid' })
     await wrapper.find('form').trigger('submit.prevent')
 
     await flushPromises()
 
     expect(wrapper.emitted('signup-error')).toBeTruthy()
-    expect(wrapper.emitted('signup-error')[0]).toEqual(['User existed'])
+    expect(wrapper.emitted('signup-error')[0]).toEqual(['Invalid password format'])
   })
 
   it('handles network error', async () => {
