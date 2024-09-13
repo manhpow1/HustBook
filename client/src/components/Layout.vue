@@ -1,44 +1,63 @@
+<!-- src/components/Layout.vue -->
 <template>
-  <div class="flex h-screen bg-gray-100">
-    <!-- Sidebar -->
-    <nav class="w-64 bg-white shadow-lg">
-      <div class="p-4">
-        <h1 class="text-2xl font-bold text-blue-600">HustBook</h1>
+  <div class="flex flex-col min-h-screen bg-gray-100">
+    <!-- Navigation -->
+    <nav class="bg-white shadow-md">
+      <div class="container mx-auto px-6 py-3">
+        <div class="flex justify-between items-center">
+          <div class="flex items-center">
+            <router-link to="/" class="text-2xl font-bold text-blue-600">HUSTBOOK</router-link>
+          </div>
+          <div class="flex items-center space-x-4">
+            <template v-if="isLoggedIn">
+              <router-link v-for="item in navItems" :key="item.path" :to="item.path"
+                class="text-gray-700 hover:text-blue-600 transition duration-300">
+                {{ item.name }}
+              </router-link>
+              <button @click="handleLogout"
+                class="bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-4 rounded transition duration-300">
+                Sign Out
+              </button>
+            </template>
+            <template v-else>
+              <router-link to="/login"
+                class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded transition duration-300">
+                Sign In
+              </router-link>
+              <router-link to="/signup"
+                class="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded transition duration-300">
+                Sign Up
+              </router-link>
+            </template>
+          </div>
+        </div>
       </div>
-      <ul class="mt-4">
-        <li v-for="item in navItems" :key="item.path" class="mb-2">
-          <router-link :to="item.path" class="block px-4 py-2 text-gray-700 hover:bg-blue-100 hover:text-blue-600">
-            {{ item.name }}
-          </router-link>
-        </li>
-      </ul>
     </nav>
 
     <!-- Main content -->
-    <div class="flex-1 flex flex-col overflow-hidden">
-      <!-- Header -->
-      <header class="bg-white shadow-sm">
-        <div class="max-w-7xl mx-auto py-4 px-4 sm:px-6 lg:px-8 flex justify-between items-center">
-          <h2 class="text-xl font-semibold text-gray-800">{{ currentPage }}</h2>
-          <button class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700">
-            Log out
-          </button>
-        </div>
-      </header>
+    <main class="flex-grow container mx-auto px-6 py-8">
+      <slot></slot>
+    </main>
 
-      <!-- Page content -->
-      <main class="flex-1 overflow-x-hidden overflow-y-auto bg-gray-200">
-        <div class="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
-          <slot></slot>
-        </div>
-      </main>
-    </div>
+    <!-- Footer -->
+    <footer class="bg-white shadow-md mt-12">
+      <div class="container mx-auto px-6 py-4">
+        <p class="text-center text-gray-600">&copy; 2024 HUSTBOOK. All rights reserved.</p>
+      </div>
+    </footer>
   </div>
 </template>
 
 <script>
+import { useUserState } from '../userState'
+import axios from 'axios';
+
 export default {
   name: "Layout",
+  setup() {
+    const { isLoggedIn, logout } = useUserState()
+    return { isLoggedIn, logout }
+  },
   data() {
     return {
       navItems: [
@@ -47,8 +66,22 @@ export default {
         { name: "Friends", path: "/friends" },
         { name: "Messages", path: "/messages" },
       ],
-      currentPage: "Home",
     };
   },
+  methods: {
+    async handleLogout() {
+      try {
+        const token = localStorage.getItem('token');
+        await axios.post('http://localhost:3000/api/auth/logout', null, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        this.logout();
+        this.$router.push('/login');
+      } catch (error) {
+        console.error('Logout failed:', error);
+        // You might want to show an error message to the user here
+      }
+    }
+  }
 };
 </script>

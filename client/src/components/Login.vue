@@ -35,9 +35,15 @@
 </template>
 
 <script>
+import { useUserState } from '../userState'
 import axios from "axios";
 
 export default {
+  setup() {
+    const { login } = useUserState()
+    return { login }
+  },
+
   data() {
     return {
       phonenumber: "",
@@ -113,6 +119,7 @@ export default {
 
         if (response.data.code === "1000") {
           this.loginSuccess = true;
+          this.login(response.data.data.token);
           this.$emit("login-success", response.data.data);
           setTimeout(() => {
             // Navigate to home page after 2 seconds

@@ -53,7 +53,11 @@ router.post("/login", async (req, res) => {
         }
 
         // Generate a new token (you should use a proper JWT library in production)
-        const token = "fake-token-" + Math.random().toString(36).substring(7);
+        const token = jwt.sign(
+            { uid: userRecord.uid, phone: userRecord.phoneNumber },
+            process.env.JWT_SECRET,
+            { expiresIn: '1h' }
+        );
 
         // Update user's device token if provided
         if (deviceId) {
@@ -156,8 +160,38 @@ router.post("/signup", async (req, res) => {
     }
 });
 
-router.post("/logout", (req, res) => {
-    // Implementation for logout
+router.post("/logout", async (req, res) => {
+    try {
+        const token = req.headers.authorization?.split(' ')[1];
+
+        if (!token) {
+            return res.status(400).json({ code: "1002", message: "No token provided" });
+        }
+
+        // Verify the token
+        let decodedToken;
+        try {
+            decodedToken = jwt.verify(token, process.env.JWT_SECRET);
+        } catch (error) {
+            return res.status(401).json({ code: "9998", message: "Invalid token" });
+        }
+
+        const userId = decodedToken.uid;
+
+        // Optionally, can invalidate the token on the server side
+        // This depends on how to manage tokens (e.g., using a blacklist)
+
+        // Clear the device token for push notifications
+        await db.collection("users").doc(userId).update({
+            deviceToken: null
+        });
+
+        // Respond with success
+        res.status(200).json({ code: "1000", message: "OK" });
+    } catch (error) {
+        console.error("Logout Error:", error);
+        res.status(500).json({ code: "1001", message: "Cannot connect to DB" });
+    }
 });
 
 router.post("/get_verify_code", (req, res) => {
