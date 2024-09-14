@@ -4,6 +4,7 @@ import SignUpPage from '../components/SignUpPage.vue'
 import Login from '../components/Login.vue'
 import Logout from '../components/Logout.vue'
 import GetVerifyCode from '../components/GetVerifyCode.vue'
+import VerifyCode from '../components/VerifyCode.vue'
 
 const routes = [
     {
@@ -45,6 +46,11 @@ const routes = [
         path: '/get_verify_code',
         name: 'GetVerifyCode',
         component: GetVerifyCode
+    },
+    {
+        path: '/verify_code',
+        name: 'VerifyCode',
+        component: VerifyCode
     },
 ]
 

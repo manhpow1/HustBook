@@ -236,8 +236,65 @@ router.post("/get_verify_code", async (req, res) => {
     }
 });
 
-router.post("/check_verify_code", (req, res) => {
-    // Implementation for checking verification code
+router.post("/check_verify_code", async (req, res) => {
+    try {
+        const { phonenumber, code } = req.body;
+
+        // Validate input
+        if (!phonenumber || !code) {
+            return res.status(400).json({ code: "1002", message: "Parameter is not enough" });
+        }
+
+        // Validate phone number format
+        if (!/^0\d{9}$/.test(phonenumber)) {
+            return res.status(400).json({ code: "1004", message: "Invalid phone number format" });
+        }
+
+        // Find user by phone number
+        const userQuerySnapshot = await db.collection("users")
+            .where("phoneNumber", "==", phonenumber)
+            .get();
+
+        if (userQuerySnapshot.empty) {
+            return res.status(400).json({ code: "9995", message: "User is not validated" });
+        }
+
+        const userDoc = userQuerySnapshot.docs[0];
+        const userData = userDoc.data();
+
+        // Check if the verification code matches and is not expired
+        const currentTime = Date.now();
+        const codeExpirationTime = 5 * 60 * 1000; // 5 minutes in milliseconds
+
+        if (userData.verificationCode !== code ||
+            currentTime - userData.verificationCodeTimestamp > codeExpirationTime) {
+            return res.status(400).json({ code: "9993", message: "Code verify is incorrect" });
+        }
+
+        // Generate a new token
+        const token = jwt.sign(
+            { uid: userDoc.id, phone: userData.phoneNumber },
+            process.env.JWT_SECRET,
+            { expiresIn: '1h' }
+        );
+
+        // Update user as verified
+        await userDoc.ref.update({ isVerified: true });
+
+        res.status(200).json({
+            code: "1000",
+            message: "OK",
+            data: {
+                id: userDoc.id,
+                token: token,
+                active: userData.active || "1"
+            }
+        });
+
+    } catch (error) {
+        console.error("Error in check_verify_code:", error);
+        res.status(500).json({ code: "1001", message: "Cannot connect to DB" });
+    }
 });
 
 router.get("/check", async (req, res) => {
