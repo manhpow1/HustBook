@@ -3,6 +3,7 @@ import Home from '../views/Home.vue'
 import SignUpPage from '../components/SignUpPage.vue'
 import Login from '../components/Login.vue'
 import Logout from '../components/Logout.vue'
+import GetVerifyCode from '../components/GetVerifyCode.vue'
 
 const routes = [
     {
@@ -39,7 +40,12 @@ const routes = [
         path: '/logout',
         name: 'Logout',
         component: Logout
-    }
+    },
+    {
+        path: '/get_verify_code',
+        name: 'GetVerifyCode',
+        component: GetVerifyCode
+    },
 ]
 
 const router = createRouter({

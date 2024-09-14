@@ -194,8 +194,46 @@ router.post("/logout", async (req, res) => {
     }
 });
 
-router.post("/get_verify_code", (req, res) => {
-    // Implementation for getting verification code
+router.post("/get_verify_code", async (req, res) => {
+    try {
+        const { phonenumber } = req.body;
+
+        // Validate phone number format
+        if (!/^0\d{9}$/.test(phonenumber)) {
+            return res.status(400).json({ code: "1004", message: "Invalid phone number format" });
+        }
+
+        // Check if user exists
+        let userRecord;
+        try {
+            userRecord = await auth.getUserByPhoneNumber("+84" + phonenumber.substring(1));
+        } catch (error) {
+            return res.status(400).json({ code: "9995", message: "User is not validated" });
+        }
+
+        // Generate verification code
+        const verificationCode = Math.floor(100000 + Math.random() * 900000).toString();
+
+        // Store the verification code in the database
+        await db.collection("users").doc(userRecord.uid).update({
+            verificationCode: verificationCode,
+            verificationCodeTimestamp: Date.now()
+        });
+
+        // In a real-world scenario, you would send this code via SMS
+        // For this example, we'll just return it in the response
+        res.status(200).json({
+            code: "1000",
+            message: "Verification code sent successfully",
+            data: {
+                verifyCode: verificationCode // In production, don't send this back to the client
+            }
+        });
+
+    } catch (error) {
+        console.error("Error in get_verify_code:", error);
+        res.status(500).json({ code: "1001", message: "Cannot connect to DB" });
+    }
 });
 
 router.post("/check_verify_code", (req, res) => {
