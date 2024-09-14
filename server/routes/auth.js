@@ -240,4 +240,29 @@ router.post("/check_verify_code", (req, res) => {
     // Implementation for checking verification code
 });
 
+router.get("/check", async (req, res) => {
+    try {
+        const token = req.headers.authorization?.split(' ')[1];
+
+        if (!token) {
+            return res.json({ isAuthenticated: false });
+        }
+
+        // Verify the token
+        const decodedToken = jwt.verify(token, process.env.JWT_SECRET);
+        const userId = decodedToken.uid;
+
+        // Check if the user exists in the database
+        const userDoc = await db.collection("users").doc(userId).get();
+
+        if (!userDoc.exists) {
+            return res.json({ isAuthenticated: false });
+        }
+
+        res.json({ isAuthenticated: true });
+    } catch (error) {
+        console.error("Auth check error:", error);
+        res.json({ isAuthenticated: false });
+    }
+});
 module.exports = router;

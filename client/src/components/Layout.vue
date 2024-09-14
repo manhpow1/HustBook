@@ -79,7 +79,6 @@ export default {
         this.$router.push('/login');
       } catch (error) {
         console.error('Logout failed:', error);
-        // You might want to show an error message to the user here
       }
     }
   }
