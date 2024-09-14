@@ -3,7 +3,8 @@ const router = express.Router();
 const { db, auth } = require("../firebaseConfig");
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
-
+const multer = require('multer');
+const upload = multer({ dest: 'uploads/' });
 router.post("/login", async (req, res) => {
     try {
         const { phonenumber, password, deviceId } = req.body;
@@ -322,4 +323,99 @@ router.get("/check", async (req, res) => {
         res.json({ isAuthenticated: false });
     }
 });
+
+router.post("/change_info_after_signup", upload.single('avatar'), async (req, res) => {
+    try {
+        const { token, username } = req.body;
+        const avatar = req.file;
+
+        if (!token || !username) {
+            return res.status(400).json({ code: "1002", message: "Parameter is not enough" });
+        }
+
+        // Verify the token
+        let decodedToken;
+        try {
+            decodedToken = jwt.verify(token, process.env.JWT_SECRET);
+        } catch (error) {
+            return res.status(401).json({ code: "9998", message: "Invalid token" });
+        }
+
+        // Validate username
+        if (!validateUsername(username)) {
+            return res.status(400).json({ code: "1004", message: "Invalid username format" });
+        }
+
+        const userId = decodedToken.uid;
+
+        // Get user data
+        const userDoc = await db.collection("users").doc(userId).get();
+        if (!userDoc.exists) {
+            return res.status(404).json({ code: "9995", message: "User not found" });
+        }
+
+        const userData = userDoc.data();
+
+        // Update user information
+        const updateData = {
+            username: username,
+        };
+
+        if (avatar) {
+            // In a real-world scenario, you would upload this file to a storage service
+            // and get a URL. For this example, we'll just use a placeholder URL.
+            updateData.avatar = `http://example.com/avatars/${avatar.filename}`;
+        }
+
+        await db.collection("users").doc(userId).update(updateData);
+
+        // Fetch updated user data
+        const updatedUserDoc = await db.collection("users").doc(userId).get();
+        const updatedUserData = updatedUserDoc.data();
+
+        res.status(200).json({
+            code: "1000",
+            message: "OK",
+            data: {
+                id: userId,
+                username: updatedUserData.username,
+                phonenumber: updatedUserData.phoneNumber,
+                created: updatedUserData.createdAt,
+                avatar: updatedUserData.avatar,
+                is_blocked: updatedUserData.isBlocked || false,
+                online: updatedUserData.online || false
+            }
+        });
+    } catch (error) {
+        console.error("Error in change_info_after_signup:", error);
+        res.status(500).json({ code: "1001", message: "Cannot connect to DB" });
+    }
+});
+
+function validateUsername(username) {
+    // Check for special characters
+    if (/[!@#$%^&*(),.?":{}|<>]/.test(username)) {
+        return false;
+    }
+
+    // Check length
+    if (username.length < 3 || username.length > 30) {
+        return false;
+    }
+
+    // Check if it's not a path, phone number, or address (basic checks)
+    if (
+        username.includes('/') ||
+        username.includes('\\') ||
+        /^\d+$/.test(username) ||
+        /^\d{3}-\d{3}-\d{4}$/.test(username) ||
+        /^\d+\s+[\w\s]+(?:avenue|street|road)$/i.test(username)
+    ) {
+        return false;
+    }
+
+    return true;
+}
+
+module.exports = router;
 module.exports = router;

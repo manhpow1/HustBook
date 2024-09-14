@@ -42,6 +42,16 @@ export default {
     };
   },
   methods: {
+    handleSignupSuccess(verifyCode) {
+      this.signupSuccess = true;
+      this.verificationCode = verifyCode;
+      this.error = "";
+      // Redirect to complete profile page after a short delay
+      setTimeout(() => {
+        this.$router.push("/complete-profile");
+      }, 3000);
+    },
+
     validatePhone() {
       if (!/^0\d{9}$/.test(this.phonenumber)) {
         this.phoneError = "Invalid phone number format";

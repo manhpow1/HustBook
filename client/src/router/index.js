@@ -5,6 +5,7 @@ import Login from '../components/Login.vue'
 import Logout from '../components/Logout.vue'
 import GetVerifyCode from '../components/GetVerifyCode.vue'
 import VerifyCode from '../components/VerifyCode.vue'
+import ChangeInfoAfterSignup from '../components/ChangeInfoAfterSignup.vue'
 
 const routes = [
     {
@@ -51,6 +52,11 @@ const routes = [
         path: '/verify_code',
         name: 'VerifyCode',
         component: VerifyCode
+    },
+    {
+        path: '/complete-profile',
+        name: 'CompleteProfile',
+        component: ChangeInfoAfterSignup
     },
 ]
 
