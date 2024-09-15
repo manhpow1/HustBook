@@ -418,4 +418,3 @@ function validateUsername(username) {
 }
 
 module.exports = router;
-module.exports = router;
