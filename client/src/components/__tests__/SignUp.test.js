@@ -4,12 +4,31 @@ import SignUp from '../SignUp.vue'
 import axios from 'axios'
 
 vi.mock('axios')
+vi.mock('../userState', () => ({
+  useUserState: () => ({
+    login: vi.fn(),
+  }),
+}))
 
 describe('SignUp Component', () => {
   let wrapper;
+  const mockRouter = {
+    push: vi.fn()
+  }
 
   beforeEach(() => {
-    wrapper = mount(SignUp)
+    vi.useFakeTimers()
+    wrapper = mount(SignUp, {
+      global: {
+        provide: {
+          router: mockRouter
+        }
+      }
+    })
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
   })
 
   it('validates phone number format', async () => {
@@ -26,8 +45,8 @@ describe('SignUp Component', () => {
     expect(wrapper.find('.text-red-600').text()).toBe('Password must be 6-10 characters long, contain only letters and numbers, and not match the phone number')
   })
 
-  it('submits form with valid data', async () => {
-    const mockResponse = { data: { code: '1000', data: { verifyCode: '123456' } } }
+  it('submits form with valid data and redirects after timeout', async () => {
+    const mockResponse = { data: { code: '1000', data: { verifyCode: '123456', token: 'mockToken', deviceToken: 'mockDeviceToken' } } }
     axios.post.mockResolvedValue(mockResponse)
 
     await wrapper.setData({ phonenumber: '0123456789', password: 'valid123' })
@@ -45,6 +64,12 @@ describe('SignUp Component', () => {
     )
     expect(wrapper.emitted('signup-success')).toBeTruthy()
     expect(wrapper.emitted('signup-success')[0]).toEqual(['123456'])
+
+    // Fast-forward time
+    vi.runAllTimers()
+
+    // Now check if router.push was called
+    expect(mockRouter.push).toHaveBeenCalledWith('/complete-profile')
   })
 
   it('handles server-side validation error', async () => {

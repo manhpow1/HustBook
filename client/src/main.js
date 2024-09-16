@@ -8,7 +8,9 @@ const { checkAuth } = useUserState()
 
 async function initApp() {
     await checkAuth()
-    createApp(App).use(router).mount('#app')
+    const app = createApp(App)
+    app.use(router)
+    app.mount('#app')
 }
 
 initApp()

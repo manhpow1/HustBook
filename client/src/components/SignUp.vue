@@ -30,8 +30,17 @@
 
 <script>
 import axios from "axios";
+import { inject } from 'vue'
+import { useUserState } from '../userState';
 
 export default {
+  setup() {
+    const router = inject('router', {
+      push: (path) => console.warn(`Navigation to ${path} is not available.`)
+    });
+    const { login } = useUserState();
+    return { router, login };
+  },
   data() {
     return {
       phonenumber: "",
@@ -42,16 +51,20 @@ export default {
     };
   },
   methods: {
-    handleSignupSuccess(verifyCode) {
+    handleSignupSuccess(data) {
+      this.$emit("signup-success", data.verifyCode);
       this.signupSuccess = true;
-      this.verificationCode = verifyCode;
+      this.verificationCode = data.verifyCode;
       this.error = "";
+
+      // Log in the user
+      this.login(data.token, data.deviceToken);
+
       // Redirect to complete profile page after a short delay
       setTimeout(() => {
-        this.$router.push("/complete-profile");
+        this.router.push("/complete-profile");
       }, 3000);
     },
-
     validatePhone() {
       if (!/^0\d{9}$/.test(this.phonenumber)) {
         this.phoneError = "Invalid phone number format";
@@ -74,6 +87,7 @@ export default {
       this.passwordError = "";
       return true;
     },
+
     async handleSubmit() {
       if (!this.validatePhone() || !this.validatePassword()) {
         return;
@@ -92,7 +106,7 @@ export default {
         );
 
         if (response.data.code === "1000") {
-          this.$emit("signup-success", response.data.data.verifyCode);
+          this.handleSignupSuccess(response.data.data);
           this.clearForm();
         }
       } catch (error) {

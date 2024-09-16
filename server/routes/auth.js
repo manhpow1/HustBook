@@ -5,6 +5,10 @@ const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const multer = require('multer');
 const upload = multer({ dest: 'uploads/' });
+const { v4: uuidv4 } = require('uuid');
+
+const generateDeviceToken = () => uuidv4();
+
 router.post("/login", async (req, res) => {
     try {
         const { phonenumber, password, deviceId } = req.body;
@@ -25,45 +29,26 @@ router.post("/login", async (req, res) => {
                 .json({ code: "1004", message: "Invalid phone number format" });
         }
 
-        // Check if user exists
-        let userRecord;
-        try {
-            userRecord = await auth.getUserByPhoneNumber("+84" + phonenumber.substring(1));
-        } catch (error) {
-            console.error("Error fetching user:", error);
-            return res.status(400).json({ code: "9995", message: "User is not validated" });
-        }
-
-        // Fetch user data from Firestore
+        // Check if user exists in Authentication
+        let userRecord = await auth.getUserByPhoneNumber("+84" + phonenumber.substring(1));
         const userDoc = await db.collection("users").doc(userRecord.uid).get();
         const userData = userDoc.data();
 
-        // Check if user is verified (if you're implementing this)
-        if (userData.isVerified === false) {
-            return res.status(400).json({ code: "9995", message: "Account not verified" });
-        }
-
-        // Verify password using bcrypt
-        console.log("Stored hashed password:", userData.password);
-        console.log("Provided password:", password);
-
         const isPasswordCorrect = await bcrypt.compare(password, userData.password);
-        console.log("Password comparison result:", isPasswordCorrect);
         if (!isPasswordCorrect) {
             return res.status(400).json({ code: "1004", message: "Invalid password" });
         }
 
-        // Generate a new token (you should use a proper JWT library in production)
+        const deviceToken = generateDeviceToken();
+
+        // Update the deviceToken in the database
+        await db.collection("users").doc(userRecord.uid).update({ deviceToken });
+
         const token = jwt.sign(
             { uid: userRecord.uid, phone: userRecord.phoneNumber },
             process.env.JWT_SECRET,
             { expiresIn: '1h' }
         );
-
-        // Update user's device token if provided
-        if (deviceId) {
-            await db.collection("users").doc(userRecord.uid).update({ deviceId });
-        }
 
         res.status(200).json({
             code: "1000",
@@ -73,7 +58,8 @@ router.post("/login", async (req, res) => {
                 username: userData.username || "User" + userRecord.uid.substring(0, 4),
                 token: token,
                 avatar: userData.avatar || "http://example.com/default-avatar.jpg",
-                active: userData.active || "1"
+                active: userData.active || "1",
+                deviceToken: deviceToken
             },
         });
     } catch (error) {
@@ -83,11 +69,8 @@ router.post("/login", async (req, res) => {
 });
 
 router.post("/signup", async (req, res) => {
-    const saltRounds = 10;
-    const hashedPassword = await bcrypt.hash(password, saltRounds);
     try {
         const { phonenumber, password, uuid } = req.body;
-        const hashedPassword = await bcrypt.hash(password, 10);
 
         // Case 5: Check if all required fields are provided
         if (!phonenumber || !password || !uuid) {
@@ -117,18 +100,24 @@ router.post("/signup", async (req, res) => {
 
         // Case 2: Check if user already exists
         try {
-            const userRecord = await auth.getUserByPhoneNumber(
-                "+84" + phonenumber.substring(1)
-            );
-            return res.status(400).json({ code: "9996", message: "User existed" });
+            const userRecord = await auth.getUserByPhoneNumber("+84" + phonenumber.substring(1));
+
+            // If user exists in Authentication, check if they exist in Firestore
+            const userDoc = await db.collection("users").doc(userRecord.uid).get();
+            if (!userDoc.exists) {
+                // If user exists in Authentication but not in Firestore, delete the Authentication record
+                await auth.deleteUser(userRecord.uid);
+            } else {
+                return res.status(400).json({ code: "9996", message: "User existed" });
+            }
         } catch (error) {
-            // User doesn't exist, continue with registration
+            // User doesn't exist in Authentication, continue with registration
         }
 
-        // Case 1: Create new user
-        const verificationCode = Math.floor(
-            100000 + Math.random() * 900000
-        ).toString();
+        const hashedPassword = await bcrypt.hash(password, 10);
+        const verificationCode = Math.floor(100000 + Math.random() * 900000).toString();
+        const deviceToken = generateDeviceToken();
+
         const newUser = await auth.createUser({
             phoneNumber: "+84" + phonenumber.substring(1),
             password: password,
@@ -140,23 +129,28 @@ router.post("/signup", async (req, res) => {
             uuid: uuid,
             verificationCode: verificationCode,
             isVerified: false,
+            deviceToken: deviceToken
         });
+
+        // Generate JWT token
+        const token = jwt.sign(
+            { uid: newUser.uid, phone: newUser.phoneNumber },
+            process.env.JWT_SECRET,
+            { expiresIn: '1h' }
+        );
 
         res.status(200).json({
             code: "1000",
             message: "OK",
             data: {
+                id: newUser.uid,
+                token: token,
+                deviceToken: deviceToken,
                 verifyCode: verificationCode,
             },
         });
     } catch (error) {
         console.error("Firebase Error:", error);
-        if (error.code === "app/invalid-credential") {
-            return res.status(500).json({
-                code: "1001",
-                message: "Firebase configuration error. Please check server logs.",
-            });
-        }
         res.status(500).json({ code: "1001", message: "Cannot connect to DB" });
     }
 });

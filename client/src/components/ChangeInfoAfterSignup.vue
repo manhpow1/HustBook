@@ -34,7 +34,7 @@
 </template>
 
 <script>
-import { ref, watch } from 'vue'
+import { ref, watch, onMounted } from 'vue'
 import axios from 'axios'
 import { useUserState } from '../userState'
 import { useRouter } from 'vue-router'
@@ -50,14 +50,22 @@ export default {
         const successMessage = ref('')
         const errorMessage = ref('')
 
-        // Watch for changes in the token
-        watch(() => token.value, (newToken) => {
-            if (!newToken) {
+        const checkToken = (tokenValue) => {
+            if (!tokenValue) {
                 errorMessage.value = 'Invalid token'
+                router.push('/login')
             } else {
                 errorMessage.value = ''
             }
-        }, { immediate: true })
+        }
+
+        onMounted(() => {
+            checkToken(token.value)
+        })
+
+        watch(() => token.value, (newToken) => {
+            checkToken(newToken)
+        })
 
         const validateUsername = (value) => {
             if (value.length < 3 || value.length > 30) {
