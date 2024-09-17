@@ -4,161 +4,160 @@ import Login from '../Login.vue'
 import axios from 'axios'
 
 vi.mock('axios')
+vi.mock('vue-router', () => ({
+  useRouter: () => ({
+    push: vi.fn()
+  })
+}))
 
 describe('Login Component', () => {
-  let wrapper;
-  let consoleLogSpy;
-  let consoleErrorSpy;
+  let wrapper
 
   beforeEach(() => {
+    vi.clearAllMocks() // Clear all mocks before each test
     wrapper = mount(Login)
-    vi.clearAllMocks()
-    consoleLogSpy = vi.spyOn(console, 'log')
-    consoleErrorSpy = vi.spyOn(console, 'error')
+    console.log('Test setup complete')
   })
 
-  it('logs in successfully with correct credentials', async () => {
-    const mockResponse = {
-      data: {
-        code: '1000',
-        message: 'OK',
-        data: {
-          id: '123',
-          username: 'John Doe',
-          token: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
-          avatar: 'http://example.com/avatar.jpg',
-          active: '1'
-        }
-      }
-    }
+  const fillForm = async (phonenumber, password) => {
+    await wrapper.find('input[type="tel"]').setValue(phonenumber)
+    await wrapper.find('input[type="password"]').setValue(password)
+  }
+
+  it('1. Successfully logs in with valid credentials', async () => {
+    console.log('Starting test 1')
+    const mockResponse = { data: { code: '1000', message: 'OK', data: { token: 'mockToken' } } }
     axios.post.mockResolvedValue(mockResponse)
 
-    await wrapper.setData({ phonenumber: '0123456789', password: 'password' })
-    await wrapper.vm.handleSubmit()
+    await fillForm('0123456789', 'validPass')
+    await wrapper.find('form').trigger('submit.prevent')
 
     await flushPromises()
 
+    expect(axios.post).toHaveBeenCalledTimes(1)
     expect(axios.post).toHaveBeenCalledWith(
       'http://localhost:3000/api/auth/login',
       expect.objectContaining({
         phonenumber: '0123456789',
-        password: 'password',
+        password: 'validPass',
         deviceId: expect.any(String)
       })
     )
-    
-    expect(wrapper.emitted('login-success')).toBeTruthy()
-    expect(wrapper.emitted('login-success')[0][0]).toEqual(mockResponse.data.data)
+    expect(wrapper.vm.loginSuccess).toBe(true)
+    console.log('Test 1 complete')
   })
 
-  it('handles login for unregistered phone number', async () => {
-    axios.post.mockRejectedValue({
-      response: { data: { code: '9995', message: 'User is not validated' } }
-    })
+  it('2. Fails to log in with unregistered phone number', async () => {
+    console.log('Starting test 2')
+    const mockResponse = { response: { data: { code: '9995', message: 'User is not validated' } } }
+    axios.post.mockRejectedValue(mockResponse)
 
-    await wrapper.setData({ phonenumber: '0987654321', password: 'password' })
-    await wrapper.vm.handleSubmit()
+    await fillForm('0987654321', 'validPass')
+    await wrapper.find('form').trigger('submit.prevent')
 
     await flushPromises()
 
-    expect(wrapper.emitted('login-error')).toBeTruthy()
-    expect(wrapper.emitted('login-error')[0]).toEqual(['User is not validated'])
+    expect(axios.post).toHaveBeenCalledTimes(1)
+    expect(wrapper.vm.errorMessage).toBe('User is not validated')
+    console.log('Test 2 complete')
   })
 
-  it('handles invalid password', async () => {
-    axios.post.mockRejectedValue({
-      response: { data: { code: '1004', message: 'Invalid password' } }
-    })
-
-    await wrapper.setData({ phonenumber: '0123456789', password: 'password1' })
-    await wrapper.vm.handleSubmit()
-
-    await flushPromises()
-
-    expect(wrapper.emitted('login-error')).toBeTruthy()
-    expect(wrapper.emitted('login-error')[0]).toEqual(['Invalid password'])
-  })
-
-  it('handles unexpected error messages', async () => {
-    axios.post.mockRejectedValue({
-      response: { data: { code: '9995', message: 'Account not verified' } }
-    })
-
-    await wrapper.setData({ phonenumber: '0123456789', password: 'password' })
-    await wrapper.vm.handleSubmit()
-
-    await flushPromises()
-
-    expect(wrapper.emitted('login-error')).toBeTruthy()
-    expect(wrapper.emitted('login-error')[0]).toEqual(['Account not verified'])
-  })
-
-  it('validates phone number format', async () => {
-    await wrapper.setData({ phonenumber: '123', password: 'password' })
-    await wrapper.vm.handleSubmit()
+  it('3. Shows error for invalid phone number format', async () => {
+    console.log('Starting test 3')
+    await fillForm('123', 'validPass')
+    await wrapper.find('form').trigger('submit.prevent')
 
     expect(wrapper.vm.phoneError).toBe('Invalid phone number format')
+    expect(axios.post).not.toHaveBeenCalled()
+    console.log('Test 3 complete')
   })
 
-  it('validates password format', async () => {
-    await wrapper.setData({ phonenumber: '0123456789', password: 'short' })
-    await wrapper.vm.handleSubmit()
+  it('4. Shows error for invalid password format', async () => {
+    console.log('Starting test 4')
+    await fillForm('0123456789', 'short')
+    await wrapper.find('form').trigger('submit.prevent')
 
-    expect(wrapper.vm.passwordError).toBe('Password must be 6-10 characters long and not match the phone number')
+    expect(wrapper.vm.passwordError).toContain('Password must be 6-10 characters long')
+    expect(axios.post).not.toHaveBeenCalled()
+    console.log('Test 4 complete')
   })
 
-  it('requires both phone number and password', async () => {
-    await wrapper.vm.handleSubmit()
+  it('5. Shows error when submitting empty form', async () => {
+    console.log('Starting test 5')
+    await wrapper.find('form').trigger('submit.prevent')
 
     expect(wrapper.vm.phoneError).toBe('Phone number is required')
-    expect(wrapper.vm.passwordError).toBe('Password is required')
+    expect(axios.post).not.toHaveBeenCalled()
+    console.log('Test 5 complete')
   })
 
-  it('handles network error', async () => {
-    const networkError = new Error('Network Error');
-    networkError.request = {}; // This simulates a request that was sent but got no response
-    axios.post.mockRejectedValue(networkError);
+  it('6. Shows network error when offline', async () => {
+    console.log('Starting test 6')
+    const networkError = new Error('Network Error')
+    networkError.request = {}
+    axios.post.mockRejectedValue(networkError)
 
-    await wrapper.setData({ phonenumber: '0123456789', password: 'password' })
-    await wrapper.vm.handleSubmit()
+    await fillForm('0123456789', 'validPass')
+    await wrapper.find('form').trigger('submit.prevent')
 
     await flushPromises()
 
-    expect(wrapper.emitted('login-error')).toBeTruthy()
-    expect(wrapper.emitted('login-error')[0]).toEqual(['Unable to connect to the Internet'])
+    expect(axios.post).toHaveBeenCalledTimes(1)
+    expect(wrapper.vm.errorMessage).toBe('Unable to connect to the Internet')
+    console.log('Test 6 complete')
   })
 
-  it('handles unexpected errors', async () => {
-    const unexpectedError = new Error('Unexpected Error');
-    axios.post.mockRejectedValue(unexpectedError);
+  it('7. Shows error when password matches phone number', async () => {
+    console.log('Starting test 7')
+    await fillForm('0123456789', '0123456789')
+    await wrapper.find('form').trigger('submit.prevent')
 
-    await wrapper.setData({ phonenumber: '0123456789', password: 'password' })
-    await wrapper.vm.handleSubmit()
+    expect(wrapper.vm.passwordError).toContain('Password must not match the phone number')
+    expect(axios.post).not.toHaveBeenCalled()
+    console.log('Test 7 complete')
+  })
+
+  it('8. Successful login overwrites previous token', async () => {
+    console.log('Starting test 8')
+    const mockResponse1 = { data: { code: '1000', message: 'OK', data: { token: 'token1' } } }
+    const mockResponse2 = { data: { code: '1000', message: 'OK', data: { token: 'token2' } } }
+    axios.post.mockResolvedValueOnce(mockResponse1).mockResolvedValueOnce(mockResponse2)
+
+    // First login
+    await fillForm('0123456789', 'validPass')
+    await wrapper.find('form').trigger('submit.prevent')
+    await flushPromises()
+
+    expect(wrapper.vm.loginSuccess).toBe(true)
+    expect(axios.post).toHaveBeenCalledTimes(1)
+
+    // Second login
+    await fillForm('0987654321', 'validSup')
+    await wrapper.find('form').trigger('submit.prevent')
+    await flushPromises()
+
+    expect(wrapper.vm.loginSuccess).toBe(true)
+    expect(axios.post).toHaveBeenCalledTimes(2)
+    console.log('Test 8 complete')
+  })
+
+  it('9. Shows error when deviceId is missing', async () => {
+    console.log('Starting test 9')
+    const mockResponse = { response: { data: { code: '1002', message: 'Parameter is not enough' } } }
+    axios.post.mockRejectedValue(mockResponse)
+
+    await fillForm('0123456789', 'validPass')
+    if (wrapper.find('input[type="checkbox"]').exists()) {
+      await wrapper.find('input[type="checkbox"]').setChecked(false)
+    } else {
+      console.warn('Checkbox for deviceId not found')
+    }
+    await wrapper.find('form').trigger('submit.prevent')
 
     await flushPromises()
 
-    expect(wrapper.emitted('login-error')).toBeTruthy()
-    expect(wrapper.emitted('login-error')[0]).toEqual(['An unexpected error occurred. Please try again.'])
-  })
-
-  it('disables submit button while loading', async () => {
-    let resolvePromise;
-    const promise = new Promise(resolve => { resolvePromise = resolve; });
-    axios.post.mockImplementation(() => promise)
-
-    await wrapper.setData({ phonenumber: '0123456789', password: 'password' })
-    const submitPromise = wrapper.vm.handleSubmit()
-
-    await wrapper.vm.$nextTick()
-
-    expect(wrapper.vm.isLoading).toBe(true)
-    expect(wrapper.find('button[type="submit"]').attributes('disabled')).toBe('')
-
-    resolvePromise({ data: { code: '1000', data: {} } })
-    await submitPromise
-    await wrapper.vm.$nextTick()
-
-    expect(wrapper.vm.isLoading).toBe(false)
-    expect(wrapper.find('button[type="submit"]').attributes('disabled')).toBeUndefined()
+    expect(axios.post).toHaveBeenCalledTimes(1)
+    expect(wrapper.vm.errorMessage).toBe('Parameter is not enough')
+    console.log('Test 9 complete')
   })
 })

@@ -1,153 +1,213 @@
 <template>
-  <div class="max-w-md mx-auto mt-8 p-6 bg-white rounded-lg shadow-xl">
-    <h2 class="text-2xl font-bold mb-4 text-gray-800">Login</h2>
-    <form @submit.prevent="handleSubmit" class="space-y-4">
+  <div class="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+    <div class="max-w-md w-full space-y-8">
       <div>
-        <label for="phonenumber" class="block text-sm font-medium text-gray-700">Phone Number</label>
-        <input v-model="phonenumber" type="tel" id="phonenumber" required
-          class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50"
-          :class="{ 'border-red-500': phoneError }" />
-        <p v-if="phoneError" class="mt-2 text-sm text-red-600">{{ phoneError }}</p>
+        <img class="mx-auto h-12 w-auto" src="../assets/logo.svg" alt="HUSTBOOK" />
+        <h2 class="mt-6 text-center text-3xl font-extrabold text-gray-900">Sign in to your account</h2>
+        <p class="mt-2 text-center text-sm text-gray-600">
+          Or
+          <router-link to="/signup" class="font-medium text-indigo-600 hover:text-indigo-500">
+            create a new account
+          </router-link>
+        </p>
       </div>
-      <div>
-        <label for="password" class="block text-sm font-medium text-gray-700">Password</label>
-        <input v-model="password" type="password" id="password" required
-          class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50"
-          :class="{ 'border-red-500': passwordError }" />
-        <p v-if="passwordError" class="mt-2 text-sm text-red-600">{{ passwordError }}</p>
+      <form @submit.prevent="handleSubmit" class="mt-8 space-y-6">
+        <input type="hidden" name="remember" value="true" />
+        <div class="rounded-md shadow-sm -space-y-px">
+          <div>
+            <label for="phonenumber" class="sr-only">Phone Number</label>
+            <div class="relative">
+              <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <PhoneIcon class="h-5 w-5 text-gray-400" aria-hidden="true" />
+              </div>
+              <input v-model="phonenumber" id="phonenumber" name="phonenumber" type="tel" autocomplete="tel" required
+                class="appearance-none rounded-none relative block w-full px-3 py-2 pl-10 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-t-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
+                :class="{ 'border-red-500': phoneError }" placeholder="Phone number" />
+            </div>
+          </div>
+          <div>
+            <label for="password" class="sr-only">Password</label>
+            <div class="relative">
+              <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <LockIcon class="h-5 w-5 text-gray-400" aria-hidden="true" />
+              </div>
+              <input v-model="password" id="password" name="password" type="password" autocomplete="current-password"
+                required
+                class="appearance-none rounded-none relative block w-full px-3 py-2 pl-10 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-b-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
+                :class="{ 'border-red-500': passwordError }" placeholder="Password" />
+            </div>
+          </div>
+        </div>
+
+        <div class="flex items-center justify-between">
+          <div class="flex items-center">
+            <input id="remember-me" name="remember-me" type="checkbox"
+              class="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded" />
+            <label for="remember-me" class="ml-2 block text-sm text-gray-900">
+              Remember me
+            </label>
+          </div>
+
+          <div class="text-sm">
+            <a href="#" class="font-medium text-indigo-600 hover:text-indigo-500">
+              Forgot your password?
+            </a>
+          </div>
+        </div>
+
+        <div>
+          <button type="submit" :disabled="isLoading"
+            class="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed">
+            <span class="absolute left-0 inset-y-0 flex items-center pl-3">
+              <LockIcon class="h-5 w-5 text-indigo-500 group-hover:text-indigo-400" aria-hidden="true" />
+            </span>
+            {{ isLoading ? 'Signing in...' : 'Sign in' }}
+          </button>
+        </div>
+      </form>
+
+      <!-- Success message -->
+      <div v-if="loginSuccess" class="mt-4 p-4 bg-green-100 rounded-md">
+        <p class="text-green-700 flex items-center">
+          <CheckCircleIcon class="h-5 w-5 mr-2" />
+          Login successful! Redirecting...
+        </p>
       </div>
-      <button type="submit" :disabled="isLoading"
-        class="w-full py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed">
-        {{ isLoading ? 'Logging in...' : 'Log In' }}
-      </button>
-    </form>
 
-    <!-- Success message -->
-    <div v-if="loginSuccess" class="mt-4 p-4 bg-green-100 rounded-md">
-      <p class="text-green-700">Login successful! Redirecting...</p>
-    </div>
-
-    <!-- Error message -->
-    <div v-if="errorMessage" class="mt-4 p-4 bg-red-100 rounded-md">
-      <p class="text-red-700">{{ errorMessage }}</p>
+      <!-- Error message -->
+      <div v-if="errorMessage" class="mt-4 p-4 bg-red-100 rounded-md">
+        <p class="text-red-700 flex items-center">
+          <AlertCircleIcon class="h-5 w-5 mr-2" />
+          {{ errorMessage }}
+        </p>
+      </div>
     </div>
   </div>
 </template>
 
 <script>
+import { ref } from 'vue'
+import { useRouter } from 'vue-router'
 import { useUserState } from '../userState'
-import axios from "axios";
+import axios from "axios"
+import { PhoneIcon, LockIcon, CheckCircleIcon, AlertCircleIcon } from 'lucide-vue-next'
 
 export default {
+  components: {
+    PhoneIcon,
+    LockIcon,
+    CheckCircleIcon,
+    AlertCircleIcon,
+  },
   setup() {
+    const router = useRouter()
     const { login } = useUserState()
-    return { login }
-  },
 
-  data() {
-    return {
-      phonenumber: "",
-      password: "",
-      phoneError: "",
-      passwordError: "",
-      isLoading: false,
-      loginSuccess: false,
-      errorMessage: "",
-      sendDeviceId: true,
-    };
-  },
-  methods: {
-    validatePhone() {
-      console.log("Validating phone:", this.phonenumber);
-      if (!this.phonenumber) {
-        this.phoneError = "Phone number is required";
-        return false;
-      }
-      if (!/^0\d{9}$/.test(this.phonenumber)) {
-        this.phoneError = "Invalid phone number format";
-        return false;
-      }
-      this.phoneError = "";
-      return true;
-    },
-    validatePassword() {
-      console.log("Validating password:", this.password);
-      if (!this.password) {
-        this.passwordError = "Password is required";
-        return false;
-      }
-      if (this.password.length < 6 || this.password.length > 10) {
-        this.passwordError = "Password must be 6-10 characters long and not match the phone number";
-        return false;
-      }
-      if (this.password === this.phonenumber) {
-        this.passwordError = "Password must not match the phone number";
-        return false;
-      }
-      this.passwordError = "";
-      return true;
-    },
-    async handleSubmit() {
-      console.log("handleSubmit called");
-      this.phoneError = "";
-      this.passwordError = "";
-      this.errorMessage = "";
-      this.loginSuccess = false;
+    const phonenumber = ref("")
+    const password = ref("")
+    const phoneError = ref("")
+    const passwordError = ref("")
+    const isLoading = ref(false)
+    const loginSuccess = ref(false)
+    const errorMessage = ref("")
+    const sendDeviceId = ref(true)
+    const rememberMe = ref(false)
 
-      const phoneValid = this.validatePhone();
-      const passwordValid = this.validatePassword();
+    const validatePhone = () => {
+      if (!phonenumber.value) {
+        phoneError.value = "Phone number is required"
+        return false
+      }
+      if (!/^0\d{9}$/.test(phonenumber.value)) {
+        phoneError.value = "Invalid phone number format"
+        return false
+      }
+      phoneError.value = ""
+      return true
+    }
 
-      console.log("Validation results:", { phoneValid, passwordValid });
+    const validatePassword = () => {
+      if (!password.value) {
+        passwordError.value = "Password is required"
+        return false
+      }
+      if (password.value.length < 6 || password.value.length > 10) {
+        passwordError.value = "Password must be 6-10 characters long"
+        return false
+      }
+      if (password.value === phonenumber.value) {
+        passwordError.value = "Password must not match the phone number"
+        return false
+      }
+      passwordError.value = ""
+      return true
+    }
+
+    const handleSubmit = async () => {
+      phoneError.value = ""
+      passwordError.value = ""
+      errorMessage.value = ""
+      loginSuccess.value = false
+
+      const phoneValid = validatePhone()
+      const passwordValid = validatePassword()
 
       if (!phoneValid || !passwordValid) {
-        console.log("Validation failed, not making API call");
-        return;
+        return
       }
 
-      this.isLoading = true;
+      isLoading.value = true
       try {
-        console.log("Attempting to make API call");
         const response = await axios.post(
           "http://localhost:3000/api/auth/login",
           {
-            phonenumber: this.phonenumber,
-            password: this.password,
-            deviceId: this.sendDeviceId ? "device-uuid" : undefined
+            phonenumber: phonenumber.value,
+            password: password.value,
+            deviceId: sendDeviceId.value ? "device-uuid" : undefined,
+            rememberMe: rememberMe.value
           }
-        );
-        console.log("API call successful", response.data);
+        )
 
         if (response.data.code === "1000") {
-          this.loginSuccess = true;
-          this.login(response.data.data.token);
-          this.$emit("login-success", response.data.data);
+          loginSuccess.value = true
+          login(response.data.data.token)
           setTimeout(() => {
-            // Navigate to home page after 2 seconds
-            this.$router.push('/');
-          }, 2000);
+            router.push('/')
+          }, 2000)
         } else {
-          this.errorMessage = response.data.message;
-          this.$emit("login-error", response.data.message);
+          errorMessage.value = response.data.message
         }
       } catch (error) {
-        console.error("Login error:", error);
+        console.error("Login error:", error)
         if (error.response) {
-          console.log("Error with response:", error.response.data);
-          this.errorMessage = error.response.data.message;
-          this.$emit("login-error", error.response.data.message);
+          errorMessage.value = error.response.data.message
         } else if (error.request) {
-          console.log("Network error detected");
-          this.errorMessage = "Unable to connect to the Internet";
-          this.$emit("login-error", "Unable to connect to the Internet");
+          errorMessage.value = "Unable to connect to the Internet"
         } else {
-          console.log("Unexpected error:", error.message);
-          this.errorMessage = "An unexpected error occurred. Please try again.";
-          this.$emit("login-error", "An unexpected error occurred. Please try again.");
+          errorMessage.value = "An unexpected error occurred. Please try again."
         }
       } finally {
-        this.isLoading = false;
+        isLoading.value = false
       }
-    },
+    }
+
+    const handleForgotPassword = () => {
+      router.push('/forgot-password') // Adjust the route as needed
+    }
+
+    return {
+      phonenumber,
+      password,
+      phoneError,
+      passwordError,
+      isLoading,
+      loginSuccess,
+      errorMessage,
+      sendDeviceId,
+      rememberMe,
+      handleSubmit,
+      handleForgotPassword,
+    }
   },
-};
+}
 </script>
