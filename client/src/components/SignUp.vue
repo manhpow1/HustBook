@@ -90,7 +90,8 @@ export default {
     PhoneIcon,
     LockIcon,
   },
-  setup() {
+  emits: ['signup-success', 'signup-error'],
+  setup(props, { emit }) {
     const router = useRouter()
     const { login } = useUserState()
 
@@ -100,21 +101,30 @@ export default {
     const passwordError = ref("")
     const isLoading = ref(false)
     const rememberMe = ref(false)
-    const successMessage = ref("")
-    const errorMessage = ref("")
 
     const passwordStrength = computed(() => {
+      if (password.value.length === 0) return 0
       let strength = 0
-      if (password.value.length >= 6) strength += 25
-      if (password.value.length >= 8) strength += 25
-      if (/[A-Z]/.test(password.value)) strength += 25
-      if (/[0-9]/.test(password.value)) strength += 25
-      return strength
+      // Check length
+      if (password.value.length >= 6 && password.value.length <= 10) {
+        strength += 25
+      } else {
+        return password.value.length > 10 ? 50 : 25
+      }
+      // Check for alphanumeric characters only
+      if (!/[^a-zA-Z0-9]/.test(password.value)) strength += 25
+      // Check if password doesn't match phone number
+      if (password.value !== phonenumber.value) strength += 25
+      // Check for uppercase letters
+      if (/[A-Z]/.test(password.value)) strength += 12.5
+      // Check for numbers
+      if (/[0-9]/.test(password.value)) strength += 12.5
+      return Math.min(Math.round(strength), 100)
     })
-
     const passwordStrengthClass = computed(() => {
-      if (passwordStrength.value < 50) return 'bg-red-500'
-      if (passwordStrength.value < 75) return 'bg-yellow-500'
+      if (passwordStrength.value <= 25) return 'bg-red-500'
+      if (passwordStrength.value <= 50) return 'bg-yellow-500'
+      if (passwordStrength.value <= 75) return 'bg-orange-500'
       return 'bg-green-500'
     })
 
@@ -128,35 +138,45 @@ export default {
     }
 
     const validatePassword = () => {
-      if (
-        password.value.length < 6 ||
-        password.value.length > 10 ||
-        /[^a-zA-Z0-9]/.test(password.value) ||
-        password.value === phonenumber.value
-      ) {
-        passwordError.value =
-          "Password must be 6-10 characters long, contain only letters and numbers, and not match the phone number"
+      if (!password.value) {
+        passwordError.value = "Password is required"
         return false
       }
+
+      let errors = []
+      if (password.value.length < 6 || password.value.length > 10) {
+        errors.push("be 6-10 characters long")
+      }
+      if (/[^a-zA-Z0-9]/.test(password.value)) {
+        errors.push("contain only letters and numbers")
+      }
+      if (password.value === phonenumber.value) {
+        errors.push("not match the phone number")
+      }
+
+      if (errors.length > 0) {
+        passwordError.value = `Password must ${errors.join(', and ')}`
+        return false
+      }
+
       passwordError.value = ""
       return true
     }
 
+
     const handleSignupSuccess = (data) => {
-      successMessage.value = "Signup successful! Redirecting to complete your profile..."
+      emit('signup-success', data.verificationCode)
       login(data.token, data.deviceToken)
-      setTimeout(() => {
-        router.push("/complete-profile")
-      }, 2000)
     }
 
     const handleSubmit = async () => {
       phoneError.value = ""
       passwordError.value = ""
-      errorMessage.value = ""
-      successMessage.value = ""
 
-      if (!validatePhone() || !validatePassword()) {
+      validatePhone()
+      validatePassword()
+
+      if (phoneError.value || passwordError.value) {
         return
       }
 
@@ -176,17 +196,17 @@ export default {
         if (response.data.code === "1000") {
           handleSignupSuccess(response.data.data)
         } else {
-          errorMessage.value = response.data.message || "An error occurred during signup"
+          emit('signup-error', response.data.message || "An error occurred during signup")
         }
       } catch (error) {
         console.error("Error occurred:", error)
+        let errorMessage = "An unexpected error occurred. Please try again."
         if (error.response) {
-          errorMessage.value = error.response.data.message || "Server error occurred"
+          errorMessage = error.response.data.message || "Server error occurred"
         } else if (error.request) {
-          errorMessage.value = "Unable to connect to the server. Please check your internet connection."
-        } else {
-          errorMessage.value = "An unexpected error occurred. Please try again."
+          errorMessage = "Unable to connect to the server. Please check your internet connection."
         }
+        emit('signup-error', errorMessage)
       } finally {
         isLoading.value = false
       }
@@ -199,8 +219,6 @@ export default {
       passwordError,
       isLoading,
       rememberMe,
-      successMessage,
-      errorMessage,
       passwordStrength,
       passwordStrengthClass,
       handleSubmit,

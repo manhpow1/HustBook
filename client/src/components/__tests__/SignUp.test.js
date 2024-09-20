@@ -43,7 +43,7 @@ describe('SignUp Component', () => {
         code: '1000',
         message: 'OK',
         data: {
-          verifyCode: '123ABC',
+          verificationCode: '123ABC',
           token: 'mockToken',
           deviceToken: 'mockDeviceToken'
         }
@@ -52,42 +52,24 @@ describe('SignUp Component', () => {
     axios.post.mockResolvedValue(mockResponse)
 
     await wrapper.find('input[type="tel"]').setValue('0123456789')
-    await wrapper.find('input[type="password"]').setValue('validPass123')
+    await wrapper.find('input[type="password"]').setValue('validPass')
 
     await wrapper.find('form').trigger('submit.prevent')
 
     await flushPromises()
 
-    try {
-      expect(axios.post).toHaveBeenCalledWith(
-        'http://localhost:3000/api/auth/signup',
-        expect.objectContaining({
-          phonenumber: '0123456789',
-          password: 'validpass',
-          uuid: 'device-uuid',
-          rememberMe: false
-        })
-      )
-    } catch (error) {
-    }
+    expect(axios.post).toHaveBeenCalledWith(
+      'http://localhost:3000/api/auth/signup',
+      expect.objectContaining({
+        phonenumber: '0123456789',
+        password: 'validPass',
+        uuid: 'device-uuid',
+        rememberMe: false
+      })
+    )
 
-    try {
-      expect(wrapper.vm.successMessage).toBe('Signup successful! Redirecting to complete your profile...')
-    } catch (error) {
-    }
-
-    try {
-      expect(wrapper.vm.errorMessage).toBe('')
-    } catch (error) {
-    }
-
-    await vi.runAllTimers()
-    await flushPromises()
-
-    try {
-      expect(router.currentRoute.value.path).toBe('/complete-profile')
-    } catch (error) {
-    }
+    expect(wrapper.emitted('signup-success')).toBeTruthy()
+    expect(wrapper.emitted('signup-success')[0]).toEqual(['123ABC'])
   })
 
   it('2. Fails to sign up with already registered phone number', async () => {
@@ -100,7 +82,8 @@ describe('SignUp Component', () => {
 
     await flushPromises()
 
-    expect(wrapper.vm.errorMessage).toBe('User existed')
+    expect(wrapper.emitted('signup-error')).toBeTruthy()
+    expect(wrapper.emitted('signup-error')[0]).toEqual(['User existed'])
   })
 
   it('3. Shows error for invalid phone number format', async () => {
@@ -114,7 +97,7 @@ describe('SignUp Component', () => {
 
   it('4. Shows error for invalid password format', async () => {
     await wrapper.find('input[type="tel"]').setValue('0123456789')
-    await wrapper.find('input[type="password"]').setValue('short3456734968457')
+    await wrapper.find('input[type="password"]').setValue('short')
     await wrapper.find('form').trigger('submit.prevent')
 
     expect(wrapper.vm.passwordError).toContain('Password must be 6-10 characters long')
@@ -124,18 +107,60 @@ describe('SignUp Component', () => {
   it('5. Shows error when submitting empty form', async () => {
     await wrapper.find('form').trigger('submit.prevent')
     await flushPromises()
-    try {
-      expect(wrapper.vm.phoneError).toBe('Phone number is required')
-    } catch (error) {
-    }
-    try {
-      expect(wrapper.vm.passwordError).toBe('Password must be 6-10 characters long, contain only letters and numbers, and not match the phone number')
-    } catch (error) {
-    }
-    try {
-      expect(axios.post).not.toHaveBeenCalled()
-    } catch (error) {
-    }
 
+    expect(wrapper.vm.phoneError).toBe('Invalid phone number format')
+    expect(wrapper.vm.passwordError).toBe('Password is required')
+    expect(axios.post).not.toHaveBeenCalled()
+  })
+
+  it('6. Handles network error', async () => {
+    const mockError = { request: {} }  // Simulating a network error
+    axios.post.mockRejectedValue(mockError)
+
+    await wrapper.find('input[type="tel"]').setValue('0123456789')
+    await wrapper.find('input[type="password"]').setValue('password')
+    await wrapper.find('form').trigger('submit.prevent')
+
+    await flushPromises()
+
+    expect(wrapper.emitted('signup-error')).toBeTruthy()
+    expect(wrapper.emitted('signup-error')[0]).toEqual(['Unable to connect to the server. Please check your internet connection.'])
+  })
+
+  it('7. Displays password strength indicator', async () => {
+    await wrapper.find('input[type="password"]').setValue('short')
+    expect(wrapper.vm.passwordStrength).toBe(25)
+    expect(wrapper.vm.passwordStrengthClass).toBe('bg-red-500')
+
+    await wrapper.find('input[type="password"]').setValue('medium12')
+    expect(wrapper.vm.passwordStrength).toBe(88)
+    expect(wrapper.vm.passwordStrengthClass).toBe('bg-green-500')
+
+    await wrapper.find('input[type="password"]').setValue('Strong123')
+    expect(wrapper.vm.passwordStrength).toBe(100)
+    expect(wrapper.vm.passwordStrengthClass).toBe('bg-green-500')
+
+    await wrapper.find('input[type="password"]').setValue('toolongpassword')
+    expect(wrapper.vm.passwordStrength).toBe(50)
+    expect(wrapper.vm.passwordStrengthClass).toBe('bg-yellow-500')
+  })
+
+  it('8. Shows detailed password error messages', async () => {
+    await wrapper.find('input[type="password"]').setValue('a')
+    await wrapper.find('form').trigger('submit.prevent')
+    expect(wrapper.vm.passwordError).toBe('Password must be 6-10 characters long')
+
+    await wrapper.find('input[type="password"]').setValue('longpassword123')
+    await wrapper.find('form').trigger('submit.prevent')
+    expect(wrapper.vm.passwordError).toBe('Password must be 6-10 characters long')
+
+    await wrapper.find('input[type="password"]').setValue('pass@123')
+    await wrapper.find('form').trigger('submit.prevent')
+    expect(wrapper.vm.passwordError).toBe('Password must contain only letters and numbers')
+
+    await wrapper.find('input[type="tel"]').setValue('0123456789')
+    await wrapper.find('input[type="password"]').setValue('0123456789')
+    await wrapper.find('form').trigger('submit.prevent')
+    expect(wrapper.vm.passwordError).toBe('Password must not match the phone number')
   })
 })

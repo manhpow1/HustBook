@@ -6,7 +6,7 @@
         <div class="flex justify-between items-center h-16">
           <div class="flex items-center">
             <router-link to="/" class="flex-shrink-0">
-              <img class="h-8 w-auto" src="../../public/logo.svg" alt="HUSTBOOK" />
+              <img class="h-8 w-auto" src="../assets/logo.svg" alt="HUSTBOOK" />
             </router-link>
             <div class="hidden sm:block sm:ml-6">
               <div class="flex space-x-4">

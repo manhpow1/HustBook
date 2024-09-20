@@ -5,7 +5,7 @@ const token = ref(localStorage.getItem('token'))
 const deviceToken = ref(localStorage.getItem('deviceToken'))
 const isAuthenticated = ref(false)
 
-export const useUserState = () => {
+export function useUserState() {
     const isLoggedIn = computed(() => isAuthenticated.value)
 
     const checkAuth = async () => {

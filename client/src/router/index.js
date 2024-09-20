@@ -49,9 +49,10 @@ const routes = [
         component: GetVerifyCode
     },
     {
-        path: '/verify_code',
+        path: '/verify-code/:verificationCode',
         name: 'VerifyCode',
-        component: VerifyCode
+        component: VerifyCode,
+        props: true
     },
     {
         path: '/complete-profile',
