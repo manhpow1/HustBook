@@ -327,6 +327,10 @@ router.post("/change_info_after_signup", upload.single('avatar'), async (req, re
             return res.status(400).json({ code: "1002", message: "Parameter is not enough" });
         }
 
+        if (username === userData.phoneNumber) {
+            return res.status(400).json({ code: "1004", message: "Username cannot be the same as the phone number" });
+        }
+        
         // Verify the token
         let decodedToken;
         try {
@@ -387,7 +391,7 @@ router.post("/change_info_after_signup", upload.single('avatar'), async (req, re
 });
 
 function validateUsername(username) {
-    // Check for special characters
+    // Check for special characters (improved regex)
     if (/[!@#$%^&*(),.?":{}|<>]/.test(username)) {
         return false;
     }
@@ -397,13 +401,13 @@ function validateUsername(username) {
         return false;
     }
 
-    // Check if it's not a path, phone number, or address (basic checks)
+    // Check if it's not a path, phone number, or address (improved checks)
     if (
         username.includes('/') ||
         username.includes('\\') ||
         /^\d+$/.test(username) ||
-        /^\d{3}-\d{3}-\d{4}$/.test(username) ||
-        /^\d+\s+[\w\s]+(?:avenue|street|road)$/i.test(username)
+        /^(\+\d{1,2}\s?)?1?\-?\.?\s?\(?\d{3}\)?[\s.-]?\d{3}[\s.-]?\d{4}$/.test(username) ||
+        /^\d+\s+[\w\s]+(?:avenue|ave|street|st|road|rd|boulevard|blvd)\.?$/i.test(username)
     ) {
         return false;
     }

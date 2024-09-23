@@ -45,6 +45,7 @@ import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useUserState } from '../userState'
 import axios from 'axios'
+import { API_ENDPOINTS } from '../config/api'
 import { LogOut, Loader, CheckCircle, AlertCircle } from 'lucide-vue-next'
 
 const router = useRouter()
@@ -62,7 +63,7 @@ const handleLogout = async () => {
 
     try {
         const token = localStorage.getItem('token')
-        const response = await axios.post('http://localhost:3000/api/auth/logout', null, {
+        const response = await axios.post(API_ENDPOINTS.LOGOUT, null, {
             headers: { Authorization: `Bearer ${token}` }
         })
 

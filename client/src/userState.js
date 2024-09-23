@@ -1,5 +1,6 @@
 import { ref, computed } from 'vue'
 import axios from 'axios'
+import { API_ENDPOINTS } from './config/api';
 
 const token = ref(localStorage.getItem('token'))
 const deviceToken = ref(localStorage.getItem('deviceToken'))
@@ -11,7 +12,7 @@ export function useUserState() {
     const checkAuth = async () => {
         if (token.value && deviceToken.value) {
             try {
-                const response = await axios.get('http://localhost:3000/api/auth/check', {
+                const response = await axios.get(API_ENDPOINTS.AUTH_CHECK, {
                     headers: {
                         Authorization: `Bearer ${token.value}`,
                         'X-Device-Token': deviceToken.value

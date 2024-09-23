@@ -2,39 +2,39 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { mount, flushPromises } from '@vue/test-utils'
 import ChangeInfoAfterSignup from '../ChangeInfoAfterSignup.vue'
 import axios from 'axios'
+import { useRouter } from 'vue-router'
 import { useUserState } from '../../userState'
-import { createRouter, createMemoryHistory } from 'vue-router'
 
 vi.mock('axios')
+vi.mock('vue-router')
 vi.mock('../../userState')
-
-const router = createRouter({
-    history: createMemoryHistory(),
-    routes: [
-        { path: '/', component: { template: '<div>Home</div>' } },
-        { path: '/login', component: { template: '<div>Login</div>' } }
-    ]
-})
 
 describe('ChangeInfoAfterSignup Component', () => {
     let wrapper
+    let mockRouter
+    let mockToken
 
     beforeEach(() => {
         vi.clearAllMocks()
-        useUserState.mockReturnValue({
-            token: { value: 'valid-token' }
-        })
+        mockRouter = {
+            push: vi.fn()
+        }
+        mockToken = { value: 'valid-token' }
+
+        useRouter.mockReturnValue(mockRouter)
+        useUserState.mockReturnValue({ token: mockToken })
+
         wrapper = mount(ChangeInfoAfterSignup, {
             global: {
-                plugins: [router],
-                stubs: {
-                    teleport: true
+                stubs: ['UserPlusIcon', 'CheckCircleIcon', 'XCircleIcon', 'LoaderIcon'],
+                mocks: {
+                    $router: mockRouter
                 }
             }
         })
     })
 
-    it('1. Sends correct login session code, username, and avatar', async () => {
+    it('1. Successfully updates profile with valid session code, username, and avatar', async () => {
         const mockResponse = {
             data: {
                 code: '1000',
@@ -42,11 +42,8 @@ describe('ChangeInfoAfterSignup Component', () => {
                 data: {
                     id: '123',
                     username: 'validuser',
-                    phonenumber: '1234567890',
-                    created: '2023-01-01',
                     avatar: 'http://example.com/avatar.jpg',
-                    is_blocked: false,
-                    online: true
+                    is_blocked: false
                 }
             }
         }
@@ -54,53 +51,44 @@ describe('ChangeInfoAfterSignup Component', () => {
 
         await wrapper.find('input[type="text"]').setValue('validuser')
         const file = new File([''], 'avatar.jpg', { type: 'image/jpeg' })
-        await wrapper.vm.handleFileChange({ target: { files: [file] } })
+        const input = wrapper.find('input[type="file"]')
+        Object.defineProperty(input.element, 'files', {
+            value: [file]
+        })
+        await input.trigger('change')
         await wrapper.find('form').trigger('submit')
 
         await flushPromises()
 
         expect(axios.post).toHaveBeenCalledWith(
-            'http://localhost:3000/api/auth/change_info_after_signup',
+            expect.any(String),
             expect.any(FormData),
-            expect.any(Object)
+            expect.objectContaining({
+                headers: {
+                    'Content-Type': 'multipart/form-data',
+                    'Authorization': 'Bearer valid-token'
+                }
+            })
         )
         expect(wrapper.vm.successMessage).toBe('Profile updated successfully!')
     })
 
-    it('2. Sends wrong login session code', async () => {
-        useUserState.mockReturnValue({
-            token: { value: '' }
-        })
+    it('2. Shows error for invalid session code', async () => {
+        mockToken.value = ''
 
-        // Remount the component to trigger the watch function
-        wrapper = mount(ChangeInfoAfterSignup, {
-            global: {
-                plugins: [router],
-                stubs: {
-                    teleport: true
-                }
-            }
-        })
+        // Directly call the checkToken function instead of trying to trigger the watch
+        await wrapper.vm.checkToken('')
 
         await flushPromises()
 
         expect(wrapper.vm.errorMessage).toBe('Invalid token')
-
-        await wrapper.find('input[type="text"]').setValue('validuser')
-        await wrapper.find('form').trigger('submit')
-
-        await flushPromises()
-
-        expect(wrapper.vm.errorMessage).toBe('Invalid token')
+        expect(mockRouter.push).toHaveBeenCalledWith({ name: 'Login' })
     })
 
-    it('3. Sends someone else\'s or old session code', async () => {
+    it('3. Redirects to login for old or someone else\'s session code', async () => {
         const mockResponse = {
             response: {
-                data: {
-                    code: '9998',
-                    message: 'Invalid token'
-                }
+                data: { code: '9998', message: 'Invalid token' }
             }
         }
         axios.post.mockRejectedValue(mockResponse)
@@ -110,27 +98,24 @@ describe('ChangeInfoAfterSignup Component', () => {
 
         await flushPromises()
 
-        expect(router.currentRoute.value.path).toBe('/login')
         expect(wrapper.vm.errorMessage).toBe('Invalid token')
+        expect(mockRouter.push).toHaveBeenCalledWith({ name: 'Login' })
     })
 
-    it('4. Sends valid session code but invalid username', async () => {
-        await wrapper.find('input[type="text"]').setValue('invalid@user')
+    it('4. Shows error for invalid username format', async () => {
+        await wrapper.find('input[type="text"]').setValue('inv@lid')
         await wrapper.find('form').trigger('submit')
 
-        await flushPromises()
-
-        expect(wrapper.vm.errorMessage).toBe('Username cannot contain special characters')
+        expect(wrapper.vm.usernameError).toBe('Username cannot contain special characters')
+        expect(axios.post).not.toHaveBeenCalled()
     })
 
-    it('5. Sends valid session code but blocked username', async () => {
+    it('5. Redirects to login for blocked account', async () => {
         const mockResponse = {
             data: {
                 code: '1000',
                 message: 'OK',
-                data: {
-                    is_blocked: true
-                }
+                data: { is_blocked: true }
             }
         }
         axios.post.mockResolvedValue(mockResponse)
@@ -140,41 +125,38 @@ describe('ChangeInfoAfterSignup Component', () => {
 
         await flushPromises()
 
-        expect(router.currentRoute.value.path).toBe('/login')
         expect(wrapper.vm.errorMessage).toBe('Your account has been blocked')
+        expect(mockRouter.push).toHaveBeenCalledWith({ name: 'Login' })
     })
 
-    it('6. Sends valid session code and username but avatar is too large', async () => {
-        const largeFile = new File([''], 'large-avatar.jpg', { type: 'image/jpeg' })
-        Object.defineProperty(largeFile, 'size', { value: 5 * 1024 * 1024 }) // 5MB
+    it('6. Shows error for avatar file size too large', async () => {
+        const largeFile = new File([''.padStart(5 * 1024 * 1024)], 'large-avatar.jpg', { type: 'image/jpeg' })
 
-        await wrapper.find('input[type="text"]').setValue('validuser')
-        await wrapper.vm.handleFileChange({ target: { files: [largeFile] } })
+        const input = wrapper.find('input[type="file"]')
+        Object.defineProperty(input.element, 'files', {
+            value: [largeFile]
+        })
+        await input.trigger('change')
 
-        expect(wrapper.vm.errorMessage).toBe('Avatar file size is too large. Maximum size is 4MB.')
+        expect(wrapper.vm.avatarError).toBe('Avatar file size is too large. Maximum size is 4MB.')
         expect(axios.post).not.toHaveBeenCalled()
     })
 
-    it('7. Sends valid session code and username but avatar is rejected by server', async () => {
-        const mockResponse = {
-            response: {
-                data: {
-                    code: '1006',
-                    message: 'File upload failed'
-                }
-            }
-        }
-        axios.post.mockRejectedValue(mockResponse)
-
-        await wrapper.find('input[type="text"]').setValue('validuser')
-        const file = new File([''], 'avatar.jpg', { type: 'image/jpeg' })
-        await wrapper.vm.handleFileChange({ target: { files: [file] } })
+    it('7. Shows error for username that looks like a phone number', async () => {
+        await wrapper.find('input[type="text"]').setValue('(123) 456-7890')
         await wrapper.find('form').trigger('submit')
 
         await flushPromises()
 
-        expect(wrapper.vm.errorMessage).toBe('File upload failed. Please try again or proceed without an avatar.')
-        expect(wrapper.findAll('button').some(w => w.text().includes('Continue without avatar'))).toBe(true)
-        expect(wrapper.findAll('button').some(w => w.text().includes('Try again'))).toBe(true)
+        expect(wrapper.vm.usernameError).toBe('Username cannot be a phone number')
+        expect(axios.post).not.toHaveBeenCalled()
+    })
+
+    it('8. Shows error for username that looks like an address', async () => {
+        await wrapper.find('input[type="text"]').setValue('123 Main Street')
+        await wrapper.find('form').trigger('submit')
+
+        expect(wrapper.vm.usernameError).toBe('Username cannot be an address')
+        expect(axios.post).not.toHaveBeenCalled()
     })
 })

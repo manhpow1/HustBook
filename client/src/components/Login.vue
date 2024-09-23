@@ -89,6 +89,7 @@
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useUserState } from '../userState'
+import { API_ENDPOINTS } from '../config/api'
 import axios from "axios"
 import { PhoneIcon, LockIcon, CheckCircleIcon, AlertCircleIcon } from 'lucide-vue-next'
 
@@ -159,7 +160,7 @@ export default {
       isLoading.value = true
       try {
         const response = await axios.post(
-          "http://localhost:3000/api/auth/login",
+          API_ENDPOINTS.LOGIN,
           {
             phonenumber: phonenumber.value,
             password: password.value,

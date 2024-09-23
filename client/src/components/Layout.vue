@@ -133,6 +133,7 @@ import { useUserState } from '../userState'
 import { useRouter } from 'vue-router'
 import axios from 'axios'
 import { HomeIcon, UserIcon, UsersIcon, MessageCircleIcon, SearchIcon, MenuIcon, XIcon, FacebookIcon, TwitterIcon, InstagramIcon } from 'lucide-vue-next'
+import { API_ENDPOINTS } from '../config/api'
 
 const { isLoggedIn, logout } = useUserState()
 const router = useRouter()
@@ -158,7 +159,7 @@ const toggleMobileMenu = () => {
 const handleLogout = async () => {
   try {
     const token = localStorage.getItem('token')
-    await axios.post('http://localhost:3000/api/auth/logout', null, {
+    await axios.post(API_ENDPOINTS.LOGOUT, null, {
       headers: { Authorization: `Bearer ${token}` }
     })
     logout()

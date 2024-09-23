@@ -83,6 +83,7 @@ import { ref, computed } from 'vue'
 import axios from "axios"
 import { useRouter } from 'vue-router'
 import { useUserState } from '../userState'
+import { API_ENDPOINTS } from '../config/api'
 import { PhoneIcon, LockIcon } from 'lucide-vue-next'
 
 export default {
@@ -184,7 +185,7 @@ export default {
 
       try {
         const response = await axios.post(
-          "http://localhost:3000/api/auth/signup",
+          API_ENDPOINTS.SIGNUP,
           {
             phonenumber: phonenumber.value,
             password: password.value,
