@@ -1,6 +1,6 @@
 const express = require("express");
 const router = express.Router();
-const { db, auth } = require("../firebaseConfig");
+const { db, auth } = require("../config/firebaseConfig");
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const multer = require('multer');

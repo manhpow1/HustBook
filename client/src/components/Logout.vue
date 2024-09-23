@@ -43,7 +43,7 @@
 <script setup>
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { useUserState } from '../userState'
+import { useUserState } from '../store/user-state'
 import axios from 'axios'
 import { API_ENDPOINTS } from '../config/api'
 import { LogOut, Loader, CheckCircle, AlertCircle } from 'lucide-vue-next'

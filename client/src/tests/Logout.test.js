@@ -1,12 +1,12 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { mount, flushPromises } from '@vue/test-utils'
-import Logout from '../Logout.vue'
+import Logout from '../components/Logout.vue'
 import axios from 'axios'
-import { useUserState } from '../../userState'
+import { useUserState } from '../store/user-state'
 import { createRouter, createMemoryHistory } from 'vue-router'
 
 vi.mock('axios')
-vi.mock('../../userState')
+vi.mock('../store/user-state')
 
 const router = createRouter({
     history: createMemoryHistory(),

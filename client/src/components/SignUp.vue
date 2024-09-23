@@ -82,7 +82,7 @@
 import { ref, computed } from 'vue'
 import axios from "axios"
 import { useRouter } from 'vue-router'
-import { useUserState } from '../userState'
+import { useUserState } from '../store/user-state'
 import { API_ENDPOINTS } from '../config/api'
 import { PhoneIcon, LockIcon } from 'lucide-vue-next'
 

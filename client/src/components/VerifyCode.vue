@@ -55,7 +55,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { useUserState } from '../userState'
+import { useUserState } from '../store/user-state'
 import axios from 'axios'
 import { API_ENDPOINTS } from '../config/api'
 import { ShieldCheckIcon, PhoneIcon, LoaderIcon, CheckCircleIcon, XCircleIcon } from 'lucide-vue-next'

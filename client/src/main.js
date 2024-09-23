@@ -1,8 +1,8 @@
 import { createApp } from 'vue'
 import App from './App.vue'
 import router from './router'
-import './index.css'
-import { useUserState } from './userState'
+import './styles/index.css'
+import { useUserState } from './store/user-state'
 
 const { checkAuth } = useUserState()
 

@@ -61,7 +61,7 @@
 
 <script>
 import { ref, onMounted } from 'vue'
-import { useUserState } from '../userState'
+import { useUserState } from '../store/user-state'
 import AddPost from '../components/AddPost.vue'
 import axios from 'axios'
 

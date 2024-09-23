@@ -88,7 +88,7 @@
 <script>
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { useUserState } from '../userState'
+import { useUserState } from '../store/user-state'
 import { API_ENDPOINTS } from '../config/api'
 import axios from "axios"
 import { PhoneIcon, LockIcon, CheckCircleIcon, AlertCircleIcon } from 'lucide-vue-next'

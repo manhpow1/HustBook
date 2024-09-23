@@ -1,6 +1,6 @@
 import { ref, computed } from 'vue'
 import axios from 'axios'
-import { API_ENDPOINTS } from './config/api';
+import { API_ENDPOINTS } from '../config/api';
 
 const token = ref(localStorage.getItem('token'))
 const deviceToken = ref(localStorage.getItem('deviceToken'))

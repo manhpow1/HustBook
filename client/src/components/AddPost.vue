@@ -54,7 +54,7 @@
 <script>
 import { ref } from 'vue'
 import axios from 'axios'
-import { useUserState } from '../userState'
+import { useUserState } from '../store/user-state'
 import { useRouter } from 'vue-router'
 
 export default {

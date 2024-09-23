@@ -129,7 +129,7 @@
 
 <script setup>
 import { ref } from 'vue'
-import { useUserState } from '../userState'
+import { useUserState } from '../store/user-state'
 import { useRouter } from 'vue-router'
 import axios from 'axios'
 import { HomeIcon, UserIcon, UsersIcon, MessageCircleIcon, SearchIcon, MenuIcon, XIcon, FacebookIcon, TwitterIcon, InstagramIcon } from 'lucide-vue-next'

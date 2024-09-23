@@ -1,13 +1,13 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { mount, flushPromises } from '@vue/test-utils'
-import ChangeInfoAfterSignup from '../ChangeInfoAfterSignup.vue'
+import ChangeInfoAfterSignup from '../components/ChangeInfoAfterSignup.vue'
 import axios from 'axios'
 import { useRouter } from 'vue-router'
-import { useUserState } from '../../userState'
+import { useUserState } from '../store/user-state'
 
 vi.mock('axios')
 vi.mock('vue-router')
-vi.mock('../../userState')
+vi.mock('../store/user-state')
 
 describe('ChangeInfoAfterSignup Component', () => {
     let wrapper
