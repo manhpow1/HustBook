@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const multer = require('multer');
-const { db, auth } = require('../firebaseConfig');
+const { db, auth } = require('../config/firebaseConfig');
 const { v4: uuidv4 } = require('uuid');
 const admin = require('firebase-admin');
 

@@ -1,49 +1,59 @@
 <template>
   <div class="container mx-auto px-4 py-8">
-    <h1 class="text-3xl font-bold mb-6">Welcome to HustBook</h1>
+    <h1 class="text-3xl font-bold mb-6 text-gray-800">Welcome to HustBook</h1>
 
     <div v-if="isLoggedIn">
       <AddPost @post-created="handlePostCreated" />
 
       <div class="mt-12">
-        <h2 class="text-2xl font-semibold mb-4">Recent Posts</h2>
-        <div v-if="posts.length > 0">
+        <h2 class="text-2xl font-semibold mb-4 text-gray-800">Recent Posts</h2>
+        <div v-if="isLoading" class="flex justify-center items-center h-32">
+          <LoaderIcon class="animate-spin h-8 w-8 text-indigo-600" />
+        </div>
+        <div v-else-if="error" class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative"
+          role="alert">
+          <strong class="font-bold">Error!</strong>
+          <span class="block sm:inline">{{ error }}</span>
+        </div>
+        <div v-else-if="posts.length > 0">
           <div v-for="post in posts" :key="post.id" class="bg-white shadow rounded-lg p-6 mb-6">
             <div class="flex items-center mb-4">
-              <img :src="post.userAvatar" alt="User Avatar" class="w-10 h-10 rounded-full mr-4">
+              <img :src="post.userAvatar || '/default-avatar.png'" :alt="`${post.userName}'s avatar`"
+                class="w-10 h-10 rounded-full mr-4">
               <div>
-                <p class="font-semibold">{{ post.userName }}</p>
+                <p class="font-semibold text-gray-800">{{ post.userName }}</p>
                 <p class="text-sm text-gray-500">{{ formatDate(post.created) }}</p>
               </div>
             </div>
-            <p class="mb-4">{{ post.described }}</p>
-            <div v-if="post.media.length > 0" class="mb-4">
-              <img v-if="isImage(post.media[0])" :src="post.media[0]" alt="Post image" class="w-full rounded-lg">
-              <video v-else controls class="w-full rounded-lg">
-                <source :src="post.media[0]" type="video/mp4">
-                Your browser does not support the video tag.
-              </video>
+            <p class="mb-4 text-gray-700">{{ post.described }}</p>
+            <div v-if="post.media && post.media.length > 0" class="mb-4 grid grid-cols-2 gap-2">
+              <div v-for="(media, index) in post.media" :key="index">
+                <img v-if="isImage(media)" :src="media" :alt="`Post image ${index + 1}`"
+                  class="w-full h-48 object-cover rounded-lg" />
+                <video v-else controls class="w-full h-48 object-cover rounded-lg">
+                  <source :src="media" type="video/mp4">
+                  Your browser does not support the video tag.
+                </video>
+              </div>
             </div>
             <div class="flex items-center text-gray-500">
-              <button class="flex items-center mr-4">
-                <svg class="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"
-                  xmlns="http://www.w3.org/2000/svg">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                    d="M14 10h4.764a2 2 0 011.789 2.894l-3.5 7A2 2 0 0115.263 21h-4.017c-.163 0-.326-.02-.485-.06L7 20m7-10V5a2 2 0 00-2-2h-.095c-.5 0-.905.405-.905.905 0 .714-.211 1.412-.608 2.006L7 11v9m7-10h-2M7 20H5a2 2 0 01-2-2v-6a2 2 0 012-2h2.5">
-                  </path>
-                </svg>
-                Like
+              <button @click="likePost(post.id)"
+                class="flex items-center mr-4 hover:text-indigo-600 transition-colors duration-200">
+                <ThumbsUpIcon :class="{ 'text-indigo-600': post.isLiked }" class="w-5 h-5 mr-1" />
+                <span>{{ post.like }} {{ post.like === 1 ? 'Like' : 'Likes' }}</span>
               </button>
-              <button class="flex items-center">
-                <svg class="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"
-                  xmlns="http://www.w3.org/2000/svg">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                    d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z">
-                  </path>
-                </svg>
-                Comment
+              <button @click="showComments(post.id)"
+                class="flex items-center hover:text-indigo-600 transition-colors duration-200">
+                <MessageCircleIcon class="w-5 h-5 mr-1" />
+                <span>{{ post.comment }} {{ post.comment === 1 ? 'Comment' : 'Comments' }}</span>
               </button>
             </div>
+          </div>
+          <div v-if="hasMorePosts" class="flex justify-center mt-4">
+            <button @click="loadMorePosts"
+              class="bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700 transition-colors duration-200">
+              Load More
+            </button>
           </div>
         </div>
         <p v-else class="text-gray-500">No posts to display yet. Be the first to create a post!</p>
@@ -51,65 +61,105 @@
     </div>
 
     <div v-else class="text-center">
-      <p class="mb-4">Please log in to view and create posts.</p>
-      <router-link to="/login" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
+      <p class="mb-4 text-gray-700">Please log in to view and create posts.</p>
+      <router-link to="/login"
+        class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded transition-colors duration-200">
         Log In
       </router-link>
     </div>
   </div>
 </template>
 
-<script>
-import { ref, onMounted } from 'vue'
+<script setup>
+import { ref, onMounted, watch } from 'vue'
 import { useUserState } from '../store/user-state'
 import AddPost from '../components/AddPost.vue'
 import axios from 'axios'
+import { LoaderIcon, ThumbsUpIcon, MessageCircleIcon } from 'lucide-vue-next'
 
-export default {
-  name: 'Home',
-  components: {
-    AddPost
-  },
-  setup() {
-    const { isLoggedIn, token } = useUserState()
-    const posts = ref([])
+const { isLoggedIn, token } = useUserState()
+const posts = ref([])
+const isLoading = ref(false)
+const error = ref(null)
+const page = ref(1)
+const hasMorePosts = ref(true)
 
-    const fetchPosts = async () => {
-      try {
-        const response = await axios.get('http://localhost:3000/api/posts/get_list_posts', {
-          headers: { Authorization: `Bearer ${token.value}` }
-        })
-        posts.value = response.data.data
-      } catch (error) {
-        console.error('Error fetching posts:', error)
-      }
-    }
+const fetchPosts = async () => {
+  if (!isLoggedIn.value || isLoading.value) return
 
-    const handlePostCreated = (newPost) => {
-      posts.value.unshift(newPost)
-    }
+  isLoading.value = true
+  error.value = null
 
-    const formatDate = (dateString) => {
-      return new Date(dateString).toLocaleString()
-    }
-
-    const isImage = (url) => {
-      return url.match(/\.(jpeg|jpg|gif|png)$/) != null
-    }
-
-    onMounted(() => {
-      if (isLoggedIn.value) {
-        fetchPosts()
-      }
+  try {
+    const response = await axios.get('http://localhost:3000/api/posts/get_list_posts', {
+      headers: { Authorization: `Bearer ${token.value}` },
+      params: { page: page.value, limit: 10 }
     })
 
-    return {
-      isLoggedIn,
-      posts,
-      handlePostCreated,
-      formatDate,
-      isImage
+    if (response.data.data.length === 0) {
+      hasMorePosts.value = false
+    } else {
+      posts.value = [...posts.value, ...response.data.data]
+      page.value++
     }
+  } catch (err) {
+    console.error('Error fetching posts:', err)
+    error.value = 'Failed to load posts. Please try again later.'
+  } finally {
+    isLoading.value = false
   }
 }
+
+const handlePostCreated = (newPost) => {
+  posts.value.unshift(newPost)
+}
+
+const formatDate = (dateString) => {
+  const options = { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' }
+  return new Date(dateString).toLocaleDateString(undefined, options)
+}
+
+const isImage = (url) => {
+  return url.match(/\.(jpeg|jpg|gif|png)$/) != null
+}
+
+const likePost = async (postId) => {
+  try {
+    await axios.post(`http://localhost:3000/api/posts/like`, { id: postId }, {
+      headers: { Authorization: `Bearer ${token.value}` }
+    })
+    const post = posts.value.find(p => p.id === postId)
+    if (post) {
+      post.isLiked = !post.isLiked
+      post.like += post.isLiked ? 1 : -1
+    }
+  } catch (err) {
+    console.error('Error liking post:', err)
+  }
+}
+
+const showComments = (postId) => {
+  // Implement comment functionality
+  console.log(`Show comments for post ${postId}`)
+}
+
+const loadMorePosts = () => {
+  fetchPosts()
+}
+
+onMounted(() => {
+  if (isLoggedIn.value) {
+    fetchPosts()
+  }
+})
+
+watch(isLoggedIn, (newValue) => {
+  if (newValue) {
+    fetchPosts()
+  } else {
+    posts.value = []
+    page.value = 1
+    hasMorePosts.value = true
+  }
+})
 </script>

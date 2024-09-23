@@ -59,6 +59,7 @@ import { useUserState } from '../store/user-state'
 import axios from 'axios'
 import { API_ENDPOINTS } from '../config/api'
 import { ShieldCheckIcon, PhoneIcon, LoaderIcon, CheckCircleIcon, XCircleIcon } from 'lucide-vue-next'
+import { watch } from 'vue'
 
 const props = defineProps({
     initialPhoneNumber: {
@@ -72,7 +73,7 @@ const emit = defineEmits(['verification-success', 'verification-error'])
 const router = useRouter()
 const { login } = useUserState()
 
-const phonenumber = ref('')
+const phonenumber = ref(props.initialPhoneNumber)
 const codeDigits = ref(['', '', '', '', '', ''])
 const phoneError = ref('')
 const codeError = ref('')
@@ -86,6 +87,9 @@ const isFormValid = computed(() => {
     return /^0\d{9}$/.test(phonenumber.value) && codeDigits.value.every(digit => /^\d$/.test(digit))
 })
 
+watch(() => props.initialPhoneNumber, (newValue) => {
+    phonenumber.value = newValue
+})
 onMounted(() => {
     codeInputs.value[0]?.focus()
 })

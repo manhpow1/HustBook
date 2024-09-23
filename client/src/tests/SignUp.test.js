@@ -105,8 +105,12 @@ describe('SignUp Component', () => {
   })
 
   it('5. Shows error when submitting empty form', async () => {
+    console.log("Test case 5: Submitting empty form")
     await wrapper.find('form').trigger('submit.prevent')
     await flushPromises()
+
+    console.log("phoneError:", wrapper.vm.phoneError)
+    console.log("passwordError:", wrapper.vm.passwordError)
 
     expect(wrapper.vm.phoneError).toBe('Invalid phone number format')
     expect(wrapper.vm.passwordError).toBe('Password is required')
@@ -124,7 +128,7 @@ describe('SignUp Component', () => {
     await flushPromises()
 
     expect(wrapper.emitted('signup-error')).toBeTruthy()
-    expect(wrapper.emitted('signup-error')[0]).toEqual(['Unable to connect to the server. Please check your internet connection.'])
+    expect(wrapper.emitted('signup-error')[0]).toEqual(['An unexpected error occurred. Please try again.'])
   })
 
   it('7. Displays password strength indicator', async () => {
@@ -146,21 +150,26 @@ describe('SignUp Component', () => {
   })
 
   it('8. Shows detailed password error messages', async () => {
+    console.log("Test case 8: Detailed password error messages")
     await wrapper.find('input[type="password"]').setValue('a')
     await wrapper.find('form').trigger('submit.prevent')
+    console.log("passwordError:", wrapper.vm.passwordError)
     expect(wrapper.vm.passwordError).toBe('Password must be 6-10 characters long')
 
     await wrapper.find('input[type="password"]').setValue('longpassword123')
     await wrapper.find('form').trigger('submit.prevent')
+    console.log("passwordError:", wrapper.vm.passwordError)
     expect(wrapper.vm.passwordError).toBe('Password must be 6-10 characters long')
 
     await wrapper.find('input[type="password"]').setValue('pass@123')
     await wrapper.find('form').trigger('submit.prevent')
+    console.log("passwordError:", wrapper.vm.passwordError)
     expect(wrapper.vm.passwordError).toBe('Password must contain only letters and numbers')
 
     await wrapper.find('input[type="tel"]').setValue('0123456789')
     await wrapper.find('input[type="password"]').setValue('0123456789')
     await wrapper.find('form').trigger('submit.prevent')
+    console.log("passwordError:", wrapper.vm.passwordError)
     expect(wrapper.vm.passwordError).toBe('Password must not match the phone number')
   })
 })

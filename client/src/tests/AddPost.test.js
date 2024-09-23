@@ -41,7 +41,10 @@ describe('AddPost Component', () => {
         await input.trigger('change')
 
         await wrapper.find('textarea').setValue('Test post content')
-        await wrapper.find('select').setValue('happy')
+        
+        // Simulate clicking the status button
+        const statusButton = wrapper.findAll('button').filter(button => button.text() === 'Happy')[0]
+        await statusButton.trigger('click')
 
         axios.post.mockResolvedValue({
             data: { code: '1000', message: 'OK', data: { id: '123', url: 'http://example.com/post/123' } }
