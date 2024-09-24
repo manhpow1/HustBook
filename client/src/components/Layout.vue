@@ -42,10 +42,9 @@
                   <router-link to="/settings" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
                     Settings
                   </router-link>
-                  <button @click="handleLogout"
-                    class="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                  <LogoutButton @logout-success="handleLogoutSuccess" :onLogoutSuccess="onLogoutSuccess">
                     Sign Out
-                  </button>
+                  </LogoutButton>
                 </div>
               </div>
             </template>
@@ -57,6 +56,10 @@
               <router-link to="/signup"
                 class="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded transition duration-300">
                 Sign Up
+              </router-link>
+              <router-link to="/get-verify-code"
+                class="bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-2 px-4 rounded transition duration-300">
+                Get Verification Code
               </router-link>
             </template>
           </div>
@@ -130,13 +133,10 @@
 
 <script setup>
 import { ref } from 'vue'
-import { useUserState } from '../store/user-state'
 import { useRouter } from 'vue-router'
-import axios from 'axios'
 import { HomeIcon, UserIcon, UsersIcon, MessageCircleIcon, SearchIcon, MenuIcon, XIcon, FacebookIcon, TwitterIcon, InstagramIcon } from 'lucide-vue-next'
-import { API_ENDPOINTS } from '../config/api'
+import LogoutButton from './Logout.vue'
 
-const { isLoggedIn, logout } = useUserState()
 const router = useRouter()
 
 const showUserMenu = ref(false)
@@ -157,17 +157,12 @@ const toggleMobileMenu = () => {
   showMobileMenu.value = !showMobileMenu.value
 }
 
-const handleLogout = async () => {
-  try {
-    const token = localStorage.getItem('token')
-    await axios.post(API_ENDPOINTS.LOGOUT, null, {
-      headers: { Authorization: `Bearer ${token}` }
-    })
-    logout()
-    router.push('/login')
-  } catch (error) {
-    console.error('Logout failed:', error)
-  }
+const handleLogoutSuccess = () => {
+  console.log('User logged out successfully')
+}
+
+const onLogoutSuccess = () => {
+  router.push('/login')
 }
 
 </script>

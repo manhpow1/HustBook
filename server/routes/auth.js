@@ -8,6 +8,7 @@ const upload = multer({ dest: 'uploads/' });
 const { v4: uuidv4 } = require('uuid');
 
 const generateDeviceToken = () => uuidv4();
+console.log("JWT_SECRET first 5 characters:", process.env.JWT_SECRET.substring(0, 5));
 
 router.post("/login", async (req, res) => {
     try {
@@ -57,9 +58,9 @@ router.post("/login", async (req, res) => {
                 id: userRecord.uid,
                 username: userData.username || "User" + userRecord.uid.substring(0, 4),
                 token: token,
+                deviceToken: deviceToken,  // Make sure this is included
                 avatar: userData.avatar || "http://example.com/default-avatar.jpg",
-                active: userData.active || "1",
-                deviceToken: deviceToken
+                active: userData.active || "1"
             },
         });
     } catch (error) {
@@ -138,6 +139,7 @@ router.post("/signup", async (req, res) => {
             process.env.JWT_SECRET,
             { expiresIn: '1h' }
         );
+        console.log("Generated token first 20 characters:", token.substring(0, 20));
 
         res.status(200).json({
             code: "1000",
@@ -234,7 +236,6 @@ router.post("/get_verify_code", async (req, res) => {
 router.post("/check_verify_code", async (req, res) => {
     try {
         const { phonenumber, code } = req.body;
-
         // Validate input
         if (!phonenumber || !code) {
             return res.status(400).json({ code: "1002", message: "Parameter is not enough" });
@@ -268,13 +269,17 @@ router.post("/check_verify_code", async (req, res) => {
 
         // Generate a new token
         const token = jwt.sign(
-            { uid: userDoc.id, phone: userData.phoneNumber },
+            { uid: userDoc.id, phone: phonenumber },
             process.env.JWT_SECRET,
             { expiresIn: '1h' }
         );
+        const deviceToken = jwt.sign({ uid: userDoc.id }, process.env.JWT_SECRET, { expiresIn: '30d' });
 
         // Update user as verified
-        await userDoc.ref.update({ isVerified: true });
+        await userDoc.ref.update({
+            isVerified: true,
+            deviceToken: deviceToken
+        });
 
         res.status(200).json({
             code: "1000",
@@ -282,6 +287,7 @@ router.post("/check_verify_code", async (req, res) => {
             data: {
                 id: userDoc.id,
                 token: token,
+                deviceToken: deviceToken,
                 active: userData.active || "1"
             }
         });
@@ -295,23 +301,37 @@ router.post("/check_verify_code", async (req, res) => {
 router.get("/check", async (req, res) => {
     try {
         const token = req.headers.authorization?.split(' ')[1];
+        const deviceToken = req.headers['x-device-token'];
 
-        if (!token) {
+        console.log("Received headers:", req.headers);  // Add this line
+        console.log("Received token:", token);
+        console.log("Received device token:", deviceToken);
+
+        if (!token || !deviceToken) {
+            console.log("No token or device token provided");
             return res.json({ isAuthenticated: false });
         }
 
         // Verify the token
-        const decodedToken = jwt.verify(token, process.env.JWT_SECRET);
-        const userId = decodedToken.uid;
+        try {
+            const decodedToken = jwt.verify(token, process.env.JWT_SECRET);
+            console.log("Decoded token:", decodedToken);
+            const userId = decodedToken.uid;
 
-        // Check if the user exists in the database
-        const userDoc = await db.collection("users").doc(userId).get();
+            // Check if the user exists in the database and the device token matches
+            const userDoc = await db.collection("users").doc(userId).get();
 
-        if (!userDoc.exists) {
-            return res.json({ isAuthenticated: false });
+            if (!userDoc.exists || userDoc.data().deviceToken !== deviceToken) {
+                console.log("User not found or device token mismatch");
+                return res.json({ isAuthenticated: false });
+            }
+
+            console.log("User authenticated successfully");
+            res.json({ isAuthenticated: true });
+        } catch (jwtError) {
+            console.error("JWT verification error:", jwtError);
+            res.json({ isAuthenticated: false });
         }
-
-        res.json({ isAuthenticated: true });
     } catch (error) {
         console.error("Auth check error:", error);
         res.json({ isAuthenticated: false });
@@ -323,25 +343,20 @@ router.post("/change_info_after_signup", upload.single('avatar'), async (req, re
         const { token, username } = req.body;
         const avatar = req.file;
 
+        console.log('Received data:', { token, username, avatar: avatar ? 'File received' : 'No file' });
+
         if (!token || !username) {
+            console.log('Missing token or username');
             return res.status(400).json({ code: "1002", message: "Parameter is not enough" });
         }
 
-        if (username === userData.phoneNumber) {
-            return res.status(400).json({ code: "1004", message: "Username cannot be the same as the phone number" });
-        }
-        
         // Verify the token
         let decodedToken;
         try {
             decodedToken = jwt.verify(token, process.env.JWT_SECRET);
         } catch (error) {
+            console.log('Invalid token:', error.message);
             return res.status(401).json({ code: "9998", message: "Invalid token" });
-        }
-
-        // Validate username
-        if (!validateUsername(username)) {
-            return res.status(400).json({ code: "1004", message: "Invalid username format" });
         }
 
         const userId = decodedToken.uid;
@@ -349,10 +364,22 @@ router.post("/change_info_after_signup", upload.single('avatar'), async (req, re
         // Get user data
         const userDoc = await db.collection("users").doc(userId).get();
         if (!userDoc.exists) {
+            console.log('User not found:', userId);
             return res.status(404).json({ code: "9995", message: "User not found" });
         }
 
         const userData = userDoc.data();
+
+        if (username === userData.phoneNumber) {
+            console.log('Username same as phone number');
+            return res.status(400).json({ code: "1004", message: "Username cannot be the same as the phone number" });
+        }
+
+        // Validate username
+        if (!validateUsername(username)) {
+            console.log('Invalid username format');
+            return res.status(400).json({ code: "1004", message: "Invalid username format" });
+        }
 
         // Update user information
         const updateData = {
@@ -386,7 +413,7 @@ router.post("/change_info_after_signup", upload.single('avatar'), async (req, re
         });
     } catch (error) {
         console.error("Error in change_info_after_signup:", error);
-        res.status(500).json({ code: "1001", message: "Cannot connect to DB" });
+        res.status(500).json({ code: "1001", message: "Cannot connect to DB or internal server error" });
     }
 });
 

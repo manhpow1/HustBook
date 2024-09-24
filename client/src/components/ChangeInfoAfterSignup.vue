@@ -8,10 +8,11 @@
             <div>
                 <label for="username" class="block text-sm font-medium text-gray-700">Username</label>
                 <div class="mt-1 relative rounded-md shadow-sm">
-                    <input v-model="username" type="text" id="username" required :class="[
-                        'block w-full pr-10 border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm',
-                        { 'border-red-300': usernameError }
-                    ]" placeholder="Enter your username" />
+                    <input v-model="username" type="text" id="username" name="username" autocomplete="username" required
+                        :class="[
+                            'block w-full pr-10 border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm',
+                            { 'border-red-300': usernameError }
+                        ]" placeholder="Enter your username" />
                     <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
                         <CheckCircleIcon v-if="!usernameError && username" class="h-5 w-5 text-green-500" />
                         <XCircleIcon v-if="usernameError" class="h-5 w-5 text-red-500" />
@@ -21,7 +22,7 @@
             </div>
 
             <div>
-                <label for="avatar" class="block text-sm font-medium text-gray-700">Avatar</label>
+                <label for="avatar-upload" class="block text-sm font-medium text-gray-700">Avatar</label>
                 <div class="mt-1 flex items-center space-x-4">
                     <div v-if="avatarPreview" class="flex-shrink-0">
                         <img :src="avatarPreview" alt="Avatar preview" class="h-16 w-16 rounded-full object-cover" />
@@ -29,8 +30,8 @@
                     <label for="avatar-upload"
                         class="cursor-pointer bg-white py-2 px-3 border border-gray-300 rounded-md shadow-sm text-sm leading-4 font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
                         <span>{{ avatar ? 'Change' : 'Upload' }}</span>
-                        <input id="avatar-upload" type="file" @change="handleFileChange" accept="image/*"
-                            class="sr-only" />
+                        <input id="avatar-upload" name="avatar-upload" type="file" @change="handleFileChange"
+                            accept="image/*" class="sr-only" />
                     </label>
                     <button v-if="avatar" type="button" @click="removeAvatar"
                         class="text-sm text-red-600 hover:text-red-500">
@@ -73,9 +74,9 @@
 import { ref, watch, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useUserState } from '../store/user-state'
-import axios from 'axios'
 import { API_ENDPOINTS } from '../config/api'
 import { UserPlusIcon, CheckCircleIcon, XCircleIcon, LoaderIcon } from 'lucide-vue-next'
+import api from '../services/api'
 
 const router = useRouter()
 const { token } = useUserState()
@@ -181,44 +182,50 @@ const handleSubmit = async () => {
     }
 
     try {
-        const response = await axios.post(API_ENDPOINTS.CHANGE_INFO_AFTER_SIGNUP, formData, {
+        const formData = new FormData();
+        formData.append('token', token.value);
+        formData.append('username', username.value);
+        if (avatar.value) {
+            formData.append('avatar', avatar.value);
+        }
+
+        const response = await api.post(API_ENDPOINTS.CHANGE_INFO_AFTER_SIGNUP, formData, {
             headers: {
                 'Content-Type': 'multipart/form-data',
-                'Authorization': `Bearer ${token.value}`
             }
         })
 
         if (response.data.code === '1000') {
             if (response.data.data.is_blocked) {
-                errorMessage.value = 'Your account has been blocked'
-                router.push({ name: 'Login' })
+                errorMessage.value = 'Your account has been blocked';
+                router.push({ name: 'Login' });
             } else {
-                successMessage.value = 'Profile updated successfully!'
+                successMessage.value = 'Profile updated successfully!';
                 setTimeout(() => {
-                    router.push({ name: 'Home' })
-                }, 2000)
+                    router.push({ name: 'Home' });
+                }, 2000);
             }
         } else {
-            errorMessage.value = response.data.message
+            errorMessage.value = response.data.message;
         }
     } catch (error) {
-        console.error('Error updating profile:', error)
+        console.error('Error updating profile:', error);
         if (error.response?.data?.code === '9998') {
-            errorMessage.value = 'Invalid token'
-            router.push({ name: 'Login' })
+            errorMessage.value = 'Invalid token';
+            router.push({ name: 'Login' });
         } else if (error.response?.data?.code === '1004') {
-            errorMessage.value = 'Invalid username format'
+            errorMessage.value = 'Invalid username format';
         } else if (error.response?.data?.code === '1006') {
-            errorMessage.value = 'File upload failed. Please try again or proceed without an avatar.'
+            errorMessage.value = 'File upload failed. Please try again or proceed without an avatar.';
         } else if (error.request) {
-            errorMessage.value = 'Network error. Please check your internet connection and try again.'
+            errorMessage.value = 'Network error. Please check your internet connection and try again.';
         } else {
-            errorMessage.value = error.response?.data?.message || 'An error occurred while updating your profile'
+            errorMessage.value = error.response?.data?.message || 'An error occurred while updating your profile';
         }
     } finally {
-        isLoading.value = false
+        isLoading.value = false;
     }
-}
+};
 
 const continueWithoutAvatar = () => {
     removeAvatar()

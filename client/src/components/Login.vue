@@ -171,7 +171,7 @@ export default {
 
         if (response.data.code === "1000") {
           loginSuccess.value = true
-          login(response.data.data.token)
+          login(response.data.data.token, response.data.data.deviceToken) // Pass both token and deviceToken
           setTimeout(() => {
             router.push('/')
           }, 2000)

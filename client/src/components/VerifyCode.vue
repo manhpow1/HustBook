@@ -18,10 +18,11 @@
                 <p v-if="phoneError" class="mt-2 text-sm text-red-600">{{ phoneError }}</p>
             </div>
             <div>
-                <label for="code" class="block text-sm font-medium text-gray-700">Verification Code</label>
+                <label for="verification-code" class="block text-sm font-medium text-gray-700">Verification Code</label>
                 <div class="mt-1 flex justify-between">
                     <input v-for="(digit, index) in codeDigits" :key="index" v-model="codeDigits[index]" type="text"
-                        :id="`code-${index}`" maxlength="1"
+                        :id="index === 0 ? 'verification-code' : `code-${index}`"
+                        :aria-label="`Digit ${index + 1} of verification code`" maxlength="1"
                         class="w-12 h-12 text-center text-2xl border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500"
                         :class="{ 'border-red-500': codeError }" @input="onCodeInput(index)"
                         @keydown="onCodeKeydown($event, index)" ref="codeInputs" />
@@ -60,6 +61,7 @@ import axios from 'axios'
 import { API_ENDPOINTS } from '../config/api'
 import { ShieldCheckIcon, PhoneIcon, LoaderIcon, CheckCircleIcon, XCircleIcon } from 'lucide-vue-next'
 import { watch } from 'vue'
+import api from '../services/api'
 
 const props = defineProps({
     initialPhoneNumber: {
@@ -141,18 +143,18 @@ const handleSubmit = async () => {
     isLoading.value = true
 
     try {
-        const response = await axios.post(API_ENDPOINTS.CHECK_VERIFY_CODE, {
+        const response = await api.post(API_ENDPOINTS.CHECK_VERIFY_CODE, {
             phonenumber: phonenumber.value,
             code: codeDigits.value.join('')
         })
 
         if (response.data.code === '1000') {
+            const { token, deviceToken } = response.data.data
+            login(token, deviceToken)
+            emit('verification-success', token, deviceToken)
             successMessage.value = 'Verification successful!'
-            login(response.data.data.token)
-            emit('verification-success')
-            //setTimeout(() => router.push('/'), 1500)
         } else {
-            handleErrorResponse(response.data)
+            errorMessage.value = response.data.message || 'Verification failed'
         }
     } catch (error) {
         console.error('Verification error:', error)

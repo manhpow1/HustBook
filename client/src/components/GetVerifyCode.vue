@@ -40,9 +40,9 @@
 
 <script setup>
 import { ref, computed } from 'vue'
-import axios from 'axios'
 import { ShieldCheckIcon, PhoneIcon, LoaderIcon, CheckCircleIcon, XCircleIcon, ClockIcon } from 'lucide-vue-next'
 import { API_ENDPOINTS } from '../config/api';
+import api from '../services/api'
 
 const phonenumber = ref('')
 const phoneError = ref('')
@@ -92,7 +92,7 @@ const handleSubmit = async () => {
 
     isLoading.value = true
     try {
-        const response = await axios.post(API_ENDPOINTS.GET_VERIFY_CODE, { phonenumber: phonenumber.value })
+        const response = await api.post(API_ENDPOINTS.GET_VERIFY_CODE, { phonenumber: phonenumber.value })
 
         if (response.data.code === '1000') {
             successMessage.value = `Verification code sent successfully. (Code: ${response.data.data.verifyCode})`

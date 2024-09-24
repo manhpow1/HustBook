@@ -76,6 +76,7 @@ import { useUserState } from '../store/user-state'
 import AddPost from '../components/AddPost.vue'
 import axios from 'axios'
 import { LoaderIcon, ThumbsUpIcon, MessageCircleIcon } from 'lucide-vue-next'
+import api from '../services/api'
 
 const { isLoggedIn, token } = useUserState()
 const posts = ref([])
@@ -91,8 +92,7 @@ const fetchPosts = async () => {
   error.value = null
 
   try {
-    const response = await axios.get('http://localhost:3000/api/posts/get_list_posts', {
-      headers: { Authorization: `Bearer ${token.value}` },
+    const response = await api.get('/posts/get_list_posts', {
       params: { page: page.value, limit: 10 }
     })
 
@@ -125,9 +125,7 @@ const isImage = (url) => {
 
 const likePost = async (postId) => {
   try {
-    await axios.post(`http://localhost:3000/api/posts/like`, { id: postId }, {
-      headers: { Authorization: `Bearer ${token.value}` }
-    })
+    await api.post(`/posts/like`, { id: postId })
     const post = posts.value.find(p => p.id === postId)
     if (post) {
       post.isLiked = !post.isLiked

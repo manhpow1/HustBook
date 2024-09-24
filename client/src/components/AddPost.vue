@@ -98,9 +98,9 @@
 import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useUserState } from '../store/user-state'
-import axios from 'axios'
 import { PencilIcon, UploadCloudIcon, XIcon, LoaderIcon, CheckCircleIcon, XCircleIcon, SmileIcon, FrownIcon, ZapIcon, AngryIcon, MehIcon, HeartIcon } from 'lucide-vue-next'
 import { API_ENDPOINTS } from '../config/api'
+import api from '../services/api'
 
 const router = useRouter()
 const { token } = useUserState()
@@ -205,10 +205,9 @@ const submitPost = async () => {
     files.value.forEach((file) => formData.append("files", file))
 
     try {
-        const response = await axios.post(API_ENDPOINTS.ADD_POST, formData, {
+        const response = await api.post(API_ENDPOINTS.ADD_POST, formData, {
             headers: {
-                'Content-Type': 'multipart/form-data',
-                'Authorization': `Bearer ${token.value}`
+                'Content-Type': 'multipart/form-data'
             }
         })
 

@@ -6,6 +6,7 @@ import GetVerifyCode from '../components/GetVerifyCode.vue'
 import VerifyCode from '../components/VerifyCode.vue'
 import ChangeInfoAfterSignup from '../components/ChangeInfoAfterSignup.vue'
 import SignUp from '../components/SignUp.vue'
+import { useUserState } from '../store/user-state'
 
 const routes = [
     {
@@ -39,12 +40,7 @@ const routes = [
         component: Login
     },
     {
-        path: '/logout',
-        name: 'Logout',
-        component: Logout
-    },
-    {
-        path: '/get_verify_code',
+        path: '/get-verify-code',
         name: 'GetVerifyCode',
         component: GetVerifyCode
     },
@@ -64,6 +60,32 @@ const routes = [
 const router = createRouter({
     history: createWebHistory(),
     routes
+})
+
+router.beforeEach(async (to, from, next) => {
+    console.log("Navigation guard triggered");
+    console.log("Navigating to:", to.path);
+
+    const { checkAuth, isLoggedIn } = useUserState();
+
+    const publicPages = ['/', '/login', '/signup', '/get-verify-code', '/verify-code'];
+    const authRequired = !publicPages.includes(to.path);
+
+    console.log("Auth required:", authRequired);
+    console.log("Current isLoggedIn state:", isLoggedIn.value);
+
+    if (authRequired) {
+        await checkAuth();
+        console.log("After checkAuth - isLoggedIn:", isLoggedIn.value);
+
+        if (!isLoggedIn.value) {
+            console.log("User not authenticated, redirecting to login");
+            return next('/login');
+        }
+    }
+
+    console.log("Proceeding with navigation");
+    next();
 })
 
 export default router

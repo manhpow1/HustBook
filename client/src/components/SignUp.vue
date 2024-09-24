@@ -252,10 +252,18 @@ const handleSignup = async () => {
   }
 }
 
-const handleVerificationSuccess = (token) => {
-  login(token)
-  currentStep.value = 'complete'
-  error.value = ''
+const handleVerificationSuccess = (token, deviceToken) => {
+  console.log("Verification successful. Token:", token);
+  console.log("Device Token:", deviceToken);
+
+  if (token && deviceToken) {
+    login(token, deviceToken); // Make sure to pass both token and deviceToken
+    currentStep.value = 'complete';
+    error.value = '';
+  } else {
+    console.error("Token or deviceToken is missing");
+    error.value = "Authentication failed. Please try again.";
+  }
 }
 
 const handleVerificationError = (errorMessage) => {
@@ -263,6 +271,9 @@ const handleVerificationError = (errorMessage) => {
 }
 
 const proceedToCompleteProfile = () => {
-  router.push('/complete-profile')
+  console.log("Attempting to navigate to complete profile");
+  console.log("Current token:", localStorage.getItem('token'));
+  console.log("Current device token:", localStorage.getItem('deviceToken'));
+  router.push('/complete-profile');
 }
 </script>
