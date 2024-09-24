@@ -52,15 +52,24 @@
             </div>
 
             <div>
-                <label for="status" class="block text-sm font-medium text-gray-700 mb-2">
+                <label for="status-select" class="block text-sm font-medium text-gray-700 mb-2">
                     How are you feeling?
                 </label>
-                <div class="grid grid-cols-3 sm:grid-cols-6 gap-4">
+                <select id="status-select" v-model="status"
+                    class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md">
+                    <option value="">Select a status</option>
+                    <option v-for="option in statusOptions" :key="option.value" :value="option.value">
+                        {{ option.label }}
+                    </option>
+                </select>
+                <div class="mt-2 grid grid-cols-3 sm:grid-cols-6 gap-4">
                     <button v-for="option in statusOptions" :key="option.value" type="button"
                         @click="status = option.value"
                         class="flex flex-col items-center justify-center p-3 rounded-lg border-2 transition duration-300 ease-in-out"
-                        :class="status === option.value ? 'border-indigo-600 bg-indigo-50' : 'border-gray-200 hover:border-indigo-300'">
-                        <component :is="option.icon" class="w-8 h-8 mb-2" :class="option.iconColor" />
+                        :class="status === option.value ? 'border-indigo-600 bg-indigo-50' : 'border-gray-200 hover:border-indigo-300'"
+                        :aria-label="`Select ${option.label} status`" :aria-pressed="status === option.value">
+                        <component :is="option.icon" class="w-8 h-8 mb-2" :class="option.iconColor"
+                            aria-hidden="true" />
                         <span class="text-sm font-medium text-gray-700">{{ option.label }}</span>
                     </button>
                 </div>
