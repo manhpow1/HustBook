@@ -103,7 +103,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onBeforeUnmount, watch, defineExpose } from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import ErrorBoundary from './ErrorBoundary.vue'
 import UnsavedChangesModal from './UnsavedChangesModal.vue'
@@ -111,7 +111,7 @@ import { useUserState } from '../store/user-state'
 import { PencilIcon, UploadCloudIcon, XIcon, LoaderIcon, CheckCircleIcon, XCircleIcon, SmileIcon } from 'lucide-vue-next'
 import { API_ENDPOINTS } from '../config/api'
 import apiService from '../services/api'
-import { logError, logInfo, logWarning } from '../services/logging'
+import logger from '../services/logging'
 
 const router = useRouter()
 const showUnsavedChangesModal = ref(false)
@@ -213,41 +213,29 @@ const handleFileUpload = (event) => {
         const uploadedFile = event.target.files[0]
 
         if (!uploadedFile) {
-            logInfo('No file selected')
+            logger.info('No file selected')
             return
         }
 
         if (previewUrls.value.length >= 4) {
             fileError.value = "You can upload a maximum of 4 images"
-            logWarning('Max image limit reached', { currentCount: previewUrls.value.length })
-            return
-        }
-
-        if (uploadedFile.size > MAX_FILE_SIZE) {
-            fileError.value = "File size is too big (max 5MB for images, 10MB for videos)"
-            logWarning('File size too large', { size: uploadedFile.size, maxSize: MAX_FILE_SIZE })
-            return
-        }
-
-        if (!uploadedFile.type.startsWith("image/") && !uploadedFile.type.startsWith("video/")) {
-            fileError.value = "Only image and video files are allowed"
-            logWarning('Invalid file type', { type: uploadedFile.type })
+            logger.warn('Max image limit reached', { currentCount: previewUrls.value.length })
             return
         }
 
         if (uploadedFile.type.startsWith("video/")) {
             if (uploadedFile.size > 10 * 1024 * 1024) {
-                fileError.value = "File size is too big (max 10MB for videos)"
-                logWarning('Video file size too large', { size: uploadedFile.size, maxSize: 10 * 1024 * 1024 })
+                fileError.value = "Video duration should be less than 60 seconds and size should be less than 10MB"
+                logger.warn('Video file size too large', { size: uploadedFile.size, maxSize: 10 * 1024 * 1024 })
                 return
             }
 
             const video = document.createElement("video")
             video.preload = "metadata"
             video.onloadedmetadata = () => {
-                if (video.duration > 10) {
-                    fileError.value = "Video duration is too long (max 10 seconds)"
-                    logWarning('Video duration too long', { duration: video.duration })
+                if (video.duration > 60) {
+                    fileError.value = "Video duration should be less than 60 seconds and size should be less than 10MB"
+                    logger.warn('Video duration too long', { duration: video.duration })
                 } else {
                     processFile(uploadedFile)
                 }
@@ -255,19 +243,24 @@ const handleFileUpload = (event) => {
             }
             video.onerror = () => {
                 fileError.value = "Error processing video file"
-                logError('Error processing video file', { fileName: uploadedFile.name })
+                logger.error('Error processing video file', { fileName: uploadedFile.name })
                 URL.revokeObjectURL(video.src)
             }
             video.src = URL.createObjectURL(uploadedFile)
         } else if (uploadedFile.type.startsWith("image/")) {
+            if (uploadedFile.size > 5 * 1024 * 1024) {
+                fileError.value = "File size is too big (max 5MB for images, 10MB for videos)"
+                logger.warn('Image file size too large', { size: uploadedFile.size, maxSize: 5 * 1024 * 1024 })
+                return
+            }
             processFile(uploadedFile)
+        } else {
+            fileError.value = "Only image and video files are allowed"
+            logger.warn('Invalid file type', { type: uploadedFile.type })
         }
-
-        fileError.value = ""
-        logInfo('File upload initiated', { fileName: uploadedFile.name, fileType: uploadedFile.type, fileSize: uploadedFile.size })
     } catch (error) {
-        logError('Error in handleFileUpload', error)
-        errorMessage.value = 'An error occurred while processing the file. Please try again.'
+        logger.error('Error in handleFileUpload', error)
+        fileError.value = "An error occurred while processing the file"
     }
 }
 
@@ -276,10 +269,10 @@ const processFile = (file) => {
     const reader = new FileReader()
     reader.onload = (e) => {
         previewUrls.value.push(e.target.result)
-        logInfo('File processed successfully', { fileName: file.name })
+        logger.info('File processed successfully', { fileName: file.name })
     }
     reader.onerror = (e) => {
-        logError('Error reading file', { fileName: file.name, error: e.target.error })
+        logger.error('Error reading file', { fileName: file.name, error: e.target.error })
         errorMessage.value = 'Error reading file. Please try again.'
     }
     reader.readAsDataURL(file)
@@ -337,13 +330,13 @@ const loadDraft = () => {
 const submitPost = async () => {
     if (files.value.length === 0 && description.value.trim() === '') {
         errorMessage.value = "Please add an image or write a description"
-        logWarning('Attempted to submit empty post')
+        logger.warn('Attempted to submit empty post')
         return
     }
 
     if (description.value.length > 500) {
         errorMessage.value = "Description cannot exceed 500 characters"
-        logWarning('Description too long', { length: description.value.length })
+        logger.warn('Description too long', { length: description.value.length })
         return
     }
 
@@ -364,7 +357,7 @@ const submitPost = async () => {
 
         if (response.data.code === '1000') {
             successMessage.value = 'Post created successfully!'
-            logInfo('Post created successfully', { postId: response.data.data.id })
+            logger.info('Post created successfully', { postId: response.data.data.id })
             description.value = ''
             status.value = ''
             files.value = []
@@ -373,10 +366,10 @@ const submitPost = async () => {
             router.push('/') // Navigate to home page after successful post
         } else {
             errorMessage.value = response.data.message || 'An error occurred while creating the post'
-            logWarning('Failed to create post', { responseCode: response.data.code, message: response.data.message })
+            logger.warn('Failed to create post', { responseCode: response.data.code, message: response.data.message })
         }
     } catch (error) {
-        logError('Error in submitPost', error)
+        logger.error('Error in submitPost', error)
         handleError(error)
     } finally {
         isLoading.value = false
@@ -384,9 +377,6 @@ const submitPost = async () => {
         uploadProgress.value = 0
     }
 }
-
-// Expose the handleRouteChange function to make it accessible to the router
-defineExpose({ handleRouteChange })
 
 onMounted(() => {
     window.addEventListener('beforeunload', handleBeforeUnload)
