@@ -76,7 +76,7 @@ import { useRouter } from 'vue-router'
 import { useUserState } from '../store/user-state'
 import { API_ENDPOINTS } from '../config/api'
 import { UserPlusIcon, CheckCircleIcon, XCircleIcon, LoaderIcon } from 'lucide-vue-next'
-import api from '../services/api'
+import apiService from '../services/api'
 
 const router = useRouter()
 const { token } = useUserState()
@@ -189,7 +189,7 @@ const handleSubmit = async () => {
             formData.append('avatar', avatar.value);
         }
 
-        const response = await api.post(API_ENDPOINTS.CHANGE_INFO_AFTER_SIGNUP, formData, {
+        const response = await apiService.post(API_ENDPOINTS.CHANGE_INFO_AFTER_SIGNUP, formData, {
             headers: {
                 'Content-Type': 'multipart/form-data',
             }

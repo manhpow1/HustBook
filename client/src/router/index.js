@@ -1,11 +1,8 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import Home from '../views/Home.vue'
 import Login from '../components/Login.vue'
-import Logout from '../components/Logout.vue'
-import GetVerifyCode from '../components/GetVerifyCode.vue'
-import VerifyCode from '../components/VerifyCode.vue'
-import ChangeInfoAfterSignup from '../components/ChangeInfoAfterSignup.vue'
 import SignUp from '../components/SignUp.vue'
+import AddPost from '../components/AddPost.vue'
 import { useUserState } from '../store/user-state'
 
 const routes = [
@@ -17,17 +14,20 @@ const routes = [
     {
         path: '/profile',
         name: 'Profile',
-        component: () => import('../views/Profile.vue')
+        component: () => import('../views/Profile.vue'),
+        meta: { requiresAuth: true }
     },
     {
         path: '/friends',
         name: 'Friends',
-        component: () => import('../views/Friends.vue')
+        component: () => import('../views/Friends.vue'),
+        meta: { requiresAuth: true }
     },
     {
         path: '/messages',
         name: 'Messages',
-        component: () => import('../views/Messages.vue')
+        component: () => import('../views/Messages.vue'),
+        meta: { requiresAuth: true }
     },
     {
         path: '/signup',
@@ -42,19 +42,26 @@ const routes = [
     {
         path: '/get-verify-code',
         name: 'GetVerifyCode',
-        component: GetVerifyCode
+        component: () => import('../components/GetVerifyCode.vue')
     },
     {
         path: '/verify-code/:verificationCode',
         name: 'VerifyCode',
-        component: VerifyCode,
+        component: () => import('../components/VerifyCode.vue'),
         props: true
     },
     {
         path: '/complete-profile',
         name: 'CompleteProfile',
-        component: ChangeInfoAfterSignup
+        component: () => import('../components/ChangeInfoAfterSignup.vue'),
+        meta: { requiresAuth: true }
     },
+    {
+        path: '/add-post',
+        name: 'AddPost',
+        component: AddPost,
+        meta: { requiresAuth: true }
+    }
 ]
 
 const router = createRouter({
@@ -62,30 +69,42 @@ const router = createRouter({
     routes
 })
 
+// Global navigation guard
 router.beforeEach(async (to, from, next) => {
-    console.log("Navigation guard triggered");
-    console.log("Navigating to:", to.path);
+    console.log("Global navigation guard triggered")
+    console.log("Navigating to:", to.path)
 
-    const { checkAuth, isLoggedIn } = useUserState();
+    const { checkAuth, isLoggedIn } = useUserState()
 
-    const publicPages = ['/', '/login', '/signup', '/get-verify-code', '/verify-code'];
-    const authRequired = !publicPages.includes(to.path);
+    const requiresAuth = to.matched.some(record => record.meta.requiresAuth)
 
-    console.log("Auth required:", authRequired);
-    console.log("Current isLoggedIn state:", isLoggedIn.value);
-
-    if (authRequired) {
-        await checkAuth();
-        console.log("After checkAuth - isLoggedIn:", isLoggedIn.value);
+    if (requiresAuth) {
+        await checkAuth()
+        console.log("After checkAuth - isLoggedIn:", isLoggedIn.value)
 
         if (!isLoggedIn.value) {
-            console.log("User not authenticated, redirecting to login");
-            return next('/login');
+            console.log("User not authenticated, redirecting to login")
+            next({ name: 'Login', query: { redirect: to.fullPath } })
+        } else {
+            next()
         }
+    } else {
+        next()
     }
+})
 
-    console.log("Proceeding with navigation");
-    next();
+// Navigation guard for AddPost component
+router.beforeResolve((to, from, next) => {
+    if (from.name === 'AddPost' && to.name !== 'AddPost') {
+        const addPostComponent = from.matched[0].instances.default
+        if (addPostComponent && addPostComponent.handleRouteChange) {
+            addPostComponent.handleRouteChange(to, from, next)
+        } else {
+            next()
+        }
+    } else {
+        next()
+    }
 })
 
 export default router

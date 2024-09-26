@@ -19,4 +19,60 @@ api.interceptors.request.use(config => {
     return config
 })
 
+const apiService = {
+    get(url, config = {}) {
+        return api.get(url, config)
+    },
+
+    post(url, data, config = {}) {
+        return api.post(url, data, config)
+    },
+
+    put(url, data, config = {}) {
+        return api.put(url, data, config)
+    },
+
+    delete(url, config = {}) {
+        return api.delete(url, config)
+    },
+
+    upload(url, formData, onUploadProgress) {
+        return api.post(url, formData, {
+            headers: {
+                'Content-Type': 'multipart/form-data'
+            },
+            onUploadProgress: progressEvent => {
+                const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total)
+                if (onUploadProgress) {
+                    onUploadProgress(percentCompleted)
+                }
+            }
+        })
+    }
+}
+
+// Error handling middleware
+api.interceptors.response.use(
+    response => response,
+    error => {
+        // Handle global errors here
+        if (error.response) {
+            // The request was made and the server responded with a status code
+            // that falls out of the range of 2xx
+            console.error('Response error:', error.response.data)
+            if (error.response.status === 401) {
+                // Handle unauthorized access
+                // For example, redirect to login page or refresh token
+            }
+        } else if (error.request) {
+            // The request was made but no response was received
+            console.error('Request error:', error.request)
+        } else {
+            // Something happened in setting up the request that triggered an Error
+            console.error('Error:', error.message)
+        }
+        return Promise.reject(error)
+    }
+)
+
 export default api

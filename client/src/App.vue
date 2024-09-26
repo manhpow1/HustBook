@@ -1,16 +1,12 @@
 <template>
-  <Layout>
-    <router-view></router-view>
-  </Layout>
+  <ErrorBoundary component="App">
+    <Layout>
+      <router-view></router-view>
+    </Layout>
+  </ErrorBoundary>
 </template>
 
-<script>
+<script setup>
 import Layout from './components/Layout.vue'
-
-export default {
-  name: 'App',
-  components: {
-    Layout
-  }
-}
+import ErrorBoundary from './components/ErrorBoundary.vue'
 </script>
