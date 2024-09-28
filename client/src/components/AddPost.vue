@@ -96,8 +96,7 @@
             </div>
         </transition>
 
-        <UnsavedChangesModal :model-value="showUnsavedChangesModal"
-            @update:model-value="showUnsavedChangesModal = $event" @save="saveChanges" @discard="discardChanges"
+        <UnsavedChangesModal v-model="showUnsavedChangesModal" @save="saveChanges" @discard="discardChanges"
             @cancel="cancelNavigation" />
     </div>
 </template>
@@ -191,6 +190,7 @@ const saveChanges = async () => {
         showUnsavedChangesModal.value = false
         pendingNavigation.value.next()
     }
+    showUnsavedChangesModal.value = false
 }
 
 const discardChanges = () => {

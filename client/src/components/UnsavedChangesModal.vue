@@ -1,8 +1,8 @@
 <template>
     <Teleport to="body">
         <Transition name="modal">
-            <div v-if="isOpen" class="fixed inset-0 z-50 overflow-y-auto" aria-labelledby="modal-title" role="dialog"
-                aria-modal="true">
+            <div v-if="modelValue" class="fixed inset-0 z-50 overflow-y-auto" aria-labelledby="modal-title"
+                role="dialog" aria-modal="true">
                 <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
                     <Transition name="modal-backdrop">
                         <div v-if="isOpen" class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity"
@@ -62,29 +62,29 @@ import { ref, onMounted, onUnmounted } from 'vue'
 import { AlertTriangleIcon } from 'lucide-vue-next'
 
 const props = defineProps({
-    isOpen: {
+    modelValue: {
         type: Boolean,
         default: false
     }
 })
 
-const emit = defineEmits(['save', 'discard', 'cancel', 'update:isOpen'])
+const emit = defineEmits(['update:modelValue', 'save', 'discard', 'cancel'])
 
 const cancelButtonRef = ref(null)
 
 const handleSave = () => {
     emit('save')
-    emit('update:isOpen', false)
+    emit('update:modelValue', false)
 }
 
 const handleDiscard = () => {
     emit('discard')
-    emit('update:isOpen', false)
+    emit('update:modelValue', false)
 }
 
 const handleCancel = () => {
     emit('cancel')
-    emit('update:isOpen', false)
+    emit('update:modelValue', false)
 }
 
 const handleBackdropClick = (event) => {

@@ -136,8 +136,10 @@ import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { HomeIcon, UserIcon, UsersIcon, MessageCircleIcon, SearchIcon, MenuIcon, XIcon, FacebookIcon, TwitterIcon, InstagramIcon } from 'lucide-vue-next'
 import LogoutButton from './Logout.vue'
+import { useUserState } from '../store/user-state'
 
 const router = useRouter()
+const { isLoggedIn } = useUserState()
 
 const showUserMenu = ref(false)
 const showMobileMenu = ref(false)

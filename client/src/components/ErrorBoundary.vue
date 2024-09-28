@@ -28,7 +28,7 @@
 <script setup>
 import { ref, onErrorCaptured } from 'vue'
 import { AlertCircleIcon } from 'lucide-vue-next'
-import { logError } from '../services/logging'
+import logger from '../services/logging'
 
 const props = defineProps({
     component: {
@@ -41,7 +41,7 @@ const error = ref(null)
 
 onErrorCaptured((err, component, info) => {
     error.value = err
-    logError(err, { component: props.component, info })
+    logger.error(err.message, { component: props.component, info, stack: err.stack })
     return false // Prevent the error from propagating further
 })
 
