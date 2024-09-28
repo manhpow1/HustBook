@@ -104,13 +104,13 @@
 <script setup>
 import { ref, computed, onMounted, onBeforeUnmount, watch } from 'vue'
 import { useRouter } from 'vue-router'
-import ErrorBoundary from './ErrorBoundary.vue'
-import UnsavedChangesModal from './UnsavedChangesModal.vue'
-import { useUserState } from '../store/user-state'
+import ErrorBoundary from '../shared/ErrorBoundary.vue'
+import UnsavedChangesModal from '../shared/UnsavedChangesModal.vue'
+import { useUserState } from '../../store/user-state'
 import { PencilIcon, UploadCloudIcon, XIcon, LoaderIcon, CheckCircleIcon, XCircleIcon, SmileIcon } from 'lucide-vue-next'
-import { API_ENDPOINTS } from '../config/api'
-import apiService from '../services/api'
-import logger from '../services/logging'
+import { API_ENDPOINTS } from '../../config/api'
+import apiService from '../../services/api'
+import logger from '../../services/logging'
 
 const router = useRouter()
 const showUnsavedChangesModal = ref(false)

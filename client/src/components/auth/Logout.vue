@@ -68,11 +68,11 @@
 
 <script setup>
 import { ref } from 'vue'
-import { useUserState } from '../store/user-state'
-import { API_ENDPOINTS } from '../config/api'
+import { useUserState } from '../../store/user-state'
+import { API_ENDPOINTS } from '../../config/api'
 import { LogOutIcon, LoaderIcon, CheckCircleIcon, AlertCircleIcon } from 'lucide-vue-next'
 import { Dialog, DialogPanel, DialogTitle, TransitionChild, TransitionRoot } from '@headlessui/vue'
-import api from '../services/api'
+import api from '../../services/api'
 
 const props = defineProps({
     onLogoutSuccess: {

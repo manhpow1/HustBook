@@ -73,10 +73,10 @@
 <script setup>
 import { ref, watch, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { useUserState } from '../store/user-state'
-import { API_ENDPOINTS } from '../config/api'
+import { useUserState } from '../../store/user-state'
+import { API_ENDPOINTS } from '../../config/api'
 import { UserPlusIcon, CheckCircleIcon, XCircleIcon, LoaderIcon } from 'lucide-vue-next'
-import apiService from '../services/api'
+import apiService from '../../services/api'
 
 const router = useRouter()
 const { token } = useUserState()

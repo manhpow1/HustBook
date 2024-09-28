@@ -7,6 +7,6 @@
 </template>
 
 <script setup>
-import Layout from './components/Layout.vue'
-import ErrorBoundary from './components/ErrorBoundary.vue'
+import Layout from './components/layout/Layout.vue'
+import ErrorBoundary from './components/shared/ErrorBoundary.vue'
 </script>

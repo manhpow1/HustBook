@@ -57,11 +57,11 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { useUserState } from '../store/user-state'
-import { API_ENDPOINTS } from '../config/api'
+import { useUserState } from '../../store/user-state'
+import { API_ENDPOINTS } from '../../config/api'
 import { ShieldCheckIcon, PhoneIcon, LoaderIcon, CheckCircleIcon, XCircleIcon } from 'lucide-vue-next'
 import { watch } from 'vue'
-import apiService from '../services/api'
+import apiService from '../../services/api'
 
 const props = defineProps({
     initialPhoneNumber: {

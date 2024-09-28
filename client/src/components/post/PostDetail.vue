@@ -112,11 +112,11 @@ import { ref, computed, onMounted, nextTick } from 'vue'
 import { useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import VirtualList from 'vue-virtual-scroll-list'
-import apiService from '../services/api'
+import apiService from '../../services/api'
 import { ThumbsUpIcon, MessageSquareIcon, ShareIcon, AlertCircleIcon, AlertTriangleIcon, LoaderIcon } from 'lucide-vue-next'
-import PostSkeleton from './PostSkeleton.vue'
-import CommentItem from './CommentItem.vue'
-import MarkdownEditor from './MarkdownEditor.vue'
+import PostSkeleton from '../shared/PostSkeleton.vue'
+import CommentItem from '../shared/CommentItem.vue'
+import MarkdownEditor from '../shared/MarkdownEditor.vue'
 
 const route = useRoute()
 const { t } = useI18n()

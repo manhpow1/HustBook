@@ -79,7 +79,7 @@
 <script setup>
 import { ref, onMounted, watch } from 'vue'
 import { useUserState } from '../store/user-state'
-import AddPost from '../components/AddPost.vue'
+import AddPost from '../components/post/AddPost.vue'
 import { LoaderIcon, ThumbsUpIcon, MessageCircleIcon } from 'lucide-vue-next'
 import apiService from '../services/api'
 

@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { mount, flushPromises } from '@vue/test-utils'
-import Logout from '../components/Logout.vue'
+import Logout from '../components/auth/Logout.vue'
 import axios from 'axios'
 import { useUserState } from '../store/user-state'
 import { createRouter, createMemoryHistory } from 'vue-router'

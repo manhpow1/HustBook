@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { mount, flushPromises } from '@vue/test-utils'
-import SignUp from '../components/SignUp.vue'
+import SignUp from '../components/auth/SignUp.vue'
 import axios from 'axios'
 import { createRouter, createWebHistory } from 'vue-router'
 

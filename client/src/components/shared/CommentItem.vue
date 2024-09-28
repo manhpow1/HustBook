@@ -83,8 +83,8 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ThumbsUpIcon } from 'lucide-vue-next'
-import { useUserStore } from '../store/user'
-import { formatDate, renderMarkdown } from '../utils/helpers'
+import { useUserStore } from '../../store/user'
+import { formatDate, renderMarkdown } from '../../utils/helpers'
 import { debounce } from 'lodash-es'
 
 const props = defineProps({

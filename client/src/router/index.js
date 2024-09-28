@@ -1,10 +1,10 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import Home from '../views/Home.vue'
-import Login from '../components/Login.vue'
-import SignUp from '../components/SignUp.vue'
-import AddPost from '../components/AddPost.vue'
+import Login from '../components/auth/Login.vue'
+import SignUp from '../components/auth/SignUp.vue'
+import AddPost from '../components/post/AddPost.vue'
 import { useUserState } from '../store/user-state'
-import PostDetail from '../components/PostDetail.vue'
+import PostDetail from '../components/post/PostDetail.vue'
 
 const routes = [
     {
@@ -43,18 +43,18 @@ const routes = [
     {
         path: '/get-verify-code',
         name: 'GetVerifyCode',
-        component: () => import('../components/GetVerifyCode.vue')
+        component: () => import('../components/auth/GetVerifyCode.vue')
     },
     {
         path: '/verify-code/:verificationCode',
         name: 'VerifyCode',
-        component: () => import('../components/VerifyCode.vue'),
+        component: () => import('../components/auth/VerifyCode.vue'),
         props: true
     },
     {
         path: '/complete-profile',
         name: 'CompleteProfile',
-        component: () => import('../components/ChangeInfoAfterSignup.vue'),
+        component: () => import('../components/user/ChangeInfoAfterSignup.vue'),
         meta: { requiresAuth: true }
     },
     {

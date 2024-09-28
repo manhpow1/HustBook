@@ -41,8 +41,8 @@
 <script setup>
 import { ref, computed } from 'vue'
 import { ShieldCheckIcon, PhoneIcon, LoaderIcon, CheckCircleIcon, XCircleIcon, ClockIcon } from 'lucide-vue-next'
-import { API_ENDPOINTS } from '../config/api';
-import apiService from '../services/api'
+import { API_ENDPOINTS } from '../../config/api';
+import apiService from '../../services/api'
 
 const phonenumber = ref('')
 const phoneError = ref('')

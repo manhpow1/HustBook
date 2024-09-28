@@ -64,8 +64,8 @@ import {
     BoldIcon, ItalicIcon, CodeIcon, ListIcon, LinkIcon, ImageIcon, QuoteIcon,
     UndoIcon, RedoIcon, SmileIcon, MaximizeIcon, MinimizeIcon
 } from 'lucide-vue-next'
-import { useUndoRedo } from '../composables/useUndoRedo'
-import { renderMarkdown } from '../utils/markdown'
+import { useUndoRedo } from '../../composables/useUndoRedo'
+import { renderMarkdown } from '../../utils/markdown'
 
 const props = defineProps({
     modelValue: {

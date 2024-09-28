@@ -1,10 +1,10 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { mount, flushPromises } from '@vue/test-utils'
-import AddPost from '../components/AddPost.vue'
+import AddPost from '../components/post/AddPost.vue'
 import apiService from '../services/api'
 import { useUserState } from '../store/user-state'
 import { createRouter, createMemoryHistory } from 'vue-router'
-import UnsavedChangesModal from '../components/UnsavedChangesModal.vue'
+import UnsavedChangesModal from '../components/shared/UnsavedChangesModal.vue'
 import logger from '../services/logging'
 import { nextTick } from 'vue'
 

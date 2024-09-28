@@ -28,7 +28,7 @@
 <script setup>
 import { ref, onErrorCaptured } from 'vue'
 import { AlertCircleIcon } from 'lucide-vue-next'
-import logger from '../services/logging'
+import logger from '../../services/logging'
 
 const props = defineProps({
     component: {

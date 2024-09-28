@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { mount, flushPromises } from '@vue/test-utils'
-import ChangeInfoAfterSignup from '../components/ChangeInfoAfterSignup.vue'
+import ChangeInfoAfterSignup from '../components/user/ChangeInfoAfterSignup.vue'
 import axios from 'axios'
 import { useRouter } from 'vue-router'
 import { useUserState } from '../store/user-state'

@@ -129,9 +129,9 @@
 <script setup>
 import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
-import { useUserState } from '../store/user-state'
+import { useUserState } from '../../store/user-state'
 import axios from 'axios'
-import { API_ENDPOINTS } from '../config/api'
+import { API_ENDPOINTS } from '../../config/api'
 import { PhoneIcon, LockIcon, CheckCircleIcon, XCircleIcon } from 'lucide-vue-next'
 import VerifyCode from './VerifyCode.vue'
 

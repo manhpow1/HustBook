@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { mount, flushPromises } from '@vue/test-utils'
-import Login from '../components/Login.vue'
+import Login from '../components/auth/Login.vue'
 import axios from 'axios'
 
 vi.mock('axios')

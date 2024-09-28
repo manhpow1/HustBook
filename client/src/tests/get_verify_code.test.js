@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { mount, flushPromises } from '@vue/test-utils'
-import GetVerifyCode from '../components/GetVerifyCode.vue'
+import GetVerifyCode from '../components/auth/GetVerifyCode.vue'
 import axios from 'axios'
 
 vi.mock('axios')

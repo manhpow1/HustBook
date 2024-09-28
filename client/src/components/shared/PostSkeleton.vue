@@ -90,7 +90,6 @@ const imageGridClass = computed(() => {
 }
 
 @keyframes pulse {
-
     0%,
     100% {
         background-color: var(--skeleton-start-color);
