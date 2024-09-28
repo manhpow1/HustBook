@@ -22,7 +22,7 @@
                 class="w-10 h-10 rounded-full mr-4">
               <div>
                 <p class="font-semibold text-gray-800">{{ post.userName }}</p>
-                <p class="text-sm text-gray-500">{{ formatDate(post.created) }}</p>
+                <p class="text-sm text-gray-500">{{ post.created }}</p>
               </div>
             </div>
             <p class="mb-4 text-gray-700">{{ post.described }}</p>
@@ -47,6 +47,12 @@
                 <MessageCircleIcon class="w-5 h-5 mr-1" />
                 <span>{{ post.comment }} {{ post.comment === 1 ? 'Comment' : 'Comments' }}</span>
               </button>
+            </div>
+            <div class="mt-4">
+              <router-link :to="{ name: 'PostDetail', params: { id: post.id } }"
+                class="text-indigo-600 hover:text-indigo-800 transition-colors duration-200">
+                View Full Post
+              </router-link>
             </div>
           </div>
           <div v-if="hasMorePosts" class="flex justify-center mt-4">
@@ -74,11 +80,10 @@
 import { ref, onMounted, watch } from 'vue'
 import { useUserState } from '../store/user-state'
 import AddPost from '../components/AddPost.vue'
-import axios from 'axios'
 import { LoaderIcon, ThumbsUpIcon, MessageCircleIcon } from 'lucide-vue-next'
 import apiService from '../services/api'
 
-const { isLoggedIn, token } = useUserState()
+const { isLoggedIn} = useUserState()
 const posts = ref([])
 const isLoading = ref(false)
 const error = ref(null)
@@ -114,22 +119,17 @@ const handlePostCreated = (newPost) => {
   posts.value.unshift(newPost)
 }
 
-const formatDate = (dateString) => {
-  const options = { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' }
-  return new Date(dateString).toLocaleDateString(undefined, options)
-}
-
 const isImage = (url) => {
   return url.match(/\.(jpeg|jpg|gif|png)$/) != null
 }
 
 const likePost = async (postId) => {
   try {
-    await apiService.post(`/posts/like`, { id: postId })
+    await apiService.likePost(postId)
     const post = posts.value.find(p => p.id === postId)
     if (post) {
       post.isLiked = !post.isLiked
-      post.like += post.isLiked ? 1 : -1
+      post.like = parseInt(post.like) + (post.isLiked ? 1 : -1)
     }
   } catch (err) {
     console.error('Error liking post:', err)
@@ -137,7 +137,8 @@ const likePost = async (postId) => {
 }
 
 const showComments = (postId) => {
-  // Implement comment functionality
+  // This function could be used to expand a comment section inline,
+  // or you could remove it if you're handling comments in the PostDetail view
   console.log(`Show comments for post ${postId}`)
 }
 

@@ -36,6 +36,35 @@ const apiService = {
         return api.delete(url, config)
     },
 
+    getPost(postId) {
+        return api.post('/posts/get_post', { id: postId })
+    },
+
+    likePost(postId) {
+        return api.post('/posts/like_post', { postId })
+    },
+
+    addComment(postId, content) {
+        return api.post('/posts/add_comment', { postId, content })
+    },
+
+    updateComment(id, data) {
+        return api.put(`/comments/${id}`, data)
+    },
+
+    deleteComment(id) {
+        return api.delete(`/comments/${id}`)
+    },
+
+    getComments(postId, lastCommentId, limit = 10) {
+        return api.get(`/posts/${postId}/comments`, {
+            params: {
+                last_id: lastCommentId,
+                limit
+            }
+        })
+    },
+
     upload(url, formData, onUploadProgress) {
         return api.post(url, formData, {
             headers: {
@@ -48,7 +77,7 @@ const apiService = {
                 }
             }
         })
-    }
+    },
 }
 
 // Error handling middleware
@@ -75,4 +104,4 @@ api.interceptors.response.use(
     }
 )
 
-export default api
+export default apiService

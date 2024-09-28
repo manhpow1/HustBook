@@ -4,6 +4,7 @@ import Login from '../components/Login.vue'
 import SignUp from '../components/SignUp.vue'
 import AddPost from '../components/AddPost.vue'
 import { useUserState } from '../store/user-state'
+import PostDetail from '../components/PostDetail.vue'
 
 const routes = [
     {
@@ -60,6 +61,12 @@ const routes = [
         path: '/add-post',
         name: 'AddPost',
         component: AddPost,
+        meta: { requiresAuth: true }
+    },
+    {
+        path: '/post/:id',
+        name: 'PostDetail',
+        component: PostDetail,
         meta: { requiresAuth: true }
     }
 ]
