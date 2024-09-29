@@ -69,6 +69,7 @@ export function useUserState() {
         localStorage.removeItem('token')
         localStorage.removeItem('deviceToken')
         isAuthenticated.value = false
+        console.log("Logout complete");
     }
 
     return {

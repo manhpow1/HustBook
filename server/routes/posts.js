@@ -173,7 +173,7 @@ router.post('/add_post', verifyToken, upload.array('files', 4), async (req, res)
 
     // Validate input
     if (!files || files.length === 0) {
-      return res.status(400).json({ code: '1002', message: 'At least one image or video is required' });
+      return res.status(400).json({ code: '1002', message: 'Parameter is not enough' });
     }
 
     if (files.length > 4) {
@@ -181,16 +181,13 @@ router.post('/add_post', verifyToken, upload.array('files', 4), async (req, res)
     }
 
     // Check if all files are valid
-    const invalidFile = files.find(file => !validateFileType(file));
-    if (invalidFile) {
-      return res.status(400).json({ code: '1003', message: 'Invalid file type' });
-    }
+    const isImage = (file) => file.mimetype.startsWith('image/');
+    const isVideo = (file) => file.mimetype.startsWith('video/');
+    const allImages = files.every(isImage);
+    const allVideos = files.every(isVideo);
 
-    // Check if there's a mix of images and videos
-    const hasImage = files.some(file => file.mimetype.startsWith('image/'));
-    const hasVideo = files.some(file => file.mimetype.startsWith('video/'));
-    if (hasImage && hasVideo) {
-      return res.status(400).json({ code: '1003', message: 'Cannot mix images and videos in the same post' });
+    if (!allImages && !allVideos) {
+      return res.status(400).json({ code: '1003', message: 'Invalid file type or mix of images and videos' });
     }
 
     // Generate a unique ID for the post

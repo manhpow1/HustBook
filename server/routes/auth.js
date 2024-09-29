@@ -30,6 +30,12 @@ router.post("/login", async (req, res) => {
                 .json({ code: "1004", message: "Invalid phone number format" });
         }
 
+        if (!deviceId) {
+            return res
+                .status(400)
+                .json({ code: "1002", message: "Device ID is required" });
+        }
+
         // Check if user exists in Authentication
         let userRecord = await auth.getUserByPhoneNumber("+84" + phonenumber.substring(1));
         const userDoc = await db.collection("users").doc(userRecord.uid).get();
@@ -43,7 +49,10 @@ router.post("/login", async (req, res) => {
         const deviceToken = generateDeviceToken();
 
         // Update the deviceToken in the database
-        await db.collection("users").doc(userRecord.uid).update({ deviceToken });
+        await db.collection("users").doc(userRecord.uid).update({
+            deviceToken,
+            deviceId
+        });
 
         const token = jwt.sign(
             { uid: userRecord.uid, phone: userRecord.phoneNumber },

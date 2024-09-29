@@ -1,5 +1,6 @@
 import axios from 'axios'
 import { useUserState } from '../store/user-state'
+import { API_ENDPOINTS } from '../config/api'
 
 const api = axios.create({
     baseURL: import.meta.env.VUE_APP_API_BASE_URL || 'http://localhost:3000/api'
@@ -37,27 +38,27 @@ const apiService = {
     },
 
     getPost(postId) {
-        return api.post('/posts/get_post', { id: postId })
+        return api.post(API_ENDPOINTS.GET_POST, { id: postId })
     },
 
     likePost(postId) {
-        return api.post('/posts/like_post', { postId })
+        return api.post(API_ENDPOINTS.LIKE_POST, { postId })
     },
 
     addComment(postId, content) {
-        return api.post('/posts/add_comment', { postId, content })
+        return api.post(API_ENDPOINTS.ADD_COMMENT, { postId, content })
     },
 
     updateComment(id, data) {
-        return api.put(`/comments/${id}`, data)
+        return api.put(`${API_ENDPOINTS.UPDATE_COMMENT}/${id}`, data)
     },
 
     deleteComment(id) {
-        return api.delete(`/comments/${id}`)
+        return api.delete(`${API_ENDPOINTS.DELETE_COMMENT}/${id}`)
     },
 
     getComments(postId, lastCommentId, limit = 10) {
-        return api.get(`/posts/${postId}/comments`, {
+        return api.get(`${API_ENDPOINTS.GET_COMMENTS}/${postId}/comments`, {
             params: {
                 last_id: lastCommentId,
                 limit
@@ -65,16 +66,16 @@ const apiService = {
         })
     },
 
-    upload(url, formData, onUploadProgress) {
-        return api.post(url, formData, {
+    upload: async (url, formData, onUploadProgress) => {
+        const { token } = useUserState()
+        return axios.post(url, formData, {
             headers: {
-                'Content-Type': 'multipart/form-data'
+                'Content-Type': 'multipart/form-data',
+                'Authorization': `Bearer ${token.value}`
             },
-            onUploadProgress: progressEvent => {
+            onUploadProgress: (progressEvent) => {
                 const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total)
-                if (onUploadProgress) {
-                    onUploadProgress(percentCompleted)
-                }
+                onUploadProgress(percentCompleted)
             }
         })
     },
@@ -86,18 +87,13 @@ api.interceptors.response.use(
     error => {
         // Handle global errors here
         if (error.response) {
-            // The request was made and the server responded with a status code
-            // that falls out of the range of 2xx
             console.error('Response error:', error.response.data)
             if (error.response.status === 401) {
                 // Handle unauthorized access
-                // For example, redirect to login page or refresh token
             }
         } else if (error.request) {
-            // The request was made but no response was received
             console.error('Request error:', error.request)
         } else {
-            // Something happened in setting up the request that triggered an Error
             console.error('Error:', error.message)
         }
         return Promise.reject(error)

@@ -104,7 +104,6 @@
 <script setup>
 import { ref, computed, onMounted, onBeforeUnmount, watch } from 'vue'
 import { useRouter } from 'vue-router'
-import ErrorBoundary from '../shared/ErrorBoundary.vue'
 import UnsavedChangesModal from '../shared/UnsavedChangesModal.vue'
 import { useUserState } from '../../store/user-state'
 import { PencilIcon, UploadCloudIcon, XIcon, LoaderIcon, CheckCircleIcon, XCircleIcon, SmileIcon } from 'lucide-vue-next'
@@ -248,9 +247,9 @@ const handleFileUpload = (event) => {
             }
             video.src = URL.createObjectURL(uploadedFile)
         } else if (uploadedFile.type.startsWith("image/")) {
-            if (uploadedFile.size > 5 * 1024 * 1024) {
+            if (uploadedFile.size > MAX_FILE_SIZE) {
                 fileError.value = "File size is too big (max 5MB for images, 10MB for videos)"
-                logger.warn('Image file size too large', { size: uploadedFile.size, maxSize: 5 * 1024 * 1024 })
+                logger.warn('Image file size too large', { size: uploadedFile.size, maxSize: MAX_FILE_SIZE })
                 return
             }
             processFile(uploadedFile)
@@ -329,7 +328,7 @@ const loadDraft = () => {
 
 const submitPost = async () => {
     if (files.value.length === 0 && description.value.trim() === '') {
-        errorMessage.value = "Please add an image or write a description"
+        errorMessage.value = "Please add an image/video or write a description"
         logger.warn('Attempted to submit empty post')
         return
     }
@@ -337,6 +336,18 @@ const submitPost = async () => {
     if (description.value.length > 500) {
         errorMessage.value = "Description cannot exceed 500 characters"
         logger.warn('Description too long', { length: description.value.length })
+        return
+    }
+
+    // Check if all files are either images or videos
+    const isImage = (file) => file.type.startsWith('image/')
+    const isVideo = (file) => file.type.startsWith('video/')
+    const allImages = files.value.every(isImage)
+    const allVideos = files.value.every(isVideo)
+
+    if (!allImages && !allVideos) {
+        errorMessage.value = "Please upload only images or only videos"
+        logger.warn('Invalid file types', { fileTypes: files.value.map(f => f.type) })
         return
     }
 

@@ -152,27 +152,33 @@ const error = ref('')
 const passwordStrength = computed(() => {
   if (password.value.length === 0) return 0
   let strength = 0
-  // Check length
+
+  // Check length (must be between 6 and 10 characters)
   if (password.value.length >= 6 && password.value.length <= 10) {
     strength += 25
   } else {
-    return password.value.length > 10 ? 50 : 25
+    return 0 // Invalid length, return 0 strength
   }
-  // Check for alphanumeric characters only
-  if (!/[^a-zA-Z0-9]/.test(password.value)) strength += 25
+
+  // Check for lowercase letters (mandatory)
+  if (/[a-z]/.test(password.value)) strength += 20
+
+  // Check for uppercase letters (mandatory)
+  if (/[A-Z]/.test(password.value)) strength += 20
+
+  // Check for numbers (mandatory)
+  if (/[0-9]/.test(password.value)) strength += 20
+
   // Check if password doesn't match phone number
-  if (password.value !== phonenumber.value) strength += 25
-  // Check for uppercase letters
-  if (/[A-Z]/.test(password.value)) strength += 12.5
-  // Check for numbers
-  if (/[0-9]/.test(password.value)) strength += 12.5
-  return Math.min(Math.round(strength), 100)
+  if (password.value !== phonenumber.value) strength += 15
+
+  return Math.min(strength, 100)
 })
 
 const passwordStrengthClass = computed(() => {
-  if (passwordStrength.value <= 25) return 'bg-red-500'
-  if (passwordStrength.value <= 50) return 'bg-yellow-500'
-  if (passwordStrength.value <= 75) return 'bg-orange-500'
+  if (passwordStrength.value < 60) return 'bg-red-500'
+  if (passwordStrength.value < 80) return 'bg-yellow-500'
+  if (passwordStrength.value < 100) return 'bg-orange-500'
   return 'bg-green-500'
 })
 

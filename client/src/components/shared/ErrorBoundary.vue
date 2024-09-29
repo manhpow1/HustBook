@@ -19,33 +19,50 @@
                     class="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 transition-colors duration-200">
                     Try again
                 </button>
-                <p class="text-xs text-red-500">Error in component: {{ component }}</p>
+                <p class="text-xs text-red-500">Error in component: {{ componentName }}</p>
             </div>
         </div>
     </div>
 </template>
 
 <script setup>
-import { ref, onErrorCaptured } from 'vue'
+import { ref, onErrorCaptured, provide } from 'vue'
+import { useRouter } from 'vue-router'
 import { AlertCircleIcon } from 'lucide-vue-next'
 import logger from '../../services/logging'
+import { useUserState } from '../../store/user-state'
 
 const props = defineProps({
-    component: {
+    componentName: {
         type: String,
         required: true
     }
 })
 
-const error = ref(null)
+const router = useRouter()
+const { logout } = useUserState()
 
-onErrorCaptured((err, component, info) => {
-    error.value = err
-    logger.error(err.message, { component: props.component, info, stack: err.stack })
-    return false // Prevent the error from propagating further
-})
+const error = ref(null)
 
 const resetError = () => {
     error.value = null
 }
+
+const handleError = (err, instance, info) => {
+    error.value = err
+    logger.error(err.message, { component: props.componentName, info, stack: err.stack })
+
+    // Check if the error is related to authentication
+    if (err.response && (err.response.status === 401 || err.response.data?.code === '9998')) {
+        logout()
+        router.push('/login')
+    }
+
+    return false // Prevent the error from propagating further
+}
+
+onErrorCaptured(handleError)
+
+// Provide the error handling function to child components
+provide('handleError', handleError)
 </script>
