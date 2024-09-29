@@ -1,6 +1,6 @@
 <template>
-    <div class="max-w-2xl mx-auto mt-8 p-6 bg-white rounded-lg shadow-xl animate-pulse"
-        :class="{ 'dark:bg-gray-800': isDarkMode }" role="status" aria-label="Loading post content">
+    <div class="max-w-2xl mx-auto mt-8 p-6 bg-white rounded-lg shadow-xl animate-pulse" role="status"
+        aria-label="Loading post content">
         <div class="flex items-center mb-4">
             <div class="rounded-full mr-4" :class="[avatarSize, skeletonBgClass]"></div>
             <div>
@@ -33,10 +33,6 @@
 import { computed } from 'vue';
 
 const props = defineProps({
-    isDarkMode: {
-        type: Boolean,
-        default: false
-    },
     avatarSize: {
         type: String,
         default: 'w-12 h-12'
@@ -67,9 +63,7 @@ const props = defineProps({
     }
 });
 
-const skeletonBgClass = computed(() =>
-    props.isDarkMode ? 'bg-gray-700' : 'bg-gray-300'
-);
+const skeletonBgClass = 'bg-gray-300';
 
 const imageGridClass = computed(() => {
     if (props.numberOfImages <= 1) return 'grid grid-cols-1';
@@ -79,16 +73,6 @@ const imageGridClass = computed(() => {
 </script>
 
 <style scoped>
-:root {
-    --skeleton-start-color: rgba(156, 163, 175, 0.5);
-    --skeleton-end-color: rgba(156, 163, 175, 1);
-}
-
-.dark {
-    --skeleton-start-color: rgba(75, 85, 99, 0.5);
-    --skeleton-end-color: rgba(75, 85, 99, 1);
-}
-
 @keyframes pulse {
     0%,
     100% {

@@ -1,16 +1,28 @@
 import { createApp } from 'vue'
+import { createI18n } from 'vue-i18n'
 import App from './App.vue'
 import router from './router'
+import { createPinia } from 'pinia'
+import 'vue-virtual-scroller/dist/vue-virtual-scroller.css'
 import './styles/index.css'
 import { useUserState } from './store/user-state'
-import { createPinia } from 'pinia'
-import { createI18n } from 'vue-i18n'
 
 const { checkAuth } = useUserState()
 const i18n = createI18n({
     locale: 'en',
+    fallbackLocale: 'en',
     messages: {
         en: {
+            postNotFound: 'Post not found',
+            invalidSession: 'Invalid session',
+            errorLoadingPost: 'Error loading post',
+            postNotAvailable: 'Post is not available',
+            retry: 'Retry',
+            comment: 'Comment',
+            comments: 'Comments',
+            share: 'Share',
+            writeComment: 'Write a comment',
+            postComment: 'Post Comment',
             like: 'Like',
             likes: 'Likes',
             unlike: 'Unlike',
