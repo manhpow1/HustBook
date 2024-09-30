@@ -57,6 +57,40 @@ export const usePostStore = defineStore('post', () => {
         }
     }
 
+    const editPost = async (postId, updatedData) => {
+        loading.value = true
+        error.value = null
+        try {
+            const response = await apiService.put(`/posts/edit_post/${postId}`, updatedData)
+            if (response.data.code === '1000') {
+                // Update the currentPost if it's the one being edited
+                if (currentPost.value && currentPost.value.id === postId) {
+                    currentPost.value = {
+                        ...currentPost.value,
+                        ...updatedData,
+                        described: updatedData.described || currentPost.value.described,
+                        image: updatedData.image || currentPost.value.image,
+                        video: updatedData.video || currentPost.value.video,
+                        like: updatedData.like || currentPost.value.like,
+                        comment: updatedData.comment || currentPost.value.comment,
+                        is_liked: updatedData.is_liked || currentPost.value.is_liked,
+                        status: updatedData.status || currentPost.value.status,
+                        hashtags: updatedData.hashtags || currentPost.value.hashtags,
+                        link: updatedData.link || currentPost.value.link
+                    }
+                }
+                return response.data
+            } else {
+                throw new Error(response.data.message || 'Failed to edit post')
+            }
+        } catch (err) {
+            handleError(err, 'errorEditingPost')
+            throw err
+        } finally {
+            loading.value = false
+        }
+    }
+
     const loadMoreComments = async (postId) => {
         if (!hasMoreComments.value || loadingMoreComments.value) return
 
@@ -208,6 +242,7 @@ export const usePostStore = defineStore('post', () => {
         loadingMoreComments,
         commentError,
         isLiked,
+        editPost,
         fetchPost,
         loadMoreComments,
         retryLoadComments,

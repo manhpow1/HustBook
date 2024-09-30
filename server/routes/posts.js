@@ -5,6 +5,22 @@ const { db, auth } = require('../config/firebaseConfig');
 const { v4: uuidv4 } = require('uuid');
 const admin = require('firebase-admin');
 
+const natural = require('natural');
+const tokenizer = new natural.WordTokenizer();
+const classifier = new natural.BayesClassifier();
+
+// Train the classifier (you should do this with a larger dataset)
+classifier.addDocument('kill murder death weapon', 'dangerous');
+classifier.addDocument('illegal drugs crime theft', 'illegal');
+classifier.addDocument('hate racist sexist discriminate', 'offensive');
+classifier.addDocument('normal safe friendly happy', 'safe');
+classifier.train();
+
+// List of explicitly banned words
+const bannedWords = [
+  'cocaine', 'heroin', 'meth', 'assault', 'terrorist', 'bomb', 'kill', 'attack'
+];
+
 const storage = multer.memoryStorage();
 const upload = multer({
   storage: storage,
@@ -231,9 +247,150 @@ router.post('/add_post', verifyToken, upload.array('files', 4), async (req, res)
   }
 });
 
-router.put('/edit_post/:id', (req, res) => {
-  // Implementation for editing a post
+router.put('/edit_post/:id', verifyToken, upload.fields([
+  { name: 'image', maxCount: 4 },
+  { name: 'video', maxCount: 1 },
+  { name: 'thumb', maxCount: 1 }
+]), async (req, res) => {
+  try {
+    const postId = req.params.id;
+    const userId = req.user.uid;
+    const { described, status, image_del, image_sort, auto_accept, auto_block } = req.body;
+
+    // Fetch the existing post
+    const postRef = db.collection('posts').doc(postId);
+    const postDoc = await postRef.get();
+
+    if (!postDoc.exists) {
+      return res.status(404).json({ code: '9992', message: 'Post is not existed' });
+    }
+
+    const postData = postDoc.data();
+    if (postData.userId !== userId) {
+      return res.status(403).json({ code: '1009', message: 'Not access' });
+    }
+
+    // Prepare update data
+    const updateData = {};
+    if (described) updateData.described = described;
+    if (status) updateData.status = status;
+
+    // Handle image deletion
+    if (image_del && Array.isArray(image_del)) {
+      updateData.media = postData.media.filter(m => !image_del.includes(m.id));
+    }
+
+    // Handle image reordering and addition
+    const newImages = req.files.image || [];
+    if (image_sort && Array.isArray(image_sort)) {
+      const reorderedMedia = [];
+      image_sort.forEach((index, newIndex) => {
+        if (index < postData.media.length) {
+          reorderedMedia[newIndex] = postData.media[index];
+        } else if (newImages[index - postData.media.length]) {
+          reorderedMedia[newIndex] = {
+            id: uuidv4(),
+            url: newImages[index - postData.media.length].path,
+            type: 'image'
+          };
+        }
+      });
+      updateData.media = reorderedMedia;
+    } else if (newImages.length > 0) {
+      updateData.media = [
+        ...(updateData.media || postData.media),
+        ...newImages.map(img => ({
+          id: uuidv4(),
+          url: img.path,
+          type: 'image'
+        }))
+      ];
+    }
+
+    // Handle video upload
+    if (req.files.video && req.files.video[0]) {
+      if (updateData.media && updateData.media.some(m => m.type === 'image')) {
+        return res.status(400).json({ code: '1003', message: 'Cannot mix images and videos in the same post' });
+      }
+      updateData.media = [{
+        id: uuidv4(),
+        url: req.files.video[0].path,
+        type: 'video',
+        thumb: req.files.thumb && req.files.thumb[0] ? req.files.thumb[0].path : null
+      }];
+    }
+
+    // Implement auto_accept and auto_block
+    if (auto_accept === '1') {
+      const userRef = db.collection('users').doc(userId);
+      const userDoc = await userRef.get();
+      const userData = userDoc.data();
+      if (userData.influencer || userData.government) {
+        updateData.status = 'approved';
+      }
+    }
+
+    if (auto_block === '1') {
+      // Implement content checking logic here
+      const containsDangerousContent = checkForDangerousContent(described);
+      if (containsDangerousContent) {
+        updateData.status = 'blocked';
+      }
+    }
+
+    // Update the post
+    await postRef.update(updateData);
+
+    res.status(200).json({
+      code: '1000',
+      message: 'OK',
+      data: {
+        id: postId,
+        url: '' // Leave empty as per current version requirements
+      }
+    });
+
+  } catch (error) {
+    console.error('Error in edit_post:', error);
+    res.status(500).json({ code: '1001', message: 'Can not connect to DB' });
+  }
 });
+
+// Helper function to check for dangerous content
+function checkForDangerousContent(content) {
+  // Convert to lowercase for consistency
+  const lowercaseContent = content.toLowerCase();
+
+  // Check for explicitly banned words
+  if (bannedWords.some(word => lowercaseContent.includes(word))) {
+    return true;
+  }
+
+  // Tokenize the content
+  const tokens = tokenizer.tokenize(lowercaseContent);
+
+  // Check for suspicious patterns
+  const suspiciousPatterns = [
+    /\b(how to|ways to) (make|create|build) (a bomb|weapons|drugs)\b/,
+    /\b(planning|organize) (an attack|a riot)\b/,
+    /\b(buy|sell|distribute) (illegal drugs|weapons|stolen goods)\b/
+  ];
+
+  if (suspiciousPatterns.some(pattern => pattern.test(lowercaseContent))) {
+    return true;
+  }
+
+  // Use the classifier to determine if the content is dangerous
+  const classification = classifier.classify(tokens.join(' '));
+
+  // Count the number of potentially dangerous words
+  const dangerousWordCount = tokens.filter(token =>
+    ['dangerous', 'illegal', 'offensive'].includes(classifier.classify(token))
+  ).length;
+
+  // If the overall classification is not 'safe' or there are multiple dangerous words, flag it
+  return classification !== 'safe' || dangerousWordCount > 2;
+}
 
 router.delete('/delete_post/:id', (req, res) => {
   // Implementation for deleting a post

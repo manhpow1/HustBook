@@ -68,7 +68,13 @@ const routes = [
         name: 'PostDetail',
         component: PostDetail,
         meta: { requiresAuth: true }
-    }
+    },
+    {
+        path: '/edit-post/:id',
+        name: 'EditPost',
+        component: () => import('../components/post/EditPost.vue'),
+        meta: { requiresAuth: true }
+    },
 ]
 
 const router = createRouter({

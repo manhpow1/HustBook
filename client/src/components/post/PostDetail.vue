@@ -36,6 +36,10 @@
                 </div>
             </template>
 
+            <button v-if="isOwnPost" @click="editPost" class="btn-secondary">
+                Edit Post
+            </button>
+
             <MediaViewer :lightboxImage="lightboxImage" :videoPlayerUrl="videoPlayerUrl" @close="closeMediaViewer" />
         </ErrorBoundary>
     </div>
@@ -63,6 +67,7 @@ const router = useRouter()
 const { t } = useI18n({ useScope: 'global' })
 const postStore = usePostStore()
 const userStore = useUserStore()
+const isOwnPost = computed(() => post.value?.userId === currentUserId)
 
 const post = computed(() => postStore.currentPost)
 const comments = computed(() => postStore.comments)
@@ -74,6 +79,10 @@ const commentError = computed(() => postStore.commentError)
 const lightboxImage = ref(null)
 const videoPlayerUrl = ref(null)
 const isOwnPost = computed(() => post.value?.author?.id === userStore.currentUser?.id)
+
+const editPost = () => {
+    router.push({ name: 'EditPost', params: { id: post.value.id } })
+}
 
 const fetchPost = async () => {
     await postStore.fetchPost(route.params.id)
