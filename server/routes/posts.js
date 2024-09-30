@@ -9,6 +9,10 @@ const natural = require('natural');
 const tokenizer = new natural.WordTokenizer();
 const classifier = new natural.BayesClassifier();
 
+const BAD_ACTOR_THRESHOLD = 10; // Threshold for flagging users
+const BAD_ACTOR_DECAY_RATE = 1; // Points decayed per day
+const BAD_ACTOR_DECAY_INTERVAL = 24 * 60 * 60 * 1000; // 24 hours in milliseconds
+
 // Train the classifier (you should do this with a larger dataset)
 classifier.addDocument('kill murder death weapon', 'dangerous');
 classifier.addDocument('illegal drugs crime theft', 'illegal');
@@ -320,21 +324,31 @@ router.put('/edit_post/:id', verifyToken, upload.fields([
       }];
     }
 
+    // Fetch user data for bad actor score
+    const userRef = db.collection('users').doc(userId);
+    const userDoc = await userRef.get();
+    const userData = userDoc.data();
+
+    // Decay the bad actor score before checking the content
+    await decayBadActorScore(userId);
+
     // Implement auto_accept and auto_block
     if (auto_accept === '1') {
-      const userRef = db.collection('users').doc(userId);
-      const userDoc = await userRef.get();
-      const userData = userDoc.data();
       if (userData.influencer || userData.government) {
         updateData.status = 'approved';
       }
     }
 
+    let autoBlockStatus = '0';
     if (auto_block === '1') {
-      // Implement content checking logic here
-      const containsDangerousContent = checkForDangerousContent(described);
-      if (containsDangerousContent) {
+      const contentCheckResult = checkForDangerousContent(described, userData.badActorScore || 0);
+      if (contentCheckResult.isDangerous) {
         updateData.status = 'blocked';
+        autoBlockStatus = '1';
+        await updateBadActorScore(userId, contentCheckResult.dangerLevel);
+      } else if (contentCheckResult.requiresReview) {
+        updateData.status = 'pending_review';
+        autoBlockStatus = '2'; // New status for posts requiring review
       }
     }
 
@@ -346,7 +360,8 @@ router.put('/edit_post/:id', verifyToken, upload.fields([
       message: 'OK',
       data: {
         id: postId,
-        url: '' // Leave empty as per current version requirements
+        url: '',
+        auto_block: autoBlockStatus
       }
     });
 
@@ -357,17 +372,19 @@ router.put('/edit_post/:id', verifyToken, upload.fields([
 });
 
 // Helper function to check for dangerous content
-function checkForDangerousContent(content) {
+function checkForDangerousContent(content, userBadActorScore) {
   // Convert to lowercase for consistency
   const lowercaseContent = content.toLowerCase();
 
-  // Check for explicitly banned words
-  if (bannedWords.some(word => lowercaseContent.includes(word))) {
-    return true;
-  }
-
   // Tokenize the content
   const tokens = tokenizer.tokenize(lowercaseContent);
+
+  let dangerLevel = 0;
+
+  // Check for explicitly banned words
+  if (bannedWords.some(word => lowercaseContent.includes(word))) {
+    dangerLevel += 2;
+  }
 
   // Check for suspicious patterns
   const suspiciousPatterns = [
@@ -377,19 +394,58 @@ function checkForDangerousContent(content) {
   ];
 
   if (suspiciousPatterns.some(pattern => pattern.test(lowercaseContent))) {
-    return true;
+    dangerLevel += 3;
   }
 
   // Use the classifier to determine if the content is dangerous
   const classification = classifier.classify(tokens.join(' '));
+  if (classification !== 'safe') {
+    dangerLevel += 1;
+  }
 
   // Count the number of potentially dangerous words
   const dangerousWordCount = tokens.filter(token =>
     ['dangerous', 'illegal', 'offensive'].includes(classifier.classify(token))
   ).length;
 
-  // If the overall classification is not 'safe' or there are multiple dangerous words, flag it
-  return classification !== 'safe' || dangerousWordCount > 2;
+  dangerLevel += Math.min(dangerousWordCount, 5);
+
+  // Factor in the user's bad actor score
+  const adjustedDangerLevel = dangerLevel + (userBadActorScore / 2);
+
+  return {
+    isDangerous: adjustedDangerLevel > 3,
+    dangerLevel: dangerLevel,
+    requiresReview: userBadActorScore >= BAD_ACTOR_THRESHOLD
+  };
+}
+
+// Helper function to update user's bad actor score
+async function updateBadActorScore(userId, increment) {
+  const userRef = db.collection('users').doc(userId);
+  await userRef.update({
+    badActorScore: admin.firestore.FieldValue.increment(increment),
+    lastBadActorUpdate: admin.firestore.FieldValue.serverTimestamp()
+  });
+}
+
+// Helper function to decay bad actor score
+async function decayBadActorScore(userId) {
+  const userRef = db.collection('users').doc(userId);
+  const userDoc = await userRef.get();
+  const userData = userDoc.data();
+
+  if (userData.badActorScore && userData.lastBadActorUpdate) {
+    const daysSinceLastUpdate = (Date.now() - userData.lastBadActorUpdate.toMillis()) / (24 * 60 * 60 * 1000);
+    const decayAmount = Math.min(userData.badActorScore, Math.floor(daysSinceLastUpdate) * BAD_ACTOR_DECAY_RATE);
+
+    if (decayAmount > 0) {
+      await userRef.update({
+        badActorScore: admin.firestore.FieldValue.increment(-decayAmount),
+        lastBadActorUpdate: admin.firestore.FieldValue.serverTimestamp()
+      });
+    }
+  }
 }
 
 router.delete('/delete_post/:id', (req, res) => {
