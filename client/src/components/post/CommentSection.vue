@@ -50,7 +50,7 @@
 import { ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { LoaderIcon } from 'lucide-vue-next'
-import MarkdownEditor from '@/components/shared/MarkdownEditor.vue'
+import MarkdownEditor from '../shared/MarkdownEditor.vue'
 import DOMPurify from 'dompurify'
 
 const props = defineProps({

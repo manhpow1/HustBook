@@ -18,11 +18,13 @@
             <template v-else-if="post">
                 <div class="bg-white shadow-lg rounded-lg overflow-hidden">
                     <div class="p-6">
-                        <PostHeader :post="post" :isOwnPost="isOwnPost" @showAdvancedOptions="showAdvancedOptions" />
+                        <PostHeader :post="post" :isOwnPost="isOwnPost"
+                            @showAdvancedOptions="showAdvancedOptionsModal = true" />
 
-                        <PostContent :post="post" @toggleContent="toggleContent" />
+                        <PostContent :post="post" @toggleContent="toggleContent" @hashtagClick="handleHashtagClick" />
 
-                        <PostMedia :post="post" @openLightbox="openLightbox" @openVideoPlayer="openVideoPlayer" />
+                        <PostMedia :post="post" @openLightbox="openLightbox" @openVideoPlayer="openVideoPlayer"
+                            @uncoverMedia="handleUncoverMedia" />
 
                         <PostActions :post="post" @like="handleLike" @comment="focusCommentInput" />
 
@@ -36,11 +38,12 @@
                 </div>
             </template>
 
-            <button v-if="isOwnPost" @click="editPost" class="btn-secondary">
-                Edit Post
-            </button>
+            <MediaViewer v-if="showMediaViewer" :post="post" :initialMediaIndex="currentMediaIndex"
+                @close="closeMediaViewer" />
 
-            <MediaViewer :lightboxImage="lightboxImage" :videoPlayerUrl="videoPlayerUrl" @close="closeMediaViewer" />
+            <AdvancedOptionsModal v-if="showAdvancedOptionsModal" :isOwnPost="isOwnPost"
+                @close="showAdvancedOptionsModal = false" @edit="editPost" @save="handleSavePost"
+                @copyLink="handleCopyLink" @report="handleReportPost" />
         </ErrorBoundary>
     </div>
 </template>
@@ -61,13 +64,13 @@ import PostActions from './PostActions.vue'
 import PostBanWarning from './PostBanWarning.vue'
 import CommentSection from './CommentSection.vue'
 import MediaViewer from '../shared/MediaViewer.vue'
+import AdvancedOptionsModal from './AdvancedOptionsModal.vue'
 
 const route = useRoute()
 const router = useRouter()
 const { t } = useI18n({ useScope: 'global' })
 const postStore = usePostStore()
 const userStore = useUserStore()
-const isOwnPost = computed(() => post.value?.userId === currentUserId)
 
 const post = computed(() => postStore.currentPost)
 const comments = computed(() => postStore.comments)
@@ -76,13 +79,10 @@ const error = computed(() => postStore.error)
 const loadingMoreComments = computed(() => postStore.loadingMoreComments)
 const commentError = computed(() => postStore.commentError)
 
-const lightboxImage = ref(null)
-const videoPlayerUrl = ref(null)
+const showMediaViewer = ref(false)
+const currentMediaIndex = ref(0)
+const showAdvancedOptionsModal = ref(false)
 const isOwnPost = computed(() => post.value?.author?.id === userStore.currentUser?.id)
-
-const editPost = () => {
-    router.push({ name: 'EditPost', params: { id: post.value.id } })
-}
 
 const fetchPost = async () => {
     await postStore.fetchPost(route.params.id)
@@ -114,22 +114,18 @@ const toggleContent = () => {
     postStore.togglePostContent(post.value.id)
 }
 
-const openLightbox = (imageUrl) => {
-    lightboxImage.value = imageUrl
+const openLightbox = (index) => {
+    currentMediaIndex.value = index
+    showMediaViewer.value = true
 }
 
-const openVideoPlayer = (videoUrl) => {
-    videoPlayerUrl.value = videoUrl
+const openVideoPlayer = (index) => {
+    currentMediaIndex.value = index
+    showMediaViewer.value = true
 }
 
 const closeMediaViewer = () => {
-    lightboxImage.value = null
-    videoPlayerUrl.value = null
-}
-
-const showAdvancedOptions = () => {
-    // Implement advanced options menu for post owner
-    console.log('Show advanced options')
+    showMediaViewer.value = false
 }
 
 const handleCommentUpdate = async (commentId, content) => {
@@ -138,6 +134,55 @@ const handleCommentUpdate = async (commentId, content) => {
 
 const handleCommentDelete = async (commentId) => {
     await postStore.deleteComment(post.value.id, commentId)
+}
+
+const handleUncoverMedia = async () => {
+    try {
+        await postStore.uncoverMedia(post.value.id)
+    } catch (error) {
+        console.error('Failed to uncover media:', error)
+        // You might want to show an error message to the user here
+    }
+}
+
+const handleHashtagClick = (hashtag) => {
+    // Implement hashtag click functionality
+    console.log('Hashtag clicked:', hashtag)
+    // You might want to navigate to a hashtag search page or filter posts by this hashtag
+}
+
+const editPost = () => {
+    router.push({ name: 'EditPost', params: { id: post.value.id } })
+}
+
+const handleSavePost = async () => {
+    try {
+        await postStore.savePost(post.value.id)
+        // Show a success message to the user
+    } catch (error) {
+        console.error('Failed to save post:', error)
+        // Show an error message to the user
+    }
+}
+
+const handleCopyLink = () => {
+    const postUrl = `${window.location.origin}/post/${post.value.id}`
+    navigator.clipboard.writeText(postUrl).then(() => {
+        // Show a success message to the user
+    }, (err) => {
+        console.error('Failed to copy link:', err)
+        // Show an error message to the user
+    })
+}
+
+const handleReportPost = async () => {
+    try {
+        await postStore.reportPost(post.value.id)
+        // Show a success message to the user
+    } catch (error) {
+        console.error('Failed to report post:', error)
+        // Show an error message to the user
+    }
 }
 
 onMounted(async () => {

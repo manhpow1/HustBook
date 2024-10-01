@@ -1,7 +1,6 @@
-// src/stores/postStore.js
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
-import apiService from '@/services/api'
+import apiService from '../services/api'
 import { useI18n } from 'vue-i18n'
 import logger from '../services/logging'
 
@@ -213,6 +212,40 @@ export const usePostStore = defineStore('post', () => {
         }
     }
 
+    const uncoverMedia = async (postId, mediaId = null) => {
+        try {
+            loading.value = true
+            error.value = null
+
+            const response = await apiService.post(`/posts/${postId}/uncover_media`, { mediaId })
+
+            if (response.data.code === '1000') {
+                if (currentPost.value && currentPost.value.id === postId) {
+                    if (mediaId) {
+                        // Uncover specific media item
+                        const mediaItem = currentPost.value.image.find(img => img.id === mediaId) ||
+                            currentPost.value.video.find(vid => vid.id === mediaId)
+                        if (mediaItem) {
+                            mediaItem.covered = false
+                        }
+                    } else {
+                        // Uncover all media
+                        currentPost.value.image.forEach(img => img.covered = false)
+                        currentPost.value.video.forEach(vid => vid.covered = false)
+                    }
+                }
+                return true
+            } else {
+                throw new Error(response.data.message || 'Failed to uncover media')
+            }
+        } catch (err) {
+            handleError(err, 'errorUncoveringMedia')
+            return false
+        } finally {
+            loading.value = false
+        }
+    }
+
     // Error handling
     const handleError = (error, customErrorKey = null) => {
         logger.error('Error in postStore:', { error: error.message, customErrorKey })
@@ -250,6 +283,7 @@ export const usePostStore = defineStore('post', () => {
         addComment,
         updateComment,
         deleteComment,
-        togglePostContent
+        togglePostContent,
+        uncoverMedia
     }
 })

@@ -1,11 +1,11 @@
 <template>
     <transition name="fade">
-        <div v-if="isOpen" class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-90">
-            <button @click="close" class="absolute top-4 right-4 text-white hover:text-gray-300 focus:outline-none">
-                <XIcon class="w-8 h-8" />
-            </button>
+        <div v-if="isOpen" class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-75">
+            <div class="relative max-w-4xl max-h-full w-full">
+                <button @click="close" class="absolute top-4 right-4 text-white hover:text-gray-300 focus:outline-none">
+                    <XIcon class="w-8 h-8" />
+                </button>
 
-            <div class="relative max-w-4xl max-h-full">
                 <div v-if="currentMedia.type === 'image'" class="flex items-center justify-center">
                     <img :src="currentMedia.url" :alt="currentMedia.alt || ''"
                         class="max-w-full max-h-[90vh] object-contain" />
@@ -35,6 +35,17 @@
                     aria-label="Next media">
                     <ChevronRightIcon class="w-10 h-10" />
                 </button>
+
+                <div class="absolute bottom-4 left-4 text-white flex items-center space-x-4">
+                    <button @click="handleLike" class="flex items-center space-x-2">
+                        <ThumbsUpIcon :class="{ 'text-blue-500 fill-current': isLiked }" class="w-6 h-6" />
+                        <span>{{ formatNumber(likes) }}</span>
+                    </button>
+                    <button @click="handleComment" class="flex items-center space-x-2">
+                        <MessageSquareIcon class="w-6 h-6" />
+                        <span>{{ formatNumber(comments) }}</span>
+                    </button>
+                </div>
             </div>
         </div>
     </transition>
@@ -42,7 +53,8 @@
 
 <script setup>
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
-import { XIcon, ChevronLeftIcon, ChevronRightIcon } from 'lucide-vue-next'
+import { XIcon, ChevronLeftIcon, ChevronRightIcon, ThumbsUpIcon, MessageSquareIcon } from 'lucide-vue-next'
+import { formatNumber } from '../utils/numberFormat'
 
 const props = defineProps({
     isOpen: {
@@ -56,10 +68,22 @@ const props = defineProps({
     initialIndex: {
         type: Number,
         default: 0
+    },
+    likes: {
+        type: Number,
+        required: true
+    },
+    comments: {
+        type: Number,
+        required: true
+    },
+    isLiked: {
+        type: Boolean,
+        required: true
     }
 })
 
-const emit = defineEmits(['close'])
+const emit = defineEmits(['close', 'like', 'comment'])
 
 const currentIndex = ref(props.initialIndex)
 const videoPlayer = ref(null)
@@ -80,6 +104,14 @@ const nextMedia = () => {
 
 const close = () => {
     emit('close')
+}
+
+const handleLike = () => {
+    emit('like')
+}
+
+const handleComment = () => {
+    emit('comment')
 }
 
 const handleKeydown = (event) => {
@@ -126,8 +158,12 @@ watch(currentIndex, (newIndex) => {
     const prevIndex = (newIndex - 1 + props.mediaList.length) % props.mediaList.length
     const nextIndex = (newIndex + 1) % props.mediaList.length
 
-    preloadImage(props.mediaList[prevIndex]?.url)
-    preloadImage(props.mediaList[nextIndex]?.url)
+    if (props.mediaList[prevIndex]?.type === 'image') {
+        preloadImage(props.mediaList[prevIndex].url)
+    }
+    if (props.mediaList[nextIndex]?.type === 'image') {
+        preloadImage(props.mediaList[nextIndex].url)
+    }
 })
 </script>
 

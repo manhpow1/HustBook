@@ -1,24 +1,24 @@
 <template>
     <div class="mb-4">
-        <p class="text-gray-800 whitespace-pre-wrap" :class="{ 'line-clamp-3': !showFullContent }"
-            v-html="sanitizedContent"></p>
+        <p class="text-gray-800 whitespace-pre-wrap" :class="{ 'line-clamp-3': !showFullContent }">
+            <template v-for="(part, index) in parsedContent" :key="index">
+                <span v-if="part.type === 'text'">{{ part.content }}</span>
+                <a v-else-if="part.type === 'hashtag'" @click.prevent="$emit('hashtagClick', part.content)"
+                    class="text-blue-500 hover:underline cursor-pointer">
+                    {{ part.content }}
+                </a>
+            </template>
+        </p>
         <button v-if="post.described.length > 300" @click="toggleContent"
             class="text-blue-500 hover:underline mt-2 focus:outline-none">
             {{ showFullContent ? t('collapse') : t('seeMore') }}
         </button>
-        <div v-if="post.hashtags && post.hashtags.length > 0" class="mt-2">
-            <span v-for="hashtag in post.hashtags" :key="hashtag"
-                class="inline-block bg-gray-200 rounded-full px-3 py-1 text-sm font-semibold text-blue-500 mr-2 mb-2 cursor-pointer hover:bg-gray-300 transition-colors duration-200">
-                #{{ hashtag }}
-            </span>
-        </div>
     </div>
 </template>
 
 <script setup>
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
-import DOMPurify from 'dompurify'
 
 const props = defineProps({
     post: {
@@ -31,12 +31,33 @@ const props = defineProps({
     }
 })
 
-const emit = defineEmits(['toggleContent'])
+const emit = defineEmits(['toggleContent', 'hashtagClick'])
 
 const { t } = useI18n()
 
-const sanitizedContent = computed(() => {
-    return DOMPurify.sanitize(props.post.described)
+const parsedContent = computed(() => {
+    const regex = /(#\w+)|\s+/g
+    const parts = []
+    let lastIndex = 0
+    let match
+
+    while ((match = regex.exec(props.post.described)) !== null) {
+        if (lastIndex < match.index) {
+            parts.push({ type: 'text', content: props.post.described.slice(lastIndex, match.index) })
+        }
+        if (match[1]) {
+            parts.push({ type: 'hashtag', content: match[0] })
+        } else {
+            parts.push({ type: 'text', content: match[0] })
+        }
+        lastIndex = regex.lastIndex
+    }
+
+    if (lastIndex < props.post.described.length) {
+        parts.push({ type: 'text', content: props.post.described.slice(lastIndex) })
+    }
+
+    return parts
 })
 
 const toggleContent = () => {

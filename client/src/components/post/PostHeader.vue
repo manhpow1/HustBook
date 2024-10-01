@@ -15,10 +15,17 @@
                 <div v-if="showAdvancedOptions"
                     class="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg z-10 py-1 text-sm">
                     <button @click="editPost" class="block px-4 py-2 text-gray-700 hover:bg-gray-100 w-full text-left">
-                        Edit Post
+                        {{ t('editPost') }}
                     </button>
                     <button @click="deletePost" class="block px-4 py-2 text-red-600 hover:bg-gray-100 w-full text-left">
-                        Delete Post
+                        {{ t('deletePost') }}
+                    </button>
+                    <button @click="reportPost"
+                        class="block px-4 py-2 text-gray-700 hover:bg-gray-100 w-full text-left">
+                        {{ t('reportPost') }}
+                    </button>
+                    <button @click="sharePost" class="block px-4 py-2 text-gray-700 hover:bg-gray-100 w-full text-left">
+                        {{ t('sharePost') }}
                     </button>
                 </div>
             </transition>
@@ -42,7 +49,7 @@ const props = defineProps({
     }
 })
 
-const emit = defineEmits(['editPost', 'deletePost'])
+const emit = defineEmits(['editPost', 'deletePost', 'reportPost', 'sharePost'])
 
 const { t } = useI18n()
 const showAdvancedOptions = ref(false)
@@ -65,6 +72,16 @@ const deletePost = () => {
     showAdvancedOptions.value = false
 }
 
+const reportPost = () => {
+    emit('reportPost')
+    showAdvancedOptions.value = false
+}
+
+const sharePost = () => {
+    emit('sharePost')
+    showAdvancedOptions.value = false
+}
+
 const formatDate = (dateString) => {
     const date = new Date(dateString)
     const now = new Date()
@@ -74,6 +91,7 @@ const formatDate = (dateString) => {
     if (diffInSeconds < 3600) return t('minutesAgo', { minutes: Math.floor(diffInSeconds / 60) })
     if (diffInSeconds < 86400) return t('hoursAgo', { hours: Math.floor(diffInSeconds / 3600) })
     if (diffInSeconds < 604800) return t('daysAgo', { days: Math.floor(diffInSeconds / 86400) })
+    if (diffInSeconds < 2592000) return t('weeksAgo', { weeks: Math.floor(diffInSeconds / 604800) })
     if (diffInSeconds < 31536000) return t('monthsAgo', { months: Math.floor(diffInSeconds / 2592000) })
     return t('yearsAgo', { years: Math.floor(diffInSeconds / 31536000) })
 }

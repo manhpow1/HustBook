@@ -19,6 +19,7 @@
 <script setup>
 import { ThumbsUpIcon, MessageSquareIcon } from 'lucide-vue-next'
 import { useI18n } from 'vue-i18n'
+import { formatNumber } from '../../utils/numberFormat'
 
 const props = defineProps({
     post: {
@@ -37,9 +38,5 @@ const handleLike = () => {
 
 const handleComment = () => {
     emit('comment')
-}
-
-const formatNumber = (num) => {
-    return new Intl.NumberFormat('en-US', { notation: 'compact', compactDisplay: 'short' }).format(num)
 }
 </script>
