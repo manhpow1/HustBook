@@ -2,11 +2,11 @@
     <div class="mb-4">
         <p class="text-gray-800 whitespace-pre-wrap" :class="{ 'line-clamp-3': !showFullContent }">
             <template v-for="(part, index) in parsedContent" :key="index">
-                <span v-if="part.type === 'text'">{{ part.content }}</span>
-                <a v-else-if="part.type === 'hashtag'" @click.prevent="$emit('hashtagClick', part.content)"
-                    class="text-blue-500 hover:underline cursor-pointer">
+                <span v-if="part.type === 'text'" v-html="preserveSpaces(part.content)"></span>
+                <span v-else-if="part.type === 'hashtag'" @click.prevent="$emit('hashtagClick', part.content)"
+                    class="cursor-pointer">
                     {{ part.content }}
-                </a>
+                </span>
             </template>
         </p>
         <button v-if="post.described.length > 300" @click="toggleContent"
@@ -19,6 +19,7 @@
 <script setup>
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
+import DOMPurify from 'dompurify'
 
 const props = defineProps({
     post: {
@@ -60,17 +61,20 @@ const parsedContent = computed(() => {
     return parts
 })
 
+const preserveSpaces = (text) => {
+    // Replace spaces with non-breaking spaces, but allow line breaks
+    const sanitizedText = DOMPurify.sanitize(text)
+    return sanitizedText.replace(/ /g, '&nbsp;').replace(/\n/g, '<br>')
+}
+
 const toggleContent = () => {
     emit('toggleContent')
 }
 </script>
 
 <style scoped>
-.line-clamp-3 {
-    display: -webkit-box;
-    -webkit-line-clamp: 3;
-    line-clamp: 3;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
+.whitespace-pre-wrap {
+    white-space: pre-wrap;
+    word-wrap: break-word;
 }
 </style>

@@ -5,6 +5,8 @@ import SignUp from '../components/auth/SignUp.vue'
 import AddPost from '../components/post/AddPost.vue'
 import { useUserState } from '../store/user-state'
 import PostDetail from '../components/post/PostDetail.vue'
+import HashtagView from '../views/HashtagView.vue'
+import Watch from '../views/Watch.vue'
 
 const routes = [
     {
@@ -74,6 +76,17 @@ const routes = [
         name: 'EditPost',
         component: () => import('../components/post/EditPost.vue'),
         meta: { requiresAuth: true }
+    },
+    {
+        path: '/hashtag/:hashtag',
+        name: 'Hashtag',
+        component: HashtagView,
+        meta: { requiresAuth: true }
+    },
+    {
+        path: '/watch/:id',
+        name: 'Watch',
+        component: Watch
     },
 ]
 

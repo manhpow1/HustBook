@@ -448,6 +448,52 @@ async function decayBadActorScore(userId) {
   }
 }
 
+router.post('/uncover_media', verifyToken, async (req, res) => {
+  try {
+    const { postId, mediaId } = req.body;
+    const userId = req.user.uid;
+
+    if (!postId || !mediaId) {
+      return res.status(400).json({ code: '1002', message: 'Parameter is not enough' });
+    }
+
+    const postRef = db.collection('posts').doc(postId);
+    const postDoc = await postRef.get();
+
+    if (!postDoc.exists) {
+      return res.status(404).json({ code: '9992', message: 'Post is not existed' });
+    }
+
+    const postData = postDoc.data();
+    const mediaIndex = postData.media.findIndex(m => m.id === mediaId);
+
+    if (mediaIndex === -1) {
+      return res.status(404).json({ code: '9992', message: 'Media not found' });
+    }
+
+    if (!postData.media[mediaIndex].covered) {
+      return res.status(400).json({ code: '1010', message: 'Media is already uncovered' });
+    }
+
+    // Update the media item to uncover it
+    postData.media[mediaIndex].covered = false;
+
+    await postRef.update({ media: postData.media });
+
+    res.status(200).json({
+      code: '1000',
+      message: 'OK',
+      data: {
+        id: mediaId,
+        url: postData.media[mediaIndex].url
+      }
+    });
+  } catch (error) {
+    console.error('Error in uncover_media:', error);
+    res.status(500).json({ code: '1001', message: 'Cannot connect to DB' });
+  }
+});
+
 router.delete('/delete_post/:id', (req, res) => {
   // Implementation for deleting a post
 });

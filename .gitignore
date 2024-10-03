@@ -3,3 +3,6 @@ node_modules
 .DS_Store
 server/serviceAccountKey.json
 /server/uploads
+repopack-output.txt
+repopack.config.json
+.repopackignore

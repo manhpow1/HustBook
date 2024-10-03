@@ -101,8 +101,7 @@
 <script setup>
 import { ref, computed } from 'vue'
 import { PlayIcon } from 'lucide-vue-next'
-import MediaViewer from './MediaViewer.vue'
-import { formatNumber } from '../../utils/numberFormat'
+import MediaViewer from '../shared/MediaViewer.vue'
 
 const props = defineProps({
     post: {

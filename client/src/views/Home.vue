@@ -29,13 +29,18 @@
               </div>
               <p class="mb-4 text-gray-700">{{ post.described }}</p>
               <div v-if="post.media && post.media.length > 0" class="mb-4 grid grid-cols-2 gap-2">
-                <div v-for="(media, index) in post.media" :key="index">
+                <div v-for="(media, index) in post.media" :key="index" class="relative">
                   <img v-if="isImage(media)" :src="media" :alt="`Post image ${index + 1}`"
                     class="w-full h-48 object-cover rounded-lg" loading="lazy" />
-                  <video v-else controls class="w-full h-48 object-cover rounded-lg">
-                    <source :src="media" type="video/mp4">
-                    Your browser does not support the video tag.
-                  </video>
+                  <div v-else @click="goToWatchPage(post.id, index)"
+                    class="relative w-full h-48 bg-black rounded-lg overflow-hidden cursor-pointer">
+                    <video :src="media" class="w-full h-full object-cover" preload="metadata">
+                      Your browser does not support the video tag.
+                    </video>
+                    <div class="absolute inset-0 flex items-center justify-center bg-black bg-opacity-50">
+                      <PlayIcon class="w-16 h-16 text-white" />
+                    </div>
+                  </div>
                 </div>
               </div>
               <div class="flex items-center text-gray-500">
@@ -78,15 +83,17 @@
 </template>
 
 <script setup>
-import { ref, onMounted, watch} from 'vue'
+import { ref, onMounted, watch } from 'vue'
+import { useRouter } from 'vue-router'
 import { useUserState } from '../store/user-state'
-import { usePostStore } from '../stores/post'
+import { usePostStore } from '../store/post'
 import AddPost from '../components/post/AddPost.vue'
 import PostSkeleton from '../components/shared/PostSkeleton.vue'
-import { LoaderIcon, ThumbsUpIcon, MessageCircleIcon } from 'lucide-vue-next'
+import { LoaderIcon, ThumbsUpIcon, MessageCircleIcon, PlayIcon } from 'lucide-vue-next'
 import { useInfiniteScroll } from '@vueuse/core'
 import { formatDistanceToNow } from 'date-fns'
 
+const router = useRouter()
 const { isLoggedIn } = useUserState()
 const postStore = usePostStore()
 
@@ -165,6 +172,10 @@ const showComments = (postId) => {
 
 const formatDate = (date) => {
   return formatDistanceToNow(new Date(date), { addSuffix: true })
+}
+
+const goToWatchPage = (postId, mediaIndex) => {
+  router.push({ name: 'Watch', params: { id: `${postId}-${mediaIndex}` } })
 }
 
 onMounted(() => {

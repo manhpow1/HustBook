@@ -90,6 +90,26 @@ export const usePostStore = defineStore('post', () => {
         }
     }
 
+    const fetchPostsByHashtag = async (hashtag, page = 1) => {
+        try {
+            loading.value = true
+            error.value = null
+            const response = await apiService.get('/posts', {
+                params: { hashtag, page, limit: 10 }
+            })
+            if (response.data.code === '1000') {
+                return response.data.data
+            } else {
+                throw new Error(response.data.message || 'Failed to fetch posts')
+            }
+        } catch (err) {
+            handleError(err, 'errorFetchingPosts')
+            return []
+        } finally {
+            loading.value = false
+        }
+    }
+
     const loadMoreComments = async (postId) => {
         if (!hasMoreComments.value || loadingMoreComments.value) return
 
@@ -212,37 +232,101 @@ export const usePostStore = defineStore('post', () => {
         }
     }
 
-    const uncoverMedia = async (postId, mediaId = null) => {
+    const deletePost = async (postId) => {
         try {
             loading.value = true
             error.value = null
-
-            const response = await apiService.post(`/posts/${postId}/uncover_media`, { mediaId })
-
+            const response = await apiService.delete(`/posts/${postId}`)
             if (response.data.code === '1000') {
-                if (currentPost.value && currentPost.value.id === postId) {
-                    if (mediaId) {
-                        // Uncover specific media item
-                        const mediaItem = currentPost.value.image.find(img => img.id === mediaId) ||
-                            currentPost.value.video.find(vid => vid.id === mediaId)
-                        if (mediaItem) {
-                            mediaItem.covered = false
-                        }
-                    } else {
-                        // Uncover all media
-                        currentPost.value.image.forEach(img => img.covered = false)
-                        currentPost.value.video.forEach(vid => vid.covered = false)
-                    }
-                }
+                currentPost.value = null
                 return true
             } else {
-                throw new Error(response.data.message || 'Failed to uncover media')
+                throw new Error(response.data.message || 'Failed to delete post')
             }
         } catch (err) {
-            handleError(err, 'errorUncoveringMedia')
+            handleError(err, 'errorDeletingPost')
             return false
         } finally {
             loading.value = false
+        }
+    }
+
+    const toggleComments = async (postId) => {
+        try {
+            loading.value = true
+            error.value = null
+            const newState = currentPost.value.can_comment === '1' ? '0' : '1'
+            const response = await apiService.put(`/posts/${postId}/toggle_comments`, { can_comment: newState })
+            if (response.data.code === '1000') {
+                currentPost.value.can_comment = newState
+                return true
+            } else {
+                throw new Error(response.data.message || 'Failed to toggle comments')
+            }
+        } catch (err) {
+            handleError(err, 'errorTogglingComments')
+            return false
+        } finally {
+            loading.value = false
+        }
+    }
+
+    const hidePost = async (postId) => {
+        try {
+            loading.value = true
+            error.value = null
+            const response = await apiService.post(`/posts/${postId}/hide`)
+            if (response.data.code === '1000') {
+                // You might want to update some state here to reflect that the post is hidden
+                return true
+            } else {
+                throw new Error(response.data.message || 'Failed to hide post')
+            }
+        } catch (err) {
+            handleError(err, 'errorHidingPost')
+            return false
+        } finally {
+            loading.value = false
+        }
+    }
+
+    const reportPost = async (postId, reason) => {
+        try {
+            loading.value = true
+            error.value = null
+            const response = await apiService.post(`/posts/${postId}/report`, { reason })
+            if (response.data.code === '1000') {
+                // You might want to update some state here to reflect that the post has been reported
+                return true
+            } else {
+                throw new Error(response.data.message || 'Failed to report post')
+            }
+        } catch (err) {
+            handleError(err, 'errorReportingPost')
+            return false
+        } finally {
+            loading.value = false
+        }
+    }
+
+    const uncoverMedia = async (postId, mediaId) => {
+        try {
+            const response = await apiService.post('/posts/uncover_media', { postId, mediaId })
+            if (response.data.code === '1000') {
+                // Update the current post's media
+                if (currentPost.value && currentPost.value.id === postId) {
+                    const mediaIndex = currentPost.value.media.findIndex(m => m.id === mediaId)
+                    if (mediaIndex !== -1) {
+                        currentPost.value.media[mediaIndex].covered = false
+                    }
+                }
+                return response.data.data
+            } else {
+                throw new Error(response.data.message)
+            }
+        } catch (err) {
+            handleError(err, 'errorUncoveringMedia')
+            throw err
         }
     }
 
@@ -275,8 +359,12 @@ export const usePostStore = defineStore('post', () => {
         loadingMoreComments,
         commentError,
         isLiked,
-        editPost,
         fetchPost,
+        editPost,
+        deletePost,
+        toggleComments,
+        hidePost,
+        reportPost,
         loadMoreComments,
         retryLoadComments,
         likePost,
@@ -284,6 +372,7 @@ export const usePostStore = defineStore('post', () => {
         updateComment,
         deleteComment,
         togglePostContent,
-        uncoverMedia
+        uncoverMedia,
+        fetchPostsByHashtag
     }
 })

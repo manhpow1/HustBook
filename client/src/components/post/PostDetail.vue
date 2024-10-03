@@ -21,12 +21,14 @@
                         <PostHeader :post="post" :isOwnPost="isOwnPost"
                             @showAdvancedOptions="showAdvancedOptionsModal = true" />
 
-                        <PostContent :post="post" @toggleContent="toggleContent" @hashtagClick="handleHashtagClick" />
+                        <PostContent :post="post" :showFullContent="showFullContent" @toggleContent="toggleContent"
+                            @hashtagClick="handleHashtagClick" />
 
                         <PostMedia :post="post" @openLightbox="openLightbox" @openVideoPlayer="openVideoPlayer"
                             @uncoverMedia="handleUncoverMedia" />
 
-                        <PostActions :post="post" @like="handleLike" @comment="focusCommentInput" />
+                        <PostActions :post="post" :formattedLikes="formattedLikes"
+                            :formattedComments="formattedComments" @like="handleLike" @comment="focusCommentInput" />
 
                         <PostBanWarning v-if="post.banned !== '0'" :banStatus="post.banned" />
 
@@ -41,9 +43,9 @@
             <MediaViewer v-if="showMediaViewer" :post="post" :initialMediaIndex="currentMediaIndex"
                 @close="closeMediaViewer" />
 
-            <AdvancedOptionsModal v-if="showAdvancedOptionsModal" :isOwnPost="isOwnPost"
-                @close="showAdvancedOptionsModal = false" @edit="editPost" @save="handleSavePost"
-                @copyLink="handleCopyLink" @report="handleReportPost" />
+            <AdvancedOptionsModal v-if="showAdvancedOptionsModal" :isOwnPost="isOwnPost" :post="post"
+                @close="showAdvancedOptionsModal = false" @edit="editPost" @delete="deletePost"
+                @toggleComments="toggleComments" @report="handleReportPost" @hide="hidePost" />
         </ErrorBoundary>
     </div>
 </template>
@@ -55,6 +57,8 @@ import { useI18n } from 'vue-i18n'
 import { usePostStore } from '../../stores/post'
 import { useUserStore } from '../../stores/user'
 import { AlertCircleIcon } from 'lucide-vue-next'
+import { formatNumber } from '../../utils/numberFormat'
+import { useConfirm } from '@vueuse/core'
 import PostSkeleton from '../shared/PostSkeleton.vue'
 import ErrorBoundary from '../shared/ErrorBoundary.vue'
 import PostHeader from './PostHeader.vue'
@@ -79,10 +83,15 @@ const error = computed(() => postStore.error)
 const loadingMoreComments = computed(() => postStore.loadingMoreComments)
 const commentError = computed(() => postStore.commentError)
 
+const formattedLikes = computed(() => formatNumber(post.value?.like || 0))
+const formattedComments = computed(() => formatNumber(post.value?.comment || 0))
+
 const showMediaViewer = ref(false)
 const currentMediaIndex = ref(0)
 const showAdvancedOptionsModal = ref(false)
 const isOwnPost = computed(() => post.value?.author?.id === userStore.currentUser?.id)
+
+const { confirm } = useConfirm()
 
 const fetchPost = async () => {
     await postStore.fetchPost(route.params.id)
@@ -111,7 +120,7 @@ const focusCommentInput = () => {
 }
 
 const toggleContent = () => {
-    postStore.togglePostContent(post.value.id)
+    showFullContent.value = !showFullContent.value
 }
 
 const openLightbox = (index) => {
@@ -136,9 +145,9 @@ const handleCommentDelete = async (commentId) => {
     await postStore.deleteComment(post.value.id, commentId)
 }
 
-const handleUncoverMedia = async () => {
+const handleUncoverMedia = async (mediaId) => {
     try {
-        await postStore.uncoverMedia(post.value.id)
+        await postStore.uncoverMedia(post.value.id, mediaId)
     } catch (error) {
         console.error('Failed to uncover media:', error)
         // You might want to show an error message to the user here
@@ -146,13 +155,49 @@ const handleUncoverMedia = async () => {
 }
 
 const handleHashtagClick = (hashtag) => {
-    // Implement hashtag click functionality
-    console.log('Hashtag clicked:', hashtag)
-    // You might want to navigate to a hashtag search page or filter posts by this hashtag
+    // Remove the '#' symbol if it's included
+    const tag = hashtag.startsWith('#') ? hashtag.slice(1) : hashtag
+    router.push({ name: 'Hashtag', params: { hashtag: tag } })
 }
 
 const editPost = () => {
     router.push({ name: 'EditPost', params: { id: post.value.id } })
+    showAdvancedOptionsModal.value = false
+}
+
+const deletePost = async () => {
+    if (await confirm(t('confirmDeletePost'))) {
+        try {
+            await postStore.deletePost(post.value.id)
+            router.push({ name: 'Home' })
+        } catch (error) {
+            console.error('Failed to delete post:', error)
+            // Show an error message to the user
+        }
+    }
+    showAdvancedOptionsModal.value = false
+}
+
+const handleReportPost = async () => {
+    try {
+        await postStore.reportPost(post.value.id)
+        // Show a success message to the user
+    } catch (error) {
+        console.error('Failed to report post:', error)
+        // Show an error message to the user
+    }
+    showAdvancedOptionsModal.value = false
+}
+
+const hidePost = async () => {
+    try {
+        await postStore.hidePost(post.value.id)
+        // Remove the post from the current view or update its visibility
+    } catch (error) {
+        console.error('Failed to hide post:', error)
+        // Show an error message to the user
+    }
+    showAdvancedOptionsModal.value = false
 }
 
 const handleSavePost = async () => {
@@ -163,16 +208,6 @@ const handleSavePost = async () => {
         console.error('Failed to save post:', error)
         // Show an error message to the user
     }
-}
-
-const handleCopyLink = () => {
-    const postUrl = `${window.location.origin}/post/${post.value.id}`
-    navigator.clipboard.writeText(postUrl).then(() => {
-        // Show a success message to the user
-    }, (err) => {
-        console.error('Failed to copy link:', err)
-        // Show an error message to the user
-    })
 }
 
 const handleReportPost = async () => {
