@@ -3,15 +3,16 @@ const router = express.Router();
 const multer = require('multer');
 const upload = multer({ dest: 'uploads/' });
 const postController = require('../controllers/postController');
+const { authenticateToken } = require('../middleware/auth');
 
-router.post('/', upload.array('images', 4), postController.createPost);
-router.get('/:id', postController.getPost);
-router.put('/:id', upload.array('images', 4), postController.updatePost);
-router.delete('/:id', postController.deletePost);
-router.post('/:id/like', postController.likePost);
-router.post('/:id/unlike', postController.unlikePost);
-router.post('/:id/comment', postController.addComment);
-router.get('/:id/comments', postController.getPostComments);
-router.get('/user/:userId', postController.getUserPosts);
+router.post('/', authenticateToken, upload.array('images', 4), postController.createPost);
+router.get('/:id', authenticateToken, postController.getPost);
+router.put('/:id', authenticateToken, upload.array('images', 4), postController.updatePost);
+router.delete('/:id', authenticateToken, postController.deletePost);
+router.post('/:id/like', authenticateToken, postController.likePost);
+router.post('/:id/unlike', authenticateToken, postController.unlikePost);
+router.post('/:id/comment', authenticateToken, postController.addComment);
+router.get('/:id/comments', authenticateToken, postController.getPostComments);
+router.get('/user/:userId', authenticateToken, postController.getUserPosts);
 
 module.exports = router;

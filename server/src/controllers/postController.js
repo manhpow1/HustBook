@@ -1,13 +1,24 @@
 const postService = require('../services/postService');
+const {
+    validateCreatePost,
+    validateUpdatePost,
+    validateComment,
+    validateLike,
+    validateGetPost,
+    validateGetPostComments,
+    validateGetUserPosts
+} = require('../validators/postValidator');
 
 const createPost = async (req, res) => {
     try {
-        const { userId, content } = req.body;
-        const images = req.files ? req.files.map(file => file.path) : [];
-
-        if (!userId || !content) {
-            return res.status(400).json({ code: "1002", message: "Parameter is not enough" });
+        const { error } = validateCreatePost(req.body);
+        if (error) {
+            return res.status(400).json({ code: "1002", message: error.details[0].message });
         }
+
+        const { content } = req.body;
+        const userId = req.user.uid;
+        const images = req.files ? req.files.map(file => file.path) : [];
 
         const postId = await postService.createPost(userId, content, images);
 
@@ -24,6 +35,11 @@ const createPost = async (req, res) => {
 
 const getPost = async (req, res) => {
     try {
+        const { error } = validateGetPost(req.params);
+        if (error) {
+            return res.status(400).json({ code: "1002", message: error.details[0].message });
+        }
+
         const { id } = req.params;
 
         const post = await postService.getPost(id);
@@ -45,15 +61,17 @@ const getPost = async (req, res) => {
 
 const updatePost = async (req, res) => {
     try {
-        const { id } = req.params;
-        const { content } = req.body;
-        const images = req.files ? req.files.map(file => file.path) : [];
-
-        if (!content) {
-            return res.status(400).json({ code: "1002", message: "Parameter is not enough" });
+        const { error } = validateUpdatePost(req.body);
+        if (error) {
+            return res.status(400).json({ code: "1002", message: error.details[0].message });
         }
 
-        const updatedPost = await postService.updatePost(id, content, images);
+        const { id } = req.params;
+        const { content } = req.body;
+        const userId = req.user.uid;
+        const images = req.files ? req.files.map(file => file.path) : [];
+
+        const updatedPost = await postService.updatePost(id, userId, content, images);
 
         if (!updatedPost) {
             return res.status(404).json({ code: "9992", message: "Post is not existed" });
@@ -88,12 +106,13 @@ const deletePost = async (req, res) => {
 
 const likePost = async (req, res) => {
     try {
+        const { error } = validateLike(req.body);
+        if (error) {
+            return res.status(400).json({ code: "1002", message: error.details[0].message });
+        }
+
         const { id } = req.params;
         const { userId } = req.body;
-
-        if (!userId) {
-            return res.status(400).json({ code: "1002", message: "Parameter is not enough" });
-        }
 
         await postService.likePost(id, userId);
 
@@ -109,12 +128,13 @@ const likePost = async (req, res) => {
 
 const unlikePost = async (req, res) => {
     try {
+        const { error } = validateLike(req.body);
+        if (error) {
+            return res.status(400).json({ code: "1002", message: error.details[0].message });
+        }
+
         const { id } = req.params;
         const { userId } = req.body;
-
-        if (!userId) {
-            return res.status(400).json({ code: "1002", message: "Parameter is not enough" });
-        }
 
         await postService.unlikePost(id, userId);
 
@@ -130,12 +150,14 @@ const unlikePost = async (req, res) => {
 
 const addComment = async (req, res) => {
     try {
-        const { id } = req.params;
-        const { userId, content } = req.body;
-
-        if (!userId || !content) {
-            return res.status(400).json({ code: "1002", message: "Parameter is not enough" });
+        const { error } = validateComment(req.body);
+        if (error) {
+            return res.status(400).json({ code: "1002", message: error.details[0].message });
         }
+
+        const { id } = req.params;
+        const { content } = req.body;
+        const userId = req.user.uid;
 
         const commentId = await postService.addComment(id, userId, content);
 
@@ -152,6 +174,11 @@ const addComment = async (req, res) => {
 
 const getPostComments = async (req, res) => {
     try {
+        const { error } = validateGetPostComments(req.query);
+        if (error) {
+            return res.status(400).json({ code: "1002", message: error.details[0].message });
+        }
+
         const { id } = req.params;
         const { lastCommentId, limit } = req.query;
 
@@ -170,6 +197,11 @@ const getPostComments = async (req, res) => {
 
 const getUserPosts = async (req, res) => {
     try {
+        const { error } = validateGetUserPosts(req.params, req.query);
+        if (error) {
+            return res.status(400).json({ code: "1002", message: error.details[0].message });
+        }
+
         const { userId } = req.params;
         const { lastPostId, limit } = req.query;
 

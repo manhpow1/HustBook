@@ -1,80 +1,29 @@
 const authService = require('../services/authService');
-const { getDocument, updateDocument, collections } = require('../config/database');
-
-const login = async (req, res) => {
-    try {
-        const { phonenumber, password, deviceId } = req.body;
-
-        if (!phonenumber || !password || !deviceId) {
-            return res.status(400).json({ code: "1002", message: "Parameter is not enough" });
-        }
-
-        if (!/^0\d{9}$/.test(phonenumber)) {
-            return res.status(400).json({ code: "1004", message: "Invalid phone number format" });
-        }
-
-        const user = await authService.getUserByPhoneNumber(phonenumber);
-        if (!user) {
-            return res.status(400).json({ code: "9995", message: "User is not validated" });
-        }
-
-        const isPasswordCorrect = await authService.comparePassword(password, user.password);
-        if (!isPasswordCorrect) {
-            return res.status(400).json({ code: "1004", message: "Invalid password" });
-        }
-
-        const deviceToken = authService.generateDeviceToken();
-        await authService.updateUserDeviceInfo(user.uid, deviceToken, deviceId);
-
-        const token = authService.generateJWT({ uid: user.uid, phone: user.phoneNumber });
-
-        res.status(200).json({
-            code: "1000",
-            message: "OK",
-            data: {
-                id: user.uid,
-                username: user.username || "User" + user.uid.substring(0, 4),
-                token: token,
-                deviceToken: deviceToken,
-                avatar: user.avatar || "http://example.com/default-avatar.jpg",
-                active: user.active || "1"
-            },
-        });
-    } catch (error) {
-        console.error("Login Error:", error);
-        res.status(500).json({ code: "1001", message: "Cannot connect to DB" });
-    }
-};
+const { validateSignup, validateLogin, validateChangeInfo } = require('../validators/userValidator');
+const { generateRandomCode, hashPassword, comparePassword, formatPhoneNumber } = require('../utils/helpers');
+const User = require('../models/User');
 
 const signup = async (req, res) => {
     try {
-        const { phonenumber, password, uuid } = req.body;
-
-        if (!phonenumber || !password || !uuid) {
-            return res.status(400).json({ code: "1002", message: "Parameter is not enough" });
+        const { error } = validateSignup(req.body);
+        if (error) {
+            return res.status(400).json({ code: "1002", message: error.details[0].message });
         }
 
-        if (!/^0\d{9}$/.test(phonenumber)) {
-            return res.status(400).json({ code: "1004", message: "Invalid phone number format" });
-        }
+        const { phoneNumber, password, uuid } = req.body;
 
-        if (
-            password.length < 6 ||
-            password.length > 10 ||
-            /[^a-zA-Z0-9]/.test(password) ||
-            password === phonenumber
-        ) {
-            return res.status(400).json({ code: "1004", message: "Invalid password format" });
-        }
-
-        const existingUser = await authService.getUserByPhoneNumber(phonenumber);
+        const existingUser = await authService.getUserByPhoneNumber(phoneNumber);
         if (existingUser) {
             return res.status(400).json({ code: "9996", message: "User existed" });
         }
 
-        const { userId, verificationCode, deviceToken } = await authService.createUser(phonenumber, password, uuid);
+        const hashedPassword = await hashPassword(password);
+        const formattedPhoneNumber = formatPhoneNumber(phoneNumber);
+        const verificationCode = generateRandomCode();
 
-        const token = authService.generateJWT({ uid: userId, phone: phonenumber });
+        const { userId, deviceToken } = await authService.createUser(formattedPhoneNumber, hashedPassword, uuid, verificationCode);
+
+        const token = authService.generateJWT({ uid: userId, phone: formattedPhoneNumber });
 
         res.status(200).json({
             code: "1000",
@@ -88,6 +37,47 @@ const signup = async (req, res) => {
         });
     } catch (error) {
         console.error("Signup Error:", error);
+        res.status(500).json({ code: "1001", message: "Cannot connect to DB" });
+    }
+};
+
+const login = async (req, res) => {
+    try {
+        const { error } = validateLogin(req.body);
+        if (error) {
+            return res.status(400).json({ code: "1002", message: error.details[0].message });
+        }
+
+        const { phoneNumber, password, deviceId } = req.body;
+
+        const user = await authService.getUserByPhoneNumber(phoneNumber);
+        if (!user) {
+            return res.status(400).json({ code: "9995", message: "User is not validated" });
+        }
+
+        const isPasswordCorrect = await comparePassword(password, user.password);
+        if (!isPasswordCorrect) {
+            return res.status(400).json({ code: "1004", message: "Invalid password" });
+        }
+
+        const deviceToken = authService.generateDeviceToken();
+        await authService.updateUserDeviceInfo(user.uid, deviceToken, deviceId);
+
+        const token = authService.generateJWT({ uid: user.uid, phone: user.phoneNumber });
+
+        const userModel = new User(user);
+
+        res.status(200).json({
+            code: "1000",
+            message: "OK",
+            data: {
+                ...userModel.toJSON(),
+                token: token,
+                deviceToken: deviceToken,
+            },
+        });
+    } catch (error) {
+        console.error("Login Error:", error);
         res.status(500).json({ code: "1001", message: "Cannot connect to DB" });
     }
 };
@@ -214,6 +204,10 @@ const checkAuth = async (req, res) => {
 
 const changeInfoAfterSignup = async (req, res) => {
     try {
+        const { error } = validateChangeInfo(req.body);
+        if (error) {
+            return res.status(400).json({ code: "1002", message: error.details[0].message });
+        }
         const { token, username } = req.body;
         const avatar = req.file;
 
@@ -229,12 +223,8 @@ const changeInfoAfterSignup = async (req, res) => {
             return res.status(404).json({ code: "9995", message: "User not found" });
         }
 
-        if (username === user.phoneNumber) {
+        if (username === req.user.phoneNumber) {
             return res.status(400).json({ code: "1004", message: "Username cannot be the same as the phone number" });
-        }
-
-        if (!authService.validateUsername(username)) {
-            return res.status(400).json({ code: "1004", message: "Invalid username format" });
         }
 
         const updateData = { username };
@@ -268,12 +258,12 @@ const changeInfoAfterSignup = async (req, res) => {
     }
 };
 
-module.exports = {
-    login,
-    signup,
-    logout,
-    getVerifyCode,
-    checkVerifyCode,
-    checkAuth,
-    changeInfoAfterSignup
-};
+        module.exports = {
+            login,
+            signup,
+            logout,
+            getVerifyCode,
+            checkVerifyCode,
+            checkAuth,
+            changeInfoAfterSignup
+        };
