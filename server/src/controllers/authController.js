@@ -67,6 +67,9 @@ const login = async (req, res) => {
 
         const userModel = new User(user);
 
+        const refreshToken = generateRefreshToken(user.id);
+        await updateDocument(collections.users, user.id, { refreshToken });
+
         res.status(200).json({
             code: "1000",
             message: "OK",
@@ -258,12 +261,12 @@ const changeInfoAfterSignup = async (req, res) => {
     }
 };
 
-        module.exports = {
-            login,
-            signup,
-            logout,
-            getVerifyCode,
-            checkVerifyCode,
-            checkAuth,
-            changeInfoAfterSignup
-        };
+module.exports = {
+    login,
+    signup,
+    logout,
+    getVerifyCode,
+    checkVerifyCode,
+    checkAuth,
+    changeInfoAfterSignup
+};

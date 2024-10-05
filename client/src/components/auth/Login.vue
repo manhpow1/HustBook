@@ -68,12 +68,12 @@
         </div>
 
         <div>
-          <button type="submit" :disabled="isLoading || !isFormValid || isRateLimited"
+          <button type="submit" :disabled="userStore.loading || !isFormValid || isRateLimited"
             class="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200">
             <span class="absolute left-0 inset-y-0 flex items-center pl-3">
               <LockIcon class="h-5 w-5 text-indigo-500 group-hover:text-indigo-400" aria-hidden="true" />
             </span>
-            <span v-if="isLoading" class="flex items-center">
+            <span v-if="userStore.loading" class="flex items-center">
               <svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none"
                 viewBox="0 0 24 24">
                 <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
@@ -100,10 +100,10 @@
       </div>
 
       <!-- Error message -->
-      <div v-if="errorMessage" class="mt-4 p-4 bg-red-100 rounded-md" aria-live="polite">
+      <div v-if="userStore.error" class="mt-4 p-4 bg-red-100 rounded-md" aria-live="polite">
         <p class="text-red-700 flex items-center">
           <AlertCircleIcon class="h-5 w-5 mr-2" />
-          {{ errorMessage }}
+          {{ userStore.error }}
         </p>
         <button v-if="canRetry" @click="handleSubmit"
           class="mt-2 text-sm font-medium text-indigo-600 hover:text-indigo-500 transition-colors duration-200">
@@ -121,28 +121,26 @@
 <script setup>
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { useUserState } from '../../store/user-state'
+import { useUserStore } from '../../stores/userStore'
 import { useFormValidation } from '../../composables/useFormValidation'
-import { useLoginSubmit } from '../../composables/useLoginSubmit'
 import { useRateLimiter } from '../../composables/useRateLimiter'
 import { PhoneIcon, LockIcon, CheckCircleIcon, AlertCircleIcon, EyeIcon, EyeOffIcon } from 'lucide-vue-next'
 
 const router = useRouter()
-const { login } = useUserState()
+const userStore = useUserStore()
 
 const phonenumber = ref("")
 const password = ref("")
 const rememberMe = ref(false)
 const showPassword = ref(false)
 const canRetry = ref(false)
+const loginSuccess = ref(false)
 
 const { phoneError, passwordError, validatePhone, validatePassword } = useFormValidation()
 
 const isFormValid = computed(() => {
   return phonenumber.value && password.value && !phoneError.value && !passwordError.value
 })
-
-const { isLoading, loginSuccess, errorMessage, submitLogin } = useLoginSubmit(login, router)
 
 const { isRateLimited, rateLimitRemaining, incrementAttempts } = useRateLimiter(5, 60000) // 5 attempts per minute
 
@@ -165,8 +163,13 @@ const handleSubmit = async () => {
 
   if (validatePhone(phonenumber.value) && validatePassword(password.value)) {
     canRetry.value = false
-    await submitLogin(phonenumber.value, password.value, rememberMe.value)
-    if (errorMessage.value) {
+    const success = await userStore.login(phonenumber.value, password.value)
+    if (success) {
+      loginSuccess.value = true
+      setTimeout(() => {
+        router.push('/')
+      }, 1500)
+    } else {
       canRetry.value = true
     }
   }
@@ -174,7 +177,7 @@ const handleSubmit = async () => {
 
 // Keyboard accessibility
 const handleKeyDown = (event) => {
-  if (event.key === 'Enter' && isFormValid.value && !isLoading.value && !isRateLimited.value) {
+  if (event.key === 'Enter' && isFormValid.value && !userStore.loading && !isRateLimited.value) {
     handleSubmit()
   }
 }

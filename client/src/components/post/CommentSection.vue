@@ -47,8 +47,10 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { usePostStore } from '../../stores/postStore'
+import { useUserStore } from '../../stores/userStore'
 import { LoaderIcon } from 'lucide-vue-next'
 import MarkdownEditor from '../shared/MarkdownEditor.vue'
 import DOMPurify from 'dompurify'
@@ -75,30 +77,35 @@ const props = defineProps({
 const emit = defineEmits(['addComment', 'updateComment', 'deleteComment', 'loadMore', 'retry'])
 
 const { t } = useI18n()
+const postStore = usePostStore()
+const userStore = useUserStore()
 const newComment = ref('')
 const commentInput = ref(null)
 
-const addComment = () => {
+const comments = computed(() => postStore.getComments(props.postId))
+const loading = computed(() => postStore.loadingComments)
+const error = computed(() => postStore.commentError)
+
+const addComment = async () => {
     if (newComment.value.trim()) {
-        emit('addComment', newComment.value)
+        await postStore.addComment(props.postId, newComment.value)
         newComment.value = ''
     }
 }
 
-const editComment = (comment) => {
-    // Implement edit functionality
+const editComment = async (comment) => {
+    // Implement edit functionality using postStore
     console.log('Edit comment:', comment)
 }
 
-const deleteComment = (commentId) => {
+const deleteComment = async (commentId) => {
     if (confirm(t('confirmDeleteComment'))) {
-        emit('deleteComment', commentId)
+        await postStore.deleteComment(props.postId, commentId)
     }
 }
 
 const isOwnComment = (comment) => {
-    // Implement logic to check if the comment belongs to the current user
-    return true // Placeholder
+    return comment.user.id === userStore.userId
 }
 
 const sanitizeContent = (content) => {
@@ -108,6 +115,14 @@ const sanitizeContent = (content) => {
 const formatDate = (dateString) => {
     // Implement date formatting logic
     return new Date(dateString).toLocaleString()
+}
+
+const loadMoreComments = () => {
+    postStore.loadMoreComments(props.postId)
+}
+
+const retryLoadComments = () => {
+    postStore.fetchComments(props.postId)
 }
 </script>
 

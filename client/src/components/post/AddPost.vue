@@ -5,31 +5,7 @@
             Create a New Post
         </h2>
         <form @submit.prevent="submitPost" class="space-y-6">
-            <div>
-                <label for="file-upload" class="block text-sm font-medium text-gray-700 mb-2">
-                    Upload Images (Max 4)
-                </label>
-                <div class="image-grid" :class="[`grid-${previewUrls.length}`]">
-                    <div v-for="(preview, index) in previewUrls" :key="index" class="image-container">
-                        <img :src="preview" alt="Preview" class="preview-image" />
-                        <button @click="removeFile(index)" type="button" class="remove-button"
-                            aria-label="Remove image">
-                            <XIcon class="w-4 h-4" />
-                        </button>
-                    </div>
-                    <label v-if="previewUrls.length < 4" for="file-upload" class="upload-label">
-                        <div class="flex flex-col items-center justify-center pt-5 pb-6">
-                            <UploadCloudIcon class="w-10 h-10 mb-3 text-gray-400" />
-                            <p class="text-xs text-gray-500">Click to add image</p>
-                        </div>
-                    </label>
-                </div>
-                <input id="file-upload" type="file" accept="image/*" @change="handleFileUpload" class="hidden" />
-                <p v-if="fileError" class="mt-2 text-sm text-red-600">
-                    {{ fileError }}
-                </p>
-            </div>
-
+            <FileUpload v-model:files="files" @error="fileError = $event" />
             <div>
                 <label for="description" class="block text-sm font-medium text-gray-700 mb-2">
                     Description
@@ -40,7 +16,6 @@
                 <p class="mt-2 text-sm text-gray-500">{{ description.length }}/500 characters</p>
                 <div v-html="highlightedDescription" class="mt-2 text-sm text-gray-700"></div>
             </div>
-
             <div>
                 <label for="status-select" class="block text-sm font-medium text-gray-700 mb-2">
                     How are you feeling?
@@ -105,13 +80,15 @@
 import { ref, computed, onMounted, onBeforeUnmount, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import UnsavedChangesModal from '../shared/UnsavedChangesModal.vue'
-import { useUserState } from '../../store/user-state'
-import { PencilIcon, UploadCloudIcon, XIcon, LoaderIcon, CheckCircleIcon, XCircleIcon, SmileIcon } from 'lucide-vue-next'
-import { API_ENDPOINTS } from '../../config/api'
-import apiService from '../../services/api'
+import { useUserStore } from '../../stores/userStore'
+import { usePostStore } from '../../stores/postStore'
+import { PencilIcon, LoaderIcon, CheckCircleIcon, XCircleIcon, SmileIcon } from 'lucide-vue-next'
+import FileUpload from '../shared/FileUpload.vue'
 import logger from '../../services/logging'
 
 const router = useRouter()
+const userStore = useUserStore()
+const postStore = usePostStore()
 const showUnsavedChangesModal = ref(false)
 const pendingNavigation = ref(null)
 const { token } = useUserState()
@@ -127,8 +104,6 @@ const errorMessage = ref('')
 const showEmojiPicker = ref(false)
 const showUploadProgress = ref(false)
 const uploadProgress = ref(0)
-
-const MAX_FILE_SIZE = 5 * 1024 * 1024 // 5MB
 
 const statusOptions = [
     { value: 'happy', label: 'Happy' },
@@ -205,81 +180,6 @@ const discardChanges = () => {
 const cancelNavigation = () => {
     showUnsavedChangesModal.value = false
     pendingNavigation.value.next(false)
-}
-
-const handleFileUpload = (event) => {
-    try {
-        const uploadedFile = event.target.files[0]
-
-        if (!uploadedFile) {
-            logger.info('No file selected')
-            return
-        }
-
-        if (previewUrls.value.length >= 4) {
-            fileError.value = "You can upload a maximum of 4 images"
-            logger.warn('Max image limit reached', { currentCount: previewUrls.value.length })
-            return
-        }
-
-        if (uploadedFile.type.startsWith("video/")) {
-            if (uploadedFile.size > 10 * 1024 * 1024) {
-                fileError.value = "Video duration should be less than 60 seconds and size should be less than 10MB"
-                logger.warn('Video file size too large', { size: uploadedFile.size, maxSize: 10 * 1024 * 1024 })
-                return
-            }
-
-            const video = document.createElement("video")
-            video.preload = "metadata"
-            video.onloadedmetadata = () => {
-                if (video.duration > 60) {
-                    fileError.value = "Video duration should be less than 60 seconds and size should be less than 10MB"
-                    logger.warn('Video duration too long', { duration: video.duration })
-                } else {
-                    processFile(uploadedFile)
-                }
-                URL.revokeObjectURL(video.src)
-            }
-            video.onerror = () => {
-                fileError.value = "Error processing video file"
-                logger.error('Error processing video file', { fileName: uploadedFile.name })
-                URL.revokeObjectURL(video.src)
-            }
-            video.src = URL.createObjectURL(uploadedFile)
-        } else if (uploadedFile.type.startsWith("image/")) {
-            if (uploadedFile.size > MAX_FILE_SIZE) {
-                fileError.value = "File size is too big (max 5MB for images, 10MB for videos)"
-                logger.warn('Image file size too large', { size: uploadedFile.size, maxSize: MAX_FILE_SIZE })
-                return
-            }
-            processFile(uploadedFile)
-        } else {
-            fileError.value = "Only image and video files are allowed"
-            logger.warn('Invalid file type', { type: uploadedFile.type })
-        }
-    } catch (error) {
-        logger.error('Error in handleFileUpload', error)
-        fileError.value = "An error occurred while processing the file"
-    }
-}
-
-const processFile = (file) => {
-    files.value.push(file)
-    const reader = new FileReader()
-    reader.onload = (e) => {
-        previewUrls.value.push(e.target.result)
-        logger.info('File processed successfully', { fileName: file.name })
-    }
-    reader.onerror = (e) => {
-        logger.error('Error reading file', { fileName: file.name, error: e.target.error })
-        errorMessage.value = 'Error reading file. Please try again.'
-    }
-    reader.readAsDataURL(file)
-}
-
-const removeFile = (index) => {
-    files.value.splice(index, 1)
-    previewUrls.value.splice(index, 1)
 }
 
 const handleDescriptionInput = () => {
@@ -362,13 +262,15 @@ const submitPost = async () => {
     files.value.forEach((file) => formData.append("files", file))
 
     try {
-        const response = await apiService.upload(API_ENDPOINTS.ADD_POST, formData, (progress) => {
-            uploadProgress.value = progress
+        const response = await postStore.createPost({
+            described: convertEmoticonsToText(description.value),
+            status: status.value,
+            files: files.value
         })
 
-        if (response.data.code === '1000') {
+        if (response.code === '1000') {
             successMessage.value = 'Post created successfully!'
-            logger.info('Post created successfully', { postId: response.data.data.id })
+            logger.info('Post created successfully', { postId: response.data.id })
             description.value = ''
             status.value = ''
             files.value = []
@@ -376,8 +278,8 @@ const submitPost = async () => {
             localStorage.removeItem('postDraft')
             router.push('/') // Navigate to home page after successful post
         } else {
-            errorMessage.value = response.data.message || 'An error occurred while creating the post'
-            logger.warn('Failed to create post', { responseCode: response.data.code, message: response.data.message })
+            errorMessage.value = response.message || 'An error occurred while creating the post'
+            logger.warn('Failed to create post', { responseCode: response.code, message: response.message })
         }
     } catch (error) {
         logger.error('Error in submitPost', error)

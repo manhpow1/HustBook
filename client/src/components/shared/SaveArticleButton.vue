@@ -9,7 +9,7 @@
 <script setup>
 import { ref } from 'vue'
 import { BookmarkIcon } from 'lucide-vue-next'
-import { useUserState } from '../../store/user-state'
+import { useUserState } from '../../stores/userState'
 import axios from 'axios'
 
 const props = defineProps({

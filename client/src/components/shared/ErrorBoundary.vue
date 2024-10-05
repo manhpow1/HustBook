@@ -30,7 +30,7 @@ import { ref, onErrorCaptured, provide } from 'vue'
 import { useRouter } from 'vue-router'
 import { AlertCircleIcon } from 'lucide-vue-next'
 import logger from '../../services/logging'
-import { useUserState } from '../../store/user-state'
+import { useUserState } from '../../stores/userState'
 
 const props = defineProps({
     componentName: {

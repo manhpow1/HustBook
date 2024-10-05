@@ -15,10 +15,14 @@
 
         <div v-else-if="posts.length > 0">
             <TransitionGroup name="post-list" tag="div" class="space-y-6">
-                <PostItem v-for="post in posts" :key="post.id" :post="post" />
+                <div v-for="post in posts" :key="post.id" class="bg-white shadow rounded-lg p-6">
+                    <!-- Replace this with your actual post rendering logic -->
+                    <h2 class="text-xl font-semibold mb-2">{{ post.title }}</h2>
+                    <p>{{ post.content }}</p>
+                </div>
             </TransitionGroup>
             <div v-if="hasMorePosts" ref="loadMoreTrigger" class="h-10 flex justify-center items-center mt-4">
-                <LoaderIcon v-if="loadingMore" class="animate-spin h-8 w-8 text-indigo-600" />
+                <LoaderIcon v-if="loading" class="animate-spin h-8 w-8 text-indigo-600" />
             </div>
         </div>
 
@@ -27,54 +31,30 @@
 </template>
 
 <script setup>
-import { ref, onMounted, watch, nextTick } from 'vue'
+import { ref, onMounted, watch } from 'vue'
 import { useRoute } from 'vue-router'
-import { usePostStore } from '../store/post'
+import { usePostStore } from '../../stores/postStore'
 import PostSkeleton from '../components/shared/PostSkeleton.vue'
-import PostItem from '../components/shared/PostItem.vue'
 import { LoaderIcon } from 'lucide-vue-next'
 import { useInfiniteScroll } from '@vueuse/core'
+import { storeToRefs } from 'pinia'
 
 const route = useRoute()
 const postStore = usePostStore()
 
+const { posts, loading, error, hasMorePosts } = storeToRefs(postStore)
+
 const hashtag = ref('')
-const posts = ref([])
-const loading = ref(false)
-const loadingMore = ref(false)
-const error = ref(null)
-const hasMorePosts = ref(true)
 const loadMoreTrigger = ref(null)
 
 const fetchPosts = async (loadMore = false) => {
-    if (loadMore) {
-        if (!hasMorePosts.value || loadingMore.value) return
-        loadingMore.value = true
-    } else {
-        loading.value = true
-        posts.value = []
-    }
-
-    try {
-        const newPosts = await postStore.fetchPostsByHashtag(hashtag.value, loadMore)
-        if (newPosts.length === 0) {
-            hasMorePosts.value = false
-        } else {
-            posts.value = loadMore ? [...posts.value, ...newPosts] : newPosts
-        }
-    } catch (err) {
-        console.error('Error fetching posts:', err)
-        error.value = 'Failed to load posts. Please try again later.'
-    } finally {
-        loading.value = false
-        loadingMore.value = false
-    }
+    await postStore.fetchPostsByHashtag(hashtag.value, loadMore)
 }
 
 useInfiniteScroll(
     loadMoreTrigger,
     () => {
-        if (hasMorePosts.value && !loadingMore.value) {
+        if (hasMorePosts.value && !loading.value) {
             fetchPosts(true)
         }
     },

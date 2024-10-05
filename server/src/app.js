@@ -3,7 +3,7 @@ const cors = require('cors');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 const morgan = require('morgan');
-require('dotenv').config();
+const env = require('./config/env');
 
 const authRoutes = require('./routes/auth');
 const postRoutes = require('./routes/posts');
@@ -13,15 +13,16 @@ const searchRoutes = require('./routes/search');
 const chatRoutes = require('./routes/chat');
 const notificationRoutes = require('./routes/notifications');
 
-const { errorHandler } = require('./middleware/errorHandler');
+const errorHandler = require('./middleware/errorHandler');
 
 const app = express();
 
 // Middleware
-app.use(cors({ origin: CORS_ORIGIN }));
+app.use(cors({ origin: env.server.corsOrigin }));
 app.use(express.json());
 app.use(helmet());
 app.use(morgan('dev'));
+app.use(errorHandler);
 
 // Rate limiting
 const limiter = rateLimit({

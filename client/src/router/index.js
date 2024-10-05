@@ -3,9 +3,9 @@ import Home from '../views/Home.vue'
 import Login from '../components/auth/Login.vue'
 import SignUp from '../components/auth/SignUp.vue'
 import AddPost from '../components/post/AddPost.vue'
-import { useUserState } from '../store/user-state'
+import { useUserState } from '../stores/userState'
 import PostDetail from '../components/post/PostDetail.vue'
-import HashtagView from '../views/HashtagView.vue'
+import HashtagView from '../views/post/HashtagView.vue'
 import Watch from '../views/Watch.vue'
 
 const routes = [
@@ -17,19 +17,19 @@ const routes = [
     {
         path: '/profile',
         name: 'Profile',
-        component: () => import('../views/Profile.vue'),
+        component: () => import('../views/user/Profile.vue'),
         meta: { requiresAuth: true }
     },
     {
         path: '/friends',
         name: 'Friends',
-        component: () => import('../views/Friends.vue'),
+        component: () => import('../views/user/Friends.vue'),
         meta: { requiresAuth: true }
     },
     {
         path: '/messages',
         name: 'Messages',
-        component: () => import('../views/Messages.vue'),
+        component: () => import('../views/user/Messages.vue'),
         meta: { requiresAuth: true }
     },
     {

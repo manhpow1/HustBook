@@ -18,8 +18,8 @@
 import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { EditIcon } from 'lucide-vue-next'
-import { usePostStore } from '@/stores/post'
-import apiService from '@/services/api'
+import { usePostStore } from '../../stores/postStore'
+import apiService from '../../services/api'
 
 const route = useRoute()
 const router = useRouter()

@@ -2,23 +2,23 @@
   <div class="container mx-auto px-4 py-8">
     <h1 class="text-3xl font-bold mb-6 text-gray-800">Welcome to HustBook</h1>
 
-    <div v-if="isLoggedIn">
+    <div v-if="userStore.isLoggedIn">
       <AddPost @post-created="handlePostCreated" />
 
       <div class="mt-12">
         <h2 class="text-2xl font-semibold mb-4 text-gray-800">Recent Posts</h2>
-        <div v-if="isLoading && posts.length === 0" class="space-y-6">
+        <div v-if="postStore.loading && postStore.posts.length === 0" class="space-y-6">
           <PostSkeleton v-for="i in 3" :key="i" />
         </div>
-        <div v-else-if="error" class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative"
-          role="alert">
+        <div v-else-if="postStore.error"
+          class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative" role="alert">
           <strong class="font-bold">Error!</strong>
-          <span class="block sm:inline">{{ error }}</span>
+          <span class="block sm:inline">{{ postStore.error }}</span>
           <button @click="retryFetchPosts" class="mt-2 text-sm underline">Retry</button>
         </div>
-        <div v-else-if="posts.length > 0">
+        <div v-else-if="postStore.posts.length > 0">
           <TransitionGroup name="post-list" tag="div" class="space-y-6">
-            <div v-for="post in posts" :key="post.id" class="bg-white shadow rounded-lg p-6">
+            <div v-for="post in postStore.posts" :key="post.id" class="bg-white shadow rounded-lg p-6">
               <div class="flex items-center mb-4">
                 <img :src="post.userAvatar || '/default-avatar.png'" :alt="`${post.userName}'s avatar`"
                   class="w-10 h-10 rounded-full mr-4">
@@ -65,7 +65,7 @@
             </div>
           </TransitionGroup>
           <div v-if="hasMorePosts" ref="loadMoreTrigger" class="h-10 flex justify-center items-center mt-4">
-            <LoaderIcon v-if="isLoading" class="animate-spin h-8 w-8 text-indigo-600" />
+            <LoaderIcon v-if="postStore.loading" class="animate-spin h-8 w-8 text-indigo-600" />
           </div>
         </div>
         <p v-else class="text-gray-500">No posts to display yet. Be the first to create a post!</p>
@@ -85,8 +85,8 @@
 <script setup>
 import { ref, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
-import { useUserState } from '../store/user-state'
-import { usePostStore } from '../store/post'
+import { usePostStore } from '../stores/postStore'
+import { useUserStore } from '../stores/userStore'
 import AddPost from '../components/post/AddPost.vue'
 import PostSkeleton from '../components/shared/PostSkeleton.vue'
 import { LoaderIcon, ThumbsUpIcon, MessageCircleIcon, PlayIcon } from 'lucide-vue-next'
@@ -94,47 +94,34 @@ import { useInfiniteScroll } from '@vueuse/core'
 import { formatDistanceToNow } from 'date-fns'
 
 const router = useRouter()
-const { isLoggedIn } = useUserState()
 const postStore = usePostStore()
+const userStore = useUserStore()
 
-const posts = ref([])
-const isLoading = ref(false)
-const error = ref(null)
-const page = ref(1)
 const hasMorePosts = ref(true)
 const loadMoreTrigger = ref(null)
 
 const fetchPosts = async () => {
-  if (!isLoggedIn.value || isLoading.value) return
-
-  isLoading.value = true
-  error.value = null
+  if (!userStore.isLoggedIn || postStore.loading) return
 
   try {
-    const newPosts = await postStore.fetchPosts(page.value)
+    const newPosts = await postStore.fetchPosts()
     if (newPosts.length === 0) {
       hasMorePosts.value = false
-    } else {
-      posts.value = [...posts.value, ...newPosts]
-      page.value++
     }
   } catch (err) {
     console.error('Error fetching posts:', err)
-    error.value = 'Failed to load posts. Please try again later.'
-  } finally {
-    isLoading.value = false
   }
 }
 
 const retryFetchPosts = () => {
-  error.value = null
+  postStore.error = null
   fetchPosts()
 }
 
 useInfiniteScroll(
   loadMoreTrigger,
   () => {
-    if (hasMorePosts.value && !isLoading.value) {
+    if (hasMorePosts.value && !postStore.loading) {
       fetchPosts()
     }
   },
@@ -142,7 +129,7 @@ useInfiniteScroll(
 )
 
 const handlePostCreated = (newPost) => {
-  posts.value.unshift(newPost)
+  postStore.posts.unshift(newPost)
 }
 
 const isImage = (url) => {
@@ -150,23 +137,10 @@ const isImage = (url) => {
 }
 
 const likePost = async (post) => {
-  try {
-    // Optimistic update
-    post.isLiked = !post.isLiked
-    post.like = parseInt(post.like) + (post.isLiked ? 1 : -1)
-
-    await postStore.likePost(post.id)
-  } catch (err) {
-    console.error('Error liking post:', err)
-    // Revert optimistic update
-    post.isLiked = !post.isLiked
-    post.like = parseInt(post.like) + (post.isLiked ? 1 : -1)
-  }
+  await postStore.likePost(post.id)
 }
 
 const showComments = (postId) => {
-  // This function could be used to expand a comment section inline,
-  // or you could remove it if you're handling comments in the PostDetail view
   console.log(`Show comments for post ${postId}`)
 }
 
@@ -179,17 +153,16 @@ const goToWatchPage = (postId, mediaIndex) => {
 }
 
 onMounted(() => {
-  if (isLoggedIn.value) {
+  if (userStore.isLoggedIn) {
     fetchPosts()
   }
 })
 
-watch(isLoggedIn, (newValue) => {
+watch(() => userStore.isLoggedIn, (newValue) => {
   if (newValue) {
     fetchPosts()
   } else {
-    posts.value = []
-    page.value = 1
+    postStore.$reset()
     hasMorePosts.value = true
   }
 })

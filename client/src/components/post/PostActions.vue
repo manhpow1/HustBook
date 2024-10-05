@@ -19,31 +19,26 @@
 <script setup>
 import { ThumbsUpIcon, MessageSquareIcon } from 'lucide-vue-next'
 import { useI18n } from 'vue-i18n'
+import { usePostStore } from '../../stores/postStore'
+import { storeToRefs } from 'pinia'
 
 const props = defineProps({
     post: {
         type: Object,
         required: true
-    },
-    formattedLikes: {
-        type: String,
-        required: true
-    },
-    formattedComments: {
-        type: String,
-        required: true
     }
 })
 
-const emit = defineEmits(['like', 'comment'])
+const postStore = usePostStore()
+const { formattedLikes, formattedComments } = storeToRefs(postStore)
 
 const { t } = useI18n()
 
 const handleLike = () => {
-    emit('like')
+    postStore.likePost(props.post.id)
 }
 
 const handleComment = () => {
-    emit('comment')
+    postStore.focusCommentInput(props.post.id)
 }
 </script>

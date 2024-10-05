@@ -68,11 +68,10 @@
 
 <script setup>
 import { ref } from 'vue'
-import { useUserState } from '../../store/user-state'
-import { API_ENDPOINTS } from '../../config/api'
+import { useAuthStore } from '../../stores/authStore'
 import { LogOutIcon, LoaderIcon, CheckCircleIcon, AlertCircleIcon } from 'lucide-vue-next'
 import { Dialog, DialogPanel, DialogTitle, TransitionChild, TransitionRoot } from '@headlessui/vue'
-import api from '../../services/api'
+import { storeToRefs } from 'pinia'
 
 const props = defineProps({
     onLogoutSuccess: {
@@ -83,38 +82,20 @@ const props = defineProps({
 
 const emit = defineEmits(['logout-success', 'logout-error'])
 
-const { logout } = useUserState()
+const authStore = useAuthStore()
+const { isLoading, message, messageClass } = storeToRefs(authStore)
 
-const isLoading = ref(false)
-const message = ref('')
-const messageClass = ref('')
 const showConfirmation = ref(false)
 
 const handleLogout = async () => {
-    isLoading.value = true
-    message.value = ''
     showConfirmation.value = false
 
     try {
-        const response = await api.post(API_ENDPOINTS.LOGOUT)
-
-        if (response.data.code === '1000') {
-            message.value = 'Logout successful.'
-            messageClass.value = 'bg-green-500'
-            localStorage.removeItem('token')
-            logout()
-            emit('logout-success')
-            props.onLogoutSuccess()
-        } else {
-            throw new Error(response.data.message || 'Logout failed')
-        }
+        await authStore.logout()
+        emit('logout-success')
+        props.onLogoutSuccess()
     } catch (error) {
-        console.error('Logout error:', error)
-        message.value = error.response?.data?.message || 'An error occurred during logout'
-        messageClass.value = 'bg-red-500'
         emit('logout-error', error)
-    } finally {
-        isLoading.value = false
     }
 }
 

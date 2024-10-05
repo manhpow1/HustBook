@@ -36,16 +36,17 @@
 import { ref, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { formatDistanceToNow } from 'date-fns'
+import { useVideoStore } from '../stores/videoStore'
+import { storeToRefs } from 'pinia'
 
 const route = useRoute()
 const router = useRouter()
+const videoStore = useVideoStore()
 
-const currentVideo = ref({})
-const recommendedVideos = ref([])
+const { currentVideo, recommendedVideos, loading, error } = storeToRefs(videoStore)
 
 const loadVideo = async (videoId) => {
-    // Simulate API call to fetch video data
-    currentVideo.value = await fetchVideoData(videoId)
+    await videoStore.fetchVideo(videoId)
     router.push({ name: 'Watch', params: { id: videoId } })
 }
 
@@ -77,7 +78,7 @@ const formatDate = (date) => {
 
 onMounted(async () => {
     await loadVideo(route.params.id)
-    recommendedVideos.value = await fetchRecommendedVideos()
+    await videoStore.fetchRecommendedVideos()
 })
 
 watch(() => route.params.id, async (newId) => {

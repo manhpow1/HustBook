@@ -1,6 +1,6 @@
 import { ref } from 'vue'
 import axios from 'axios'
-import { API_ENDPOINTS } from '../../config/api'
+import { API_ENDPOINTS } from '../config/api'
 
 export function useLoginSubmit(login, router) {
     const isLoading = ref(false)

@@ -3,12 +3,17 @@ const jwt = require('jsonwebtoken');
 const { v4: uuidv4 } = require('uuid');
 const { collections, createDocument, getDocument, updateDocument, queryDocuments } = require('../config/database');
 const { auth } = require('../config/firebase');
+const env = require('../config/env');
 
 const SALT_ROUNDS = 10;
-const JWT_SECRET = process.env.JWT_SECRET;
+const JWT_SECRET = env.jwt.secret;
 const JWT_EXPIRATION = '1h';
 
 const generateDeviceToken = () => uuidv4();
+
+const generateRefreshToken = (userId) => {
+    return jwt.sign({ userId }, process.env.REFRESH_TOKEN_SECRET, { expiresIn: '7d' });
+};
 
 const hashPassword = async (password) => {
     return bcrypt.hash(password, SALT_ROUNDS);

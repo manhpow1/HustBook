@@ -6,8 +6,12 @@ import router from './router'
 import { createPinia } from 'pinia'
 import 'vue-virtual-scroller/dist/vue-virtual-scroller.css'
 import './styles/index.css'
-import { useUserState } from './store/user-state'
+import { useUserState } from './stores/userState'
+import { useUserStore } from './stores/userStore'
+import { usePostStore } from './stores/postStore'
 
+const userStore = useUserStore()
+const postStore = usePostStore()
 const { checkAuth } = useUserState()
 const i18n = createI18n({
     locale: 'en',
@@ -44,6 +48,10 @@ const i18n = createI18n({
     }
 })
 const pinia = createPinia()
+
+if (userStore.token) {
+    userStore.fetchUser()
+}
 
 async function initApp() {
     await checkAuth()

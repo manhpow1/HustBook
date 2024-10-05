@@ -73,22 +73,19 @@
 <script setup>
 import { ref, watch, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { useUserState } from '../../store/user-state'
-import { API_ENDPOINTS } from '../../config/api'
+import { useAuthStore } from '../../stores/authStore'
 import { UserPlusIcon, CheckCircleIcon, XCircleIcon, LoaderIcon } from 'lucide-vue-next'
-import apiService from '../../services/api'
+import { storeToRefs } from 'pinia'
 
 const router = useRouter()
-const { token } = useUserState()
+const authStore = useAuthStore()
+const { token, isLoading, errorMessage, successMessage } = storeToRefs(authStore)
 
 const username = ref('')
 const usernameError = ref('')
 const avatar = ref(null)
 const avatarPreview = ref('')
 const avatarError = ref('')
-const isLoading = ref(false)
-const successMessage = ref('')
-const errorMessage = ref('')
 
 const checkToken = (tokenValue) => {
     if (!tokenValue) {
@@ -102,7 +99,9 @@ const checkToken = (tokenValue) => {
 defineExpose({ checkToken })
 
 onMounted(() => {
-    checkToken(token.value)
+    if (!token.value) {
+        router.push({ name: 'Login' })
+    }
 })
 
 watch(() => token.value, (newToken) => {
@@ -161,71 +160,21 @@ const removeAvatar = () => {
 }
 
 const handleSubmit = async () => {
-    if (!token.value) {
-        errorMessage.value = 'Invalid token'
-        return
-    }
-
-    usernameError.value = validateUsername(username.value)
-    if (usernameError.value) {
-        return
-    }
-
-    isLoading.value = true
-    errorMessage.value = ''
-    successMessage.value = ''
-
-    const formData = new FormData()
-    formData.append('username', username.value)
-    if (avatar.value) {
-        formData.append('avatar', avatar.value)
-    }
+    if (!validateUsername(username.value)) return
 
     try {
-        const formData = new FormData();
-        formData.append('token', token.value);
-        formData.append('username', username.value);
-        if (avatar.value) {
-            formData.append('avatar', avatar.value);
-        }
-
-        const response = await apiService.post(API_ENDPOINTS.CHANGE_INFO_AFTER_SIGNUP, formData, {
-            headers: {
-                'Content-Type': 'multipart/form-data',
-            }
-        })
-
-        if (response.data.code === '1000') {
-            if (response.data.data.is_blocked) {
-                errorMessage.value = 'Your account has been blocked';
-                router.push({ name: 'Login' });
-            } else {
-                successMessage.value = 'Profile updated successfully!';
-                setTimeout(() => {
-                    router.push({ name: 'Home' });
-                }, 2000);
-            }
+        await authStore.updateProfile(username.value, avatar.value)
+        if (authStore.user.is_blocked) {
+            router.push({ name: 'Login' })
         } else {
-            errorMessage.value = response.data.message;
+            setTimeout(() => {
+                router.push({ name: 'Home' })
+            }, 2000)
         }
     } catch (error) {
-        console.error('Error updating profile:', error);
-        if (error.response?.data?.code === '9998') {
-            errorMessage.value = 'Invalid token';
-            router.push({ name: 'Login' });
-        } else if (error.response?.data?.code === '1004') {
-            errorMessage.value = 'Invalid username format';
-        } else if (error.response?.data?.code === '1006') {
-            errorMessage.value = 'File upload failed. Please try again or proceed without an avatar.';
-        } else if (error.request) {
-            errorMessage.value = 'Network error. Please check your internet connection and try again.';
-        } else {
-            errorMessage.value = error.response?.data?.message || 'An error occurred while updating your profile';
-        }
-    } finally {
-        isLoading.value = false;
+        // Error handling is now managed by the store
     }
-};
+}
 
 const continueWithoutAvatar = () => {
     removeAvatar()

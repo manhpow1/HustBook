@@ -37,6 +37,7 @@
 import { ref } from 'vue'
 import { MoreVerticalIcon } from 'lucide-vue-next'
 import { useI18n } from 'vue-i18n'
+import { formatDate } from '../../utils/helpers';
 
 const props = defineProps({
     post: {
@@ -82,19 +83,6 @@ const sharePost = () => {
     showAdvancedOptions.value = false
 }
 
-const formatDate = (dateString) => {
-    const date = new Date(dateString)
-    const now = new Date()
-    const diffInSeconds = Math.floor((now - date) / 1000)
-
-    if (diffInSeconds < 60) return t('justNow')
-    if (diffInSeconds < 3600) return t('minutesAgo', { minutes: Math.floor(diffInSeconds / 60) })
-    if (diffInSeconds < 86400) return t('hoursAgo', { hours: Math.floor(diffInSeconds / 3600) })
-    if (diffInSeconds < 604800) return t('daysAgo', { days: Math.floor(diffInSeconds / 86400) })
-    if (diffInSeconds < 2592000) return t('weeksAgo', { weeks: Math.floor(diffInSeconds / 604800) })
-    if (diffInSeconds < 31536000) return t('monthsAgo', { months: Math.floor(diffInSeconds / 2592000) })
-    return t('yearsAgo', { years: Math.floor(diffInSeconds / 31536000) })
-}
 </script>
 
 <style scoped>

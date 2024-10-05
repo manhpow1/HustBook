@@ -129,7 +129,7 @@
 <script setup>
 import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
-import { useUserState } from '../../store/user-state'
+import { useUserStore } from '../../stores/userStore'
 import axios from 'axios'
 import { API_ENDPOINTS } from '../../config/api'
 import { PhoneIcon, LockIcon, CheckCircleIcon, XCircleIcon } from 'lucide-vue-next'
@@ -138,7 +138,7 @@ import VerifyCode from './VerifyCode.vue'
 const emit = defineEmits(['signup-success', 'signup-error'])
 
 const router = useRouter()
-const { login } = useUserState()
+const userStore = useUserStore()
 
 const currentStep = ref('signup')
 const phonenumber = ref('')
@@ -263,7 +263,7 @@ const handleVerificationSuccess = (token, deviceToken) => {
   console.log("Device Token:", deviceToken);
 
   if (token && deviceToken) {
-    login(token, deviceToken); // Make sure to pass both token and deviceToken
+    userStore.setTokens(token, deviceToken);
     currentStep.value = 'complete';
     error.value = '';
   } else {
@@ -278,8 +278,8 @@ const handleVerificationError = (errorMessage) => {
 
 const proceedToCompleteProfile = () => {
   console.log("Attempting to navigate to complete profile");
-  console.log("Current token:", localStorage.getItem('token'));
-  console.log("Current device token:", localStorage.getItem('deviceToken'));
+  console.log("Current token:", userStore.token);
+  console.log("Current device token:", userStore.deviceToken);
   router.push('/complete-profile');
 }
 </script>

@@ -1,64 +1,107 @@
 import axios from 'axios'
-import { useUserState } from '../store/user-state'
+import { useUserStore } from '../stores/userStore'
 import { API_ENDPOINTS } from '../config/api'
+import { handleError } from '../utils/errorHandler'
 
 const api = axios.create({
-    baseURL: import.meta.env.VUE_APP_API_BASE_URL || 'http://localhost:3000/api'
+    baseURL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api'
 })
 
 api.interceptors.request.use(config => {
-    const { token, deviceToken } = useUserState()
+    const userStore = useUserStore()
 
-    if (token.value) {
-        config.headers['Authorization'] = `Bearer ${token.value}`
+    if (userStore.token) {
+        config.headers['Authorization'] = `Bearer ${userStore.token}`
     }
 
-    if (deviceToken.value) {
-        config.headers['X-Device-Token'] = deviceToken.value
+    if (userStore.deviceToken) {
+        config.headers['X-Device-Token'] = userStore.deviceToken
     }
 
     return config
 })
 
+api.interceptors.response.use(
+    response => response,
+    error => {
+        handleError(error)
+        return Promise.reject(error)
+    }
+)
+
 const apiService = {
-    get(url, config = {}) {
-        return api.get(url, config)
+    async get(url, config = {}) {
+        try {
+            return await api.get(url, config)
+        } catch (error) {
+            handleError(error)
+            throw error
+        }
     },
 
-    post(url, data, config = {}) {
-        return api.post(url, data, config)
+    async post(url, data, config = {}) {
+        try {
+            return await api.post(url, data, config)
+        } catch (error) {
+            handleError(error)
+            throw error
+        }
     },
 
-    put(url, data, config = {}) {
-        return api.put(url, data, config)
+    async put(url, data, config = {}) {
+        try {
+            return await api.put(url, data, config)
+        } catch (error) {
+            handleError(error)
+            throw error
+        }
     },
 
-    delete(url, config = {}) {
-        return api.delete(url, config)
+    async delete(url, config = {}) {
+        try {
+            return await api.delete(url, config)
+        } catch (error) {
+            handleError(error)
+            throw error
+        }
     },
 
+    // Post-related API calls
     getPost(postId) {
-        return api.post(API_ENDPOINTS.GET_POST, { id: postId })
+        return this.post(API_ENDPOINTS.GET_POST, { id: postId })
     },
 
     likePost(postId) {
-        return api.post(API_ENDPOINTS.LIKE_POST, { postId })
+        return this.post(API_ENDPOINTS.LIKE_POST, { postId })
     },
 
+    createPost(postData) {
+        return this.post(API_ENDPOINTS.CREATE_POST, postData)
+    },
+
+    updatePost(postId, postData) {
+        return this.put(`${API_ENDPOINTS.UPDATE_POST}/${postId}`, postData)
+    },
+
+    deletePost(postId) {
+        return this.delete(`${API_ENDPOINTS.DELETE_POST}/${postId}`)
+    },
+
+    // Comment-related API calls
     addComment(postId, content) {
-        return api.post(API_ENDPOINTS.ADD_COMMENT, { postId, content })
+        return this.post(API_ENDPOINTS.ADD_COMMENT, { postId, content })
     },
 
     updateComment(id, data) {
-        return api.put(`${API_ENDPOINTS.UPDATE_COMMENT}/${id}`, data)
+        return this.put(`${API_ENDPOINTS.UPDATE_COMMENT}/${id}`, data)
     },
 
     deleteComment(id) {
-        return api.delete(`${API_ENDPOINTS.DELETE_COMMENT}/${id}`)
+        return this.delete(`${API_ENDPOINTS.DELETE_COMMENT}/${id}`)
     },
 
     getComments(postId, lastCommentId, limit = 10) {
-        return api.get(`${API_ENDPOINTS.GET_COMMENTS}/${postId}/comments`, {
+        return this.get(`${API_ENDPOINTS.GET_COMMENTS}/${postId}/comments`, {
             params: {
                 last_id: lastCommentId,
                 limit
@@ -66,12 +109,43 @@ const apiService = {
         })
     },
 
-    upload: async (url, formData, onUploadProgress) => {
-        const { token } = useUserState()
+    // User-related API calls
+    getUserProfile() {
+        return this.get(API_ENDPOINTS.GET_USER_PROFILE)
+    },
+
+    updateUserProfile(userData) {
+        return this.put(API_ENDPOINTS.UPDATE_USER_PROFILE, userData)
+    },
+
+    // Auth-related API calls
+    login(credentials) {
+        return this.post(API_ENDPOINTS.LOGIN, credentials)
+    },
+
+    register(userData) {
+        return this.post(API_ENDPOINTS.REGISTER, userData)
+    },
+
+    logout() {
+        return this.post(API_ENDPOINTS.LOGOUT)
+    },
+
+    getVerifyCode(phonenumber) {
+        return this.post(API_ENDPOINTS.GET_VERIFY_CODE, { phonenumber })
+    },
+
+    checkVerifyCode(phonenumber, code) {
+        return this.post(API_ENDPOINTS.CHECK_VERIFY_CODE, { phonenumber, code_verify: code })
+    },
+
+    // File upload
+    upload(url, formData, onUploadProgress) {
+        const userStore = useUserStore()
         return axios.post(url, formData, {
             headers: {
                 'Content-Type': 'multipart/form-data',
-                'Authorization': `Bearer ${token.value}`
+                'Authorization': `Bearer ${userStore.token}`
             },
             onUploadProgress: (progressEvent) => {
                 const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total)
@@ -80,24 +154,5 @@ const apiService = {
         })
     },
 }
-
-// Error handling middleware
-api.interceptors.response.use(
-    response => response,
-    error => {
-        // Handle global errors here
-        if (error.response) {
-            console.error('Response error:', error.response.data)
-            if (error.response.status === 401) {
-                // Handle unauthorized access
-            }
-        } else if (error.request) {
-            console.error('Request error:', error.request)
-        } else {
-            console.error('Error:', error.message)
-        }
-        return Promise.reject(error)
-    }
-)
 
 export default apiService

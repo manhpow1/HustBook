@@ -144,7 +144,7 @@
 import { defineAsyncComponent } from 'vue'
 import { computed } from 'vue'
 import { useRouter } from 'vue-router'
-import { useUserState } from '../../store/user-state'
+import { useUserStore } from '../../stores/userStore'
 import { useMenuState } from '../../composables/useMenuState'
 import LogoutButton from '../auth/Logout.vue'
 import { navItems } from '../../config/navigation'
@@ -176,13 +176,15 @@ const iconComponents = {
 }
 
 const router = useRouter()
-const { isLoggedIn, logout } = useUserState()
+const userStore = useUserStore()
 const { showUserMenu, showMobileMenu, toggleUserMenu, toggleMobileMenu } = useMenuState()
+const { isLoggedIn } = useUserState()
 
+const isLoggedIn = computed(() => userStore.isLoggedIn)
 const currentYear = computed(() => new Date().getFullYear())
 
 const handleLogoutSuccess = async () => {
-  await logout()
+  await userStore.logout()
   router.push('/login')
 }
 

@@ -8,6 +8,7 @@ const {
     validateGetPostComments,
     validateGetUserPosts
 } = require('../validators/postValidator');
+const { runTransaction } = require('../config/database');
 
 const createPost = async (req, res) => {
     try {
@@ -106,20 +107,24 @@ const deletePost = async (req, res) => {
 
 const likePost = async (req, res) => {
     try {
-        const { error } = validateLike(req.body);
-        if (error) {
-            return res.status(400).json({ code: "1002", message: error.details[0].message });
-        }
-
         const { id } = req.params;
-        const { userId } = req.body;
+        const userId = req.user.uid;
 
-        await postService.likePost(id, userId);
+        await runTransaction(async (transaction) => {
+            const postRef = db.collection(collections.posts).doc(id);
+            const post = await transaction.get(postRef);
 
-        res.status(200).json({
-            code: "1000",
-            message: "OK"
+            if (!post.exists) {
+                throw new Error('Post not found');
+            }
+
+            transaction.update(postRef, { likes: post.data().likes + 1 });
+
+            const likeRef = db.collection(collections.likes).doc(`${id}_${userId}`);
+            transaction.set(likeRef, { userId, postId: id, createdAt: new Date() });
         });
+
+        res.status(200).json({ code: "1000", message: "OK" });
     } catch (error) {
         console.error("Like post error:", error);
         res.status(500).json({ code: "1001", message: "Cannot connect to DB" });

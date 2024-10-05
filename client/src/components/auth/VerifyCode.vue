@@ -55,13 +55,11 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
-import { useUserState } from '../../store/user-state'
-import { API_ENDPOINTS } from '../../config/api'
+import { useAuthStore } from '../../stores/authStore'
 import { ShieldCheckIcon, PhoneIcon, LoaderIcon, CheckCircleIcon, XCircleIcon } from 'lucide-vue-next'
-import { watch } from 'vue'
-import apiService from '../../services/api'
+import { storeToRefs } from 'pinia'
 
 const props = defineProps({
     initialPhoneNumber: {
@@ -71,9 +69,8 @@ const props = defineProps({
 })
 
 const emit = defineEmits(['verification-success', 'verification-error'])
-
-const router = useRouter()
-const { login } = useUserState()
+const authStore = useAuthStore()
+const { isLoading, errorMessage, successMessage, resendCooldown } = storeToRefs(authStore)
 
 const phonenumber = ref(props.initialPhoneNumber)
 const codeDigits = ref(['', '', '', '', '', ''])
@@ -142,41 +139,15 @@ const handleSubmit = async () => {
     phoneError.value = ''
     codeError.value = ''
 
-    const isPhoneValid = validatePhone()
-    const isCodeValid = validateCode()
-
-    if (!isPhoneValid || !isCodeValid) {
-        return
-    }
+    if (!validatePhone() || !validateCode()) return
 
     isLoading.value = true
 
     try {
-        const response = await apiService.post(API_ENDPOINTS.CHECK_VERIFY_CODE, {
-            phonenumber: phonenumber.value,
-            code: codeDigits.value.join('')
-        })
-
-        if (response.data.code === '1000') {
-            const { token, deviceToken } = response.data.data
-            login(token, deviceToken)
-            emit('verification-success', token, deviceToken)
-            successMessage.value = 'Verification successful!'
-        } else {
-            errorMessage.value = response.data.message || 'Verification failed'
-        }
+        await authStore.verifyCode(phonenumber.value, codeDigits.value.join(''))
+        emit('verification-success', authStore.token, authStore.deviceToken)
     } catch (error) {
-        console.error('Verification error:', error)
-        if (error.response) {
-            handleErrorResponse(error.response.data)
-        } else if (error.request) {
-            errorMessage.value = 'Unable to connect to the server'
-        } else {
-            errorMessage.value = 'An unexpected error occurred'
-        }
-        emit('verification-error', errorMessage.value)
-    } finally {
-        isLoading.value = false
+        emit('verification-error', authStore.errorMessage)
     }
 }
 
@@ -200,23 +171,7 @@ const handleErrorResponse = (data) => {
 }
 
 const resendCode = async () => {
-    if (resendCooldown.value > 0) return
-
-    try {
-        const response = await apiService.post(API_ENDPOINTS.GET_VERIFY_CODE, {
-            phonenumber: phonenumber.value
-        })
-
-        if (response.data.code === '1000') {
-            successMessage.value = 'Verification code resent successfully'
-            startResendCooldown()
-        } else {
-            errorMessage.value = response.data.message || 'Failed to resend verification code'
-        }
-    } catch (error) {
-        console.error('Error resending code:', error)
-        errorMessage.value = 'Failed to resend verification code'
-    }
+    authStore.resendVerificationCode(phonenumber.value)
 }
 
 const startResendCooldown = () => {

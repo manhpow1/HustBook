@@ -1,10 +1,14 @@
 const admin = require('firebase-admin');
-const serviceAccount = require('../../serviceAccountKey.json');
+const env = require('./env');
 
 const initializeFirebase = () => {
   if (!admin.apps.length) {
     admin.initializeApp({
-      credential: admin.credential.cert(serviceAccount)
+      credential: admin.credential.cert({
+        projectId: env.firebase.projectId,
+        privateKey: env.firebase.privateKey.replace(/\\n/g, '\n'),
+        clientEmail: env.firebase.clientEmail,
+      }),
     });
   }
   return {

@@ -41,8 +41,11 @@
 <script setup>
 import { ref, computed } from 'vue'
 import { ShieldCheckIcon, PhoneIcon, LoaderIcon, CheckCircleIcon, XCircleIcon, ClockIcon } from 'lucide-vue-next'
-import { API_ENDPOINTS } from '../../config/api';
-import apiService from '../../services/api'
+import { useAuthStore } from '../../stores/authStore'
+import { storeToRefs } from 'pinia'
+
+const authStore = useAuthStore()
+const { isLoading, errorMessage, successMessage, cooldownTime } = storeToRefs(authStore)
 
 const phonenumber = ref('')
 const phoneError = ref('')
@@ -84,6 +87,8 @@ const handleSubmit = async () => {
     successMessage.value = ''
 
     if (!validatePhone()) return
+
+    await authStore.getVerifyCode(phonenumber.value)
 
     if (cooldownTime.value > 0) {
         errorMessage.value = `Please wait ${cooldownTime.value} seconds before requesting a new code.`
