@@ -1,5 +1,5 @@
 <template>
-    <main class="container mx-auto px-4 py-8 font-roboto">
+    <main class="container mx-auto px-4 py-8">
         <ErrorBoundary>
             <template v-if="loading">
                 <PostSkeleton avatarSize="w-16 h-16" nameWidth="w-40" :contentLines="['w-full', 'w-4/5', 'w-3/5']"
