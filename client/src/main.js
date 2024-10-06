@@ -8,10 +8,8 @@ import 'vue-virtual-scroller/dist/vue-virtual-scroller.css'
 import './styles/index.css'
 import { useUserState } from './stores/userState'
 import { useUserStore } from './stores/userStore'
-import { usePostStore } from './stores/postStore'
 
 const userStore = useUserStore()
-const postStore = usePostStore()
 const { checkAuth } = useUserState()
 const i18n = createI18n({
     locale: 'en',

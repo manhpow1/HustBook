@@ -1,18 +1,10 @@
 import { createRouter, createWebHistory } from 'vue-router'
-import Home from '../views/Home.vue'
-import Login from '../components/auth/Login.vue'
-import SignUp from '../components/auth/SignUp.vue'
-import AddPost from '../components/post/AddPost.vue'
-import { useUserState } from '../stores/userState'
-import PostDetail from '../components/post/PostDetail.vue'
-import HashtagView from '../views/post/HashtagView.vue'
-import Watch from '../views/Watch.vue'
 
 const routes = [
     {
         path: '/',
         name: 'Home',
-        component: Home
+        component: () => import('../views/Home.vue')
     },
     {
         path: '/profile',
@@ -35,12 +27,12 @@ const routes = [
     {
         path: '/signup',
         name: 'SignUp',
-        component: SignUp
+        component: () => import('../components/auth/SignUp.vue')
     },
     {
         path: '/login',
         name: 'Login',
-        component: Login
+        component: () => import('../components/auth/Login.vue')
     },
     {
         path: '/get-verify-code',
@@ -68,7 +60,7 @@ const routes = [
     {
         path: '/post/:id',
         name: 'PostDetail',
-        component: PostDetail,
+        component: () => import('../components/post/PostDetail.vue'),
         meta: { requiresAuth: true }
     },
     {
@@ -80,13 +72,13 @@ const routes = [
     {
         path: '/hashtag/:hashtag',
         name: 'Hashtag',
-        component: HashtagView,
+        component: () => import('../views/post/HashtagView.vue'),
         meta: { requiresAuth: true }
     },
     {
         path: '/watch/:id',
         name: 'Watch',
-        component: Watch
+        component: () => import('../views/Watch.vue')
     },
 ]
 

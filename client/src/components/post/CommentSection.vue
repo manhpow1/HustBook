@@ -12,22 +12,8 @@
         <div v-if="comments.length > 0" class="mt-6">
             <h3 class="text-lg font-semibold mb-4">{{ t('comments') }}</h3>
             <TransitionGroup name="comment-list" tag="div">
-                <div v-for="comment in comments" :key="comment.id" class="mb-4 p-4 bg-gray-50 rounded-lg">
-                    <div class="flex items-start">
-                        <img :src="comment.user.avatar" :alt="comment.user.name" class="w-8 h-8 rounded-full mr-3">
-                        <div class="flex-grow">
-                            <p class="font-semibold">{{ comment.user.name }}</p>
-                            <p v-html="sanitizeContent(comment.content)"></p>
-                            <p class="text-sm text-gray-500 mt-1">{{ formatDate(comment.created) }}</p>
-                        </div>
-                        <div v-if="isOwnComment(comment)" class="ml-2">
-                            <button @click="editComment(comment)"
-                                class="text-blue-500 hover:text-blue-700 mr-2">Edit</button>
-                            <button @click="deleteComment(comment.id)"
-                                class="text-red-500 hover:text-red-700">Delete</button>
-                        </div>
-                    </div>
-                </div>
+                <CommentItem v-for="comment in comments" :key="comment.id" :comment="comment" @update="updateComment"
+                    @delete="deleteComment" />
             </TransitionGroup>
             <div v-if="loading" class="text-center py-4">
                 <LoaderIcon class="animate-spin h-5 w-5 mx-auto text-gray-500" />
@@ -53,7 +39,7 @@ import { usePostStore } from '../../stores/postStore'
 import { useUserStore } from '../../stores/userStore'
 import { LoaderIcon } from 'lucide-vue-next'
 import MarkdownEditor from '../shared/MarkdownEditor.vue'
-import DOMPurify from 'dompurify'
+import CommentItem from '../shared/CommentItem.vue'
 
 const props = defineProps({
     postId: {
@@ -82,10 +68,6 @@ const userStore = useUserStore()
 const newComment = ref('')
 const commentInput = ref(null)
 
-const comments = computed(() => postStore.getComments(props.postId))
-const loading = computed(() => postStore.loadingComments)
-const error = computed(() => postStore.commentError)
-
 const addComment = async () => {
     if (newComment.value.trim()) {
         await postStore.addComment(props.postId, newComment.value)
@@ -93,28 +75,12 @@ const addComment = async () => {
     }
 }
 
-const editComment = async (comment) => {
-    // Implement edit functionality using postStore
-    console.log('Edit comment:', comment)
+const updateComment = async (updatedComment) => {
+    await postStore.updateComment(props.postId, updatedComment.id, updatedComment.content)
 }
 
 const deleteComment = async (commentId) => {
-    if (confirm(t('confirmDeleteComment'))) {
-        await postStore.deleteComment(props.postId, commentId)
-    }
-}
-
-const isOwnComment = (comment) => {
-    return comment.user.id === userStore.userId
-}
-
-const sanitizeContent = (content) => {
-    return DOMPurify.sanitize(content)
-}
-
-const formatDate = (dateString) => {
-    // Implement date formatting logic
-    return new Date(dateString).toLocaleString()
+    await postStore.deleteComment(props.postId, commentId)
 }
 
 const loadMoreComments = () => {

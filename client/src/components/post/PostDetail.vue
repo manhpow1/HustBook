@@ -1,13 +1,13 @@
 <template>
-    <div class="container mx-auto px-4 py-8 font-roboto">
+    <main class="container mx-auto px-4 py-8 font-roboto">
         <ErrorBoundary>
             <template v-if="loading">
                 <PostSkeleton avatarSize="w-16 h-16" nameWidth="w-40" :contentLines="['w-full', 'w-4/5', 'w-3/5']"
                     :numberOfImages="2" imageHeight="h-64" buttonSize="w-24 h-10" commentBoxHeight="h-32" />
             </template>
 
-            <div v-else-if="error" class="text-red-500 text-center">
-                <AlertCircleIcon class="w-8 h-8 mx-auto mb-2" />
+            <div v-else-if="error" class="text-red-500 text-center" role="alert">
+                <AlertCircleIcon class="w-8 h-8 mx-auto mb-2" aria-hidden="true" />
                 <p>{{ error }}</p>
                 <button @click="fetchPost"
                     class="mt-4 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors duration-200">
@@ -15,30 +15,28 @@
                 </button>
             </div>
 
-            <template v-else-if="post">
-                <div class="bg-white shadow-lg rounded-lg overflow-hidden">
-                    <div class="p-6">
-                        <PostHeader :post="post" :isOwnPost="isOwnPost"
-                            @showAdvancedOptions="showAdvancedOptionsModal = true" />
+            <article v-else-if="post" class="bg-white shadow-lg rounded-lg overflow-hidden">
+                <div class="p-6">
+                    <PostHeader :post="post" :isOwnPost="isOwnPost"
+                        @showAdvancedOptions="showAdvancedOptionsModal = true" />
 
-                        <PostContent :post="post" :showFullContent="showFullContent" @toggleContent="toggleContent"
-                            @hashtagClick="handleHashtagClick" />
+                    <PostContent :post="post" :showFullContent="showFullContent" @toggleContent="toggleContent"
+                        @hashtagClick="handleHashtagClick" />
 
-                        <PostMedia :post="post" @openLightbox="openLightbox" @openVideoPlayer="openVideoPlayer"
-                            @uncoverMedia="handleUncoverMedia" />
+                    <PostMedia :post="post" @openLightbox="openLightbox" @openVideoPlayer="openVideoPlayer"
+                        @uncoverMedia="handleUncoverMedia" />
 
-                        <PostActions :post="post" :formattedLikes="formattedLikes"
-                            :formattedComments="formattedComments" @like="handleLike" @comment="focusCommentInput" />
+                    <PostActions :post="post" :formattedLikes="formattedLikes" :formattedComments="formattedComments"
+                        @like="handleLike" @comment="focusCommentInput" />
 
-                        <PostBanWarning v-if="post.banned !== '0'" :banStatus="post.banned" />
+                    <PostBanWarning v-if="post.banned !== '0'" :banStatus="post.banned" />
 
-                        <CommentSection v-if="post.can_comment === '1'" :postId="post.id" :comments="comments"
-                            @addComment="handleComment" @updateComment="handleCommentUpdate"
-                            @deleteComment="handleCommentDelete" @loadMore="loadMoreComments"
-                            :loading="loadingMoreComments" :error="commentError" @retry="retryLoadComments" />
-                    </div>
+                    <CommentSection v-if="post.can_comment === '1'" :postId="post.id" :comments="comments"
+                        @addComment="handleComment" @updateComment="handleCommentUpdate"
+                        @deleteComment="handleCommentDelete" @loadMore="loadMoreComments" :loading="loadingMoreComments"
+                        :error="commentError" @retry="retryLoadComments" />
                 </div>
-            </template>
+            </article>
 
             <MediaViewer v-if="showMediaViewer" :post="post" :initialMediaIndex="currentMediaIndex"
                 @close="closeMediaViewer" />
@@ -47,11 +45,11 @@
                 @close="showAdvancedOptionsModal = false" @edit="editPost" @delete="deletePost"
                 @toggleComments="toggleComments" @report="handleReportPost" @hide="hidePost" />
         </ErrorBoundary>
-    </div>
+    </main>
 </template>
 
 <script setup>
-import { ref, computed, onMounted, nextTick } from 'vue'
+import { ref, computed, defineAsyncComponent } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { usePostStore } from '../../stores/postStore'
@@ -59,16 +57,17 @@ import { useUserStore } from '../../stores/userStore'
 import { AlertCircleIcon } from 'lucide-vue-next'
 import { formatNumber } from '../../utils/numberFormat'
 import { useConfirm } from '@vueuse/core'
-import PostSkeleton from '../shared/PostSkeleton.vue'
-import ErrorBoundary from '../shared/ErrorBoundary.vue'
-import PostHeader from './PostHeader.vue'
-import PostContent from './PostContent.vue'
-import PostMedia from './PostMedia.vue'
-import PostActions from './PostActions.vue'
-import PostBanWarning from './PostBanWarning.vue'
-import CommentSection from './CommentSection.vue'
-import MediaViewer from '../shared/MediaViewer.vue'
-import AdvancedOptionsModal from './AdvancedOptionsModal.vue'
+
+const PostSkeleton = defineAsyncComponent(() => import('../shared/PostSkeleton.vue'))
+const ErrorBoundary = defineAsyncComponent(() => import('../shared/ErrorBoundary.vue'))
+const PostHeader = defineAsyncComponent(() => import('./PostHeader.vue'))
+const PostContent = defineAsyncComponent(() => import('./PostContent.vue'))
+const PostMedia = defineAsyncComponent(() => import('./PostMedia.vue'))
+const PostActions = defineAsyncComponent(() => import('./PostActions.vue'))
+const PostBanWarning = defineAsyncComponent(() => import('./PostBanWarning.vue'))
+const CommentSection = defineAsyncComponent(() => import('./CommentSection.vue'))
+const MediaViewer = defineAsyncComponent(() => import('../shared/MediaViewer.vue'))
+const AdvancedOptionsModal = defineAsyncComponent(() => import('./AdvancedOptionsModal.vue'))
 
 const route = useRoute()
 const router = useRouter()

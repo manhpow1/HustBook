@@ -1,8 +1,22 @@
-/** @type {import('tailwindcss').Config} */
+/* eslint-disable no-undef */
+const colors = require('tailwindcss/colors')
+
 module.exports = {
-  content: ["./src/**/*.{html,js}"],
+  content: ['./index.html', './src/**/*.{vue,js,ts,jsx,tsx}'],
   theme: {
-    extend: {},
+    extend: {
+      colors: {
+        primary: colors.indigo,
+        secondary: colors.teal,
+        neutral: colors.gray,
+      },
+      fontFamily: {
+        sans: ['Inter', 'sans-serif'],
+      },
+    },
   },
-  plugins: [],
+  plugins: [
+    require('@tailwindcss/forms'),
+    require('@tailwindcss/typography'),
+  ],
 }

@@ -4,35 +4,35 @@
             <h2 class="text-xl font-bold mb-4">{{ t('advancedOptions') }}</h2>
             <ul class="space-y-2">
                 <li v-if="isOwnPost">
-                    <button @click="$emit('edit')" class="w-full text-left py-2 px-4 hover:bg-gray-100 rounded">
+                    <button @click="emit('edit')" class="w-full text-left py-2 px-4 hover:bg-gray-100 rounded">
                         {{ t('editPost') }}
                     </button>
                 </li>
                 <li v-if="isOwnPost">
-                    <button @click="$emit('delete')"
+                    <button @click="emit('delete')"
                         class="w-full text-left py-2 px-4 hover:bg-gray-100 rounded text-red-500">
                         {{ t('deletePost') }}
                     </button>
                 </li>
                 <li v-if="isOwnPost">
-                    <button @click="$emit('toggleComments')"
+                    <button @click="emit('toggleComments')"
                         class="w-full text-left py-2 px-4 hover:bg-gray-100 rounded">
                         {{ post.can_comment === '1' ? t('turnOffComments') : t('turnOnComments') }}
                     </button>
                 </li>
                 <li v-if="!isOwnPost">
-                    <button @click="$emit('report')"
+                    <button @click="emit('report')"
                         class="w-full text-left py-2 px-4 hover:bg-gray-100 rounded text-red-500">
                         {{ t('reportPost') }}
                     </button>
                 </li>
                 <li v-if="!isOwnPost">
-                    <button @click="$emit('hide')" class="w-full text-left py-2 px-4 hover:bg-gray-100 rounded">
+                    <button @click="emit('hide')" class="w-full text-left py-2 px-4 hover:bg-gray-100 rounded">
                         {{ t('hidePost') }}
                     </button>
                 </li>
             </ul>
-            <button @click="$emit('close')"
+            <button @click="emit('close')"
                 class="mt-4 w-full bg-gray-200 text-gray-800 py-2 rounded hover:bg-gray-300">
                 {{ t('close') }}
             </button>
