@@ -4,53 +4,64 @@
             <PencilIcon class="w-6 h-6 mr-2 text-indigo-600" />
             Create a New Post
         </h2>
-        <form @submit.prevent="submitPost" class="space-y-6">
-            <FileUpload v-model:files="files" @error="fileError = $event" />
-            <div>
-                <label for="description" class="block text-sm font-medium text-gray-700 mb-2">
-                    Description
-                </label>
-                <textarea id="description" v-model="description" rows="3" :maxlength="500"
-                    class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 transition duration-300 ease-in-out"
-                    placeholder="What's on your mind?" @input="handleDescriptionInput"></textarea>
-                <p class="mt-2 text-sm text-gray-500">{{ description.length }}/500 characters</p>
-                <div v-html="highlightedDescription" class="mt-2 text-sm text-gray-700"></div>
-            </div>
-            <div>
-                <label for="status-select" class="block text-sm font-medium text-gray-700 mb-2">
-                    How are you feeling?
-                </label>
-                <select id="status-select" v-model="status"
-                    class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md">
-                    <option value="">Select a status</option>
-                    <option v-for="option in statusOptions" :key="option.value" :value="option.value">
-                        {{ option.label }}
-                    </option>
-                </select>
-            </div>
-
-            <div>
-                <button type="button" @click="showEmojiPicker = !showEmojiPicker"
-                    class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-                    aria-label="Toggle emoji picker">
-                    <SmileIcon class="w-5 h-5 mr-2" />
-                    Add Emoji
-                </button>
-                <div v-if="showEmojiPicker" class="mt-2">
-                    <button v-for="emoji in emojis" :key="emoji" @click="insertEmoji(emoji)"
-                        class="inline-flex items-center justify-center w-8 h-8 m-1 text-lg hover:bg-gray-200 rounded"
-                        :aria-label="`Insert ${emoji} emoji`">
-                        {{ emoji }}
-                    </button>
+        <Form @submit="submitPost" v-slot="{ errors }">
+            <div class="space-y-6">
+                <div>
+                    <label for="description" class="block text-sm font-medium text-gray-700 mb-2">
+                        Description
+                    </label>
+                    <Field name="description" v-slot="{ field, errorMessage }">
+                        <textarea v-bind="field" id="description" rows="3" :class="[
+                            'mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 transition duration-300 ease-in-out',
+                            { 'border-red-500': errorMessage }
+                        ]" placeholder="What's on your mind?"></textarea>
+                        <p v-if="errorMessage" class="mt-2 text-sm text-red-600">{{ errorMessage }}</p>
+                    </Field>
                 </div>
-            </div>
 
-            <button type="submit" :disabled="isLoading || !isFormValid"
-                class="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed transition duration-300 ease-in-out">
-                <LoaderIcon v-if="isLoading" class="animate-spin -ml-1 mr-2 h-5 w-5 text-white" />
-                {{ isLoading ? "Posting..." : "Create Post" }}
-            </button>
-        </form>
+                <div>
+                    <label for="status-select" class="block text-sm font-medium text-gray-700 mb-2">
+                        How are you feeling?
+                    </label>
+                    <Field name="status" v-slot="{ field, errorMessage }">
+                        <select v-bind="field" id="status-select" :class="[
+                            'mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md',
+                            { 'border-red-500': errorMessage }
+                        ]">
+                            <option value="">Select a status</option>
+                            <option v-for="option in statusOptions" :key="option.value" :value="option.value">
+                                {{ option.label }}
+                            </option>
+                        </select>
+                        <p v-if="errorMessage" class="mt-2 text-sm text-red-600">{{ errorMessage }}</p>
+                    </Field>
+                </div>
+
+                <FileUpload v-model:files="files" @error="fileError = $event" />
+
+                <div>
+                    <button type="button" @click="showEmojiPicker = !showEmojiPicker"
+                        class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                        aria-label="Toggle emoji picker">
+                        <SmileIcon class="w-5 h-5 mr-2" />
+                        Add Emoji
+                    </button>
+                    <div v-if="showEmojiPicker" class="mt-2">
+                        <button v-for="emoji in emojis" :key="emoji" @click="insertEmoji(emoji)"
+                            class="inline-flex items-center justify-center w-8 h-8 m-1 text-lg hover:bg-gray-200 rounded"
+                            :aria-label="`Insert ${emoji} emoji`">
+                            {{ emoji }}
+                        </button>
+                    </div>
+                </div>
+
+                <button type="submit" :disabled="Object.keys(errors).length > 0 || isLoading"
+                    class="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed transition duration-300 ease-in-out">
+                    <LoaderIcon v-if="isLoading" class="animate-spin -ml-1 mr-2 h-5 w-5 text-white" />
+                    {{ isLoading ? "Posting..." : "Create Post" }}
+                </button>
+            </div>
+        </Form>
 
         <div v-if="successMessage" class="mt-4 p-4 bg-green-100 rounded-md flex items-start">
             <CheckCircleIcon class="h-5 w-5 text-green-400 mr-2 mt-0.5 flex-shrink-0" />
@@ -79,24 +90,38 @@
 <script setup>
 import { ref, computed, onMounted, onBeforeUnmount, watch } from 'vue'
 import { useRouter } from 'vue-router'
+import { Form, Field, defineRule, configure } from 'vee-validate'
+import { required, max } from '@vee-validate/rules'
+import { localize } from '@vee-validate/i18n'
 import UnsavedChangesModal from '../shared/UnsavedChangesModal.vue'
 import { useUserStore } from '../../stores/userStore'
 import { usePostStore } from '../../stores/postStore'
 import { PencilIcon, LoaderIcon, CheckCircleIcon, XCircleIcon, SmileIcon } from 'lucide-vue-next'
 import FileUpload from '../shared/FileUpload.vue'
 import logger from '../../services/logging'
+import { sanitizeInput } from '../../utils/sanitize'
+
+// Define validation rules
+defineRule('required', required)
+defineRule('max', max)
+
+// Configure Vee-Validate
+configure({
+    generateMessage: localize('en', {
+        messages: {
+            required: 'This field is required',
+            max: 'This field must be {length} characters or less'
+        }
+    })
+})
 
 const router = useRouter()
 const userStore = useUserStore()
 const postStore = usePostStore()
 const showUnsavedChangesModal = ref(false)
 const pendingNavigation = ref(null)
-const { token } = useUserState()
 
-const description = ref('')
-const status = ref('')
 const files = ref([])
-const previewUrls = ref([])
 const fileError = ref('')
 const isLoading = ref(false)
 const successMessage = ref('')
@@ -116,30 +141,62 @@ const statusOptions = [
 
 const emojis = ['😀', '😂', '😍', '🥳', '😎', '🤔', '😊', '👍', '❤️', '🎉']
 
-const isFormValid = computed(() => {
-    return (files.value.length > 0 || description.value.trim() !== '') && !fileError.value
-})
+const insertEmoji = (emoji) => {
+    const descriptionField = document.getElementById('description')
+    const start = descriptionField.selectionStart
+    const end = descriptionField.selectionEnd
+    const text = descriptionField.value
+    const newText = text.substring(0, start) + emoji + text.substring(end)
+    descriptionField.value = newText
+    descriptionField.setSelectionRange(start + emoji.length, start + emoji.length)
+    descriptionField.focus()
+}
 
-const hasUnsavedChanges = computed(() => {
-    return description.value.trim() !== '' || files.value.length > 0 || status.value !== ''
-})
-
-const highlightedDescription = computed(() => {
-    return detectLinks(description.value)
-})
-
-const handleError = (error) => {
-    console.error('Error:', error)
-    if (error.response?.status === 401 || error.response?.data?.code === '9998') {
-        errorMessage.value = 'Invalid session. Please log in again.'
-        router.push('/login')
-    } else if (error.response) {
-        errorMessage.value = error.response.data?.message || 'Server error'
-    } else if (error.request) {
-        errorMessage.value = 'Network connection error. Please check your internet connection and try again.'
-    } else {
-        errorMessage.value = 'An error occurred while setting up the request. Please try again.'
+const submitPost = async (values) => {
+    if (files.value.length === 0 && !values.description.trim()) {
+        errorMessage.value = "Please add an image/video or write a description"
+        logger.warn('Attempted to submit empty post')
+        return
     }
+
+    isLoading.value = true
+    errorMessage.value = ''
+    successMessage.value = ''
+    showUploadProgress.value = true
+
+    const sanitizedDescription = sanitizeInput(values.description)
+
+    try {
+        const response = await postStore.createPost({
+            described: sanitizedDescription,
+            status: values.status,
+            files: files.value
+        })
+
+        if (response.code === '1000') {
+            successMessage.value = 'Post created successfully!'
+            logger.info('Post created successfully', { postId: response.data.id })
+            resetForm()
+            router.push('/') // Navigate to home page after successful post
+        } else {
+            errorMessage.value = response.message || 'An error occurred while creating the post'
+            logger.warn('Failed to create post', { responseCode: response.code, message: response.message })
+        }
+    } catch (error) {
+        logger.error('Error in submitPost', error)
+        errorMessage.value = 'An error occurred while creating the post. Please try again.'
+    } finally {
+        isLoading.value = false
+        showUploadProgress.value = false
+        uploadProgress.value = 0
+    }
+}
+
+const resetForm = () => {
+    files.value = []
+    fileError.value = ''
+    showEmojiPicker.value = false
+    localStorage.removeItem('postDraft')
 }
 
 const handleBeforeUnload = (e) => {
@@ -164,14 +221,10 @@ const saveChanges = async () => {
         showUnsavedChangesModal.value = false
         pendingNavigation.value.next()
     }
-    showUnsavedChangesModal.value = false
 }
 
 const discardChanges = () => {
-    description.value = ''
-    status.value = ''
-    files.value = []
-    previewUrls.value = []
+    resetForm()
     showUnsavedChangesModal.value = false
     localStorage.removeItem('postDraft')
     pendingNavigation.value.next()
@@ -182,128 +235,37 @@ const cancelNavigation = () => {
     pendingNavigation.value.next(false)
 }
 
-const handleDescriptionInput = () => {
-    saveDraft()
-}
-
-const insertEmoji = (emoji) => {
-    description.value += emoji
-    saveDraft()
-}
-
-const detectLinks = (text) => {
-    const urlRegex = /(https?:\/\/[^\s]+)/g
-    return text.replace(urlRegex, '<a href="$1" target="_blank" rel="noopener noreferrer">$1</a>')
-}
-
-const convertEmoticonsToText = (text) => {
-    const emoticonMap = {
-        ':)': 'smile',
-        ':(': 'frown',
-        ':D': 'grin',
-        ':P': 'tongue',
-        ';)': 'wink',
-        // Add more emoticons as needed
-    }
-
-    return text.replace(/:\)|:$$|:D|:P|;$$/g, (match) => `[${emoticonMap[match]}]`)
-}
-
-const saveDraft = () => {
+const saveDraft = (values) => {
     localStorage.setItem('postDraft', JSON.stringify({
-        description: description.value,
-        status: status.value,
-        files: previewUrls.value
+        description: values.description,
+        status: values.status,
+        files: files.value
     }))
 }
 
 const loadDraft = () => {
     const draft = JSON.parse(localStorage.getItem('postDraft'))
     if (draft) {
-        description.value = draft.description
-        status.value = draft.status
-        previewUrls.value = draft.files
-    }
-}
-
-const submitPost = async () => {
-    if (files.value.length === 0 && description.value.trim() === '') {
-        errorMessage.value = "Please add an image/video or write a description"
-        logger.warn('Attempted to submit empty post')
-        return
-    }
-
-    if (description.value.length > 500) {
-        errorMessage.value = "Description cannot exceed 500 characters"
-        logger.warn('Description too long', { length: description.value.length })
-        return
-    }
-
-    // Check if all files are either images or videos
-    const isImage = (file) => file.type.startsWith('image/')
-    const isVideo = (file) => file.type.startsWith('video/')
-    const allImages = files.value.every(isImage)
-    const allVideos = files.value.every(isVideo)
-
-    if (!allImages && !allVideos) {
-        errorMessage.value = "Please upload only images or only videos"
-        logger.warn('Invalid file types', { fileTypes: files.value.map(f => f.type) })
-        return
-    }
-
-    isLoading.value = true
-    errorMessage.value = ''
-    successMessage.value = ''
-    showUploadProgress.value = true
-
-    const formData = new FormData()
-    formData.append("described", convertEmoticonsToText(description.value))
-    formData.append("status", status.value)
-    files.value.forEach((file) => formData.append("files", file))
-
-    try {
-        const response = await postStore.createPost({
-            described: convertEmoticonsToText(description.value),
-            status: status.value,
-            files: files.value
-        })
-
-        if (response.code === '1000') {
-            successMessage.value = 'Post created successfully!'
-            logger.info('Post created successfully', { postId: response.data.id })
-            description.value = ''
-            status.value = ''
-            files.value = []
-            previewUrls.value = []
-            localStorage.removeItem('postDraft')
-            router.push('/') // Navigate to home page after successful post
-        } else {
-            errorMessage.value = response.message || 'An error occurred while creating the post'
-            logger.warn('Failed to create post', { responseCode: response.code, message: response.message })
+        return {
+            description: draft.description || '',
+            status: draft.status || '',
         }
-    } catch (error) {
-        logger.error('Error in submitPost', error)
-        handleError(error)
-    } finally {
-        isLoading.value = false
-        showUploadProgress.value = false
-        uploadProgress.value = 0
+    }
+    return {
+        description: '',
+        status: '',
     }
 }
 
 onMounted(() => {
     window.addEventListener('beforeunload', handleBeforeUnload)
-    loadDraft()
 })
 
 onBeforeUnmount(() => {
     window.removeEventListener('beforeunload', handleBeforeUnload)
-    // We don't need to manually remove the navigation guard anymore
 })
 
-watch([description, status, files], () => {
-    saveDraft()
-}, { deep: true })
+const initialValues = loadDraft()
 </script>
 
 <style scoped>
@@ -315,67 +277,5 @@ watch([description, status, files], () => {
 .fade-enter,
 .fade-leave-to {
     opacity: 0;
-}
-
-.image-grid {
-    display: grid;
-    gap: 4px;
-    margin-bottom: 1rem;
-}
-
-.grid-1 {
-    grid-template-columns: 1fr;
-}
-
-.grid-2 {
-    grid-template-columns: 1fr 1fr;
-}
-
-.grid-3 {
-    grid-template-columns: 1fr 1fr 1fr;
-}
-
-.grid-4 {
-    grid-template-columns: 1fr 1fr 1fr 1fr;
-}
-
-.image-container {
-    position: relative;
-    aspect-ratio: 1;
-    overflow: hidden;
-    border: 2px solid white;
-}
-
-.preview-image {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-}
-
-.remove-button {
-    position: absolute;
-    top: 4px;
-    right: 4px;
-    background-color: rgba(0, 0, 0, 0.5);
-    color: white;
-    border-radius: 50%;
-    padding: 4px;
-}
-
-.upload-label {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    aspect-ratio: 1;
-    border: 2px dashed #d1d5db;
-    border-radius: 0.5rem;
-    cursor: pointer;
-    background-color: #f3f4f6;
-    transition: background-color 0.3s ease;
-}
-
-.upload-label:hover {
-    background-color: #e5e7eb;
 }
 </style>

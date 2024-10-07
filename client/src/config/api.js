@@ -1,4 +1,4 @@
-const API_BASE_URL = import.meta.env.VUE_APP_API_BASE_URL || 'http://localhost:3000/api';
+const API_BASE_URL = import.meta.env.VITE_APP_API_BASE_URL || 'http://localhost:3000/api';
 
 export const API_ENDPOINTS = {
     CHECK_VERIFY_CODE: `${API_BASE_URL}/auth/check_verify_code`,

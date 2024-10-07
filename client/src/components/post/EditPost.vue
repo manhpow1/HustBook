@@ -48,40 +48,53 @@
             </div>
 
             <div class="flex justify-between">
-                <Button type="button" variant="outline" @click="cancelEdit">
+                <button type="button" @click="cancelEdit"
+                    class="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary">
                     Cancel
-                </Button>
-                <Button type="submit" :disabled="isLoading || !isFormValid">
+                </button>
+                <button type="submit" :disabled="isLoading || !isFormValid"
+                    class="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-primary hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary disabled:opacity-50 disabled:cursor-not-allowed">
                     {{ isLoading ? "Updating..." : "Update Post" }}
-                </Button>
+                </button>
             </div>
         </form>
 
-        <AlertDialog v-model:open="showUnsavedChangesModal">
-            <AlertDialogContent>
-                <AlertDialogHeader>
-                    <AlertDialogTitle>Unsaved Changes</AlertDialogTitle>
-                    <AlertDialogDescription>
-                        You have unsaved changes. Are you sure you want to leave this page?
-                    </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                    <AlertDialogCancel @click="cancelNavigation">Cancel</AlertDialogCancel>
-                    <AlertDialogAction @click="discardChanges">Discard Changes</AlertDialogAction>
-                    <AlertDialogAction @click="saveChanges">Save Changes</AlertDialogAction>
-                </AlertDialogFooter>
-            </AlertDialogContent>
-        </AlertDialog>
+        <!-- Unsaved Changes Modal -->
+        <div v-if="showUnsavedChangesModal"
+            class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div class="bg-white p-6 rounded-lg shadow-xl max-w-md w-full">
+                <h3 class="text-lg font-medium text-gray-900 mb-4">Unsaved Changes</h3>
+                <p class="text-sm text-gray-500 mb-4">
+                    You have unsaved changes. Are you sure you want to leave this page?
+                </p>
+                <div class="flex justify-end space-x-2">
+                    <button @click="cancelNavigation"
+                        class="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary">
+                        Cancel
+                    </button>
+                    <button @click="discardChanges"
+                        class="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500">
+                        Discard Changes
+                    </button>
+                    <button @click="saveChanges"
+                        class="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-primary hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary">
+                        Save Changes
+                    </button>
+                </div>
+            </div>
+        </div>
 
-        <Alert v-if="successMessage" variant="success" class="mt-4">
-            <AlertTitle>Success</AlertTitle>
-            <AlertDescription>{{ successMessage }}</AlertDescription>
-        </Alert>
+        <!-- Success Message -->
+        <div v-if="successMessage" class="mt-4 p-4 bg-green-100 border border-green-400 text-green-700 rounded-md">
+            <p class="font-bold">Success</p>
+            <p>{{ successMessage }}</p>
+        </div>
 
-        <Alert v-if="errorMessage" variant="destructive" class="mt-4">
-            <AlertTitle>Error</AlertTitle>
-            <AlertDescription>{{ errorMessage }}</AlertDescription>
-        </Alert>
+        <!-- Error Message -->
+        <div v-if="errorMessage" class="mt-4 p-4 bg-red-100 border border-red-400 text-red-700 rounded-md">
+            <p class="font-bold">Error</p>
+            <p>{{ errorMessage }}</p>
+        </div>
     </div>
 </template>
 
@@ -93,22 +106,6 @@ import { usePostStore } from '../../stores/postStore'
 import apiService from '../../services/api'
 import logger from '../../services/logging'
 import FileUpload from '../shared/FileUpload.vue'
-import { Button } from '../ui/Button.vue'
-import {
-    Alert,
-    AlertTitle,
-    AlertDescription,
-} from '../ui/alert'
-import {
-    AlertDialog,
-    AlertDialogAction,
-    AlertDialogCancel,
-    AlertDialogContent,
-    AlertDialogDescription,
-    AlertDialogFooter,
-    AlertDialogHeader,
-    AlertDialogTitle,
-} from '../ui/alert-dialog'
 
 const route = useRoute()
 const router = useRouter()
