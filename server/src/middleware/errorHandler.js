@@ -1,5 +1,15 @@
+const { CustomError } = require('../utils/customError');
+const logger = require('../utils/logger');
+
 const errorHandler = (err, req, res, next) => {
-    console.error(err.stack);
+    logger.error(err);
+
+    if (err instanceof CustomError) {
+        return res.status(err.statusCode).json({
+            code: err.code,
+            message: err.message
+        });
+    }
 
     if (err.name === 'ValidationError') {
         return res.status(400).json({ code: "1002", message: err.message });
@@ -10,7 +20,7 @@ const errorHandler = (err, req, res, next) => {
     }
 
     // Default to 500 server error
-    res.status(500).json({ code: "1001", message: "Internal Server Error" });
+    res.status(500).json({ code: "9999", message: "Exception error" });
 };
 
 module.exports = errorHandler;

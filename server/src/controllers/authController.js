@@ -2,19 +2,22 @@ const authService = require('../services/authService');
 const { validateSignup, validateLogin, validateChangeInfo } = require('../validators/userValidator');
 const { generateRandomCode, hashPassword, comparePassword, formatPhoneNumber } = require('../utils/helpers');
 const User = require('../models/User');
+const { createError } = require('../utils/customError');
+const logger = require('../utils/logger');
+const { error } = require('winston');
 
-const signup = async (req, res) => {
+const signup = async (req, res, next) => {
     try {
         const { error } = validateSignup(req.body);
         if (error) {
-            return res.status(400).json({ code: "1002", message: error.details[0].message });
+            throw createError('1002');
         }
 
         const { phoneNumber, password, uuid } = req.body;
 
         const existingUser = await authService.getUserByPhoneNumber(phoneNumber);
         if (existingUser) {
-            return res.status(400).json({ code: "9996", message: "User existed" });
+            throw createError('9996');
         }
 
         const hashedPassword = await hashPassword(password);
@@ -36,28 +39,28 @@ const signup = async (req, res) => {
             },
         });
     } catch (error) {
-        console.error("Signup Error:", error);
-        res.status(500).json({ code: "1001", message: "Cannot connect to DB" });
+        logger.error('Signup Error:', error);
+        next(error);
     }
 };
 
-const login = async (req, res) => {
+const login = async (req, res, next) => {
     try {
         const { error } = validateLogin(req.body);
         if (error) {
-            return res.status(400).json({ code: "1002", message: error.details[0].message });
+            throw createError('1002');
         }
 
         const { phoneNumber, password, deviceId } = req.body;
 
         const user = await authService.getUserByPhoneNumber(phoneNumber);
         if (!user) {
-            return res.status(400).json({ code: "9995", message: "User is not validated" });
+            throw createError('9995');
         }
 
         const isPasswordCorrect = await comparePassword(password, user.password);
         if (!isPasswordCorrect) {
-            return res.status(400).json({ code: "1004", message: "Invalid password" });
+            throw createError('1004');
         }
 
         const deviceToken = authService.generateDeviceToken();
@@ -80,8 +83,8 @@ const login = async (req, res) => {
             },
         });
     } catch (error) {
-        console.error("Login Error:", error);
-        res.status(500).json({ code: "1001", message: "Cannot connect to DB" });
+        logger.error('Login Error:', error);
+        next(error);
     }
 };
 
@@ -90,7 +93,7 @@ const logout = async (req, res) => {
         const token = req.headers.authorization?.split(' ')[1];
 
         if (!token) {
-            return res.status(400).json({ code: "1002", message: "No token provided" });
+            throw createError('1002');
         }
 
         const decodedToken = authService.verifyJWT(token);
@@ -100,8 +103,8 @@ const logout = async (req, res) => {
 
         res.status(200).json({ code: "1000", message: "OK" });
     } catch (error) {
-        console.error("Logout Error:", error);
-        res.status(500).json({ code: "1001", message: "Cannot connect to DB" });
+        logger.error('Logout Error:', error);
+        next(error);
     }
 };
 
@@ -110,12 +113,12 @@ const getVerifyCode = async (req, res) => {
         const { phonenumber } = req.body;
 
         if (!/^0\d{9}$/.test(phonenumber)) {
-            return res.status(400).json({ code: "1004", message: "Invalid phone number format" });
+            throw createError('1004');
         }
 
         const user = await authService.getUserByPhoneNumber(phonenumber);
         if (!user) {
-            return res.status(400).json({ code: "9995", message: "User is not validated" });
+            throw createError('9995');
         }
 
         const verificationCode = Math.floor(100000 + Math.random() * 900000).toString();
@@ -129,8 +132,8 @@ const getVerifyCode = async (req, res) => {
             }
         });
     } catch (error) {
-        console.error("Error in get_verify_code:", error);
-        res.status(500).json({ code: "1001", message: "Cannot connect to DB" });
+        logger.error('Error in get_verify_code:', error);
+        next(error);
     }
 };
 
@@ -139,16 +142,16 @@ const checkVerifyCode = async (req, res) => {
         const { phonenumber, code } = req.body;
 
         if (!phonenumber || !code) {
-            return res.status(400).json({ code: "1002", message: "Parameter is not enough" });
+            throw createError('1002');
         }
 
         if (!/^0\d{9}$/.test(phonenumber)) {
-            return res.status(400).json({ code: "1004", message: "Invalid phone number format" });
+            throw createError('1004');
         }
 
         const user = await authService.getUserByPhoneNumber(phonenumber);
         if (!user) {
-            return res.status(400).json({ code: "9995", message: "User is not validated" });
+            throw createError('9995');
         }
 
         const currentTime = Date.now();
@@ -156,7 +159,7 @@ const checkVerifyCode = async (req, res) => {
 
         if (user.verificationCode !== code ||
             currentTime - user.verificationCodeTimestamp > codeExpirationTime) {
-            return res.status(400).json({ code: "9993", message: "Code verify is incorrect" });
+            throw createError('9993');
         }
 
         const token = authService.generateJWT({ uid: user.uid, phone: phonenumber });
@@ -175,8 +178,8 @@ const checkVerifyCode = async (req, res) => {
             }
         });
     } catch (error) {
-        console.error("Error in check_verify_code:", error);
-        res.status(500).json({ code: "1001", message: "Cannot connect to DB" });
+        logger.error("Error in check_verify_code:", error);
+        next(error);
     }
 };
 
@@ -209,13 +212,13 @@ const changeInfoAfterSignup = async (req, res) => {
     try {
         const { error } = validateChangeInfo(req.body);
         if (error) {
-            return res.status(400).json({ code: "1002", message: error.details[0].message });
+            throw createError('1002');
         }
         const { token, username } = req.body;
         const avatar = req.file;
 
         if (!token || !username) {
-            return res.status(400).json({ code: "1002", message: "Parameter is not enough" });
+            throw createError('1002');
         }
 
         const decodedToken = authService.verifyJWT(token);
@@ -223,11 +226,11 @@ const changeInfoAfterSignup = async (req, res) => {
 
         const user = await getDocument(collections.users, userId);
         if (!user) {
-            return res.status(404).json({ code: "9995", message: "User not found" });
+            throw createError('9995');
         }
 
         if (username === req.user.phoneNumber) {
-            return res.status(400).json({ code: "1004", message: "Username cannot be the same as the phone number" });
+            throw createError('1004');
         }
 
         const updateData = { username };
@@ -256,8 +259,8 @@ const changeInfoAfterSignup = async (req, res) => {
             }
         });
     } catch (error) {
-        console.error("Error in change_info_after_signup:", error);
-        res.status(500).json({ code: "1001", message: "Cannot connect to DB or internal server error" });
+        logger.error("Error in change_info_after_signup:", error);
+        next(error);
     }
 };
 

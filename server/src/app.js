@@ -14,6 +14,7 @@ const chatRoutes = require('./routes/chat');
 const notificationRoutes = require('./routes/notifications');
 
 const errorHandler = require('./middleware/errorHandler');
+const logger = require('./utils/logger');
 
 const app = express();
 
@@ -22,7 +23,6 @@ app.use(cors({ origin: env.server.corsOrigin }));
 app.use(express.json());
 app.use(helmet());
 app.use(morgan('dev'));
-app.use(errorHandler);
 
 // Rate limiting
 const limiter = rateLimit({
@@ -42,5 +42,11 @@ app.use('/api/notifications', notificationRoutes);
 
 // Error handling middleware
 app.use(errorHandler);
+
+// Unhandled promise rejections
+process.on('unhandledRejection', (reason, promise) => {
+    logger.error('Unhandled Rejection at:', promise, 'reason:', reason);
+    // Application specific logging, throwing an error, or other logic here
+});
 
 module.exports = app;

@@ -69,5 +69,5 @@ module.exports = {
     validateLike,
     validateGetPost,
     validateGetPostComments,
-    validateGetUserPosts
+    validateGetUserPosts,
 };

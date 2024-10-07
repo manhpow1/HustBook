@@ -6,15 +6,18 @@ const {
     validateLike,
     validateGetPost,
     validateGetPostComments,
-    validateGetUserPosts
+    validateGetUserPosts,
+    validateDeletePost,
 } = require('../validators/postValidator');
 const { runTransaction } = require('../config/database');
+const { createError } = require('../utils/customError');
+const logger = require('../utils/logger');
 
-const createPost = async (req, res) => {
+const createPost = async (req, res, next) => {
     try {
         const { error } = validateCreatePost(req.body);
         if (error) {
-            return res.status(400).json({ code: "1002", message: error.details[0].message });
+            throw createError('1002');
         }
 
         const { content } = req.body;
@@ -29,16 +32,16 @@ const createPost = async (req, res) => {
             data: { postId }
         });
     } catch (error) {
-        console.error("Create post error:", error);
-        res.status(500).json({ code: "1001", message: "Cannot connect to DB" });
+        logger.error("Create post error:", error);
+        next(error);
     }
 };
 
-const getPost = async (req, res) => {
+const getPost = async (req, res, next) => {
     try {
         const { error } = validateGetPost(req.params);
         if (error) {
-            return res.status(400).json({ code: "1002", message: error.details[0].message });
+            throw createError('1002');
         }
 
         const { id } = req.params;
@@ -46,7 +49,7 @@ const getPost = async (req, res) => {
         const post = await postService.getPost(id);
 
         if (!post) {
-            return res.status(404).json({ code: "9992", message: "Post is not existed" });
+            throw createError('9992');
         }
 
         res.status(200).json({
@@ -55,8 +58,8 @@ const getPost = async (req, res) => {
             data: post
         });
     } catch (error) {
-        console.error("Get post error:", error);
-        res.status(500).json({ code: "1001", message: "Cannot connect to DB" });
+        logger.error("Get post error:", error);
+        next(error);
     }
 };
 
@@ -64,7 +67,7 @@ const updatePost = async (req, res) => {
     try {
         const { error } = validateUpdatePost(req.body);
         if (error) {
-            return res.status(400).json({ code: "1002", message: error.details[0].message });
+            throw createError('1002');
         }
 
         const { id } = req.params;
@@ -75,7 +78,7 @@ const updatePost = async (req, res) => {
         const updatedPost = await postService.updatePost(id, userId, content, images);
 
         if (!updatedPost) {
-            return res.status(404).json({ code: "9992", message: "Post is not existed" });
+            throw createError('9992');
         }
 
         res.status(200).json({
@@ -84,15 +87,28 @@ const updatePost = async (req, res) => {
             data: updatedPost
         });
     } catch (error) {
-        console.error("Update post error:", error);
-        res.status(500).json({ code: "1001", message: "Cannot connect to DB" });
+        logger.error("Update post error:", error);
+        next(error);
     }
 };
 
 const deletePost = async (req, res) => {
     try {
         const { id } = req.params;
+        const userId = req.user.uid;
 
+        // Check if post exists
+        const post = await postService.getPost(id);
+        if (!post) {
+            throw createError('9992');
+        }
+
+        // Check if the user has permission to delete the post
+        if (post.userId !== userId) {
+            throw createError('1009');
+        }
+
+        // Delete the post
         await postService.deletePost(id);
 
         res.status(200).json({
@@ -100,8 +116,8 @@ const deletePost = async (req, res) => {
             message: "OK"
         });
     } catch (error) {
-        console.error("Delete post error:", error);
-        res.status(500).json({ code: "1001", message: "Cannot connect to DB" });
+        logger.error("Delete post error:", error);
+        next(error);
     }
 };
 
@@ -126,8 +142,8 @@ const likePost = async (req, res) => {
 
         res.status(200).json({ code: "1000", message: "OK" });
     } catch (error) {
-        console.error("Like post error:", error);
-        res.status(500).json({ code: "1001", message: "Cannot connect to DB" });
+        logger.error("Like post error:", error);
+        next(error);
     }
 };
 
@@ -135,7 +151,7 @@ const unlikePost = async (req, res) => {
     try {
         const { error } = validateLike(req.body);
         if (error) {
-            return res.status(400).json({ code: "1002", message: error.details[0].message });
+            throw createError('1002');
         }
 
         const { id } = req.params;
@@ -148,8 +164,8 @@ const unlikePost = async (req, res) => {
             message: "OK"
         });
     } catch (error) {
-        console.error("Unlike post error:", error);
-        res.status(500).json({ code: "1001", message: "Cannot connect to DB" });
+        logger.error("Unlike post error:", error);
+        next(error);
     }
 };
 
@@ -157,7 +173,7 @@ const addComment = async (req, res) => {
     try {
         const { error } = validateComment(req.body);
         if (error) {
-            return res.status(400).json({ code: "1002", message: error.details[0].message });
+            throw createError('1002');
         }
 
         const { id } = req.params;
@@ -172,8 +188,8 @@ const addComment = async (req, res) => {
             data: { commentId }
         });
     } catch (error) {
-        console.error("Add comment error:", error);
-        res.status(500).json({ code: "1001", message: "Cannot connect to DB" });
+        logger.error("Add comment error:", error);
+        next(error);
     }
 };
 
@@ -181,7 +197,7 @@ const getPostComments = async (req, res) => {
     try {
         const { error } = validateGetPostComments(req.query);
         if (error) {
-            return res.status(400).json({ code: "1002", message: error.details[0].message });
+            throw createError('1002');
         }
 
         const { id } = req.params;
@@ -195,8 +211,8 @@ const getPostComments = async (req, res) => {
             data: comments
         });
     } catch (error) {
-        console.error("Get post comments error:", error);
-        res.status(500).json({ code: "1001", message: "Cannot connect to DB" });
+        logger.error("Get post comments error:", error);
+        next(error);
     }
 };
 
@@ -218,8 +234,8 @@ const getUserPosts = async (req, res) => {
             data: posts
         });
     } catch (error) {
-        console.error("Get user posts error:", error);
-        res.status(500).json({ code: "1001", message: "Cannot connect to DB" });
+        logger.error("Get user posts error:", error);
+        next(error);
     }
 };
 
