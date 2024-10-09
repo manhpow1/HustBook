@@ -6,3 +6,4 @@ server/serviceAccountKey.json
 repopack-output.txt
 repopack.config.json
 .repopackignore
+server/config/production.json

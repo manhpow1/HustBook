@@ -1,0 +1,14 @@
+{
+    "server": {
+        "port": 3000,
+        "corsOrigin": "http://localhost:5173"
+    },
+    "firebase": {
+        "projectId": "",
+        "privateKey": "",
+        "clientEmail": ""
+    },
+    "jwt": {
+        "secret": ""
+    }
+}

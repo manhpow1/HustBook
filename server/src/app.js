@@ -3,7 +3,7 @@ const cors = require('cors');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 const morgan = require('morgan');
-const env = require('./config/env');
+const config = require('config');
 
 const authRoutes = require('./routes/auth');
 const postRoutes = require('./routes/posts');
@@ -19,7 +19,7 @@ const logger = require('./utils/logger');
 const app = express();
 
 // Middleware
-app.use(cors({ origin: env.server.corsOrigin }));
+app.use(cors({ origin: config.get('server.corsOrigin') }));
 app.use(express.json());
 app.use(helmet());
 app.use(morgan('dev'));
@@ -31,8 +31,14 @@ const limiter = rateLimit({
 });
 app.use(limiter);
 
+// Specific rate limiters for sensitive routes
+const authLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    max: 5 // limit each IP to 5 requests per windowMs
+});
+
 // Routes
-app.use('/api/auth', authRoutes);
+app.use('/api/auth', authLimiter, authRoutes);
 app.use('/api/posts', postRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/friends', friendRoutes);

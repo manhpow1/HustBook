@@ -3,24 +3,26 @@ const jwt = require('jsonwebtoken');
 const { v4: uuidv4 } = require('uuid');
 const { collections, createDocument, getDocument, updateDocument, queryDocuments } = require('../config/database');
 const { auth } = require('../config/firebase');
-const env = require('../config/env');
+const config = require('config');
 
 const SALT_ROUNDS = 10;
-const JWT_SECRET = env.jwt.secret;
+const JWT_SECRET = config.get('jwt.secret');
 const JWT_EXPIRATION = '1h';
+const REFRESH_TOKEN_SECRET = config.get('jwt.refreshSecret');
+const REFRESH_TOKEN_EXPIRATION = '7d';
 
 const generateDeviceToken = () => uuidv4();
 
 const generateRefreshToken = (userId) => {
-    return jwt.sign({ userId }, process.env.REFRESH_TOKEN_SECRET, { expiresIn: '7d' });
+    return jwt.sign({ userId }, REFRESH_TOKEN_SECRET, { expiresIn: REFRESH_TOKEN_EXPIRATION });
 };
 
 const hashPassword = async (password) => {
-    return bcrypt.hash(password, SALT_ROUNDS);
+    return await bcrypt.hash(password, SALT_ROUNDS);
 };
 
 const comparePassword = async (password, hashedPassword) => {
-    return bcrypt.compare(password, hashedPassword);
+    return await bcrypt.compare(password, hashedPassword);
 };
 
 const generateJWT = (payload) => {
@@ -31,9 +33,8 @@ const verifyJWT = (token) => {
     return jwt.verify(token, JWT_SECRET);
 };
 
-const createUser = async (phoneNumber, password, uuid) => {
+const createUser = async (phoneNumber, password, uuid, verificationCode) => {
     const hashedPassword = await hashPassword(password);
-    const verificationCode = Math.floor(100000 + Math.random() * 900000).toString();
     const deviceToken = generateDeviceToken();
 
     const newUser = await auth.createUser({
@@ -61,12 +62,20 @@ const getUserByPhoneNumber = async (phoneNumber) => {
     return users[0];
 };
 
+const getUserById = async (userId) => {
+    return await getDocument(collections.users, userId);
+};
+
 const updateUserVerification = async (userId, isVerified, deviceToken) => {
     await updateDocument(collections.users, userId, { isVerified, deviceToken });
 };
 
 const updateUserDeviceInfo = async (userId, deviceToken, deviceId) => {
     await updateDocument(collections.users, userId, { deviceToken, deviceId });
+};
+
+const updateUserRefreshToken = async (userId, refreshToken) => {
+    await updateDocument(collections.users, userId, { refreshToken });
 };
 
 const clearUserDeviceToken = async (userId) => {
@@ -80,25 +89,17 @@ const storeVerificationCode = async (userId, verificationCode) => {
     });
 };
 
+const updateUserInfo = async (userId, updateData) => {
+    await updateDocument(collections.users, userId, updateData);
+};
+
 const validateUsername = (username) => {
-    if (/[!@#$%^&*(),.?":{}|<>]/.test(username)) {
-        return false;
-    }
-
-    if (username.length < 3 || username.length > 30) {
-        return false;
-    }
-
-    if (
-        username.includes('/') ||
-        username.includes('\\') ||
-        /^\d+$/.test(username) ||
-        /^(\+\d{1,2}\s?)?1?\-?\.?\s?$$?\d{3}$$?[\s.-]?\d{3}[\s.-]?\d{4}$/.test(username) ||
-        /^\d+\s+[\w\s]+(?:avenue|ave|street|st|road|rd|boulevard|blvd)\.?$/i.test(username)
-    ) {
-        return false;
-    }
-
+    if (username.length < 3 || username.length > 30) return false;
+    if (/[!@#$%^&*(),.?":{}|<>]/.test(username)) return false;
+    if (username.includes('/') || username.includes('\\')) return false;
+    if (/^\d+$/.test(username)) return false;
+    if (/^(\+\d{1,2}\s?)?1?[-.\s]?$$?\d{3}$$?[-.\s]?\d{3}[-.\s]?\d{4}$/.test(username)) return false;
+    if (/^\d+\s+[\w\s]+(?:avenue|ave|street|st|road|rd|boulevard|blvd)\.?$/i.test(username)) return false;
     return true;
 };
 
@@ -110,9 +111,13 @@ module.exports = {
     verifyJWT,
     createUser,
     getUserByPhoneNumber,
+    getUserById,
     updateUserVerification,
     updateUserDeviceInfo,
+    updateUserRefreshToken,
     clearUserDeviceToken,
     storeVerificationCode,
-    validateUsername
+    updateUserInfo,
+    validateUsername,
+    generateRefreshToken
 };

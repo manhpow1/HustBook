@@ -1,23 +1,15 @@
 const postService = require('../services/postService');
-const {
-    validateCreatePost,
-    validateUpdatePost,
-    validateComment,
-    validateLike,
-    validateGetPost,
-    validateGetPostComments,
-    validateGetUserPosts,
-    validateDeletePost,
-} = require('../validators/postValidator');
+const { validateCreatePost, validateUpdatePost, validateComment, validateLike, validateGetPost, validateGetPostComments, validateGetUserPosts } = require('../validators/postValidator');
 const { runTransaction } = require('../config/database');
-const { createError } = require('../utils/customError');
+const { sendResponse, handleError } = require('../utils/responseHandler');
 const logger = require('../utils/logger');
+const cache = require('../utils/redis');
 
 const createPost = async (req, res, next) => {
     try {
         const { error } = validateCreatePost(req.body);
         if (error) {
-            throw createError('1002');
+            return sendResponse(res, '1002');
         }
 
         const { content } = req.body;
@@ -26,14 +18,10 @@ const createPost = async (req, res, next) => {
 
         const postId = await postService.createPost(userId, content, images);
 
-        res.status(201).json({
-            code: "1000",
-            message: "OK",
-            data: { postId }
-        });
+        sendResponse(res, '1000', { postId });
     } catch (error) {
-        logger.error("Create post error:", error);
-        next(error);
+        logger.error("Create post error:", { error: error.message, stack: error.stack });
+        handleError(error, req, res, next);
     }
 };
 
@@ -41,33 +29,37 @@ const getPost = async (req, res, next) => {
     try {
         const { error } = validateGetPost(req.params);
         if (error) {
-            throw createError('1002');
+            return sendResponse(res, '1002');
         }
 
         const { id } = req.params;
 
+        const cacheKey = `post:${id}`;
+        const cachedPost = await cache.get(cacheKey);
+
+        if (cachedPost) {
+            return sendResponse(res, '1000', cachedPost);
+        }
+
         const post = await postService.getPost(id);
 
         if (!post) {
-            throw createError('9992');
+            return sendResponse(res, '9992');
         }
 
-        res.status(200).json({
-            code: "1000",
-            message: "OK",
-            data: post
-        });
+        await cache.set(cacheKey, post);
+        sendResponse(res, '1000', post);
     } catch (error) {
-        logger.error("Get post error:", error);
-        next(error);
+        logger.error("Get post error:", { error: error.message, stack: error.stack });
+        handleError(error, req, res, next);
     }
 };
 
-const updatePost = async (req, res) => {
+const updatePost = async (req, res, next) => {
     try {
         const { error } = validateUpdatePost(req.body);
         if (error) {
-            throw createError('1002');
+            return sendResponse(res, '1002');
         }
 
         const { id } = req.params;
@@ -78,102 +70,91 @@ const updatePost = async (req, res) => {
         const updatedPost = await postService.updatePost(id, userId, content, images);
 
         if (!updatedPost) {
-            throw createError('9992');
+            return sendResponse(res, '9992');
         }
 
-        res.status(200).json({
-            code: "1000",
-            message: "OK",
-            data: updatedPost
-        });
+        const cacheKey = `post:${id}`;
+        await cache.del(cacheKey);
+
+        sendResponse(res, '1000', updatedPost);
     } catch (error) {
-        logger.error("Update post error:", error);
-        next(error);
+        logger.error("Update post error:", { error: error.message, stack: error.stack });
+        handleError(error, req, res, next);
     }
 };
 
-const deletePost = async (req, res) => {
+const deletePost = async (req, res, next) => {
     try {
         const { id } = req.params;
         const userId = req.user.uid;
 
-        // Check if post exists
         const post = await postService.getPost(id);
         if (!post) {
-            throw createError('9992');
+            return sendResponse(res, '9992');
         }
 
-        // Check if the user has permission to delete the post
         if (post.userId !== userId) {
-            throw createError('1009');
+            return sendResponse(res, '1009');
         }
 
-        // Delete the post
         await postService.deletePost(id);
 
-        res.status(200).json({
-            code: "1000",
-            message: "OK"
-        });
+        const cacheKey = `post:${id}`;
+        await cache.del(cacheKey);
+
+        sendResponse(res, '1000');
     } catch (error) {
-        logger.error("Delete post error:", error);
-        next(error);
+        logger.error("Delete post error:", { error: error.message, stack: error.stack });
+        handleError(error, req, res, next);
     }
 };
 
-const likePost = async (req, res) => {
+const likePost = async (req, res, next) => {
     try {
         const { id } = req.params;
         const userId = req.user.uid;
 
         await runTransaction(async (transaction) => {
-            const postRef = db.collection(collections.posts).doc(id);
-            const post = await transaction.get(postRef);
-
-            if (!post.exists) {
-                throw new Error('Post not found');
-            }
-
-            transaction.update(postRef, { likes: post.data().likes + 1 });
-
-            const likeRef = db.collection(collections.likes).doc(`${id}_${userId}`);
-            transaction.set(likeRef, { userId, postId: id, createdAt: new Date() });
+            await postService.likePost(id, userId, transaction);
         });
 
-        res.status(200).json({ code: "1000", message: "OK" });
+        const cacheKey = `post:${id}`;
+        await cache.del(cacheKey);
+
+        sendResponse(res, '1000');
     } catch (error) {
-        logger.error("Like post error:", error);
-        next(error);
+        logger.error("Like post error:", { error: error.message, stack: error.stack });
+        handleError(error, req, res, next);
     }
 };
 
-const unlikePost = async (req, res) => {
+const unlikePost = async (req, res, next) => {
     try {
         const { error } = validateLike(req.body);
         if (error) {
-            throw createError('1002');
+            return sendResponse(res, '1002');
         }
 
         const { id } = req.params;
-        const { userId } = req.body;
+        const userId = req.user.uid;
 
         await postService.unlikePost(id, userId);
 
-        res.status(200).json({
-            code: "1000",
-            message: "OK"
-        });
+        const cacheKey = `post:${id}`;
+        await cache.del(cacheKey);
+
+        sendResponse(res, '1000');
     } catch (error) {
-        logger.error("Unlike post error:", error);
-        next(error);
+        logger.error("Unlike post error:", { error: error.message, stack: error.stack });
+        handleError(error, req, res, next);
     }
 };
 
-const addComment = async (req, res) => {
+const addComment = async (req, res, next) => {
     try {
         const { error } = validateComment(req.body);
         if (error) {
-            throw createError('1002');
+            return sendResponse(res, '1002');
         }
 
         const { id } = req.params;
@@ -182,60 +163,51 @@ const addComment = async (req, res) => {
 
         const commentId = await postService.addComment(id, userId, content);
 
-        res.status(201).json({
-            code: "1000",
-            message: "OK",
-            data: { commentId }
-        });
+        const cacheKey = `post:${id}`;
+        await cache.del(cacheKey);
+
+        sendResponse(res, '1000', { commentId });
     } catch (error) {
-        logger.error("Add comment error:", error);
-        next(error);
+        logger.error("Add comment error:", { error: error.message, stack: error.stack });
+        handleError(error, req, res, next);
     }
 };
 
-const getPostComments = async (req, res) => {
+const getPostComments = async (req, res, next) => {
     try {
         const { error } = validateGetPostComments(req.query);
         if (error) {
-            throw createError('1002');
+            return sendResponse(res, '1002');
         }
 
         const { id } = req.params;
-        const { lastCommentId, limit } = req.query;
+        const { page = 1, limit = 20 } = req.query;
 
-        const comments = await postService.getPostComments(id, lastCommentId, parseInt(limit) || 20);
+        const comments = await postService.getPostComments(id, page, limit);
 
-        res.status(200).json({
-            code: "1000",
-            message: "OK",
-            data: comments
-        });
+        sendResponse(res, '1000', comments);
     } catch (error) {
-        logger.error("Get post comments error:", error);
-        next(error);
+        logger.error("Get post comments error:", { error: error.message, stack: error.stack });
+        handleError(error, req, res, next);
     }
 };
 
-const getUserPosts = async (req, res) => {
+const getUserPosts = async (req, res, next) => {
     try {
         const { error } = validateGetUserPosts(req.params, req.query);
         if (error) {
-            return res.status(400).json({ code: "1002", message: error.details[0].message });
+            return sendResponse(res, '1002');
         }
 
         const { userId } = req.params;
-        const { lastPostId, limit } = req.query;
+        const { page = 1, limit = 20 } = req.query;
 
-        const posts = await postService.getUserPosts(userId, lastPostId, parseInt(limit) || 20);
+        const posts = await postService.getUserPosts(userId, page, limit);
 
-        res.status(200).json({
-            code: "1000",
-            message: "OK",
-            data: posts
-        });
+        sendResponse(res, '1000', posts);
     } catch (error) {
-        logger.error("Get user posts error:", error);
-        next(error);
+        logger.error("Get user posts error:", { error: error.message, stack: error.stack });
+        handleError(error, req, res, next);
     }
 };
 

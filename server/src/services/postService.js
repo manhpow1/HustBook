@@ -1,7 +1,6 @@
-// src/services/postService.js
-
-const { db } = require('../config/firebaseConfig');
+const { db } = require('../config/firebase');
 const { collections, createDocument, getDocument, updateDocument, deleteDocument, queryDocuments } = require('../config/database');
+const { paginateQuery } = require('../utils/pagination');
 
 const createPost = async (userId, content, images) => {
     const postData = {
@@ -20,7 +19,12 @@ const getPost = async (postId) => {
     return await getDocument(collections.posts, postId);
 };
 
-const updatePost = async (postId, content, images) => {
+const updatePost = async (postId, userId, content, images) => {
+    const post = await getPost(postId);
+    if (!post || post.userId !== userId) {
+        return null;
+    }
+
     const updateData = {
         content,
         images: images || [],
@@ -34,16 +38,12 @@ const deletePost = async (postId) => {
     return await deleteDocument(collections.posts, postId);
 };
 
-const likePost = async (postId, userId) => {
-    const batch = db.batch();
-
+const likePost = async (postId, userId, transaction) => {
     const postRef = db.collection(collections.posts).doc(postId);
-    batch.update(postRef, { likes: db.FieldValue.increment(1) });
-
     const likeRef = db.collection(collections.likes).doc(`${postId}_${userId}`);
-    batch.set(likeRef, { userId, postId, createdAt: new Date() });
 
-    await batch.commit();
+    transaction.update(postRef, { likes: db.FieldValue.increment(1) });
+    transaction.set(likeRef, { userId, postId, createdAt: new Date() });
 };
 
 const unlikePost = async (postId, userId) => {
@@ -79,34 +79,20 @@ const addComment = async (postId, userId, content) => {
     return commentRef.id;
 };
 
-const getPostComments = async (postId, lastCommentId = null, limit = 20) => {
-    let query = db.collection(collections.comments)
+const getPostComments = async (postId, page = 1, limit = 20) => {
+    const query = db.collection(collections.comments)
         .where('postId', '==', postId)
-        .orderBy('createdAt', 'desc')
-        .limit(limit);
+        .orderBy('createdAt', 'desc');
 
-    if (lastCommentId) {
-        const lastComment = await getDocument(collections.comments, lastCommentId);
-        query = query.startAfter(lastComment.createdAt);
-    }
-
-    const comments = await queryDocuments(query);
-    return comments;
+    return await paginateQuery(query, page, limit);
 };
 
-const getUserPosts = async (userId, lastPostId = null, limit = 20) => {
-    let query = db.collection(collections.posts)
+const getUserPosts = async (userId, page = 1, limit = 20) => {
+    const query = db.collection(collections.posts)
         .where('userId', '==', userId)
-        .orderBy('createdAt', 'desc')
-        .limit(limit);
+        .orderBy('createdAt', 'desc');
 
-    if (lastPostId) {
-        const lastPost = await getDocument(collections.posts, lastPostId);
-        query = query.startAfter(lastPost.createdAt);
-    }
-
-    const posts = await queryDocuments(query);
-    return posts;
+    return await paginateQuery(query, page, limit);
 };
 
 module.exports = {
