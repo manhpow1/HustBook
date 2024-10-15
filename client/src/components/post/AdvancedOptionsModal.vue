@@ -32,8 +32,7 @@
                     </button>
                 </li>
             </ul>
-            <button @click="emit('close')"
-                class="mt-4 w-full bg-gray-200 text-gray-800 py-2 rounded hover:bg-gray-300">
+            <button @click="emit('close')" class="mt-4 w-full bg-gray-200 text-gray-800 py-2 rounded hover:bg-gray-300">
                 {{ t('close') }}
             </button>
         </div>

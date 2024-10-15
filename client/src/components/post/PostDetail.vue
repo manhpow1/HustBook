@@ -44,6 +44,7 @@
             <AdvancedOptionsModal v-if="showAdvancedOptionsModal" :isOwnPost="isOwnPost" :post="post"
                 @close="showAdvancedOptionsModal = false" @edit="editPost" @delete="deletePost"
                 @toggleComments="toggleComments" @report="handleReportPost" @hide="hidePost" />
+            <DeletePost v-if="showDeletePostModal" :postId="post.id" @post-deleted="handlePostDeleted" />
         </ErrorBoundary>
     </main>
 </template>
@@ -58,6 +59,7 @@ import { AlertCircleIcon } from 'lucide-vue-next'
 import { formatNumber } from '../../utils/numberFormat'
 import { useConfirm } from '@vueuse/core'
 
+const DeletePost = defineAsyncComponent(() => import('./DeletePost.vue'))
 const PostSkeleton = defineAsyncComponent(() => import('../shared/PostSkeleton.vue'))
 const ErrorBoundary = defineAsyncComponent(() => import('../shared/ErrorBoundary.vue'))
 const PostHeader = defineAsyncComponent(() => import('./PostHeader.vue'))
@@ -88,6 +90,7 @@ const formattedComments = computed(() => formatNumber(post.value?.comment || 0))
 const showMediaViewer = ref(false)
 const currentMediaIndex = ref(0)
 const showAdvancedOptionsModal = ref(false)
+const showDeletePostModal = ref(false)
 const isOwnPost = computed(() => post.value?.author?.id === userStore.currentUser?.id)
 
 const { confirm } = useConfirm()
@@ -209,14 +212,8 @@ const handleSavePost = async () => {
     }
 }
 
-const handleReportPost = async () => {
-    try {
-        await postStore.reportPost(post.value.id)
-        // Show a success message to the user
-    } catch (error) {
-        console.error('Failed to report post:', error)
-        // Show an error message to the user
-    }
+const handlePostDeleted = () => {
+    router.push({ name: 'Home' })
 }
 
 onMounted(async () => {

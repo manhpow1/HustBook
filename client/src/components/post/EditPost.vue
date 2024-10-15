@@ -5,7 +5,7 @@
             Edit Post
         </h2>
         <form @submit.prevent="handleSubmit" class="space-y-4">
-            <FileUpload v-model:files="files" @error="fileError = $event" :initialFiles="initialFiles" />
+            <FileUpload v-model="files" @error="fileError = $event" :initialFiles="initialFiles" />
 
             <div>
                 <label for="description" class="block text-sm font-medium text-gray-700 mb-2">

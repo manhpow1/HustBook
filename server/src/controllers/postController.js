@@ -87,8 +87,8 @@ const deletePost = async (req, res, next) => {
     try {
         const { id } = req.params;
         const userId = req.user.uid;
-
         const post = await postService.getPost(id);
+
         if (!post) {
             return sendResponse(res, '9992');
         }
@@ -98,10 +98,8 @@ const deletePost = async (req, res, next) => {
         }
 
         await postService.deletePost(id);
-
         const cacheKey = `post:${id}`;
         await cache.del(cacheKey);
-
         sendResponse(res, '1000');
     } catch (error) {
         logger.error("Delete post error:", { error: error.message, stack: error.stack });

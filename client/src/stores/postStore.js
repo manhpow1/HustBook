@@ -122,6 +122,23 @@ export const usePostStore = defineStore('post', () => {
         }
     }
 
+    async function removePost(postId) {
+        try {
+            await api.delete(`/posts/${postId}`)
+            const index = posts.value.findIndex(post => post.id === postId)
+            if (index !== -1) {
+                posts.value.splice(index, 1)
+            }
+            if (currentPost.value && currentPost.value.id === postId) {
+                currentPost.value = null
+            }
+        } catch (err) {
+            console.error('Error removing post:', err)
+            error.value = 'Failed to remove post'
+            throw err
+        }
+    }
+
     return {
         posts,
         currentPost,
@@ -139,6 +156,7 @@ export const usePostStore = defineStore('post', () => {
         likePost,
         fetchComments,
         addComment,
-        fetchPostsByHashtag
+        fetchPostsByHashtag,
+        removePost,
     }
 })
