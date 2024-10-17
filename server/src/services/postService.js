@@ -95,6 +95,19 @@ const getUserPosts = async (userId, page = 1, limit = 20) => {
     return await paginateQuery(query, page, limit);
 };
 
+const reportPost = async (postId, userId, reason, details) => {
+    const reportData = {
+        postId,
+        userId,
+        reason,
+        details: details || '',
+        createdAt: new Date(),
+        status: 'pending', // or 'under review'
+    };
+
+    return await createDocument(collections.reports, reportData);
+};
+
 module.exports = {
     createPost,
     getPost,
@@ -104,5 +117,6 @@ module.exports = {
     unlikePost,
     addComment,
     getPostComments,
-    getUserPosts
+    getUserPosts,
+    reportPost,
 };

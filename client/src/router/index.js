@@ -80,6 +80,12 @@ const routes = [
         name: 'Watch',
         component: () => import('../views/Watch.vue')
     },
+    {
+        path: '/delete-post/:id',
+        name: 'DeletePost',
+        component: () => import('../components/post/DeletePost.vue'),
+        meta: { requiresAuth: true }
+    }
 ]
 
 const router = createRouter({

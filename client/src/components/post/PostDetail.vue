@@ -45,6 +45,8 @@
                 @close="showAdvancedOptionsModal = false" @edit="editPost" @delete="deletePost"
                 @toggleComments="toggleComments" @report="handleReportPost" @hide="hidePost" />
             <DeletePost v-if="showDeletePostModal" :postId="post.id" @post-deleted="handlePostDeleted" />
+            <ReportPostModal v-if="showReportPostModal" :postId="post.id" @close="showReportPostModal = false"
+                @report-submitted="handleReportSubmitted" />
         </ErrorBoundary>
     </main>
 </template>
@@ -58,6 +60,8 @@ import { useUserStore } from '../../stores/userStore'
 import { AlertCircleIcon } from 'lucide-vue-next'
 import { formatNumber } from '../../utils/numberFormat'
 import { useConfirm } from '@vueuse/core'
+import { useNotificationStore } from '../../stores/notificationStore';
+
 
 const DeletePost = defineAsyncComponent(() => import('./DeletePost.vue'))
 const PostSkeleton = defineAsyncComponent(() => import('../shared/PostSkeleton.vue'))
@@ -70,12 +74,14 @@ const PostBanWarning = defineAsyncComponent(() => import('./PostBanWarning.vue')
 const CommentSection = defineAsyncComponent(() => import('./CommentSection.vue'))
 const MediaViewer = defineAsyncComponent(() => import('../shared/MediaViewer.vue'))
 const AdvancedOptionsModal = defineAsyncComponent(() => import('./AdvancedOptionsModal.vue'))
+const ReportPostModal = defineAsyncComponent(() => import('./ReportPostModal.vue'))
 
 const route = useRoute()
 const router = useRouter()
 const { t } = useI18n({ useScope: 'global' })
 const postStore = usePostStore()
 const userStore = useUserStore()
+const notificationStore = useNotificationStore();
 
 const post = computed(() => postStore.currentPost)
 const comments = computed(() => postStore.comments)
@@ -92,6 +98,7 @@ const currentMediaIndex = ref(0)
 const showAdvancedOptionsModal = ref(false)
 const showDeletePostModal = ref(false)
 const isOwnPost = computed(() => post.value?.author?.id === userStore.currentUser?.id)
+const showReportPostModal = ref(false);
 
 const { confirm } = useConfirm()
 
@@ -181,15 +188,15 @@ const deletePost = async () => {
 }
 
 const handleReportPost = async () => {
-    try {
-        await postStore.reportPost(post.value.id)
-        // Show a success message to the user
-    } catch (error) {
-        console.error('Failed to report post:', error)
-        // Show an error message to the user
-    }
-    showAdvancedOptionsModal.value = false
+    showReportPostModal.value = true;
+    showAdvancedOptionsModal.value = false;
 }
+
+const handleReportSubmitted = () => {
+    showReportPostModal.value = false;
+    // Optionally show a success notification
+    notificationStore.showNotification(t('reportSubmittedSuccess'), 'success');
+};
 
 const hidePost = async () => {
     try {

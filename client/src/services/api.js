@@ -1,7 +1,7 @@
 import axios from 'axios'
 import { useUserStore } from '../stores/userStore'
 import { API_ENDPOINTS } from '../config/api'
-import { handleError } from '../utils/errorHandler'
+import axiosInstance from './axiosInstance';
 
 const api = axios.create({
     baseURL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api'
@@ -85,6 +85,13 @@ const apiService = {
 
     deletePost(postId) {
         return this.delete(`${API_ENDPOINTS.DELETE_POST}/${postId}`)
+    },
+
+    reportPost(postId, reason, details) {
+        return axiosInstance.post(`/posts/${postId}/report`, {
+            reason,
+            details,
+        });
     },
 
     // Comment-related API calls

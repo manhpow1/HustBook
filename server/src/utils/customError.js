@@ -35,4 +35,4 @@ const createError = (code) => {
     return new CustomError(code, message, statusCode);
 };
 
-module.exports = { CustomError, createError };
+module.exports = { CustomError, createError, errorCodes };

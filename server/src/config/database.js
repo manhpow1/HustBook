@@ -4,7 +4,8 @@ const { db } = require('./firebase');
 const collections = {
     users: 'users',
     posts: 'posts',
-    comments: 'comments'
+    comments: 'comments',
+    reports: 'reports',
 };
 
 const createDocument = async (collection, data) => {

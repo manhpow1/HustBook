@@ -1,4 +1,4 @@
-const { createError } = require('./customError');
+const { CustomError, errorCodes } = require('./customError');
 const logger = require('./logger');
 
 const sendResponse = (res, code, data = null) => {
@@ -6,7 +6,7 @@ const sendResponse = (res, code, data = null) => {
     const response = {
         code,
         message,
-        data
+        data,
     };
 
     if (statusCode >= 400) {

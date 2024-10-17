@@ -1,5 +1,14 @@
 const Joi = require('joi');
 
+const acceptableReasons = [
+    'Spam',
+    'Inappropriate content',
+    'Harassment',
+    'Hate speech',
+    'Violence',
+    'Other',
+];
+
 const createPostSchema = Joi.object({
     content: Joi.string().required().max(1000),
     images: Joi.array().items(Joi.string().uri()).max(4)
@@ -34,6 +43,19 @@ const getUserPostsSchema = Joi.object({
     limit: Joi.number().integer().min(1).max(100).default(20)
 });
 
+const reportPostSchema = Joi.object({
+    reason: Joi.string()
+        .valid(...acceptableReasons)
+        .required(),
+    details: Joi.string()
+        .max(500)
+        .when('reason', {
+            is: 'Other',
+            then: Joi.required(),
+            otherwise: Joi.optional(),
+        }),
+});
+
 const validateCreatePost = (data) => {
     return createPostSchema.validate(data);
 };
@@ -62,6 +84,10 @@ const validateGetUserPosts = (data) => {
     return getUserPostsSchema.validate(data);
 };
 
+const validateReportPost = (data) => {
+    return reportPostSchema.validate(data);
+};
+
 module.exports = {
     validateCreatePost,
     validateUpdatePost,
@@ -70,4 +96,5 @@ module.exports = {
     validateGetPost,
     validateGetPostComments,
     validateGetUserPosts,
+    validateReportPost,
 };

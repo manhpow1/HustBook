@@ -11,8 +11,10 @@ export const API_ENDPOINTS = {
     ADD_POST: `${API_BASE_URL}/posts/add_post`,
     GET_POST: `${API_BASE_URL}/posts/get_post`,
     LIKE_POST: `${API_BASE_URL}/posts/like_post`,
+    DELETE_POST: `${API_BASE_URL}/posts/delete_post`,
     ADD_COMMENT: `${API_BASE_URL}/posts/add_comment`,
     UPDATE_COMMENT: `${API_BASE_URL}/comments`,
     DELETE_COMMENT: `${API_BASE_URL}/comments`,
     GET_COMMENTS: `${API_BASE_URL}/posts`,
+    REPORT_POST: `${API_BASE_URL}/posts`,
 };

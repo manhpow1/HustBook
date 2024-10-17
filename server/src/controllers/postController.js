@@ -1,5 +1,5 @@
 const postService = require('../services/postService');
-const { validateCreatePost, validateUpdatePost, validateComment, validateLike, validateGetPost, validateGetPostComments, validateGetUserPosts } = require('../validators/postValidator');
+const { validateCreatePost, validateUpdatePost, validateComment, validateLike, validateGetPost, validateGetPostComments, validateGetUserPosts, validateReportPost, } = require('../validators/postValidator');
 const { runTransaction } = require('../config/database');
 const { sendResponse, handleError } = require('../utils/responseHandler');
 const logger = require('../utils/logger');
@@ -209,6 +209,33 @@ const getUserPosts = async (req, res, next) => {
     }
 };
 
+const reportPost = async (req, res, next) => {
+    try {
+        const { error } = validateReportPost(req.body);
+        if (error) {
+            return sendResponse(res, '1002'); // Parameter is not enough
+        }
+
+        const { id } = req.params;
+        const { reason, details } = req.body;
+        const userId = req.user.uid;
+
+        const post = await postService.getPost(id);
+
+        if (!post) {
+            return sendResponse(res, '9992'); // Post is not existed
+        }
+
+        // Proceed to report the post
+        await postService.reportPost(id, userId, reason, details);
+
+        sendResponse(res, '1000', { message: 'Report submitted successfully. The post is under review.' });
+    } catch (error) {
+        logger.error('Report post error:', { error: error.message, stack: error.stack });
+        handleError(error, req, res, next);
+    }
+};
+
 module.exports = {
     createPost,
     getPost,
@@ -218,5 +245,6 @@ module.exports = {
     unlikePost,
     addComment,
     getPostComments,
-    getUserPosts
+    getUserPosts,
+    reportPost,
 };

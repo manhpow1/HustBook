@@ -41,6 +41,17 @@ const i18n = createI18n({
             deleteError: 'Failed to delete comment. Please try again.',
             likeError: 'Failed to update like status. Please try again.',
             errorFetchingComments: 'Failed to load comments. Please try again.',
+            advancedOptions: 'Advanced Options',
+            reportPost: 'Report Post',
+            selectReason: 'Select a reason for reporting:',
+            selectReasonPlaceholder: 'Select a reason',
+            details: 'Details',
+            provideDetails: 'Please provide additional details',
+            submitReport: 'Submit Report',
+            pleaseSelectReason: 'Please select a reason for reporting the post.',
+            reportSubmitted: 'Your report has been submitted.',
+            reportSubmittedSuccess: 'Report submitted successfully.',
+            reportFailed: 'Failed to submit report. Please try again later.',
         },
         // Add other languages as needed
     }

@@ -10,11 +10,9 @@
             <div v-if="showConfirmation"
                 class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" @click="closeModal">
                 <div class="bg-white p-6 rounded-lg shadow-xl max-w-sm w-full" @click.stop role="dialog"
-                    aria-modal="true" aria-labelledby="modal-title" aria-describedby="modal-description">
-                    <h3 id="modal-title" class="text-lg font-semibold mb-4">Confirm Delete</h3>
-                    <p id="modal-description" class="mb-6">
-                        Are you sure you want to delete this post? This action cannot be undone.
-                    </p>
+                    aria-modal="true" :aria-labelledby="modalTitleId" :aria-describedby="modalDescriptionId">
+                    <h3 :id="modalTitleId" class="text-lg font-semibold mb-4">{{ title }}</h3>
+                    <p :id="modalDescriptionId" class="mb-6">{{ message }}</p>
                     <div class="flex justify-end space-x-4">
                         <button @click="confirmDelete"
                             class="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
@@ -44,40 +42,47 @@
     </div>
 </template>
 
-<script setup lang="ts">
-import { ref, onMounted, onUnmounted } from 'vue'
+<script setup>
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { usePostStore } from '../../stores/postStore'
 import { useRouter } from 'vue-router'
 import apiService from '../../services/api'
 import { handleError } from '../../utils/errorHandler'
 
-interface Props {
-    postId: string
-    title?: string
-    message?: string
-    redirectAfterDelete?: boolean
-}
-
-const props = withDefaults(defineProps<Props>(), {
-    title: 'Confirm Delete',
-    message: 'Are you sure you want to delete this post? This action cannot be undone.',
-    redirectAfterDelete: true
+const props = defineProps({
+    postId: {
+        type: String,
+        required: true
+    },
+    title: {
+        type: String,
+        default: 'Confirm Delete'
+    },
+    message: {
+        type: String,
+        default: 'Are you sure you want to delete this post? This action cannot be undone.'
+    },
+    redirectAfterDelete: {
+        type: Boolean,
+        default: true
+    }
 })
 
-const emit = defineEmits<{
-    (e: 'post-deleted'): void
-}>()
+const emit = defineEmits(['post-deleted'])
 
 const showConfirmation = ref(false)
 const isDeleting = ref(false)
 const postStore = usePostStore()
 const router = useRouter()
 
+const modalTitleId = computed(() => `modal-title-${props.postId}`)
+const modalDescriptionId = computed(() => `modal-description-${props.postId}`)
+
 const openModal = () => {
     showConfirmation.value = true
     setTimeout(() => {
         const deleteButton = document.querySelector('button[type="button"]:not(:disabled)')
-        if (deleteButton instanceof HTMLElement) {
+        if (deleteButton) {
             deleteButton.focus()
         }
     }, 50)
@@ -86,10 +91,7 @@ const openModal = () => {
 const closeModal = () => {
     if (!isDeleting.value) {
         showConfirmation.value = false
-        const firstButton = document.querySelector('button:first-of-type')
-        if (firstButton instanceof HTMLElement) {
-            (firstButton as HTMLElement).focus()
-        }
+        document.querySelector('button:first-of-type')?.focus()
     }
 }
 
@@ -115,7 +117,7 @@ const confirmDelete = async () => {
     }
 }
 
-const handleKeyDown = (event: KeyboardEvent) => {
+const handleKeyDown = (event) => {
     if (event.key === 'Escape' && showConfirmation.value) {
         closeModal()
     }

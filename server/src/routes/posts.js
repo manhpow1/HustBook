@@ -14,6 +14,7 @@ router.post('/:id/unlike', authenticateToken, postController.unlikePost);
 router.post('/:id/comment', authenticateToken, postController.addComment);
 router.get('/:id/comments', authenticateToken, postController.getPostComments);
 router.get('/user/:userId', authenticateToken, postController.getUserPosts);
-router.post('/delete_post', authenticateToken, postController.deletePost);
+router.post('/delete-post', authenticateToken, postController.deletePost);
+router.post('/:id/report', authenticateToken, postController.reportPost);
 
 module.exports = router;
