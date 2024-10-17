@@ -5,5 +5,5 @@ const server = require('./server');
 module.exports = {
     firebase,
     database,
-    server
+    server,
 };

@@ -98,7 +98,7 @@ const validateUsername = (username) => {
     if (/[!@#$%^&*(),.?":{}|<>]/.test(username)) return false;
     if (username.includes('/') || username.includes('\\')) return false;
     if (/^\d+$/.test(username)) return false;
-    if (/^(\+\d{1,2}\s?)?1?[-.\s]?$$?\d{3}$$?[-.\s]?\d{3}[-.\s]?\d{4}$/.test(username)) return false;
+    if (/^(\+\d{1,2}\s?)?1?[-.\s]?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}$/.test(username)) return false;
     if (/^\d+\s+[\w\s]+(?:avenue|ave|street|st|road|rd|boulevard|blvd)\.?$/i.test(username)) return false;
     return true;
 };

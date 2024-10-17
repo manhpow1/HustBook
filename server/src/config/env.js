@@ -9,6 +9,7 @@ module.exports = {
     },
     jwt: {
         secret: process.env.JWT_SECRET || config.get('jwt.secret'),
+        refreshSecret: process.env.JWT_REFRESH_SECRET || config.get('jwt.refreshSecret')
     },
     server: {
         port: process.env.PORT || config.get('server.port'),

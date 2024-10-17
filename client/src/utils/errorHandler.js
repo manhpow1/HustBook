@@ -23,27 +23,32 @@ const errorMessages = {
     1012: 'This content is not available in your country.'
 }
 
-export function handleError(error) {
-    const notificationStore = useNotificationStore()
+export function handleError(error, router) {
+    const notificationStore = useNotificationStore();
 
     if (error.response) {
-        const statusCode = error.response.status
-        const responseCode = error.response.data.code
+        const statusCode = error.response.status;
+        const responseCode = error.response.data.code;
 
         if (statusCode === 401) {
-            // Handle unauthorized access
-            notificationStore.showNotification('Your session has expired. Please log in again.', 'error')
-            // Redirect to login page or show login modal
+            // For 401 Unauthorized
+            notificationStore.showNotification('Your session has expired. Please log in again.', 'error');
+            if (router) router.push('/login');
+        } else if (statusCode === 403) {
+            // For 403 Forbidden, use specific error message if available
+            const message = errorMessages[responseCode] || 'You do not have permission to access this resource.';
+            notificationStore.showNotification(message, 'error');
+            if (router) router.push('/login');
         } else if (errorMessages[responseCode]) {
-            notificationStore.showNotification(errorMessages[responseCode], 'error')
+            notificationStore.showNotification(errorMessages[responseCode], 'error');
         } else {
-            notificationStore.showNotification('An unexpected error occurred. Please try again later.', 'error')
+            notificationStore.showNotification('An unexpected error occurred. Please try again later.', 'error');
         }
     } else if (error.request) {
-        notificationStore.showNotification('Unable to connect to the server. Please check your internet connection.', 'error')
+        notificationStore.showNotification('Unable to connect to the server. Please check your internet connection.', 'error');
     } else {
-        notificationStore.showNotification('An unexpected error occurred. Please try again later.', 'error')
+        notificationStore.showNotification('An unexpected error occurred. Please try again later.', 'error');
     }
 
-    console.error('Error:', error)
+    console.error('Error:', error);
 }

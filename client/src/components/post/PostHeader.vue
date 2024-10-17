@@ -67,7 +67,7 @@ const editPost = () => {
 }
 
 const deletePost = () => {
-    if (confirm(t('confirmDeletePost'))) {
+    if (confirm(t('confirmDelete'))) {
         emit('deletePost')
     }
     showAdvancedOptions.value = false

@@ -168,16 +168,16 @@ const editPost = () => {
 }
 
 const deletePost = async () => {
-    if (await confirm(t('confirmDeletePost'))) {
+    // Show confirmation modal before deleting
+    if (await confirm(t('confirmDelete'))) {
         try {
             await postStore.deletePost(post.value.id)
-            router.push({ name: 'Home' })
+            router.push({ name: 'Login' })
         } catch (error) {
-            console.error('Failed to delete post:', error)
-            // Show an error message to the user
+            handleError(error)
         }
     }
-    showAdvancedOptionsModal.value = false
+    showDeletePostModal.value = false
 }
 
 const handleReportPost = async () => {
@@ -213,7 +213,7 @@ const handleSavePost = async () => {
 }
 
 const handlePostDeleted = () => {
-    router.push({ name: 'Home' })
+    router.push({ name: 'Login' })
 }
 
 onMounted(async () => {
