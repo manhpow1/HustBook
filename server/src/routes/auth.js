@@ -1,9 +1,12 @@
 const express = require("express");
 const router = express.Router();
 const multer = require('multer');
-const upload = multer({ dest: 'uploads/' });
 const authController = require('../controllers/authController');
 const { authenticateToken } = require('../middleware/auth');
+const upload = multer({
+    dest: 'uploads/',
+    limits: { fileSize: 2 * 1024 * 1024 },
+});
 
 router.post("/login", authController.login);
 router.post("/signup", authController.signup);

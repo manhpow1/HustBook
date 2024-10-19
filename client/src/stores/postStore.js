@@ -1,8 +1,9 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
-import api from '../services/api'
+import apiService from '../services/api'
 import { formatNumber } from '../utils/numberFormat'
 import { handleError } from '../utils/errorHandler'
+import { API_ENDPOINTS } from '../config/api'
 
 export const usePostStore = defineStore('post', () => {
     const posts = ref([])
@@ -14,7 +15,10 @@ export const usePostStore = defineStore('post', () => {
     const commentError = ref(null)
     const hasMorePosts = ref(true)
 
-    const formattedLikes = computed(() => formatNumber(currentPost.value?.like || 0))
+    const formattedLikes = computed(() => {
+        const likes = currentPost.value?.likes || 0
+        return formatNumber(Math.max(likes, 0)) // Ensure no negative values
+    })
     const formattedComments = computed(() => formatNumber(currentPost.value?.comment || 0))
 
     async function fetchPosts() {
@@ -22,18 +26,19 @@ export const usePostStore = defineStore('post', () => {
         try {
             const response = await apiService.get(API_ENDPOINTS.GET_POSTS)
             posts.value = response.data.data
-        } catch (error) {
-            handleError(error)
+        } catch (err) {
+            handleError(err)
+            error.value = 'Failed to load posts'
         } finally {
             loading.value = false
         }
     }
 
-    async function fetchPost(id) {
+    async function fetchPost(postId) {
         loading.value = true
         error.value = null
         try {
-            const response = await api.get(`/posts/${id}`)
+            const response = await apiService.get(API_ENDPOINTS.GET_POST(postId))
             currentPost.value = response.data.data
         } catch (err) {
             console.error('Error fetching post:', err)
@@ -47,7 +52,7 @@ export const usePostStore = defineStore('post', () => {
         loading.value = true
         error.value = null
         try {
-            const response = await api.post('/posts', postData)
+            const response = await apiService.post(API_ENDPOINTS.ADD_POST, postData)
             posts.value.unshift(response.data.data)
             return response.data
         } catch (err) {
@@ -59,21 +64,39 @@ export const usePostStore = defineStore('post', () => {
         }
     }
 
-    async function likePost(id) {
+    async function toggleLike(postId) {
         try {
-            await api.post(`/posts/${id}/like`)
-            const post = posts.value.find(p => p.id === id)
+            const post = posts.value.find(p => p.id === postId)
+            const isLiked = post?.is_liked === '1'
+
+            // Optimistic UI update
             if (post) {
-                post.likes++
-                post.isLiked = true
+                post.is_liked = isLiked ? '0' : '1'
+                post.likes += isLiked ? -1 : 1
             }
-            if (currentPost.value && currentPost.value.id === id) {
-                currentPost.value.likes++
-                currentPost.value.isLiked = true
+            if (currentPost.value && currentPost.value.id === postId) {
+                currentPost.value.is_liked = isLiked ? '0' : '1'
+                currentPost.value.likes += isLiked ? -1 : 1
             }
+
+            // Call the like API
+            await apiService.likePost(postId)
         } catch (err) {
-            console.error('Error liking post:', err)
-            throw err
+            console.error('Error toggling like:', err)
+            handleError(err)
+
+            // Revert the UI update on failure
+            const post = posts.value.find(p => p.id === postId)
+            if (post) {
+                const isLiked = post.is_liked === '1'
+                post.is_liked = isLiked ? '0' : '1'
+                post.likes += isLiked ? -1 : 1
+            }
+            if (currentPost.value && currentPost.value.id === postId) {
+                const isLiked = currentPost.value.is_liked === '1'
+                currentPost.value.is_liked = isLiked ? '0' : '1'
+                currentPost.value.likes += isLiked ? -1 : 1
+            }
         }
     }
 
@@ -81,7 +104,7 @@ export const usePostStore = defineStore('post', () => {
         loadingComments.value = true
         commentError.value = null
         try {
-            const response = await api.get(`/posts/${postId}/comments`)
+            const response = await apiService.get(API_ENDPOINTS.GET_COMMENTS(postId))
             comments.value = response.data.data
         } catch (err) {
             console.error('Error fetching comments:', err)
@@ -93,7 +116,7 @@ export const usePostStore = defineStore('post', () => {
 
     async function addComment(postId, content) {
         try {
-            const response = await api.post(`/posts/${postId}/comments`, { content })
+            const response = await apiService.addComment(postId, content)
             comments.value.unshift(response.data.data)
             if (currentPost.value && currentPost.value.id === postId) {
                 currentPost.value.comment++
@@ -111,9 +134,11 @@ export const usePostStore = defineStore('post', () => {
         }
         error.value = null
         try {
-            const response = await api.get(`/posts/hashtag/${hashtag}`, { params: { page: loadMore ? posts.value.length / 10 + 1 : 1 } })
+            const response = await apiService.get(`/posts/hashtag/${hashtag}`, {
+                params: { page: loadMore ? posts.value.length / 10 + 1 : 1 }
+            })
             posts.value = loadMore ? [...posts.value, ...response.data.data] : response.data.data
-            hasMorePosts.value = response.data.data.length === 10 // Assuming 10 posts per page
+            hasMorePosts.value = response.data.data.length === 10
         } catch (err) {
             console.error('Error fetching posts by hashtag:', err)
             error.value = 'Failed to load posts'
@@ -124,7 +149,7 @@ export const usePostStore = defineStore('post', () => {
 
     async function removePost(postId) {
         try {
-            await api.delete(`/posts/${postId}`)
+            await apiService.deletePost(postId)
             const index = posts.value.findIndex(post => post.id === postId)
             if (index !== -1) {
                 posts.value.splice(index, 1)
@@ -153,7 +178,7 @@ export const usePostStore = defineStore('post', () => {
         fetchPosts,
         fetchPost,
         createPost,
-        likePost,
+        toggleLike,
         fetchComments,
         addComment,
         fetchPostsByHashtag,

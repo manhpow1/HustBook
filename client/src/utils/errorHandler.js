@@ -24,7 +24,6 @@ export const errorMessages = {
 }
 
 export async function handleError(error, router) {
-    console.error('[ERROR] handleError:', error);
 
     const notificationStore = useNotificationStore();
     let message = 'An error occurred.';
@@ -39,9 +38,6 @@ export async function handleError(error, router) {
     notificationStore.showNotification(message, 'error');
 
     if (error.response?.status === 401 && router) {
-        console.log('[DEBUG] Calling router.push("/login") inside handleError.');
         await router.push('/login');  // Ensure async behavior is awaited.
-    } else {
-        console.log('[DEBUG] Not redirecting. Status:', error.response?.status);
     }
 }

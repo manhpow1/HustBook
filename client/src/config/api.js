@@ -1,6 +1,7 @@
 const API_BASE_URL = import.meta.env.VITE_APP_API_BASE_URL || 'http://localhost:3000/api';
 
 export const API_ENDPOINTS = {
+    // Authentication Endpoints
     CHECK_VERIFY_CODE: `${API_BASE_URL}/auth/check_verify_code`,
     GET_VERIFY_CODE: `${API_BASE_URL}/auth/get_verify_code`,
     LOGIN: `${API_BASE_URL}/auth/login`,
@@ -8,13 +9,22 @@ export const API_ENDPOINTS = {
     SIGNUP: `${API_BASE_URL}/auth/signup`,
     AUTH_CHECK: `${API_BASE_URL}/auth/check`,
     CHANGE_INFO_AFTER_SIGNUP: `${API_BASE_URL}/auth/change_info_after_signup`,
+
+    // Post Endpoints
     ADD_POST: `${API_BASE_URL}/posts`,
     GET_POST: (postId) => `${API_BASE_URL}/posts/${postId}`,
-    LIKE_POST: `${API_BASE_URL}/posts/like_post`,
     DELETE_POST: (postId) => `${API_BASE_URL}/posts/${postId}`,
-    ADD_COMMENT: `${API_BASE_URL}/posts/add_comment`,
+    REPORT_POST: (postId) => `${API_BASE_URL}/posts/${postId}/report-post`,
+    LIKE_POST: (postId) => `${API_BASE_URL}/posts/${postId}/like`,
+
+    // Comment Endpoints (Nested Under Posts)
+    ADD_COMMENT: (postId) => `${API_BASE_URL}/posts/${postId}/comment`,
+    GET_COMMENTS: (postId) => `${API_BASE_URL}/posts/${postId}/comments`,
+
+    // Separate Comment Endpoints for Updates and Deletions (If Needed)
     UPDATE_COMMENT: `${API_BASE_URL}/comments`,
     DELETE_COMMENT: `${API_BASE_URL}/comments`,
-    GET_COMMENTS: `${API_BASE_URL}/posts`,
-    REPORT_POST: (postId) => `${API_BASE_URL}/posts/${postId}/report`,
+
+    // User-Specific Posts
+    GET_USER_POSTS: (userId) => `${API_BASE_URL}/posts/user/${userId}`,
 };

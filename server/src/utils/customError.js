@@ -8,7 +8,7 @@ class CustomError extends Error {
 
 const errorCodes = {
     '1000': { message: 'OK', statusCode: 200 },
-    '9992': { message: 'Post is not existed', statusCode: 404 },
+    '9992': { message: 'The requested post does not exist.', statusCode: 404 },
     '9993': { message: 'Code verify is incorrect', statusCode: 400 },
     '9994': { message: 'No Data or end of list data', statusCode: 404 },
     '9995': { message: 'User is not validated', statusCode: 401 },

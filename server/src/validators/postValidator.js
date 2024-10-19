@@ -11,7 +11,7 @@ const acceptableReasons = [
 
 const createPostSchema = Joi.object({
     content: Joi.string().required().max(1000),
-    images: Joi.array().items(Joi.string().uri()).max(4)
+    images: Joi.array().items(Joi.string().uri()).max(4),
 });
 
 const updatePostSchema = Joi.object({
@@ -24,7 +24,7 @@ const commentSchema = Joi.object({
 });
 
 const likeSchema = Joi.object({
-    postId: Joi.string().required()
+    id: Joi.string().required()
 });
 
 const getPostSchema = Joi.object({
@@ -68,8 +68,8 @@ const validateComment = (data) => {
     return commentSchema.validate(data);
 };
 
-const validateLike = (data) => {
-    return likeSchema.validate(data);
+const validateLike = (params) => {
+    return likeSchema.validate(params);
 };
 
 const validateGetPost = (data) => {

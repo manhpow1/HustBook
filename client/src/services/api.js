@@ -1,7 +1,7 @@
 import axios from 'axios'
 import { useUserStore } from '../stores/userStore'
 import { API_ENDPOINTS } from '../config/api'
-import axiosInstance from './axiosInstance';
+import axiosInstance from './axiosInstance'
 
 const api = axios.create({
     baseURL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api'
@@ -24,10 +24,14 @@ api.interceptors.request.use(config => {
 api.interceptors.response.use(
     response => response,
     error => {
-        handleError(error)
-        return Promise.reject(error)
+        try {
+            handleError(error);
+        } catch (e) {
+            console.error('Error in handleError:', e);
+        }
+        return Promise.reject(error);
     }
-)
+);
 
 const apiService = {
     async get(url, config = {}) {
@@ -68,11 +72,11 @@ const apiService = {
 
     // Post-related API calls
     getPost(postId) {
-        return axiosInstance.get(API_ENDPOINTS.GET_POST(postId));
+        return api.get(API_ENDPOINTS.GET_POST(postId));
     },
 
     likePost(postId) {
-        return this.post(API_ENDPOINTS.LIKE_POST, { postId })
+        return this.post(API_ENDPOINTS.LIKE_POST(postId)); // Pass postId here
     },
 
     createPost(postData) {
@@ -89,14 +93,14 @@ const apiService = {
 
     reportPost(postId, reason, details) {
         return axiosInstance.post(API_ENDPOINTS.REPORT_POST(postId), {
-          reason,
-          details,
+            reason,
+            details,
         });
-      },
+    },
 
     // Comment-related API calls
     addComment(postId, content) {
-        return this.post(API_ENDPOINTS.ADD_COMMENT, { postId, content })
+        return this.post(API_ENDPOINTS.ADD_COMMENT(postId), { content });
     },
 
     updateComment(id, data) {

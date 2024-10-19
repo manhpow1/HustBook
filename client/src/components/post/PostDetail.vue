@@ -31,10 +31,26 @@
 
                     <PostBanWarning v-if="post.banned !== '0'" :banStatus="post.banned" />
 
-                    <CommentSection v-if="post.can_comment === '1'" :postId="post.id" :comments="comments"
-                        @addComment="handleComment" @updateComment="handleCommentUpdate"
-                        @deleteComment="handleCommentDelete" @loadMore="loadMoreComments" :loading="loadingMoreComments"
-                        :error="commentError" @retry="retryLoadComments" />
+                    <Suspense>
+                        <template #default>
+                            <CommentSection v-if="post.can_comment === '1'" :postId="post.id" :comments="comments"
+                                @addComment="handleComment" @updateComment="handleCommentUpdate"
+                                @deleteComment="handleCommentDelete" @loadMore="loadMoreComments"
+                                :loading="loadingMoreComments" :error="commentError" @retry="retryLoadComments" />
+                        </template>
+                        <template #fallback>
+                            <div class="text-center py-8">
+                                <svg class="animate-spin h-8 w-8 text-gray-500 mx-auto"
+                                    xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor"
+                                        stroke-width="4"></circle>
+                                    <path class="opacity-75" fill="currentColor"
+                                        d="M4 12a8 8 0 018-8v8h8a8 8 0 01-16 0z"></path>
+                                </svg>
+                                <p class="mt-2 text-gray-500">{{ t('loadingComments') }}</p>
+                            </div>
+                        </template>
+                    </Suspense>
                 </div>
             </article>
 
@@ -61,7 +77,6 @@ import { AlertCircleIcon } from 'lucide-vue-next'
 import { formatNumber } from '../../utils/numberFormat'
 import { useConfirm } from '@vueuse/core'
 import { useNotificationStore } from '../../stores/notificationStore';
-
 
 const DeletePost = defineAsyncComponent(() => import('./DeletePost.vue'))
 const PostSkeleton = defineAsyncComponent(() => import('../shared/PostSkeleton.vue'))

@@ -51,7 +51,6 @@ import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useRouter } from 'vue-router';
 import apiService from '../../services/api';
-import logger from '../../services/logging';
 import { sanitizeInput } from '../../utils/sanitize';
 import { handleError } from '../../utils/errorHandler';
 import { useNotificationStore } from '../../stores/notificationStore';

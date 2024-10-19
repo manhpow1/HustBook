@@ -4,12 +4,12 @@ require('dotenv').config();
 module.exports = {
     firebase: {
         projectId: process.env.FIREBASE_PROJECT_ID || config.get('firebase.projectId'),
-        privateKey: process.env.FIREBASE_PRIVATE_KEY || config.get('firebase.privateKey'),
+        privateKey: (process.env.FIREBASE_PRIVATE_KEY || config.get('firebase.privateKey')).replace(/\\n/g, '\n'),
         clientEmail: process.env.FIREBASE_CLIENT_EMAIL || config.get('firebase.clientEmail'),
     },
     jwt: {
         secret: process.env.JWT_SECRET || config.get('jwt.secret'),
-        refreshSecret: process.env.JWT_REFRESH_SECRET || config.get('jwt.refreshSecret')
+        refreshSecret: process.env.JWT_REFRESH_SECRET || config.get('jwt.refreshSecret'),
     },
     server: {
         port: process.env.PORT || config.get('server.port'),

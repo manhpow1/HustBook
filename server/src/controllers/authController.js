@@ -115,9 +115,12 @@ const getVerifyCode = async (req, res, next) => {
         const verificationCode = generateRandomCode();
         await authService.storeVerificationCode(user.uid, verificationCode);
 
-        sendResponse(res, '1000', {
-            verifyCode: verificationCode // In production, don't send this back to the client
-        });
+        if (process.env.NODE_ENV !== 'production') {
+            return sendResponse(res, '1000', { verifyCode: verificationCode });
+        } else {
+            return sendResponse(res, '1000', { message: 'Verification code sent.' });
+        }
+        
     } catch (error) {
         logger.error('Error in get_verify_code:', { error: error.message, stack: error.stack });
         handleError(error, req, res, next);

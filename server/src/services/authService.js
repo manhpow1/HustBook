@@ -76,6 +76,8 @@ const updateUserDeviceInfo = async (userId, deviceToken, deviceId) => {
 
 const updateUserRefreshToken = async (userId, refreshToken) => {
     await updateDocument(collections.users, userId, { refreshToken });
+    // Invalidate previous tokens (if stored elsewhere, like Redis)
+    await cache.del(`refreshToken:${userId}`);
 };
 
 const clearUserDeviceToken = async (userId) => {

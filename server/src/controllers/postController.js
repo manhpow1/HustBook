@@ -8,19 +8,16 @@ const cache = require('../utils/redis');
 const createPost = async (req, res, next) => {
     try {
         const { error } = validateCreatePost(req.body);
-        if (error) {
-            return sendResponse(res, '1002');
-        }
+        if (error) return sendResponse(res, '1002');
 
         const { content } = req.body;
         const userId = req.user.uid;
         const images = req.files ? req.files.map(file => file.path) : [];
 
         const postId = await postService.createPost(userId, content, images);
-
         sendResponse(res, '1000', { postId });
     } catch (error) {
-        logger.error("Create post error:", { error: error.message, stack: error.stack });
+        logger.error('Create post error:', error);
         handleError(error, req, res, next);
     }
 };
@@ -89,13 +86,9 @@ const deletePost = async (req, res, next) => {
         const userId = req.user.uid;
         const post = await postService.getPost(id);
 
-        if (!post) {
-            return sendResponse(res, '9992');
-        }
-
-        if (post.userId !== userId) {
-            return sendResponse(res, '1009');
-        }
+        if (!post) return sendResponse(res, '9992');
+        if (post.userId !== userId) return sendResponse(res, '1009');
+        if (post.status === 'reported') return sendResponse(res, '1012');
 
         await postService.deletePost(id);
         const cacheKey = `post:${id}`;
@@ -103,47 +96,6 @@ const deletePost = async (req, res, next) => {
         sendResponse(res, '1000');
     } catch (error) {
         logger.error("Delete post error:", { error: error.message, stack: error.stack });
-        handleError(error, req, res, next);
-    }
-};
-
-const likePost = async (req, res, next) => {
-    try {
-        const { id } = req.params;
-        const userId = req.user.uid;
-
-        await runTransaction(async (transaction) => {
-            await postService.likePost(id, userId, transaction);
-        });
-
-        const cacheKey = `post:${id}`;
-        await cache.del(cacheKey);
-
-        sendResponse(res, '1000');
-    } catch (error) {
-        logger.error("Like post error:", { error: error.message, stack: error.stack });
-        handleError(error, req, res, next);
-    }
-};
-
-const unlikePost = async (req, res, next) => {
-    try {
-        const { error } = validateLike(req.body);
-        if (error) {
-            return sendResponse(res, '1002');
-        }
-
-        const { id } = req.params;
-        const userId = req.user.uid;
-
-        await postService.unlikePost(id, userId);
-
-        const cacheKey = `post:${id}`;
-        await cache.del(cacheKey);
-
-        sendResponse(res, '1000');
-    } catch (error) {
-        logger.error("Unlike post error:", { error: error.message, stack: error.stack });
         handleError(error, req, res, next);
     }
 };
@@ -236,15 +188,37 @@ const reportPost = async (req, res, next) => {
     }
 };
 
+const toggleLike = async (req, res, next) => {
+    try {
+        const { error } = validateLike(req.params);
+        if (error) return sendResponse(res, '1002');
+
+        const userId = req.user.uid;
+        const { id: postId } = req.params;
+
+        await runTransaction(async (transaction) => {
+            const isLiked = await postService.checkUserLike(postId, userId);
+            if (isLiked) {
+                await postService.unlikePost(postId, userId, transaction);
+            } else {
+                await postService.likePost(postId, userId, transaction);
+            }
+        });
+
+        sendResponse(res, '1000', { message: 'Like status updated successfully' });
+    } catch (error) {
+        handleError(error, req, res, next);
+    }
+};
+
 module.exports = {
     createPost,
     getPost,
     updatePost,
     deletePost,
-    likePost,
-    unlikePost,
     addComment,
     getPostComments,
     getUserPosts,
     reportPost,
+    toggleLike,
 };

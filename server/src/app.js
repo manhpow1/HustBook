@@ -12,6 +12,8 @@ const friendRoutes = require('./routes/friends');
 const searchRoutes = require('./routes/search');
 const chatRoutes = require('./routes/chat');
 const notificationRoutes = require('./routes/notifications');
+const authLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 5 }); // Auth routes
+const apiLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 200 }); // General routes
 
 const errorHandler = require('./middleware/errorHandler');
 const logger = require('./utils/logger');
@@ -24,18 +26,8 @@ app.use(express.json());
 app.use(helmet());
 app.use(morgan('dev'));
 
-// Rate limiting
-const limiter = rateLimit({
-    windowMs: 15 * 60 * 1000, // 15 minutes
-    max: 100 // limit each IP to 100 requests per windowMs
-});
-app.use(limiter);
-
-// Specific rate limiters for sensitive routes
-const authLimiter = rateLimit({
-    windowMs: 15 * 60 * 1000, // 15 minutes
-    max: 5 // limit each IP to 5 requests per windowMs
-});
+app.use('/api/auth', authLimiter, authRoutes);
+app.use(apiLimiter);
 
 // Routes
 app.use('/api/auth', authLimiter, authRoutes);
