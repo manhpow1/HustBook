@@ -68,7 +68,7 @@ const apiService = {
 
     // Post-related API calls
     getPost(postId) {
-        return this.post(API_ENDPOINTS.GET_POST, { id: postId })
+        return axiosInstance.get(API_ENDPOINTS.GET_POST(postId));
     },
 
     likePost(postId) {
@@ -88,11 +88,11 @@ const apiService = {
     },
 
     reportPost(postId, reason, details) {
-        return axiosInstance.post(`/posts/${postId}/report`, {
-            reason,
-            details,
+        return axiosInstance.post(API_ENDPOINTS.REPORT_POST(postId), {
+          reason,
+          details,
         });
-    },
+      },
 
     // Comment-related API calls
     addComment(postId, content) {

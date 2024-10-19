@@ -104,6 +104,18 @@ export const useUserStore = defineStore('user', () => {
         }
     }
 
+    function setTokens(newToken, newDeviceToken) {
+        token.value = newToken;
+        deviceToken.value = newDeviceToken;
+        if (newToken && newDeviceToken) {
+            localStorage.setItem('token', newToken);
+            localStorage.setItem('deviceToken', newDeviceToken);
+        } else {
+            localStorage.removeItem('token');
+            localStorage.removeItem('deviceToken');
+        }
+    }
+
     return {
         user,
         token,
@@ -117,6 +129,7 @@ export const useUserStore = defineStore('user', () => {
         setUser,
         setTokens,
         fetchUser,
-        updateProfile
+        updateProfile,
+        setTokens,
     }
 })

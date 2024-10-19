@@ -7,16 +7,17 @@ const authenticateToken = async (req, res, next) => {
     try {
         const authHeader = req.headers['authorization'];
         const token = authHeader && authHeader.split(' ')[1];
+        const deviceToken = req.headers['x-device-token'];
 
-        if (!token) {
-            throw createError('9998');
+        if (!token || !deviceToken) {
+            throw createError('9998'); // Missing token or device token
         }
 
         const decoded = jwt.verify(token, config.get('jwt.secret'));
         const user = await getDocument(collections.users, decoded.uid);
 
-        if (!user) {
-            throw createError('9995');
+        if (!user || user.deviceToken !== deviceToken) {
+            throw createError('9995'); // User not found or invalid device token
         }
 
         req.user = user;

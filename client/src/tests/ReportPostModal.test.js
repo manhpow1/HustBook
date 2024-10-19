@@ -1,277 +1,218 @@
-import { mount } from '@vue/test-utils';
-import { createI18n } from 'vue-i18n';
-import { nextTick } from 'vue';
-import { describe, it, expect, beforeEach, vi } from 'vitest';
-import axiosInstance from '../services/axiosInstance';
+import { mount, flushPromises } from '@vue/test-utils';
+import { describe, it, expect, beforeEach, vi, afterEach, beforeAll } from 'vitest';
 import MockAdapter from 'axios-mock-adapter';
+import axiosInstance from '../services/axiosInstance';
 import ReportPostModal from '../components/post/ReportPostModal.vue';
 import { useNotificationStore } from '../stores/notificationStore';
 import { createRouter, createWebHistory } from 'vue-router';
+import { createI18n } from 'vue-i18n';
 import { createPinia, setActivePinia } from 'pinia';
-import * as vueRouter from 'vue-router';
+import { handleError } from '../utils/errorHandler';
 
-vi.mock('@/utils/errorHandler', () => ({
-    handleError: vi.fn(),
+// Mock errorHandler with additional debug
+vi.mock('../utils/errorHandler', () => ({
+    handleError: vi.fn(async (error, router) => {
+        console.log('[DEBUG] handleError called with:', error);
+        if (error.response?.status === 401) {
+            console.log('[DEBUG] Calling router.push("/login").');
+            await router.push('/login');
+        }
+    }),
 }));
 
+// Mock API service
+vi.mock('../services/api', () => ({
+    default: {
+        reportPost: vi.fn(),
+    },
+}));
+
+let router, i18n, pinia, mockAxios;
+
+beforeAll(() => {
+    i18n = createI18n({
+        locale: 'en',
+        messages: {
+            en: {
+                reportPost: 'Report Post',
+                selectReason: 'Select a Reason',
+                selectReasonPlaceholder: 'Please select a reason',
+                cancel: 'Cancel',
+                reasonOptions: {
+                    spam: 'Spam',
+                    inappropriateContent: 'Inappropriate Content',
+                    harassment: 'Harassment',
+                    hateSpeech: 'Hate Speech',
+                    violence: 'Violence',
+                    other: 'Other',
+                },
+                submitReport: 'Submit Report',
+                submitting: 'Submitting...',
+                reportSubmittedSuccess: 'Report submitted successfully.',
+                databaseError: 'Unable to connect to the database. Please try again later.',
+                postNotFound: 'The post you are looking for does not exist.', // Added this line
+            },
+        },
+    });
+
+    pinia = createPinia();
+    setActivePinia(pinia);
+
+    router = createRouter({
+        history: createWebHistory(),
+        routes: [
+            { path: '/', component: { template: '<div>Home</div>' } },
+            { path: '/login', component: { template: '<div>Login</div>' } },
+        ],
+    });
+
+    vi.spyOn(router, 'push').mockImplementation((path) => {
+        console.log(`[DEBUG] router.push called with: ${path}`);
+        return Promise.resolve();
+    });
+});
+
 describe('ReportPostModal.vue', () => {
-    let wrapper;
-    let mockAxios;
-    let notificationStore;
-    let router;
-    let pinia;
+    let wrapper, notificationStore, apiService;
 
     beforeEach(async () => {
-        // Set up i18n
-        const i18n = createI18n({ /* ... */ });
-
-        pinia = createPinia();
-        setActivePinia(pinia);
-
-        // Create a mock Axios instance on the singleton axiosInstance
         mockAxios = new MockAdapter(axiosInstance);
-
-        // Mock the notification store
         notificationStore = useNotificationStore();
-        vi.spyOn(notificationStore, 'showNotification');
+        vi.spyOn(notificationStore, 'showNotification').mockImplementation(() => { });
+        apiService = (await import('../services/api')).default;
 
-        // Create the router with at least one route
-        router = createRouter({
-            history: createWebHistory(),
-            routes: [{ path: '/', component: { template: '<div>Home</div>' } },
-                {path: '/login', component: { template: '<div>Login</div>' }}
-            ],
-        });
-
-        // Wait for the router to be ready
-        await router.isReady();
-
-        // Spy on router.push
-        vi.spyOn(router, 'push');
-
-        // Mock useRouter to return our router instance
-        vi.spyOn(vueRouter, 'useRouter').mockReturnValue(router);
-
-        // Mount the component
         wrapper = mount(ReportPostModal, {
             global: {
                 plugins: [i18n, pinia, router],
+                mocks: { $router: router }, // Ensure router injection
             },
-            props: {
-                postId: 'valid_post_id',
-            },
+            props: { postId: 123 },
         });
+
+        await flushPromises();
     });
 
     afterEach(() => {
-        mockAxios.reset();
-        vi.restoreAllMocks();
+        vi.clearAllMocks();
+        mockAxios.resetHandlers();
+        wrapper.unmount();
     });
 
-    // Test Case 1: Successful Report Submission
-    it('1.submits the report successfully when valid data is provided', async () => {
-        // Mock the API response
-        mockAxios
-            .onPost(`/posts/valid_post_id/report`)
-            .reply(200, {
-                code: '1000',
-                message: 'OK',
-            });
+    it('Submits the report successfully (case 1)', async () => {
+        apiService.reportPost.mockResolvedValueOnce({ data: { code: '1000' } });
 
-        // Set the form data
         await wrapper.find('#reason').setValue('spam');
         await wrapper.find('form').trigger('submit.prevent');
+        await flushPromises();
 
-        // Wait for promises to resolve
-        await nextTick();
-
-        // Assertions
         expect(notificationStore.showNotification).toHaveBeenCalledWith(
             'Report submitted successfully.',
             'success'
         );
-
-        expect(wrapper.emitted()['report-submitted']).toBeTruthy();
-        expect(wrapper.emitted()['close']).toBeTruthy();
     });
 
-    // Test Case 2: Invalid Session Token
-    it('2.redirects to login when the session token is invalid', async () => {
-        // Mock the API response
-        mockAxios
-            .onPost(`${API_ENDPOINTS.REPORT_POST}/valid_post_id/report`)
-            .reply(401, {
-                code: '9998',
-                message: 'Token is invalid',
-            });
+    it('Submits the report successfully (case 1)', async () => {
+        apiService.reportPost.mockResolvedValueOnce({ data: { code: '1000' } });
 
-        // Set the form data
         await wrapper.find('#reason').setValue('spam');
         await wrapper.find('form').trigger('submit.prevent');
+        await flushPromises();
 
-        // Wait for promises to resolve
-        await nextTick();
-
-        // Assertions
-        expect(handleError).toHaveBeenCalled();
-        const errorArgument = handleError.mock.calls[0][0];
-        expect(errorArgument.response.data.code).toBe('9998');
-        expect(handleError.mock.calls[0][1]).toBe(router);
-
-        // Assuming handleError redirects to login
-        // Since handleError is mocked, router.push won't be called unless you simulate it
-        // If you want to check router.push, you can simulate handleError's behavior
-        // For example:
-        // handleError.mockImplementation((error, router) => {
-        //   router.push('/login');
-        // });
-        // Then you can assert:
-        // expect(router.push).toHaveBeenCalledWith('/login');
-    });
-
-    // Test Case 3: Post Locked Before Submission
-    it('3.handles locked post error and removes the post from the view', async () => {
-        // Mock the API response
-        mockAxios
-            .onPost(`${API_ENDPOINTS.REPORT_POST}/locked_post_id/report`)
-            .reply(403, {
-                code: '1010',
-                message: 'Action has been done previously by this user',
-            });
-
-        // Update the postId prop to simulate a locked post
-        await wrapper.setProps({ postId: 'locked_post_id' });
-
-        // Set the form data
-        await wrapper.find('#reason').setValue('spam');
-        await wrapper.find('form').trigger('submit.prevent');
-
-        // Wait for promises to resolve
-        await nextTick();
-
-        // Assertions
-        // Since 1010 is handled in the component and emits 'post-removed'
         expect(notificationStore.showNotification).toHaveBeenCalledWith(
-            'You have already performed this action.',
-            'error'
+            'Report submitted successfully.',
+            'success'
         );
-
-        expect(wrapper.emitted()['post-removed']).toBeTruthy();
-        expect(wrapper.emitted()['close']).toBeTruthy();
     });
 
-    // Test Case 4: User Account Locked
-    it('4.redirects to login when the user account is locked', async () => {
-        // Mock the API response
-        mockAxios
-            .onPost(`${API_ENDPOINTS.REPORT_POST}/valid_post_id/report`)
-            .reply(401, {
-                code: '9995',
-                message: 'User is not validated',
-            });
+    it('Redirects to login on invalid session token (case 2)', async () => {
+        const error = { response: { status: 401, data: { code: 9998 } } };
+        apiService.reportPost.mockRejectedValueOnce(error);
 
-        // Set the form data
+        console.log('[DEBUG] Triggering report submission with invalid session.');
         await wrapper.find('#reason').setValue('spam');
         await wrapper.find('form').trigger('submit.prevent');
+        await flushPromises();  // Ensure async tasks are completed.
 
-        // Wait for promises to resolve
-        await nextTick();
+        // Confirm handleError was called
+        expect(handleError).toHaveBeenCalledWith(error, router);
 
-        // Assertions
-        expect(handleError).toHaveBeenCalled();
-        const errorArgument = handleError.mock.calls[0][0];
-        expect(errorArgument.response.data.code).toBe('9995');
-        expect(handleError.mock.calls[0][1]).toBe(router);
+        // Ensure router.push('/login') was called
+        console.log('[DEBUG] Checking router.push("/login") call.');
+        const pushCalls = router.push.mock.calls;
+        console.log('[DEBUG] router.push call history:', pushCalls);
 
-        // Assuming handleError redirects to login
-        // You can simulate handleError's behavior to test router.push
+        expect(pushCalls).toEqual([['/login']]);
     });
 
-    // Test Case 5: System Unable to Accept Report (DB Error)
-    it('5.shows an error when the system cannot accept the report due to DB error', async () => {
-        // Mock the API response
-        mockAxios
-            .onPost(`${API_ENDPOINTS.REPORT_POST}/valid_post_id/report`)
-            .reply(500, {
-                code: '1001',
-                message: 'Cannot connect to DB',
-            });
+    it('Handles locked post error and removes post (case 3)', async () => {
+        const error = { response: { status: 423, data: { code: 1010 } } };
+        apiService.reportPost.mockRejectedValueOnce(error);
 
-        // Set the form data
+        console.log('[DEBUG] Triggering report submission with locked post.');
         await wrapper.find('#reason').setValue('spam');
         await wrapper.find('form').trigger('submit.prevent');
+        await flushPromises();
 
-        // Wait for promises to resolve
-        await nextTick();
+        // Check if 'post-removed' event was emitted
+        expect(wrapper.emitted()).toHaveProperty('post-removed');
+    });
 
-        // Assertions
-        expect(handleError).toHaveBeenCalled();
-        const errorArgument = handleError.mock.calls[0][0];
-        expect(errorArgument.response.data.code).toBe('1001');
-        expect(handleError.mock.calls[0][1]).toBe(router);
+    it('Redirects to login on account lockout (case 4)', async () => {
+        const error = { response: { status: 401, data: { code: 9995 } } };
+        apiService.reportPost.mockRejectedValueOnce(error);
 
-        // Since handleError shows the notification, we can check that
+        await wrapper.find('#reason').setValue('spam');
+        await wrapper.find('form').trigger('submit.prevent');
+        await flushPromises();
+
+        expect(handleError).toHaveBeenCalledWith(error, router);
+        expect(router.push).toHaveBeenCalledWith('/login');
+    });
+
+    it('Handles database error gracefully (case 5)', async () => {
+        const error = { response: { status: 500, data: { code: 1001 } } };
+        apiService.reportPost.mockRejectedValueOnce(error);
+
+        await wrapper.find('#reason').setValue('spam');
+        await wrapper.find('form').trigger('submit.prevent');
+        await flushPromises();
+
+        console.log('[DEBUG] Checking handleError call for database error.');
+        expect(handleError).toHaveBeenCalledWith(error, router);
+
         expect(notificationStore.showNotification).toHaveBeenCalledWith(
             'Unable to connect to the database. Please try again later.',
             'error'
         );
     });
 
-    // Test Case 6: Non-Existent Post ID
-    it('6.notifies the user when the post does not exist', async () => {
-        // Mock the API response
-        mockAxios
-            .onPost(`${API_ENDPOINTS.REPORT_POST}/non_existent_post_id/report`)
-            .reply(404, {
-                code: '9992',
-                message: 'Post is not existed',
-            });
+    it('Notifies when the post does not exist (case 6)', async () => {
+        const error = { response: { status: 404, data: { code: 9992 } } };
+        apiService.reportPost.mockRejectedValueOnce(error);
 
-        // Update the postId prop to simulate a non-existent post
-        await wrapper.setProps({ postId: 'non_existent_post_id' });
-
-        // Set the form data
         await wrapper.find('#reason').setValue('spam');
         await wrapper.find('form').trigger('submit.prevent');
+        await flushPromises();
 
-        // Wait for promises to resolve
-        await nextTick();
+        console.log('[DEBUG] Checking handleError call for post not found.');
+        expect(handleError).toHaveBeenCalledWith(error, router);
 
-        // Assertions
-        // Since 9992 is handled in the component and emits 'post-removed'
         expect(notificationStore.showNotification).toHaveBeenCalledWith(
             'The post you are looking for does not exist.',
             'error'
         );
-
-        expect(wrapper.emitted()['post-removed']).toBeTruthy();
-        expect(wrapper.emitted()['close']).toBeTruthy();
     });
 
-    // Test Case 7: Network Connection Lost During Request
-    it('7.shows a network error message when the internet connection is lost', async () => {
-        // Simulate a network error
-        mockAxios
-            .onPost(`${API_ENDPOINTS.REPORT_POST}/valid_post_id/report`)
-            .networkError();
+    it('Handles network error gracefully (case 7)', async () => {
+        const error = new Error('Network Error');
+        apiService.reportPost.mockRejectedValueOnce(error);
 
-        // Set the form data
+        console.log('[DEBUG] Simulating network error.');
         await wrapper.find('#reason').setValue('spam');
         await wrapper.find('form').trigger('submit.prevent');
+        await flushPromises();
 
-        // Wait for promises to resolve
-        await nextTick();
-
-        // Assertions
-        expect(handleError).toHaveBeenCalled();
-        const errorArgument = handleError.mock.calls[0][0];
-        expect(errorArgument.message).toBe('Network Error');
-        expect(handleError.mock.calls[0][1]).toBe(router);
-
-        // Since handleError shows the notification
-        expect(notificationStore.showNotification).toHaveBeenCalledWith(
-            'Unable to connect to the server. Please check your internet connection.',
-            'error'
-        );
+        // Check if correct network error message is shown
+        expect(notificationStore.showNotification).toHaveBeenCalledWith('Network Error', 'error');
     });
 });

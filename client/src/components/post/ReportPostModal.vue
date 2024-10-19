@@ -47,32 +47,33 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted, watch } from 'vue';
+import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useRouter } from 'vue-router';
 import apiService from '../../services/api';
 import logger from '../../services/logging';
 import { sanitizeInput } from '../../utils/sanitize';
 import { handleError } from '../../utils/errorHandler';
+import { useNotificationStore } from '../../stores/notificationStore';
 import { LoaderIcon } from 'lucide-vue-next';
 
 // Define props and emits
 const props = defineProps({
     postId: {
-        type: String,
+        type: Number,
         required: true,
     },
 });
-const emit = defineEmits(['close', 'report-submitted']);
+const emit = defineEmits(['close', 'report-submitted', 'post-removed']);
 
-// Use router
-const router = useRouter(); // Declare router once
-
-// Other setup code
+// Setup stores and router
+const router = useRouter();
+const notificationStore = useNotificationStore();
 const { t } = useI18n();
-const reason = ref('');
-const details = ref('');
+
 const isSubmitting = ref(false);
+const details = ref('');
+const reason = ref('');
 const reasonError = ref('');
 const detailsError = ref('');
 const maxDetailsLength = 500;
@@ -87,100 +88,96 @@ const reasonOptions = [
 ];
 
 const remainingCharacters = computed(() => maxDetailsLength - details.value.length);
+const isFormValid = computed(() => reason.value && (reason.value !== 'other' || details.value.trim().length > 0));
 
-const isFormValid = computed(() => {
-    return reason.value && (reason.value !== 'Other' || details.value.trim().length > 0);
-});
-
-watch(reason, () => {
+// Watch for changes and reset errors if needed
+watch(reason, (newVal) => {
+    console.log(`[DEBUG] Reason changed: ${newVal}`);
     reasonError.value = '';
-    if (reason.value !== 'Other') {
+    if (newVal !== 'other') {
         details.value = '';
         detailsError.value = '';
     }
 });
 
-watch(details, () => {
+watch(details, (newVal) => {
+    console.log(`[DEBUG] Details changed: ${newVal}`);
     detailsError.value = '';
 });
 
+// Validate the form before submitting
 const validateForm = () => {
+    console.log('[DEBUG] Validating form...');
     let isValid = true;
-
     if (!reason.value) {
         reasonError.value = t('pleaseSelectReason');
         isValid = false;
     }
-
-    if (reason.value === 'Other' && !details.value.trim()) {
+    if (reason.value === 'other' && !details.value.trim()) {
         detailsError.value = t('pleaseProvideDetails');
         isValid = false;
     }
-
+    console.log(`[DEBUG] Form valid: ${isValid}`);
     return isValid;
 };
 
+// Handle report submission
 const submitReport = async () => {
     if (!validateForm()) return;
-
     isSubmitting.value = true;
 
     try {
         const sanitizedDetails = sanitizeInput(details.value);
+        console.log('[DEBUG] Sending API request with:', { postId: props.postId, reason: reason.value });
 
         await apiService.reportPost(props.postId, reason.value, sanitizedDetails);
+
         notificationStore.showNotification(t('reportSubmittedSuccess'), 'success');
         emit('report-submitted');
         closeModal();
     } catch (error) {
-        logger.error('Failed to report post', { postId: props.postId, error });
+        console.error('[ERROR] API call failed:', error);
 
-        const responseCode = error.response?.data?.code;
+        const status = error.response?.status;
+        const code = error.response?.data?.code;
 
-        if (responseCode === '9992' || responseCode === '1010') {
-            // Specific handling for post not found or action already performed
-            notificationStore.showNotification(errorMessages[responseCode], 'error');
+        if (status === 423 && code === 1010) {
+            console.log('[DEBUG] Post is locked. Emitting "post-removed".');
             emit('post-removed');
-            closeModal();
-        } else {
-            handleError(error, router);
+        } else if (status === 404 && code === 9992) {
+            notificationStore.showNotification(t('postNotFound'), 'error');
+        } else if (status === 500 && code === 1001) {
+            notificationStore.showNotification(t('databaseError'), 'error');
+        } else if (error.message === 'Network Error') {
+            notificationStore.showNotification('Network Error', 'error');
         }
+
+        // Ensure handleError is always called
+        console.log('[DEBUG] Calling handleError with:', error);
+        handleError(error, router);
     } finally {
         isSubmitting.value = false;
     }
 };
 
+// Close the modal
+const closeModal = () => emit('close');
 
-const closeModal = () => {
-    emit('close');
-};
-
+// Handle escape key press to close modal
 const handleEscapeKey = (event) => {
-    if (event.key === 'Escape') {
-        closeModal();
-    }
-};
-
-const preventBackgroundScroll = () => {
-    document.body.style.overflow = 'hidden';
-};
-
-const restoreBackgroundScroll = () => {
-    document.body.style.overflow = '';
+    if (event.key === 'Escape') closeModal();
 };
 
 onMounted(() => {
+    console.log('[DEBUG] Component mounted.');
     document.addEventListener('keydown', handleEscapeKey);
-    preventBackgroundScroll();
-    // Focus the first focusable element in the modal
-    setTimeout(() => {
-        const firstInput = document.querySelector('select, textarea, button');
-        if (firstInput) firstInput.focus();
-    }, 100);
+    document.body.style.overflow = 'hidden';
+    nextTick(() => document.querySelector('select, textarea, button')?.focus());
 });
 
 onUnmounted(() => {
+    console.log('[DEBUG] Component unmounted.');
     document.removeEventListener('keydown', handleEscapeKey);
-    restoreBackgroundScroll();
+    document.body.style.overflow = '';
 });
 </script>

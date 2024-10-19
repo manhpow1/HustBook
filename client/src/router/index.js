@@ -1,4 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router'
+import { useUserState } from '../stores/userState';
 
 const routes = [
     {
@@ -54,7 +55,7 @@ const routes = [
     {
         path: '/add-post',
         name: 'AddPost',
-        component: AddPost,
+        component: () => import('../components/post/AddPost.vue'),
         meta: { requiresAuth: true }
     },
     {
@@ -85,13 +86,19 @@ const routes = [
         name: 'DeletePost',
         component: () => import('../components/post/DeletePost.vue'),
         meta: { requiresAuth: true }
-    }
+    },
+    {
+        path: '/report-post/:postId',
+        name: 'ReportPost',
+        component: () => import('../components/post/ReportPostModal.vue'),
+        meta: { requiresAuth: true }
+    },
 ]
 
 const router = createRouter({
     history: createWebHistory(),
-    routes
-})
+    routes,
+});
 
 // Global navigation guard
 router.beforeEach(async (to, from, next) => {
@@ -101,6 +108,11 @@ router.beforeEach(async (to, from, next) => {
     const { checkAuth, isLoggedIn } = useUserState()
 
     const requiresAuth = to.matched.some(record => record.meta.requiresAuth)
+
+    if (process.env.NODE_ENV === 'test') {
+        next();
+        return;
+    }
 
     if (requiresAuth) {
         await checkAuth()

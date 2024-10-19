@@ -1,12 +1,12 @@
 const Joi = require('joi');
 
 const acceptableReasons = [
-    'Spam',
-    'Inappropriate content',
-    'Harassment',
-    'Hate speech',
-    'Violence',
-    'Other',
+    'spam',
+    'inappropriateContent',
+    'harassment',
+    'hateSpeech',
+    'violence',
+    'other',
 ];
 
 const createPostSchema = Joi.object({
@@ -50,7 +50,7 @@ const reportPostSchema = Joi.object({
     details: Joi.string()
         .max(500)
         .when('reason', {
-            is: 'Other',
+            is: 'other',
             then: Joi.required(),
             otherwise: Joi.optional(),
         }),
