@@ -13,6 +13,8 @@ export const usePostStore = defineStore('post', () => {
     const comments = ref([])
     const loadingComments = ref(false)
     const commentError = ref(null)
+    const hasMoreComments = ref(true);
+    const pageIndex = ref(0);
     const hasMorePosts = ref(true)
 
     const formattedLikes = computed(() => {
@@ -100,17 +102,30 @@ export const usePostStore = defineStore('post', () => {
         }
     }
 
-    async function fetchComments(postId) {
-        loadingComments.value = true
-        commentError.value = null
+    async function fetchComments(postId, count = 10) {
         try {
-            const response = await apiService.get(API_ENDPOINTS.GET_COMMENTS(postId))
-            comments.value = response.data.data
-        } catch (err) {
-            console.error('Error fetching comments:', err)
-            commentError.value = 'Failed to load comments'
+            loadingComments.value = true;
+            const response = await apiService.post(API_ENDPOINTS.GET_COMMENTS(postId), {
+                id: postId,
+                index: pageIndex.value,
+                count
+            });
+
+            if (response.data.code === '1000') {
+                const newComments = response.data.data;
+                if (newComments.length < count) {
+                    hasMoreComments.value = false; // No more comments to load
+                }
+                comments.value.push(...newComments); // Append new comments
+                pageIndex.value += 1;
+            } else {
+                throw new Error(response.data.message || 'Failed to load comments');
+            }
+        } catch (error) {
+            commentError.value = error.message;
+            handleError(error);
         } finally {
-            loadingComments.value = false
+            loadingComments.value = false;
         }
     }
 
@@ -164,6 +179,12 @@ export const usePostStore = defineStore('post', () => {
         }
     }
 
+    function resetComments() {
+        comments.value = [];
+        pageIndex.value = 0;
+        hasMoreComments.value = true;
+    }
+
     return {
         posts,
         currentPost,
@@ -173,8 +194,11 @@ export const usePostStore = defineStore('post', () => {
         loadingComments,
         commentError,
         hasMorePosts,
+        hasMoreComments,
         formattedLikes,
         formattedComments,
+        pageIndex,
+        resetComments,
         fetchPosts,
         fetchPost,
         createPost,

@@ -123,22 +123,36 @@ const addComment = async (req, res, next) => {
     }
 };
 
-const getPostComments = async (req, res, next) => {
+const getComments = async (req, res, next) => {
     try {
-        const { error } = validateGetPostComments(req.query);
+        const { error } = validateGetPostComments(req.query);  // Validate query parameters
         if (error) {
-            return sendResponse(res, '1002');
+            return sendResponse(res, '1002', { message: 'Invalid parameters.', errors: error.details });
         }
 
-        const { id } = req.params;
-        const { page = 1, limit = 20 } = req.query;
+        const { id } = req.params;  // Extract post ID from route params
+        const { index = 0, count = 10 } = req.query;
 
-        const comments = await postService.getPostComments(id, page, limit);
+        const comments = await postService.getComments(id, parseInt(index), parseInt(count));
+        if (!comments || comments.length === 0) {
+            return sendResponse(res, '9994');  // No data or end of list
+        }
 
-        sendResponse(res, '1000', comments);
+        const formattedComments = comments.map(comment => ({
+            id: comment.id,
+            comment: comment.content,
+            created: comment.createdAt,
+            poster: {
+                id: comment.user.id,
+                name: comment.user.name,
+                avatar: comment.user.avatar,
+            },
+            is_blocked: comment.isBlocked || false,
+        }));
+
+        sendResponse(res, '1000', formattedComments);  // Success response
     } catch (error) {
-        logger.error("Get post comments error:", { error: error.message, stack: error.stack });
-        handleError(error, req, res, next);
+        handleError(error, req, res, next);  // Handle errors gracefully
     }
 };
 
@@ -217,7 +231,7 @@ module.exports = {
     updatePost,
     deletePost,
     addComment,
-    getPostComments,
+    getComments,
     getUserPosts,
     reportPost,
     toggleLike,

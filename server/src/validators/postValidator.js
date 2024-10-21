@@ -32,9 +32,8 @@ const getPostSchema = Joi.object({
 });
 
 const getPostCommentsSchema = Joi.object({
-    postId: Joi.string().required(),
-    lastCommentId: Joi.string(),
-    limit: Joi.number().integer().min(1).max(100).default(20)
+    index: Joi.number().integer().min(0).default(0).optional(),  // Pagination index (default: 0)
+    count: Joi.number().integer().min(1).max(100).default(10).optional(),  // Number of comments (default: 10)
 });
 
 const getUserPostsSchema = Joi.object({
@@ -76,8 +75,8 @@ const validateGetPost = (data) => {
     return getPostSchema.validate(data);
 };
 
-const validateGetPostComments = (data) => {
-    return getPostCommentsSchema.validate(data);
+const validateGetPostComments = (query) => {
+    return getPostCommentsSchema.validate(query, { abortEarly: false });
 };
 
 const validateGetUserPosts = (data) => {

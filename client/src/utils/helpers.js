@@ -9,14 +9,23 @@ const md = new MarkdownIt({
 })
 
 export function formatDate(date) {
-    const now = new Date()
-    const postDate = new Date(date)
-    const diffInHours = (now - postDate) / (1000 * 60 * 60)
+    if (!date) {
+        return 'Unknown date'; // Fallback for missing or invalid dates
+    }
+
+    const now = new Date();
+    const postDate = new Date(date);
+
+    if (isNaN(postDate)) {
+        return 'Invalid date'; // Fallback for improperly formatted dates
+    }
+
+    const diffInHours = (now - postDate) / (1000 * 60 * 60);
 
     if (diffInHours < 24) {
-        return formatDistanceToNow(postDate, { addSuffix: true })
+        return formatDistanceToNow(postDate, { addSuffix: true });
     } else {
-        return format(postDate, 'PPP')
+        return format(postDate, 'PPP');
     }
 }
 

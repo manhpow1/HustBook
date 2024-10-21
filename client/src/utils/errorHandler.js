@@ -24,20 +24,28 @@ export const errorMessages = {
 }
 
 export async function handleError(error, router) {
-
     const notificationStore = useNotificationStore();
     let message = 'An error occurred.';
 
-    if (error.response && error.response.data && error.response.data.code) {
-        const code = error.response.data.code;
-        message = errorMessages[code] || message;
+    // Determine the error message based on the response or error object
+    if (error.response?.data?.code) {
+        message = errorMessages[error.response.data.code] || message;
     } else if (error.message) {
         message = error.message;
     }
 
+    // Display notification
     notificationStore.showNotification(message, 'error');
+    console.debug('Inside handleError with error:', error);
 
-    if (error.response?.status === 401 && router) {
-        await router.push('/login');  // Ensure async behavior is awaited.
+    // Handle 401 errors by navigating to /login
+    if (error.response?.status === 401) {
+        if (router && typeof router.push === 'function') {
+            console.debug('401 error detected. Redirecting to /login...');
+            await router.push('/login');
+            console.debug('Router push to /login completed.');
+        } else {
+            console.error('Router is not defined or missing push method:', router);
+        }
     }
 }

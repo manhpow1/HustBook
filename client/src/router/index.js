@@ -1,5 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import { useUserState } from '../stores/userState';
+import { useCommentStore } from '../stores/commentStore';
 
 const routes = [
     {
@@ -62,7 +63,14 @@ const routes = [
         path: '/post/:id',
         name: 'PostDetail',
         component: () => import('../components/post/PostDetail.vue'),
-        meta: { requiresAuth: true }
+        meta: {
+            requiresAuth: true,
+            analytics: 'PostDetail'
+        },
+        beforeEnter: (to, from, next) => {
+            commentStore.prefetchComments(to.params.id);
+            next();
+        }
     },
     {
         path: '/edit-post/:id',
@@ -142,5 +150,11 @@ router.beforeResolve((to, from, next) => {
         next()
     }
 })
+
+router.afterEach((to) => {
+    if (to.meta.analytics) {
+        trackPageView(to.meta.analytics);
+    }
+});
 
 export default router

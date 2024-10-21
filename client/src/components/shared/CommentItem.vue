@@ -1,7 +1,7 @@
 <template>
-    <div class="mb-4 p-4 bg-gray-50 rounded-lg shadow-sm hover:shadow-md transition-shadow duration-200">
+    <div v-if="comment" class="mb-4 p-4 bg-gray-50 rounded-lg shadow-sm hover:shadow-md transition-shadow duration-200">
         <div class="flex items-start">
-            <img :src="comment.user.avatar" :alt="comment.user.name" class="w-10 h-10 rounded-full mr-3">
+            <img :src="comment.user.avatar" :alt="comment.user.name" class="w-10 h-10 rounded-full mr-3" />
             <div class="flex-grow">
                 <div class="flex items-center justify-between mb-1">
                     <h4 class="font-semibold text-gray-800">{{ comment.user.name }}</h4>
@@ -51,146 +51,155 @@
                 {{ $t('cancel') }}
             </button>
         </div>
-    </div>
-
-    <teleport to="body">
-        <div v-if="showDeleteDialog" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div class="bg-white p-6 rounded-lg shadow-xl max-w-sm w-full">
-                <h3 class="text-lg font-semibold mb-4">{{ $t('confirmDelete') }}</h3>
-                <p class="mb-6">{{ $t('deleteWarning') }}</p>
-                <div class="flex justify-end space-x-4">
-                    <button @click="confirmDelete"
-                        class="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600 transition-colors duration-200"
-                        :disabled="isDeleteLoading">
-                        {{ $t('delete') }}
-                        <span v-if="isDeleteLoading" class="ml-1 animate-spin">⌛</span>
-                    </button>
-                    <button @click="closeDeleteDialog"
-                        class="px-4 py-2 bg-gray-300 text-gray-700 rounded hover:bg-gray-400 transition-colors duration-200">
-                        {{ $t('cancel') }}
-                    </button>
+        <teleport to="body">
+            <div v-if="showDeleteDialog"
+                class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                <div class="bg-white p-6 rounded-lg shadow-xl max-w-sm w-full">
+                    <h3 class="text-lg font-semibold mb-4">{{ $t('confirmDelete') }}</h3>
+                    <p class="mb-6">{{ $t('deleteWarning') }}</p>
+                    <div class="flex justify-end space-x-4">
+                        <button @click="confirmDelete"
+                            class="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600 transition-colors duration-200"
+                            :disabled="isDeleteLoading">
+                            {{ $t('delete') }}
+                            <span v-if="isDeleteLoading" class="ml-1 animate-spin">⌛</span>
+                        </button>
+                        <button @click="closeDeleteDialog"
+                            class="px-4 py-2 bg-gray-300 text-gray-700 rounded hover:bg-gray-400 transition-colors duration-200">
+                            {{ $t('cancel') }}
+                        </button>
+                    </div>
                 </div>
             </div>
-        </div>
-    </teleport>
+        </teleport>
+    </div>
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted } from 'vue'
-import { useI18n } from 'vue-i18n'
-import { ThumbsUpIcon } from 'lucide-vue-next'
-import { useUserStore } from '../../stores/userStore'
-import { formatDate, renderMarkdown } from '../../utils/helpers'
-import { debounce } from 'lodash-es'
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue';
+import { useI18n } from 'vue-i18n';
+import { ThumbsUpIcon } from 'lucide-vue-next';
+import { useUserStore } from '../../stores/userStore';
+import { formatDate, renderMarkdown } from '../../utils/helpers';
+import { debounce } from 'lodash-es';
 
+// Destructure props directly in setup
 const props = defineProps({
     comment: {
         type: Object,
-        required: true
-    }
-})
+        required: true,
+    },
+});
 
-const emit = defineEmits(['update', 'delete'])
+// Emit events for updates and deletions
+const emit = defineEmits(['update', 'delete']);
 
-const { t } = useI18n()
-const userStore = useUserStore()
+// Initialize variables and stores
+const { t } = useI18n();
+const userStore = useUserStore();
+const isEditing = ref(false);
+const editedContent = ref(props.comment.content);
+const showDeleteDialog = ref(false);
+const isLikeLoading = ref(false);
+const isSaveLoading = ref(false);
+const isDeleteLoading = ref(false);
 
-const isEditing = ref(false)
-const editedContent = ref(props.comment.content)
-const showDeleteDialog = ref(false)
-const isLikeLoading = ref(false)
-const isSaveLoading = ref(false)
-const isDeleteLoading = ref(false)
+// Use computed properties for logic based on props
+const canEditDelete = computed(() => userStore.userId === props.comment.user.id);
+const renderedContent = computed(() => renderMarkdown(props.comment.content));
 
-const canEditDelete = computed(() => userStore.userId === props.comment.user.id)
-const renderedContent = computed(() => renderMarkdown(props.comment.content))
+// Watch for prop changes to reset `editedContent` if necessary
+watch(() => props.comment.content, (newContent) => {
+    editedContent.value = newContent;
+});
 
+// Methods to handle editing, saving, deleting, and liking
 const toggleEdit = () => {
-    isEditing.value = !isEditing.value
-    if (isEditing.value) {
-        editedContent.value = props.comment.content
-    }
-}
+    isEditing.value = !isEditing.value;
+    if (isEditing.value) editedContent.value = props.comment.content;
+};
 
 const saveEdit = async () => {
     if (editedContent.value.trim() !== props.comment.content) {
-        isSaveLoading.value = true
+        isSaveLoading.value = true;
         try {
             await emit('update', {
                 id: props.comment.id,
-                content: editedContent.value.trim()
-            })
-            isEditing.value = false
+                content: editedContent.value.trim(),
+            });
+            isEditing.value = false;
         } catch (error) {
-            console.error('Failed to save edit:', error)
-            alert(t('saveEditError'))
+            console.error('Failed to save edit:', error);
+            alert(t('saveEditError'));
         } finally {
-            isSaveLoading.value = false
+            isSaveLoading.value = false;
         }
     } else {
-        isEditing.value = false
+        isEditing.value = false;
     }
-}
+};
 
 const cancelEdit = () => {
-    isEditing.value = false
-    editedContent.value = props.comment.content
-}
+    isEditing.value = false;
+    editedContent.value = props.comment.content;
+};
 
 const openDeleteDialog = () => {
-    showDeleteDialog.value = true
-}
+    showDeleteDialog.value = true;
+};
 
 const closeDeleteDialog = () => {
-    showDeleteDialog.value = false
-}
+    showDeleteDialog.value = false;
+};
 
 const confirmDelete = async () => {
-    isDeleteLoading.value = true
+    isDeleteLoading.value = true;
     try {
-        await emit('delete', props.comment.id)
-        closeDeleteDialog()
+        await emit('delete', props.comment.id);
+        closeDeleteDialog();
     } catch (error) {
-        console.error('Failed to delete comment:', error)
-        alert(t('deleteError'))
+        console.error('Failed to delete comment:', error);
+        alert(t('deleteError'));
     } finally {
-        isDeleteLoading.value = false
+        isDeleteLoading.value = false;
     }
-}
+};
 
 const toggleLike = async () => {
-    isLikeLoading.value = true
+    isLikeLoading.value = true;
     try {
         await emit('update', {
             id: props.comment.id,
             is_liked: !props.comment.is_liked,
-            like: props.comment.like + (props.comment.is_liked ? -1 : 1)
-        })
+            like: props.comment.like + (props.comment.is_liked ? -1 : 1),
+        });
     } catch (error) {
-        console.error('Failed to toggle like:', error)
-        alert(t('likeError'))
+        console.error('Failed to toggle like:', error);
+        alert(t('likeError'));
     } finally {
-        isLikeLoading.value = false
+        isLikeLoading.value = false;
     }
-}
+};
 
-const debouncedToggleLike = debounce(toggleLike, 300)
+const debouncedToggleLike = debounce(toggleLike, 300);
 
+// Use proper mounting logic without relying on the component instance
 onMounted(() => {
-    document.addEventListener('keydown', handleKeyDown)
-})
+    document.addEventListener('keydown', handleKeyDown);
+});
 
 onUnmounted(() => {
-    document.removeEventListener('keydown', handleKeyDown)
-})
+    document.removeEventListener('keydown', handleKeyDown);
+});
 
+// Handle keyboard events like Escape
 const handleKeyDown = (event) => {
     if (event.key === 'Escape') {
         if (isEditing.value) {
-            cancelEdit()
+            cancelEdit();
         } else if (showDeleteDialog.value) {
-            closeDeleteDialog()
+            closeDeleteDialog();
         }
     }
-}
+};
 </script>

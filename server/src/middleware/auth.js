@@ -62,10 +62,7 @@ const authenticateToken = async (req, res, next) => {
         }
     }
 };
-/**
- * Function to determine if a token should be rotated.
- * Tokens close to expiration can be rotated for security.
- */
+
 const tokenShouldBeRotated = (decoded) => {
     const now = Math.floor(Date.now() / 1000); // Current time in seconds
     const timeLeft = decoded.exp - now; // Token expiration time left

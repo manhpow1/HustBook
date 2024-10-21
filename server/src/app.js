@@ -26,7 +26,6 @@ app.use(express.json());
 app.use(helmet());
 app.use(morgan('dev'));
 
-app.use('/api/auth', authLimiter, authRoutes);
 app.use(apiLimiter);
 
 // Routes

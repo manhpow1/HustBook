@@ -11,14 +11,13 @@ api.interceptors.request.use(config => {
     const userStore = useUserStore()
 
     if (userStore.token) {
-        config.headers['Authorization'] = `Bearer ${userStore.token}`
+        config.headers['Authorization'] = `Bearer ${userStore.token}`;
     }
 
     if (userStore.deviceToken) {
-        config.headers['X-Device-Token'] = userStore.deviceToken
+        config.headers['X-Device-Token'] = userStore.deviceToken;
     }
-
-    return config
+    return config;
 })
 
 api.interceptors.response.use(
@@ -111,13 +110,9 @@ const apiService = {
         return this.delete(`${API_ENDPOINTS.DELETE_COMMENT}/${id}`)
     },
 
-    getComments(postId, lastCommentId, limit = 10) {
-        return this.get(`${API_ENDPOINTS.GET_COMMENTS}/${postId}/comments`, {
-            params: {
-                last_id: lastCommentId,
-                limit
-            }
-        })
+    getComments: async (postId, index = 0, count = 10) => {
+        const url = API_ENDPOINTS.GET_COMMENTS(postId, index, count);
+        return await apiService.get(url);
     },
 
     // User-related API calls

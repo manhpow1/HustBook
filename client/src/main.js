@@ -13,15 +13,16 @@ const userStore = useUserStore()
 const { checkAuth } = useUserState()
 const messages = {
     en: {
-        postNotFound: 'Post not found',
+        postNotFound: 'The post does not exist',
         invalidSession: 'Invalid session',
         errorLoadingPost: 'Error loading post',
         postNotAvailable: 'Post is not available',
         retry: 'Retry',
+        retryAction: 'Retry Action',
         comment: 'Comment',
         comments: 'Comments',
         share: 'Share',
-        writeComment: 'Write a comment',
+        writeComment: 'Write a comment...',
         postComment: 'Post Comment',
         like: 'Like',
         likes: 'Likes',
@@ -30,6 +31,16 @@ const messages = {
         delete: 'Delete',
         cancel: 'Cancel',
         save: 'Save',
+        commentAdded: 'Comment added',
+        errorAddingComment: 'Error adding comment',
+        commentUpdated: 'Comment updated',
+        errorUpdatingComment: 'Error updating comment',
+        commentDeleted: 'Comment deleted',
+        errorDeletingComment: 'Error deleting comment',
+        loadMoreComments: 'Load more comments',
+        beFirstToComment: 'Be the first to comment',
+        commentError: 'Comment Error',
+        noInternetConnection: 'Unable to connect to the Internet',
         confirmDelete: 'Confirm Delete',
         deleteWarning: 'Are you sure you want to delete this comment?',
         editComment: 'Edit comment',
@@ -61,9 +72,10 @@ const messages = {
         charactersRemaining: 'Characters remaining: {count}',
         databaseError: 'Unable to connect to the database. Please try again later.',
         postNotFound: 'The post you are looking for does not exist.',
+        characterCount: 'Characters: {count} / {max}',
+        commentTooLong: 'Comment is too long. Please keep it under 1000 characters.',
     },
-}
-
+};
 const pinia = createPinia()
 
 if (userStore.token) {

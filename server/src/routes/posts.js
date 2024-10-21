@@ -18,9 +18,9 @@ router.get('/:id', authenticateToken, postController.getPost);
 router.put('/:id', authenticateToken, upload.array('images', 4), postController.updatePost);
 router.delete('/:id', authenticateToken, postController.deletePost);
 router.post('/:id/comment', authenticateToken, postController.addComment);
-router.get('/:id/comments', authenticateToken, postController.getPostComments);
 router.get('/user/:userId', authenticateToken, postController.getUserPosts);
 router.post('/:id/report-post', authenticateToken, reportLimiter, postController.reportPost);
 router.post('/:id/like', authenticateToken, postController.toggleLike);
+router.get('/:id/comments', authenticateToken, postController.getComments);
 
 module.exports = router;

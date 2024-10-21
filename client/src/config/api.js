@@ -19,7 +19,7 @@ export const API_ENDPOINTS = {
 
     // Comment Endpoints (Nested Under Posts)
     ADD_COMMENT: (postId) => `${API_BASE_URL}/posts/${postId}/comment`,
-    GET_COMMENTS: (postId) => `${API_BASE_URL}/posts/${postId}/comments`,
+    GET_COMMENTS: (postId, index = 0, count = 10) => `${API_BASE_URL}/posts/${postId}/comments?index=${index}&count=${count}`,
 
     // Separate Comment Endpoints for Updates and Deletions (If Needed)
     UPDATE_COMMENT: `${API_BASE_URL}/comments`,

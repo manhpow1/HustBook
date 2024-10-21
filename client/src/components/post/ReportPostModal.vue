@@ -59,7 +59,7 @@ import { LoaderIcon } from 'lucide-vue-next';
 // Define props and emits
 const props = defineProps({
     postId: {
-        type: Number,
+        type: String,
         required: true,
     },
 });

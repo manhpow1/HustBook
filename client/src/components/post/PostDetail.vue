@@ -121,27 +121,12 @@ const fetchPost = async () => {
     await postStore.fetchPost(route.params.id)
 }
 
-const loadMoreComments = () => {
-    postStore.loadMoreComments(route.params.id)
-}
-
-const retryLoadComments = () => {
-    postStore.retryLoadComments(route.params.id)
-}
-
-const handleLike = async () => {
-    await postStore.likePost(post.value.id)
-}
-
-const handleComment = async (content) => {
-    await postStore.addComment(post.value.id, content)
-}
-
-const focusCommentInput = () => {
-    nextTick(() => {
-        document.querySelector('.comment-input')?.focus()
-    })
-}
+const loadMoreComments = () => postStore.loadMoreComments(route.params.id);
+const retryLoadComments = () => postStore.resetComments();
+const handleLike = async () => await postStore.likePost(post.value.id);
+const handleComment = async (content) => await postStore.addComment(post.value.id, content);
+const focusCommentInput = () => nextTick(() => document.querySelector('.comment-input')?.focus());
+const closeMediaViewer = () => (showMediaViewer.value = false);
 
 const toggleContent = () => {
     showFullContent.value = !showFullContent.value
@@ -155,10 +140,6 @@ const openLightbox = (index) => {
 const openVideoPlayer = (index) => {
     currentMediaIndex.value = index
     showMediaViewer.value = true
-}
-
-const closeMediaViewer = () => {
-    showMediaViewer.value = false
 }
 
 const handleCommentUpdate = async (commentId, content) => {

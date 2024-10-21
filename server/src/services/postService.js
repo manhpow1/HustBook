@@ -1,6 +1,6 @@
 const Post = require('../models/Post');
 const { db } = require('../config/firebase');
-const { collections, createDocument, getDocument, updateDocument, deleteDocument } = require('../config/database');
+const { collections, createDocument, getDocument, updateDocument, deleteDocument, queryDocuments } = require('../config/database');
 const { paginateQuery } = require('../utils/pagination');
 
 // Create a new post
@@ -76,11 +76,18 @@ const addComment = async (postId, userId, content) => {
 };
 
 // Retrieve comments for a post with pagination
-const getPostComments = async (postId, page = 1, limit = 20) => {
-    const query = db.collection(collections.comments)
-        .where('postId', '==', postId)
-        .orderBy('createdAt', 'desc');
-    return await paginateQuery(query, page, limit);
+const getComments = async (postId, index, count) => {
+    try {
+        return await queryDocuments('comments', (query) =>
+            query
+                .where('postId', '==', postId)
+                .orderBy('createdAt', 'desc')
+                .offset(index)
+                .limit(count)
+        );
+    } catch (error) {
+        throw new Error('Database error fetching comments.');
+    }
 };
 
 // Retrieve posts by a specific user with pagination
@@ -126,7 +133,7 @@ module.exports = {
     likePost,
     unlikePost,
     addComment,
-    getPostComments,
+    getComments,
     getUserPosts,
     reportPost,
     runTransactionWithRetry,
