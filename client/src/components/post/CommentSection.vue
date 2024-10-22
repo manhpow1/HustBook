@@ -159,33 +159,50 @@ const onDeleteComment = async (commentId) => {
 const onLoadMoreComments = throttle(async () => {
     if (!isLoadingMore.value) {
         isLoadingMore.value = true;
+        console.debug('Starting to load more comments...');
+
         try {
-            await commentStore.fetchComments(props.postId, 10, router);
+            const newComments = (await commentStore.fetchComments(postId, 10, router)) || [];
+            console.debug('Fetched new comments:', newComments);
+
+            if (newComments.length === 0) {
+                console.debug('No new comments fetched. Setting hasMoreComments to false.');
+                hasMoreComments.value = false;
+            } else {
+                console.debug('Adding new comments:', newComments);
+                comments.value.push(...newComments);
+            }
         } catch (error) {
+            console.error('Error loading more comments:', error);
             handleError(error, router);
         } finally {
             isLoadingMore.value = false;
+            console.debug('Finished loading more comments. isLoadingMore:', isLoadingMore.value);
         }
+    } else {
+        console.debug('Load more action ignored. Already loading comments.');
     }
 }, 1000);
 
 const onRetryLoadComments = async () => {
     console.debug('Retrying to load comments');
-    commentStore.resetComments();
-
+    commentStore.resetComments(); // Reset existing comments
     try {
         const result = await commentStore.fetchComments(props.postId, 10, router);
+        console.debug('Comments fetched during retry:', result);
         if (result.length === 0) {
             console.warn('No comments found for post:', props.postId);
             notificationStore.showNotification(t('noCommentsFound'), 'warning');
         } else {
             console.debug('Comments loaded successfully:', result);
+            commentStore.comments.value = result; // Ensure comments are correctly set
         }
     } catch (error) {
         console.error('Error caught in onRetryLoadComments. Calling handleError...');
-        if (error.response?.data?.code === 1010) {
-            console.debug('1010 error detected. Hiding comment section.');
-            isCommentSectionVisible.value = false;  // Hide the section
+        if (error.response?.data?.code === 1010 || error.response?.data?.code === 1009) {
+            console.debug(`${error.response.data.code} error detected. Hiding comment section.`);
+            isCommentSectionVisible.value = false;
+            return; // Stop further execution
         }
         handleError(error, router);
     }

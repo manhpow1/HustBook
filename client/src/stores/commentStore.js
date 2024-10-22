@@ -18,22 +18,31 @@ export const useCommentStore = defineStore('comment', () => {
 
         try {
             const response = await apiService.getComments(postId, pageIndex.value, count);
-            console.debug('Comments fetched:', response.data);
+            const fetchedComments = response?.data || []; // Ensure it’s an array
 
-            if (response.data.length === 0) {
+            console.debug('Fetched comments:', fetchedComments);
+
+            // Filter out future comments from blocking users (e.g., 'Blocked User')
+            const filteredComments = fetchedComments.filter(
+                (comment) => comment.user.name !== 'Blocked User'
+            );
+
+            console.debug('Filtered comments:', filteredComments);
+
+            if (filteredComments.length === 0) {
+                console.debug('No more comments. Setting hasMoreComments to false.');
                 hasMoreComments.value = false;
             } else {
-                comments.value.push(...response.data);
+                comments.value.push(...filteredComments);
                 pageIndex.value += 1;
             }
         } catch (error) {
             console.debug('Error in fetchComments:', error);
-            handleError(error, router);  // Ensure the router is passed correctly
+            handleError(error, router); // Handle other errors as needed
         } finally {
             loadingComments.value = false;
         }
     };
-
 
     const addComment = async (postId, content) => {
         const response = await api.post(`/posts/${postId}/comments`, { content });

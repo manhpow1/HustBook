@@ -8,3 +8,4 @@ repopack.config.json
 .repopackignore
 server/config/production.json
 server/logs
+/server/logs

@@ -37,6 +37,7 @@ const messages = {
         errorUpdatingComment: 'Error updating comment',
         commentDeleted: 'Comment deleted',
         errorDeletingComment: 'Error deleting comment',
+        loadingMoreComments: 'Loading more comments',
         loadMoreComments: 'Load more comments',
         beFirstToComment: 'Be the first to comment',
         commentError: 'Comment Error',

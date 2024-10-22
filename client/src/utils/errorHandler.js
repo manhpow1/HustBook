@@ -27,25 +27,36 @@ export async function handleError(error, router) {
     const notificationStore = useNotificationStore();
     let message = 'An error occurred.';
 
-    // Determine the error message based on the response or error object
+    // Debugging error message decision
+    console.debug('Evaluating error object for message:', JSON.stringify(error, null, 2));
+
     if (error.response?.data?.code) {
+        console.debug(`Error Code Found: ${error.response.data.code}`);
         message = errorMessages[error.response.data.code] || message;
     } else if (error.message) {
+        console.debug(`Error Message Found: ${error.message}`);
         message = error.message;
+    } else {
+        console.debug('Unexpected error structure received.', error);
     }
 
-    // Display notification
+    // Debug before showing notification
+    console.debug(`Displaying notification: "${message}" with type "error"`);
     notificationStore.showNotification(message, 'error');
-    console.debug('Inside handleError with error:', error);
 
-    // Handle 401 errors by navigating to /login
-    if (error.response?.status === 401) {
-        if (router && typeof router.push === 'function') {
-            console.debug('401 error detected. Redirecting to /login...');
+    // Logging error handling flow
+    console.debug('Inside handleError function:', error);
+
+    // Handle 401 or 403 redirection
+    if ((error.response?.status === 401 || error.response?.status === 403) && router) {
+        console.debug(`Status ${error.response.status} detected. Redirecting to /login...`);
+        try {
             await router.push('/login');
-            console.debug('Router push to /login completed.');
-        } else {
-            console.error('Router is not defined or missing push method:', router);
+            console.debug('Redirection to /login completed.');
+        } catch (routerError) {
+            console.error('Router push failed:', routerError);
         }
+    } else {
+        console.debug('No redirection needed. Status:', error.response?.status);
     }
 }
