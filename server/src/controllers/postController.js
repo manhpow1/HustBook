@@ -102,21 +102,41 @@ const deletePost = async (req, res, next) => {
 
 const addComment = async (req, res, next) => {
     try {
-        const { error } = validateComment(req.body);
-        if (error) {
-            return sendResponse(res, '1002');
-        }
+        const { error } = validateComment(req.body);  // Validate input
+        if (error) return sendResponse(res, '1002');  // Parameter validation failed
 
-        const { id } = req.params;
+        const { id } = req.params;  // Post ID
         const { content } = req.body;
-        const userId = req.user.uid;
+        const userId = req.user.uid;  // User ID from authenticated token
 
-        const commentId = await postService.addComment(id, userId, content);
+        // Add comment and update the post's comment count
+        await postService.addComment(id, userId, content);
 
+        // Clear the cache to refresh the comments
         const cacheKey = `post:${id}`;
         await cache.del(cacheKey);
 
-        sendResponse(res, '1000', { commentId });
+        // Fetch the latest comments with pagination
+        const { index = 0, count = 10 } = req.query;
+        const comments = await postService.getComments(id, parseInt(index), parseInt(count));
+
+        if (!comments.length) return sendResponse(res, '9994');  // No data or end of list
+
+        // Format the comments for the response
+        const formattedComments = comments.map(comment => ({
+            id: comment.id,
+            comment: comment.content,
+            created: comment.createdAt,
+            poster: {
+                id: comment.user.id,
+                name: comment.user.name,
+                avatar: comment.user.avatar,
+            },
+            is_blocked: comment.isBlocked || false,
+        }));
+
+        // Send the success response with the latest comments
+        sendResponse(res, '1000', formattedComments);
     } catch (error) {
         logger.error("Add comment error:", { error: error.message, stack: error.stack });
         handleError(error, req, res, next);

@@ -64,15 +64,20 @@ const unlikePost = async (postId, userId, transaction) => {
 // Add a comment to a post
 const addComment = async (postId, userId, content) => {
     const batch = db.batch();
-
-    const commentData = { userId, postId, content, createdAt: new Date() };
+    const commentData = {
+        userId,
+        postId,
+        content,
+        createdAt: new Date()
+    };
     const commentRef = db.collection(collections.comments).doc();
-
+    // Prepare a batch operation to save the comment and update the post's comment count
     batch.set(commentRef, commentData);
-    batch.update(db.collection(collections.posts).doc(postId), { comments: db.FieldValue.increment(1) });
-
+    batch.update(db.collection(collections.posts).doc(postId), {
+        comments: db.FieldValue.increment(1)
+    });
     await batch.commit();
-    return commentRef.id;
+    return commentRef.id;  // Returns the ID of the newly added comment
 };
 
 // Retrieve comments for a post with pagination

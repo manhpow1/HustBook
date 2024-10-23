@@ -9,3 +9,4 @@ repopack.config.json
 server/config/production.json
 server/logs
 /server/logs
+/server/logs

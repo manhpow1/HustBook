@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
-import api from '../services/api'
+import apiService from '../services/api' // Import as default
 
 export const useUserStore = defineStore('user', () => {
     const user = ref(null)
@@ -16,7 +16,7 @@ export const useUserStore = defineStore('user', () => {
         loading.value = true
         error.value = null
         try {
-            const response = await api.post('/auth/login', { phonenumber, password })
+            const response = await apiService.login({ phonenumber, password })
             if (response.data.code === '1000') {
                 setUser(response.data.data)
                 setTokens(response.data.data.token, response.data.data.deviceToken)
@@ -36,7 +36,7 @@ export const useUserStore = defineStore('user', () => {
         loading.value = true
         error.value = null
         try {
-            await api.post('/auth/logout')
+            await apiService.logout()
             user.value = null
             setTokens(null, null)
         } catch (err) {
@@ -57,9 +57,11 @@ export const useUserStore = defineStore('user', () => {
         if (newToken && newDeviceToken) {
             localStorage.setItem('token', newToken)
             localStorage.setItem('deviceToken', newDeviceToken)
+            apiService.setAuthHeaders(newToken, newDeviceToken) // Set headers in apiService
         } else {
             localStorage.removeItem('token')
             localStorage.removeItem('deviceToken')
+            apiService.setAuthHeaders(null, null) // Clear headers in apiService
         }
     }
 
@@ -68,7 +70,7 @@ export const useUserStore = defineStore('user', () => {
             loading.value = true
             error.value = null
             try {
-                const response = await api.get('/user/profile')
+                const response = await apiService.getUserProfile()
                 setUser(response.data.data)
             } catch (err) {
                 console.error('Failed to fetch user:', err)
@@ -89,7 +91,7 @@ export const useUserStore = defineStore('user', () => {
             if (avatar) {
                 formData.append('avatar', avatar)
             }
-            const response = await api.post('/user/update-profile', formData)
+            const response = await apiService.updateUserProfile(formData)
             if (response.data.code === '1000') {
                 setUser(response.data.data)
                 return true
@@ -101,18 +103,6 @@ export const useUserStore = defineStore('user', () => {
             return false
         } finally {
             loading.value = false
-        }
-    }
-
-    function setTokens(newToken, newDeviceToken) {
-        token.value = newToken;
-        deviceToken.value = newDeviceToken;
-        if (newToken && newDeviceToken) {
-            localStorage.setItem('token', newToken);
-            localStorage.setItem('deviceToken', newDeviceToken);
-        } else {
-            localStorage.removeItem('token');
-            localStorage.removeItem('deviceToken');
         }
     }
 
@@ -130,6 +120,5 @@ export const useUserStore = defineStore('user', () => {
         setTokens,
         fetchUser,
         updateProfile,
-        setTokens,
     }
 })

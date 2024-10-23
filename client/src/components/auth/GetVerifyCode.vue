@@ -43,6 +43,7 @@ import { ref, computed } from 'vue'
 import { ShieldCheckIcon, PhoneIcon, LoaderIcon, CheckCircleIcon, XCircleIcon, ClockIcon } from 'lucide-vue-next'
 import { useAuthStore } from '../../stores/authStore'
 import { storeToRefs } from 'pinia'
+import apiService from '../../services/api'
 
 const authStore = useAuthStore()
 const { isLoading, errorMessage, successMessage, cooldownTime } = storeToRefs(authStore)

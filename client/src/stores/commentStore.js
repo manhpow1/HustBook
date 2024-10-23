@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia';
 import { ref } from 'vue';
-import { api } from '../services/api';
+import apiService from '../services/api'; // Import as default
 import { handleError } from '../utils/errorHandler';
 
 export const useCommentStore = defineStore('comment', () => {
@@ -18,13 +18,13 @@ export const useCommentStore = defineStore('comment', () => {
 
         try {
             const response = await apiService.getComments(postId, pageIndex.value, count);
-            const fetchedComments = response?.data || []; // Ensure it’s an array
+            const fetchedComments = Array.isArray(response?.data) ? response.data : [];
 
             console.debug('Fetched comments:', fetchedComments);
 
-            // Filter out future comments from blocking users (e.g., 'Blocked User')
+            // Filter out comments from blocked users
             const filteredComments = fetchedComments.filter(
-                (comment) => comment.user.name !== 'Blocked User'
+                (comment) => comment.user?.name !== 'Blocked User'
             );
 
             console.debug('Filtered comments:', filteredComments);
@@ -36,17 +36,31 @@ export const useCommentStore = defineStore('comment', () => {
                 comments.value.push(...filteredComments);
                 pageIndex.value += 1;
             }
+            return filteredComments;
         } catch (error) {
-            console.debug('Error in fetchComments:', error);
-            handleError(error, router); // Handle other errors as needed
+            console.error('Error in fetchComments:', error);
+            handleError(error, router); // Use the error handler
+            return [];
         } finally {
             loadingComments.value = false;
         }
     };
 
     const addComment = async (postId, content) => {
-        const response = await api.post(`/posts/${postId}/comments`, { content });
-        comments.value.unshift(response.data);
+        try {
+            const response = await apiService.addComment(postId, content);
+            const newComment = response.data;
+
+            console.debug('New comment from API:', newComment);
+
+            // Add the new comment to the beginning of the comments array
+            comments.value.unshift(newComment);
+            console.debug('Updated comments in store:', comments.value);
+            return newComment;
+        } catch (error) {
+            console.error('Failed to add comment:', error);
+            throw error; // Rethrow to be handled in the component
+        }
     };
 
     const updateComment = async (postId, commentId, content) => {
@@ -70,9 +84,9 @@ export const useCommentStore = defineStore('comment', () => {
 
     const prefetchComments = async (postId) => {
         if (comments.value.length === 0 && !loadingComments.value) {
-            fetchComments(postId)
+            fetchComments(postId);
         }
-    }
+    };
 
     return {
         comments,
@@ -86,4 +100,5 @@ export const useCommentStore = defineStore('comment', () => {
         resetComments,
         prefetchComments,
     };
-});
+}
+);

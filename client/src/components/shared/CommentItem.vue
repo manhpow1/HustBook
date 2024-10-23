@@ -1,77 +1,47 @@
 <template>
-    <div v-if="comment" class="mb-4 p-4 bg-gray-50 rounded-lg shadow-sm hover:shadow-md transition-shadow duration-200">
-        <div class="flex items-start">
-            <img :src="comment.user.avatar" :alt="comment.user.name" class="w-10 h-10 rounded-full mr-3" />
-            <div class="flex-grow">
-                <div class="flex items-center justify-between mb-1">
-                    <h4 class="font-semibold text-gray-800">{{ comment.user.name }}</h4>
-                    <span class="text-xs text-gray-500">{{ formatDate(comment.created) }}</span>
+    <div v-if="comment" class="comment-item">
+        <div class="comment-content">
+            <img :src="comment.user.avatar" :alt="comment.user.name" class="user-avatar" />
+            <div class="comment-details">
+                <div class="comment-header">
+                    <h4 class="user-name">{{ comment.user.name }}</h4>
+                    <time :datetime="comment.created" class="comment-date">{{ formattedDate }}</time>
                 </div>
-                <div v-if="!isEditing">
-                    <p class="text-gray-700 whitespace-pre-wrap break-words" v-html="renderedContent"></p>
+                <div v-if="!isEditing" class="comment-text" v-html="renderedContent"></div>
+                <div v-else class="edit-area">
+                    <label for="edit-comment" class="sr-only">{{ t('editComment') }}</label>
+                    <textarea id="edit-comment" v-model="editedContent" class="edit-textarea" rows="3"
+                        :placeholder="t('editCommentPlaceholder')"></textarea>
                 </div>
-                <div v-else>
-                    <label for="edit-comment" class="sr-only">{{ $t('editComment') }}</label>
-                    <textarea id="edit-comment" v-model="editedContent"
-                        class="w-full p-2 border rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                        rows="3" :placeholder="$t('editCommentPlaceholder')"></textarea>
-                </div>
-                <div class="mt-2 flex items-center space-x-4">
-                    <button @click="debouncedToggleLike"
-                        class="text-sm flex items-center text-gray-500 hover:text-blue-500 transition-colors duration-200"
-                        :class="{ 'text-blue-500': comment.is_liked }" :disabled="isLikeLoading"
-                        :aria-label="comment.is_liked ? $t('unlike') : $t('like')">
-                        <ThumbsUpIcon class="w-4 h-4 mr-1" />
-                        {{ comment.like }} {{ comment.like === 1 ? $t('like') : $t('likes') }}
-                        <span v-if="isLikeLoading" class="ml-1 animate-spin">⌛</span>
+                <div class="comment-actions">
+                    <button @click="debouncedToggleLike" class="action-button" :class="{ 'liked': comment.is_liked }"
+                        :disabled="isLikeLoading" :aria-label="comment.is_liked ? t('unlike') : t('like')">
+                        <ThumbsUpIcon class="action-icon" />
+                        <span>{{ comment.like }} {{ comment.like === 1 ? t('like') : t('likes') }}</span>
+                        <span v-if="isLikeLoading" class="loader" aria-live="polite">Loading...</span>
                     </button>
-                    <button v-if="canEditDelete" @click="toggleEdit"
-                        class="text-sm text-gray-500 hover:text-blue-500 transition-colors duration-200"
-                        :aria-label="isEditing ? $t('cancelEdit') : $t('edit')">
-                        {{ isEditing ? $t('cancel') : $t('edit') }}
+                    <button v-if="canEditDelete" @click="toggleEdit" class="action-button"
+                        :aria-label="isEditing ? t('cancelEdit') : t('edit')">
+                        {{ isEditing ? t('cancel') : t('edit') }}
                     </button>
                     <button v-if="canEditDelete && !isEditing" @click="openDeleteDialog"
-                        class="text-sm text-gray-500 hover:text-red-500 transition-colors duration-200"
-                        :aria-label="$t('delete')">
-                        {{ $t('delete') }}
+                        class="action-button delete-button" :aria-label="t('delete')">
+                        {{ t('delete') }}
                     </button>
                 </div>
             </div>
         </div>
-        <div v-if="isEditing" class="mt-2 flex justify-end space-x-2">
-            <button @click="saveEdit"
-                class="px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors duration-200"
-                :disabled="isSaveLoading" :aria-label="$t('save')">
-                {{ $t('save') }}
-                <span v-if="isSaveLoading" class="ml-1 animate-spin">⌛</span>
+        <div v-if="isEditing" class="edit-actions">
+            <button @click="debouncedSaveEdit" class="save-button" :disabled="isSaveLoading" :aria-label="t('save')">
+                {{ t('save') }}
+                <span v-if="isSaveLoading" class="loader"></span>
             </button>
-            <button @click="cancelEdit"
-                class="px-3 py-1 bg-gray-300 text-gray-700 rounded hover:bg-gray-400 transition-colors duration-200"
-                :aria-label="$t('cancel')">
-                {{ $t('cancel') }}
+            <button @click="cancelEdit" class="cancel-button" :aria-label="t('cancel')">
+                {{ t('cancel') }}
             </button>
         </div>
-        <teleport to="body">
-            <div v-if="showDeleteDialog"
-                class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-                <div class="bg-white p-6 rounded-lg shadow-xl max-w-sm w-full">
-                    <h3 class="text-lg font-semibold mb-4">{{ $t('confirmDelete') }}</h3>
-                    <p class="mb-6">{{ $t('deleteWarning') }}</p>
-                    <div class="flex justify-end space-x-4">
-                        <button @click="confirmDelete"
-                            class="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600 transition-colors duration-200"
-                            :disabled="isDeleteLoading">
-                            {{ $t('delete') }}
-                            <span v-if="isDeleteLoading" class="ml-1 animate-spin">⌛</span>
-                        </button>
-                        <button @click="closeDeleteDialog"
-                            class="px-4 py-2 bg-gray-300 text-gray-700 rounded hover:bg-gray-400 transition-colors duration-200">
-                            {{ $t('cancel') }}
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </teleport>
+        <ConfirmDialog v-if="showDeleteDialog" :title="t('confirmDelete')" :message="t('deleteWarning')"
+            @confirm="debouncedConfirmDelete" @cancel="closeDeleteDialog" :isLoading="isDeleteLoading" />
     </div>
 </template>
 
@@ -80,10 +50,11 @@ import { ref, computed, onMounted, onUnmounted, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { ThumbsUpIcon } from 'lucide-vue-next';
 import { useUserStore } from '../../stores/userStore';
+import { useNotificationStore } from '../../stores/notificationStore';
 import { formatDate, renderMarkdown } from '../../utils/helpers';
 import { debounce } from 'lodash-es';
+import ConfirmDialog from './ConfirmDialog.vue';
 
-// Destructure props directly in setup
 const props = defineProps({
     comment: {
         type: Object,
@@ -91,12 +62,11 @@ const props = defineProps({
     },
 });
 
-// Emit events for updates and deletions
 const emit = defineEmits(['update', 'delete']);
 
-// Initialize variables and stores
 const { t } = useI18n();
 const userStore = useUserStore();
+const notificationStore = useNotificationStore();
 const isEditing = ref(false);
 const editedContent = ref(props.comment.content);
 const showDeleteDialog = ref(false);
@@ -104,16 +74,14 @@ const isLikeLoading = ref(false);
 const isSaveLoading = ref(false);
 const isDeleteLoading = ref(false);
 
-// Use computed properties for logic based on props
 const canEditDelete = computed(() => userStore.userId === props.comment.user.id);
 const renderedContent = computed(() => renderMarkdown(props.comment.content));
+const formattedDate = computed(() => formatDate(props.comment.created));
 
-// Watch for prop changes to reset `editedContent` if necessary
 watch(() => props.comment.content, (newContent) => {
     editedContent.value = newContent;
 });
 
-// Methods to handle editing, saving, deleting, and liking
 const toggleEdit = () => {
     isEditing.value = !isEditing.value;
     if (isEditing.value) editedContent.value = props.comment.content;
@@ -128,9 +96,9 @@ const saveEdit = async () => {
                 content: editedContent.value.trim(),
             });
             isEditing.value = false;
+            notificationStore.showNotification(t('commentUpdated'), 'success');
         } catch (error) {
-            console.error('Failed to save edit:', error);
-            alert(t('saveEditError'));
+            notificationStore.showNotification(t('saveEditError'), 'error');
         } finally {
             isSaveLoading.value = false;
         }
@@ -138,6 +106,8 @@ const saveEdit = async () => {
         isEditing.value = false;
     }
 };
+
+const debouncedSaveEdit = debounce(saveEdit, 300);
 
 const cancelEdit = () => {
     isEditing.value = false;
@@ -157,13 +127,15 @@ const confirmDelete = async () => {
     try {
         await emit('delete', props.comment.id);
         closeDeleteDialog();
+        notificationStore.showNotification(t('commentDeleted'), 'success');
     } catch (error) {
-        console.error('Failed to delete comment:', error);
-        alert(t('deleteError'));
+        notificationStore.showNotification(t('deleteError'), 'error');
     } finally {
         isDeleteLoading.value = false;
     }
 };
+
+const debouncedConfirmDelete = debounce(confirmDelete, 300);
 
 const toggleLike = async () => {
     isLikeLoading.value = true;
@@ -174,8 +146,7 @@ const toggleLike = async () => {
             like: props.comment.like + (props.comment.is_liked ? -1 : 1),
         });
     } catch (error) {
-        console.error('Failed to toggle like:', error);
-        alert(t('likeError'));
+        notificationStore.showNotification(t('likeError'), 'error');
     } finally {
         isLikeLoading.value = false;
     }
@@ -183,16 +154,6 @@ const toggleLike = async () => {
 
 const debouncedToggleLike = debounce(toggleLike, 300);
 
-// Use proper mounting logic without relying on the component instance
-onMounted(() => {
-    document.addEventListener('keydown', handleKeyDown);
-});
-
-onUnmounted(() => {
-    document.removeEventListener('keydown', handleKeyDown);
-});
-
-// Handle keyboard events like Escape
 const handleKeyDown = (event) => {
     if (event.key === 'Escape') {
         if (isEditing.value) {
@@ -202,4 +163,90 @@ const handleKeyDown = (event) => {
         }
     }
 };
+
+onMounted(() => {
+    document.addEventListener('keydown', handleKeyDown);
+});
+
+onUnmounted(() => {
+    document.removeEventListener('keydown', handleKeyDown);
+});
 </script>
+
+<style scoped>
+.comment-item {
+    @apply mb-4 p-4 bg-gray-50 rounded-lg shadow-sm hover:shadow-md transition-shadow duration-200;
+}
+
+.comment-content {
+    @apply flex items-start;
+}
+
+.user-avatar {
+    @apply w-10 h-10 rounded-full mr-3;
+}
+
+.comment-details {
+    @apply flex-grow;
+}
+
+.comment-header {
+    @apply flex items-center justify-between mb-1;
+}
+
+.user-name {
+    @apply font-semibold text-gray-800;
+}
+
+.comment-date {
+    @apply text-xs text-gray-500;
+}
+
+.comment-text {
+    @apply text-gray-700 whitespace-pre-wrap break-words;
+}
+
+.edit-area {
+    @apply mt-2;
+}
+
+.edit-textarea {
+    @apply w-full p-2 border rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent;
+}
+
+.comment-actions {
+    @apply mt-2 flex items-center space-x-4;
+}
+
+.action-button {
+    @apply text-sm flex items-center text-gray-500 hover:text-blue-500 transition-colors duration-200;
+}
+
+.action-button.liked {
+    @apply text-blue-500;
+}
+
+.action-icon {
+    @apply w-4 h-4 mr-1;
+}
+
+.delete-button {
+    @apply hover:text-red-500;
+}
+
+.edit-actions {
+    @apply mt-2 flex justify-end space-x-2;
+}
+
+.save-button {
+    @apply px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors duration-200;
+}
+
+.cancel-button {
+    @apply px-3 py-1 bg-gray-300 text-gray-700 rounded hover:bg-gray-400 transition-colors duration-200;
+}
+
+.loader {
+    @apply ml-1 animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full;
+}
+</style>

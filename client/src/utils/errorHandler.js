@@ -1,4 +1,5 @@
 import { useNotificationStore } from '../stores/notificationStore'
+import { useRouter } from 'vue-router';
 
 export const errorMessages = {
     9992: 'The post you are looking for does not exist.',
@@ -23,16 +24,27 @@ export const errorMessages = {
     1012: 'This content is not available in your country.'
 }
 
-export async function handleError(error, router) {
-    const notificationStore = useNotificationStore();
+export async function handleError(error, router, notificationStore) {
     let message = 'An error occurred.';
 
     // Debugging error message decision
     console.debug('Evaluating error object for message:', JSON.stringify(error, null, 2));
 
     if (error.response?.data?.code) {
-        console.debug(`Error Code Found: ${error.response.data.code}`);
-        message = errorMessages[error.response.data.code] || message;
+        const code = error.response.data.code;
+        console.debug(`Error Code Found: ${code}`);
+
+        // Special handling for specific codes based on status
+        if (
+            (code === 1008 || code === 1009) &&
+            (error.response.status === 401 || error.response.status === 403)
+        ) {
+            // For codes 1008 and 1009 with unauthorized status, use a consistent message
+            message = errorMessages[1009] || message;
+        } else {
+            // For all other codes, use the predefined messages
+            message = errorMessages[code] || message;
+        }
     } else if (error.message) {
         console.debug(`Error Message Found: ${error.message}`);
         message = error.message;
@@ -47,9 +59,12 @@ export async function handleError(error, router) {
     // Logging error handling flow
     console.debug('Inside handleError function:', error);
 
-    // Handle 401 or 403 redirection
-    if ((error.response?.status === 401 || error.response?.status === 403) && router) {
-        console.debug(`Status ${error.response.status} detected. Redirecting to /login...`);
+    // Handle redirection for unauthorized or forbidden errors
+    if (
+        (error.response?.status === 401 || error.response?.status === 403) &&
+        (error.response?.data?.code === 1009 || error.response?.data?.code === 1008)
+    ) {
+        console.debug(`Status ${error.response.status} detected with code ${error.response.data.code}. Redirecting to /login...`);
         try {
             await router.push('/login');
             console.debug('Redirection to /login completed.');

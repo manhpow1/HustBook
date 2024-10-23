@@ -42,7 +42,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, defineAsyncComponent, watch } from 'vue';
+import { ref, computed, onMounted, defineAsyncComponent, watch, onUnmounted } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { storeToRefs } from 'pinia';
 import { useRouter } from 'vue-router';
@@ -104,38 +104,60 @@ const scrollToBottom = () => {
 
 const isNearBottom = () => {
     const scroller = document.querySelector('.scroller');
-    const nearBottom = scroller ? scroller.scrollHeight - scroller.scrollTop <= scroller.clientHeight + 50 : false;
-    console.debug('Is near bottom:', nearBottom);
+    const nearBottom = scroller
+        ? scroller.scrollHeight - scroller.scrollTop <= scroller.clientHeight + 50
+        : false;
+    console.debug('Checking if near bottom:', nearBottom);
     return nearBottom;
 };
+
 const trackAnalyticsEvent = (action, details) => {
     console.debug(`Tracking analytics event: ${action}`, details);
     window.analytics?.track(action, details);
 };
 
 const onAddComment = async () => {
-    console.debug('Adding comment:', newComment.value);
-    if (isCommentValid.value) {
-        isSubmitting.value = true;
-        try {
-            await commentStore.addComment(postId, newComment.value.trim());
-            console.debug('Comment added successfully');
-            newComment.value = '';
-            if (isNearBottom()) scrollToBottom();
-            trackAnalyticsEvent('Add Comment', { postId });
-            notificationStore.showNotification(t('commentAdded'), 'success');
-        } catch (error) {
-            console.error('Error adding comment:', error);
-            handleError(error, router);  // Use the correct router instance
-        } finally {
-            isSubmitting.value = false;
-        }
+    console.debug('Attempting to add comment:', newComment.value);
+
+    if (!isCommentValid.value || isSubmitting.value) {
+        console.debug('Invalid comment or submission in progress.');
+        return;
+    }
+
+    const commentContent = newComment.value.trim();
+    isSubmitting.value = true;
+
+    try {
+        console.debug(`Calling addComment with postId: ${postId} and content: ${commentContent}`);
+        await commentStore.addComment(postId, commentContent);
+
+        console.debug('Comment successfully added.');
+        newComment.value = ''; // Clear input only after success
+        scrollToBottom();
+    } catch (error) {
+        console.error('Error during comment submission:', error);
+        handleError(error, router, notificationStore); // Handle the error appropriately
+    } finally {
+        isSubmitting.value = false;
+    }
+};
+
+const onScroll = () => {
+    const nearBottom = isNearBottom();
+    console.debug('User scrolled. Near bottom:', nearBottom);
+    if (nearBottom) {
+        console.debug('User is near bottom, triggering load of more comments...');
+        onLoadMoreComments();
     }
 };
 
 watch(() => postId, (newId) => {
-    console.debug('postId changed:', newId);
+    console.debug(`postId changed from ${postId} to ${newId}. Reloading comments.`);
     onRetryLoadComments();
+});
+
+watch(comments, (newComments) => {
+    console.debug('Comments updated:', newComments);
 });
 
 const onUpdateComment = async (comment) => {
@@ -143,7 +165,7 @@ const onUpdateComment = async (comment) => {
         await commentStore.updateComment(props.postId, comment.id, comment.content);
         notificationStore.showNotification(t('commentUpdated'), 'success');
     } catch (error) {
-        handleError(error, router);
+        handleError(error, router, notificationStore);;
     }
 };
 
@@ -152,65 +174,87 @@ const onDeleteComment = async (commentId) => {
         await commentStore.deleteComment(props.postId, commentId);
         notificationStore.showNotification(t('commentDeleted'), 'success');
     } catch (error) {
-        handleError(error, router);
+        handleError(error, router, notificationStore);;
     }
 };
 
 const onLoadMoreComments = throttle(async () => {
-    if (!isLoadingMore.value) {
-        isLoadingMore.value = true;
-        console.debug('Starting to load more comments...');
+    if (isLoadingMore.value) {
+        console.debug('Aborting: Already loading more comments.');
+        return;
+    }
 
-        try {
-            const newComments = (await commentStore.fetchComments(postId, 10, router)) || [];
-            console.debug('Fetched new comments:', newComments);
+    isLoadingMore.value = true;
+    try {
+        console.debug(`Fetching more comments for postId: ${postId}`);
+        const newComments = await commentStore.fetchComments(postId, 10, router);
 
-            if (newComments.length === 0) {
-                console.debug('No new comments fetched. Setting hasMoreComments to false.');
-                hasMoreComments.value = false;
-            } else {
-                console.debug('Adding new comments:', newComments);
-                comments.value.push(...newComments);
-            }
-        } catch (error) {
-            console.error('Error loading more comments:', error);
-            handleError(error, router);
-        } finally {
-            isLoadingMore.value = false;
-            console.debug('Finished loading more comments. isLoadingMore:', isLoadingMore.value);
+        if (newComments.length > 0) {
+            console.debug('Fetched comments:', newComments);
+            comments.value.push(...newComments);
+        } else {
+            console.debug('No more comments available.');
+            hasMoreComments.value = false;
         }
-    } else {
-        console.debug('Load more action ignored. Already loading comments.');
+
+        trackAnalyticsEvent('Load More Comments', { postId, count: newComments.length });
+    } catch (error) {
+        console.error('Error loading more comments:', error);
+        notificationStore.showNotification(t('loadMoreError'), 'error'); // Notify user
+        handleError(error, router, notificationStore);; // Existing error handler
+    } finally {
+        isLoadingMore.value = false;
+        console.debug('Completed loading more comments.');
     }
 }, 1000);
 
 const onRetryLoadComments = async () => {
-    console.debug('Retrying to load comments');
-    commentStore.resetComments(); // Reset existing comments
+    console.debug(`Retrying to load comments for postId: ${postId}`);
+
+    commentStore.resetComments(); // Reset state to ensure a fresh load
+
     try {
-        const result = await commentStore.fetchComments(props.postId, 10, router);
-        console.debug('Comments fetched during retry:', result);
-        if (result.length === 0) {
-            console.warn('No comments found for post:', props.postId);
+        const result = await commentStore.fetchComments(postId, 10, router);
+
+        if (!result || result.length === 0) {
+            console.warn(`No comments found for postId: ${postId}`);
             notificationStore.showNotification(t('noCommentsFound'), 'warning');
         } else {
-            console.debug('Comments loaded successfully:', result);
-            commentStore.comments.value = result; // Ensure comments are correctly set
+            console.debug('Successfully loaded comments:', result);
+            commentStore.comments.value = result;
         }
     } catch (error) {
-        console.error('Error caught in onRetryLoadComments. Calling handleError...');
-        if (error.response?.data?.code === 1010 || error.response?.data?.code === 1009) {
-            console.debug(`${error.response.data.code} error detected. Hiding comment section.`);
+        console.error('Error during comment retry load:', error);
+
+        // Handle specific error codes to hide the comment section
+        const errorCode = error.response?.data?.code;
+        if (errorCode === 1010 || errorCode === 1009) {
+            console.debug(`Error ${errorCode} detected. Hiding comment section.`);
             isCommentSectionVisible.value = false;
-            return; // Stop further execution
+            return;
         }
-        handleError(error, router);
+
+        notificationStore.showNotification(t('retry'), 'error'); // Notify the user
+        handleError(error, router, notificationStore); // Use the error handler
     }
 };
 
 onMounted(() => {
-    console.debug('Mounted component for postId:', postId);
+    console.debug('Mounted CommentSection component for postId:', postId);
+    const scroller = document.querySelector('.scroller');
+    if (scroller) {
+        console.debug('Adding scroll event listener.');
+        scroller.addEventListener('scroll', onScroll);
+    }
     onRetryLoadComments();
+});
+
+onUnmounted(() => {
+    const scroller = document.querySelector('.scroller');
+    if (scroller) {
+        console.debug('Removing scroll event listener.');
+        scroller.removeEventListener('scroll', onScroll); // Cleanup listener
+    }
 });
 </script>
 
