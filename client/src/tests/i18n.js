@@ -77,6 +77,8 @@ const i18n = createI18n({
     legacy: false, // Use the Composition API
     locale: 'en',
     messages,
+    createSpy: vi.fn,
+    stubActions: false,
 });
 
 export default i18n;

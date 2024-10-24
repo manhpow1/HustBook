@@ -9,7 +9,8 @@
             <p v-if="inputError" class="text-red-500 text-sm mt-1">{{ inputError }}</p>
             <button @click.prevent="onAddComment"
                 class="mt-2 px-4 py-2 bg-primary text-primary-foreground rounded hover:bg-primary/90 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-                :disabled="!isCommentValid || isSubmitting" :aria-label="t('postComment')">
+                :disabled="!isCommentValid || isSubmitting" :aria-label="t('postComment')"
+                data-testid="add-comment-button">
                 {{ isSubmitting ? t('posting') : t('comment') }}
             </button>
         </div>
@@ -47,6 +48,7 @@ import { useI18n } from 'vue-i18n';
 import { storeToRefs } from 'pinia';
 import { useRouter } from 'vue-router';
 import { useCommentStore } from '../../stores/commentStore';
+import { usePostStore } from '../../stores/postStore';
 import { useNotificationStore } from '../../stores/notificationStore';
 import { handleError } from '../../utils/errorHandler';
 import MarkdownEditor from '../shared/MarkdownEditor.vue';
@@ -74,6 +76,7 @@ const { postId } = props;
 
 const { t } = useI18n();
 const commentStore = useCommentStore();
+const postStore = usePostStore();
 const notificationStore = useNotificationStore();
 const { comments, commentError, hasMoreComments, loadingComments } = storeToRefs(commentStore);
 
@@ -136,7 +139,14 @@ const onAddComment = async () => {
         scrollToBottom();
     } catch (error) {
         console.error('Error during comment submission:', error);
-        handleError(error, router, notificationStore); // Handle the error appropriately
+        const errorCode = error.response?.data?.code;
+        if (errorCode === 1010) {
+            await postStore.removePost(postId);
+        } else if (errorCode === 9998 || errorCode === 9999) {
+            // Handle invalid session or account locked
+            router.push('/login');
+        }
+        await handleError(error, router, notificationStore); // Handle the error appropriately
     } finally {
         isSubmitting.value = false;
     }
@@ -165,7 +175,7 @@ const onUpdateComment = async (comment) => {
         await commentStore.updateComment(props.postId, comment.id, comment.content);
         notificationStore.showNotification(t('commentUpdated'), 'success');
     } catch (error) {
-        handleError(error, router, notificationStore);;
+        await handleError(error, router, notificationStore);;
     }
 };
 
@@ -174,7 +184,7 @@ const onDeleteComment = async (commentId) => {
         await commentStore.deleteComment(props.postId, commentId);
         notificationStore.showNotification(t('commentDeleted'), 'success');
     } catch (error) {
-        handleError(error, router, notificationStore);;
+        await handleError(error, router, notificationStore);;
     }
 };
 
@@ -201,7 +211,7 @@ const onLoadMoreComments = throttle(async () => {
     } catch (error) {
         console.error('Error loading more comments:', error);
         notificationStore.showNotification(t('loadMoreError'), 'error'); // Notify user
-        handleError(error, router, notificationStore);; // Existing error handler
+        await handleError(error, router, notificationStore);; // Existing error handler
     } finally {
         isLoadingMore.value = false;
         console.debug('Completed loading more comments.');
@@ -235,7 +245,7 @@ const onRetryLoadComments = async () => {
         }
 
         notificationStore.showNotification(t('retry'), 'error'); // Notify the user
-        handleError(error, router, notificationStore); // Use the error handler
+        await handleError(error, router, notificationStore); // Use the error handler
     }
 };
 
