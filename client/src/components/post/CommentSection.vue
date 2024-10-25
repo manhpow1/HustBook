@@ -119,6 +119,37 @@ const trackAnalyticsEvent = (action, details) => {
     window.analytics?.track(action, details);
 };
 
+const onRetryLoadComments = async () => {
+    console.debug(`Retrying to load comments for postId: ${postId}`);
+
+    commentStore.resetComments(); // Reset state to ensure a fresh load
+
+    try {
+        const result = await commentStore.fetchComments(postId, 10, router);
+
+        if (!result || result.length === 0) {
+            console.warn(`No comments found for postId: ${postId}`);
+            notificationStore.showNotification(t('noCommentsFound'), 'warning');
+        } else {
+            console.debug('Successfully loaded comments:', result);
+            commentStore.comments.value = result;
+        }
+    } catch (error) {
+        console.error('Error during comment retry load:', error);
+
+        // Handle specific error codes to hide the comment section
+        const errorCode = error.response?.data?.code;
+        if (errorCode === 1010 || errorCode === 1009) {
+            console.debug(`Error ${errorCode} detected. Hiding comment section.`);
+            isCommentSectionVisible.value = false;
+            return;
+        }
+
+        notificationStore.showNotification(t('retry'), 'error'); // Notify the user
+        await handleError(error, router, notificationStore); // Use the error handler
+    }
+};
+
 const onAddComment = async () => {
     console.debug('Attempting to add comment:', newComment.value);
 
@@ -145,6 +176,10 @@ const onAddComment = async () => {
         } else if (errorCode === 9998 || errorCode === 9999) {
             // Handle invalid session or account locked
             router.push('/login');
+        } else if (errorCode === 1009) {
+            await postStore.removePost(postId);
+            isCommentSectionVisible.value = false;
+            return;
         }
         await handleError(error, router, notificationStore); // Handle the error appropriately
     } finally {
@@ -217,37 +252,6 @@ const onLoadMoreComments = throttle(async () => {
         console.debug('Completed loading more comments.');
     }
 }, 1000);
-
-const onRetryLoadComments = async () => {
-    console.debug(`Retrying to load comments for postId: ${postId}`);
-
-    commentStore.resetComments(); // Reset state to ensure a fresh load
-
-    try {
-        const result = await commentStore.fetchComments(postId, 10, router);
-
-        if (!result || result.length === 0) {
-            console.warn(`No comments found for postId: ${postId}`);
-            notificationStore.showNotification(t('noCommentsFound'), 'warning');
-        } else {
-            console.debug('Successfully loaded comments:', result);
-            commentStore.comments.value = result;
-        }
-    } catch (error) {
-        console.error('Error during comment retry load:', error);
-
-        // Handle specific error codes to hide the comment section
-        const errorCode = error.response?.data?.code;
-        if (errorCode === 1010 || errorCode === 1009) {
-            console.debug(`Error ${errorCode} detected. Hiding comment section.`);
-            isCommentSectionVisible.value = false;
-            return;
-        }
-
-        notificationStore.showNotification(t('retry'), 'error'); // Notify the user
-        await handleError(error, router, notificationStore); // Use the error handler
-    }
-};
 
 onMounted(() => {
     console.debug('Mounted CommentSection component for postId:', postId);

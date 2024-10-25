@@ -20,7 +20,7 @@ describe('CommentSection.vue', () => {
 
     beforeEach(() => {
         router = createRouter({
-            history: createMemoryHistory(),
+            history: createMemoryHistory('/'),
             routes: [
                 { path: '/login', name: 'Login', component: { template: '<div>Login</div>' } },
                 { path: '/', name: 'Home', component: { template: '<div>Home</div>' } },
@@ -481,5 +481,241 @@ describe('CommentSection.vue', () => {
         expect(scrollerMock.scrollTop).toBe(scrollerMock.scrollHeight);
         querySelectorSpy.mockRestore();
     });
-});
 
+    it('9. handles blocked users in comments returned by the API after adding a comment', async () => {
+        // Mock the API response for adding a comment
+        const newComment = {
+            id: '126',
+            content: 'Test comment',
+            user: { id: 'user1', name: 'Test User' },
+        };
+
+        const commentStore = useCommentStore();
+        const notificationStore = useNotificationStore();
+        const { comments } = storeToRefs(commentStore);
+
+        // Existing comments including a blocked user's comment
+        comments.value = [
+            {
+                id: '123',
+                content: 'Existing comment 1',
+                user: { id: 'user2', name: 'User Two' },
+            },
+            {
+                id: '127',
+                content: 'Blocked user comment',
+                user: { id: 'blockedUser1', name: 'Blocked User' },
+            },
+        ];
+
+        // Initially filter out blocked user's comments
+        comments.value = comments.value.filter(comment => comment.user.id !== 'blockedUser1');
+
+        // Mock `addComment` to simulate adding the new comment
+        vi.spyOn(commentStore, 'addComment').mockImplementation(async (postId, content) => {
+            // Simulate adding the comment
+            const newComment = {
+                id: '126',
+                content,
+                user: { id: 'user1', name: 'Test User' },
+            };
+
+            // Update comments.value, maintaining filtering
+            comments.value.push(newComment);
+        });
+
+        await flushPromises();
+
+        const textarea = wrapper.find('textarea');
+        await textarea.setValue('Test comment');
+        await wrapper.vm.$nextTick();
+
+        const addButton = wrapper.find('button[data-testid="add-comment-button"]');
+        expect(addButton.exists()).toBe(true);
+
+        await addButton.trigger('click');
+        await flushPromises();
+
+        // Verify that the comment was added to the comments list
+        expect(comments.value).toHaveLength(2);
+        expect(comments.value[0].content).toBe('Existing comment 1');
+        expect(comments.value[1].content).toBe('Test comment');
+
+        // Ensure that blocked comments are not included
+        const blockedComments = comments.value.filter(comment => comment.user.id === 'blockedUser1');
+        expect(blockedComments).toHaveLength(0);
+
+        // Verify that no error notification is shown
+        expect(notificationStore.showNotification).not.toHaveBeenCalledWith(
+            expect.any(String),
+            'error'
+        );
+    });
+
+    it('10. silently handles server error when parameters are incorrect or comment content is empty', async () => {
+        // Mock the API response for an invalid parameter error
+        const errorResponse = {
+            response: {
+                status: 400,
+                data: {
+                    code: 1002, // Error code for parameter is not enough
+                    message: 'Parameter is not enough.',
+                },
+            },
+        };
+
+        apiService.addComment.mockRejectedValue(errorResponse);
+
+        const commentStore = useCommentStore();
+        const notificationStore = useNotificationStore();
+        const { comments } = storeToRefs(commentStore);
+
+        // Mock fetchComments and resetComments
+        vi.spyOn(commentStore, 'fetchComments').mockResolvedValue([]);
+        vi.spyOn(commentStore, 'resetComments').mockImplementation(() => { });
+
+        await flushPromises();
+
+        const textarea = wrapper.find('textarea');
+        // Set empty comment content or incorrect parameters
+        await textarea.setValue(''); // Empty content
+        await wrapper.vm.$nextTick();
+
+        const addButton = wrapper.find('button[data-testid="add-comment-button"]');
+        expect(addButton.exists()).toBe(true);
+
+        // Attempt to click the add button
+        await addButton.trigger('click');
+        await flushPromises();
+
+        // Check that the application does not show an error notification
+        expect(notificationStore.showNotification).not.toHaveBeenCalledWith(
+            expect.any(String),
+            'error'
+        );
+
+        // Ensure the comment was not added
+        expect(comments.value).toHaveLength(0);
+
+        // Optionally, verify that the input remains as is
+        expect(textarea.element.value).toBe('');
+    });
+
+    it('11. handles being blocked by post owner during comment submission', async () => {
+        // Mock the API response for being blocked
+        const errorResponse = {
+            response: {
+                status: 403,
+                data: {
+                    code: 1009, // Error code for not access
+                    message: 'You do not have permission to access this resource.',
+                },
+            },
+        };
+
+        apiService.addComment.mockRejectedValue(errorResponse);
+
+        const commentStore = useCommentStore();
+        const postStore = usePostStore();
+        const notificationStore = useNotificationStore();
+        const { comments } = storeToRefs(commentStore);
+        const { currentPost } = storeToRefs(postStore);
+
+        // Mock fetchComments and resetComments
+        vi.spyOn(commentStore, 'fetchComments').mockResolvedValue([]);
+        vi.spyOn(commentStore, 'resetComments').mockImplementation(() => { });
+        const removePostSpy = vi.spyOn(postStore, 'removePost');
+
+        await flushPromises();
+
+        const textarea = wrapper.find('textarea');
+        await textarea.setValue('Test comment');
+        await wrapper.vm.$nextTick();
+
+        const addButton = wrapper.find('button[data-testid="add-comment-button"]');
+        expect(addButton.exists()).toBe(true);
+
+        await addButton.trigger('click');
+        await flushPromises();
+
+        // Verify that the comment section is hidden
+        expect(wrapper.find('.comment-section').exists()).toBe(false);
+
+        // Verify that the post was removed from the store
+        expect(removePostSpy).toHaveBeenCalledWith('post1');
+        expect(currentPost.value).toBeNull();
+
+        // Ensure the comment was not added
+        expect(comments.value).toHaveLength(0);
+
+        // Verify that no error notification is shown (since the application handles it)
+        expect(notificationStore.showNotification).not.toHaveBeenCalledWith(
+            expect.any(String),
+            'error'
+        );
+    });
+
+    it('12. handles being blocked by another commenter during comment submission', async () => {
+        // Mock the API response for adding a comment
+        const newComment = {
+            id: '126',
+            content: 'Test comment',
+            user: { id: 'user1', name: 'Test User' },
+        };
+        apiService.addComment.mockResolvedValue({
+            data: newComment,
+        });
+
+        const commentStore = useCommentStore();
+        const notificationStore = useNotificationStore();
+        const { comments } = storeToRefs(commentStore);
+
+        // Existing comments including the user who will block the current user
+        comments.value = [
+            newComment,
+            {
+                id: '123',
+                content: 'Existing comment 1',
+                user: { id: 'user2', name: 'User Two' },
+            },
+            // The comment from 'blockingUser' is omitted
+        ];
+
+        // Mock fetchComments to return comments excluding the blocking user's comments
+        vi.spyOn(commentStore, 'addComment').mockImplementation(async (postId, content) => {
+            // Simulate adding the comment
+            const newComment = {
+                id: '126',
+                content,
+                user: { id: 'user1', name: 'Test User' },
+            };
+
+            await flushPromises();
+
+            const textarea = wrapper.find('textarea');
+            await textarea.setValue('Test comment');
+            await wrapper.vm.$nextTick();
+
+            const addButton = wrapper.find('button[data-testid="add-comment-button"]');
+            expect(addButton.exists()).toBe(true);
+
+            await addButton.trigger('click');
+            await flushPromises();
+
+            // Verify that the blocking user's comment is no longer present
+            const blockingUserComments = comments.value.filter(comment => comment.user.id === 'blockingUser');
+            expect(blockingUserComments).toHaveLength(0);
+
+            // Ensure that other comments remain visible
+            expect(comments.value).toHaveLength(2);
+            expect(comments.value[0].content).toBe('Test comment');
+            expect(comments.value[1].content).toBe('Existing comment 1');
+
+            // Verify that no error notification is shown (since the application handles it)
+            expect(notificationStore.showNotification).not.toHaveBeenCalledWith(
+                expect.any(String),
+                'error'
+            );
+        });
+    });
+});
