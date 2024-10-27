@@ -1,7 +1,10 @@
 import { defineStore } from 'pinia';
 import { ref } from 'vue';
-import apiService from '../services/api'; // Import as default
+import { openDB } from 'idb';
+import apiService from '../services/api';
 import { handleError } from '../utils/errorHandler';
+import { database } from '../config/firebase';
+import { ref as dbRef, onChildAdded, off } from 'firebase/database';
 
 export const useCommentStore = defineStore('comment', () => {
     const comments = ref([]);
@@ -9,6 +12,13 @@ export const useCommentStore = defineStore('comment', () => {
     const commentError = ref(null);
     const hasMoreComments = ref(true);
     const pageIndex = ref(0);
+
+    const dbPromise = openDB('comments-store', 1, {
+        upgrade(db) {
+            db.createObjectStore('comments', { keyPath: 'id' });
+            db.createObjectStore('offline-comments', { keyPath: 'tempId' });
+        },
+    });
 
     const fetchComments = async (postId, count = 10, router) => {
         loadingComments.value = true;
@@ -36,10 +46,16 @@ export const useCommentStore = defineStore('comment', () => {
                 comments.value.push(...filteredComments);
                 pageIndex.value += 1;
             }
+
+            const db = await dbPromise;
+            const tx = db.transaction('comments', 'readwrite');
+            fetchedComments.forEach(comment => tx.store.put(comment));
+            await tx.done;
+
             return filteredComments;
         } catch (error) {
             console.error('Error in fetchComments:', error);
-            handleError(error, router); // Use the error handler
+            handleError(error, router);
             return [];
         } finally {
             loadingComments.value = false;
@@ -48,23 +64,49 @@ export const useCommentStore = defineStore('comment', () => {
 
     const addComment = async (postId, content) => {
         try {
+            if (!navigator.onLine) {
+                return await addOfflineComment(postId, content);
+            }
+
             const response = await apiService.addComment(postId, content);
             const newComment = response.data;
 
             console.debug('New comment from API:', newComment);
 
-            // Add the new comment to the beginning of the comments array
             comments.value.unshift(newComment);
             console.debug('Updated comments in store:', comments.value);
+
+            const db = await dbPromise;
+            await db.add('comments', newComment);
+
             return newComment;
         } catch (error) {
+            if (!navigator.onLine) {
+                return await addOfflineComment(postId, content);
+            }
             console.error('Failed to add comment:', error);
-            throw error; // Rethrow to be handled in the component
+            throw error;
         }
     };
 
+    const addOfflineComment = async (postId, content) => {
+        const offlineComment = {
+            tempId: Date.now(),
+            postId,
+            content,
+            createdAt: new Date().toISOString(),
+            isOffline: true
+        };
+        comments.value.unshift(offlineComment);
+
+        const db = await dbPromise;
+        await db.add('offline-comments', offlineComment);
+
+        return offlineComment;
+    };
+
     const updateComment = async (postId, commentId, content) => {
-        const response = await api.put(`/posts/${postId}/comments/${commentId}`, { content });
+        const response = await apiService.updateComment(postId, commentId, content);
         const index = comments.value.findIndex(c => c.id === commentId);
         if (index !== -1) {
             comments.value[index] = response.data;
@@ -72,7 +114,7 @@ export const useCommentStore = defineStore('comment', () => {
     };
 
     const deleteComment = async (postId, commentId) => {
-        await api.delete(`/posts/${postId}/comments/${commentId}`);
+        await apiService.deleteComment(postId, commentId);
         comments.value = comments.value.filter(c => c.id !== commentId);
     };
 
@@ -84,8 +126,43 @@ export const useCommentStore = defineStore('comment', () => {
 
     const prefetchComments = async (postId) => {
         if (comments.value.length === 0 && !loadingComments.value) {
-            fetchComments(postId);
+            await fetchComments(postId);
         }
+    };
+
+    const syncOfflineComments = async () => {
+        const db = await dbPromise;
+        const offlineComments = await db.getAll('offline-comments');
+
+        for (const comment of offlineComments) {
+            try {
+                const response = await apiService.addComment(comment.postId, comment.content);
+                const syncedComment = response.data;
+
+                await db.delete('offline-comments', comment.tempId);
+                await db.add('comments', syncedComment);
+
+                const index = comments.value.findIndex(c => c.tempId === comment.tempId);
+                if (index !== -1) {
+                    comments.value[index] = syncedComment;
+                }
+            } catch (error) {
+                console.error('Failed to sync comment:', error);
+            }
+        }
+    };
+
+    const setupRealtimeComments = (postId) => {
+        const commentsRef = dbRef(database, `comments/${postId}`);
+        const callback = (snapshot) => {
+            const newComment = snapshot.val();
+            if (!comments.value.some(comment => comment.id === newComment.id)) {
+                comments.value.unshift(newComment);
+            }
+        };
+        onChildAdded(commentsRef, callback);
+
+        return () => off(commentsRef, 'child_added', callback);
     };
 
     return {
@@ -99,6 +176,7 @@ export const useCommentStore = defineStore('comment', () => {
         deleteComment,
         resetComments,
         prefetchComments,
+        syncOfflineComments,
+        setupRealtimeComments,
     };
-}
-);
+});

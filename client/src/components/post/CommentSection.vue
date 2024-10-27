@@ -1,5 +1,18 @@
 <template>
     <div v-if="isCommentSectionVisible" class="comment-section">
+        <div v-if="offlineMode" class="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 mb-4"
+            role="alert">
+            <p class="font-bold">{{ t('offlineMode') }}</p>
+            <p>{{ t('offlineModeDescription') }}</p>
+        </div>
+        <div v-if="syncError" class="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mb-4" role="alert">
+            <p class="font-bold">{{ t('syncError') }}</p>
+            <p>{{ syncError }}</p>
+            <button @click="retrySyncComments"
+                class="mt-2 px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600 transition-colors duration-200">
+                {{ t('retrySync') }}
+            </button>
+        </div>
         <div class="mb-4">
             <MarkdownEditor v-model="newComment" :rows="3" ref="commentInput" :placeholder="t('writeComment')"
                 :maxLength="1000" @input="onInput" />
@@ -86,11 +99,28 @@ const inputError = ref('');
 const isSubmitting = ref(false);
 const isLoadingMore = ref(false);
 const isCommentSectionVisible = ref(true);
+const offlineMode = ref(false);
+const syncError = ref(null);
 
 const isCommentValid = computed(() => {
     console.debug('Validating comment:', newComment.value);
     return newComment.value.trim().length > 0 && newComment.value.length <= 1000;
 });
+
+const checkOnlineStatus = () => {
+    offlineMode.value = !navigator.onLine;
+};
+
+const retrySyncComments = async () => {
+    try {
+        await commentStore.syncOfflineComments();
+        syncError.value = null;
+        notificationStore.showNotification(t('commentsSyncedSuccessfully'), 'success');
+    } catch (error) {
+        syncError.value = t('failedToSyncComments');
+        notificationStore.showNotification(t('failedToSyncComments'), 'error');
+    }
+};
 
 const onInput = () => {
     console.debug('Input changed:', newComment.value);
@@ -168,24 +198,33 @@ const onAddComment = async () => {
         console.debug('Comment successfully added.');
         newComment.value = ''; // Clear input only after success
         scrollToBottom();
+
+        if (offlineMode.value) {
+            notificationStore.showNotification(t('commentSavedOffline'), 'info');
+        }
     } catch (error) {
         console.error('Error during comment submission:', error);
-        const errorCode = error.response?.data?.code;
-        if (errorCode === 1010) {
-            await postStore.removePost(postId);
-        } else if (errorCode === 9998 || errorCode === 9999) {
-            // Handle invalid session or account locked
-            router.push('/login');
-        } else if (errorCode === 1009) {
-            await postStore.removePost(postId);
-            isCommentSectionVisible.value = false;
-            return;
+        if (!navigator.onLine) {
+            notificationStore.showNotification(t('commentSavedOffline'), 'info');
+        } else {
+            const errorCode = error.response?.data?.code;
+            if (errorCode === 1010) {
+                await postStore.removePost(postId);
+            } else if (errorCode === 9998 || errorCode === 9999) {
+                router.push('/login');
+            } else if (errorCode === 1009) {
+                await postStore.removePost(postId);
+                isCommentSectionVisible.value = false;
+                return;
+            }
+            await handleError(error, router, notificationStore);
         }
-        await handleError(error, router, notificationStore); // Handle the error appropriately
     } finally {
         isSubmitting.value = false;
     }
 };
+
+let cleanupRealtimeComments;
 
 const onScroll = () => {
     const nearBottom = isNearBottom();
@@ -261,6 +300,15 @@ onMounted(() => {
         scroller.addEventListener('scroll', onScroll);
     }
     onRetryLoadComments();
+    commentStore.syncOfflineComments().catch(error => {
+        syncError.value = t('failedToSyncOfflineComments');
+        notificationStore.showNotification(t('failedToSyncOfflineComments'), error);
+    });
+    cleanupRealtimeComments = commentStore.setupRealtimeComments(postId);
+
+    window.addEventListener('online', checkOnlineStatus);
+    window.addEventListener('offline', checkOnlineStatus);
+    checkOnlineStatus();
 });
 
 onUnmounted(() => {
@@ -269,6 +317,11 @@ onUnmounted(() => {
         console.debug('Removing scroll event listener.');
         scroller.removeEventListener('scroll', onScroll); // Cleanup listener
     }
+    if (cleanupRealtimeComments) {
+        cleanupRealtimeComments();
+    }
+    window.removeEventListener('online', checkOnlineStatus);
+    window.removeEventListener('offline', checkOnlineStatus);
 });
 </script>
 

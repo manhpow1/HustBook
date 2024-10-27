@@ -77,6 +77,11 @@ const addComment = async (postId, userId, content) => {
         comments: db.FieldValue.increment(1)
     });
     await batch.commit();
+    const realtimeCommentRef = db.ref(`comments/${postId}/${commentRef.id}`);
+    await realtimeCommentRef.set({
+        id: commentRef.id,
+        ...commentData
+    });
     return commentRef.id;  // Returns the ID of the newly added comment
 };
 
