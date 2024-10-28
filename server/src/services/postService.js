@@ -123,6 +123,85 @@ const reportPost = async (postId, userId, reason, details) => {
     return await createDocument(collections.reports, reportData);
 };
 
+const getListPosts = async ({
+    userId,
+    inCampaign,
+    campaignId,
+    latitude,
+    longitude,
+    lastId,
+    count
+}) => {
+    try {
+        let query = db.collection(collections.posts)
+            .orderBy('createdAt', 'desc')
+            .limit(count);
+
+        if (inCampaign === '1' && campaignId) {
+            query = query.where('campaignId', '==', campaignId);
+        }
+
+        if (latitude && longitude) {
+            const center = new GeoPoint(latitude, longitude);
+            const radiusInM = 10000; // 10km radius, adjust as needed
+            const bounds = getBoundingBox(center, radiusInM);
+            query = query.where('location', '>', bounds.southwest)
+                .where('location', '<', bounds.northeast);
+        }
+
+        if (lastId) {
+            const lastPost = await db.collection(collections.posts).doc(lastId).get();
+            if (!lastPost.exists) {
+                throw new Error('Invalid last_id');
+            }
+            query = query.startAfter(lastPost);
+        }
+
+        const snapshot = await query.get();
+
+        const posts = snapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data(),
+        }));
+
+        // Batch get authors
+        const authorIds = [...new Set(posts.map(post => post.userId))];
+        const authorDocs = await db.collection(collections.users).where('__name__', 'in', authorIds).get();
+        const authorMap = new Map(authorDocs.docs.map(doc => [doc.id, doc.data()]));
+
+        // Batch check likes
+        const likeChecks = posts.map(post => checkUserLike(post.id, userId));
+        const likeResults = await Promise.all(likeChecks);
+
+        const postsWithDetails = posts.map((post, index) => ({
+            ...post,
+            isLiked: likeResults[index],
+            author: {
+                id: post.userId,
+                ...authorMap.get(post.userId)
+            }
+        }));
+
+        return postsWithDetails;
+    } catch (error) {
+        console.error('Error in getListPosts:', error);
+        throw error;
+    }
+};
+
+const getBoundingBox = (center, radiusInM) => {
+    const lat = 0.0144927536231884; // degrees latitude per mile
+    const lon = 0.0181818181818182; // degrees longitude per mile
+
+    const latDelta = (radiusInM / 1609.344) * lat;
+    const lonDelta = (radiusInM / 1609.344) * lon;
+
+    return {
+        southwest: new GeoPoint(center.latitude - latDelta, center.longitude - lonDelta),
+        northeast: new GeoPoint(center.latitude + latDelta, center.longitude + lonDelta),
+    };
+};
+
 const runTransactionWithRetry = async (transactionFn, retries = 3) => {
     while (retries > 0) {
         try {
@@ -147,4 +226,5 @@ module.exports = {
     getUserPosts,
     reportPost,
     runTransactionWithRetry,
+    getListPosts,
 };

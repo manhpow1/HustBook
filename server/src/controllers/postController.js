@@ -5,6 +5,9 @@ const { sendResponse, handleError } = require('../utils/responseHandler');
 const logger = require('../utils/logger');
 const cache = require('../utils/redis');
 
+const SUCCESS_CODE = '1000';
+const VALIDATION_ERROR_CODE = '1002';
+
 const createPost = async (req, res, next) => {
     try {
         const { error } = validateCreatePost(req.body);
@@ -245,6 +248,69 @@ const toggleLike = async (req, res, next) => {
     }
 };
 
+const mapPostToResponse = (post) => ({
+    id: post.id,
+    name: post.name,
+    image: post.images,
+    video: post.videos.map(video => ({ url: video.url, thumb: video.thumbnail })),
+    described: post.content,
+    created: post.createdAt,
+    like: post.likes.toString(),
+    comment: post.comments.toString(),
+    is_liked: post.isLiked ? '1' : '0',
+    is_blocked: post.isBlocked ? '1' : '0',
+    can_comment: post.canComment ? '1' : '0',
+    can_edit: post.canEdit ? '1' : '0',
+    banned: post.banned ? '1' : '0',
+    state: post.state,
+    author: {
+        id: post.author.id,
+        username: post.author.username,
+        avatar: post.author.avatar,
+        online: post.author.online ? '1' : '0'
+    }
+});
+
+const getListPosts = async (req, res, next) => {
+    try {
+        const { error, value } = validateGetListPosts(req.query);
+        if (error) return sendResponse(res, VALIDATION_ERROR_CODE, { message: error.details[0].message });
+
+        const {
+            user_id,
+            in_campaign,
+            campaign_id,
+            latitude,
+            longitude,
+            last_id,
+            index,
+            count
+        } = value;
+
+        const posts = await postService.getListPosts({
+            userId: user_id || req.user.uid,
+            inCampaign: in_campaign,
+            campaignId: campaign_id,
+            latitude,
+            longitude,
+            lastId: last_id,
+            index: parseInt(index),
+            count: parseInt(count)
+        });
+
+        sendResponse(res, SUCCESS_CODE, {
+            posts: posts.map(mapPostToResponse),
+            new_items: posts.length.toString(),
+            last_id: posts.length > 0 ? posts[posts.length - 1].id : '',
+            in_campaign: in_campaign || '0',
+            campaign_id: campaign_id || ''
+        });
+    } catch (error) {
+        logger.error('Get list posts error:', error);
+        handleError(error, req, res, next);
+    }
+};
+
 module.exports = {
     createPost,
     getPost,
@@ -255,4 +321,5 @@ module.exports = {
     getUserPosts,
     reportPost,
     toggleLike,
+    getListPosts,
 };

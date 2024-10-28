@@ -22,5 +22,6 @@ router.get('/user/:userId', authenticateToken, postController.getUserPosts);
 router.post('/:id/report-post', authenticateToken, reportLimiter, postController.reportPost);
 router.post('/:id/like', authenticateToken, postController.toggleLike);
 router.get('/:id/comments', authenticateToken, postController.getComments);
+router.get('/get_list_posts', authenticateToken, postController.getListPosts);
 
 module.exports = router;
