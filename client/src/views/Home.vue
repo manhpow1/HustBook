@@ -73,17 +73,12 @@
           </ul>
           <p v-else class="text-gray-500">No posts to display yet. Be the first to create a post!</p>
         </section>
-        <infinite-loading @infinite="loadMorePosts" :identifier="infiniteId">
-          <template #spinner>
-            <div class="loader">Loading...</div>
-          </template>
-          <template #no-more>
-            <div>No more posts</div>
-          </template>
-          <template #no-results>
-            <div>No posts found</div>
-          </template>
-        </infinite-loading>
+        <div v-if="postStore.hasMorePosts && !postStore.loading" class="mt-4 text-center">
+          <Button @click="loadMorePosts" variant="outline">Load More</Button>
+        </div>
+        <div v-if="postStore.loading && postStore.posts.length > 0" class="mt-4 text-center">
+          <span class="loading loading-spinner loading-md"></span>
+        </div>
       </div>
 
       <div v-else class="text-center">
@@ -97,7 +92,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, watch, defineAsyncComponent } from 'vue'
+import { ref, onMounted, watch, defineAsyncComponent } from 'vue'
 import { useRouter } from 'vue-router'
 import { usePostStore } from '../stores/postStore'
 import { useUserStore } from '../stores/userStore'
@@ -105,8 +100,6 @@ import { ThumbsUpIcon, MessageCircleIcon, PlayIcon } from 'lucide-vue-next'
 import { formatDistanceToNow } from 'date-fns'
 import { Button, Card } from '../components/ui'
 import ErrorBoundary from '../components/shared/ErrorBoundary.vue'
-import InfiniteLoading from 'v3-infinite-loading'
-import 'v3-infinite-loading/lib/style.css'
 import DOMPurify from 'dompurify'
 
 const AddPost = defineAsyncComponent(() => import('../components/post/AddPost.vue'))
@@ -116,32 +109,13 @@ const router = useRouter()
 const postStore = usePostStore()
 const userStore = useUserStore()
 
-const page = ref(1);
-const infiniteId = ref(+new Date());
-
-const loadMorePosts = async ($state) => {
-  try {
-    const newPosts = await postStore.fetchPosts({ page: page.value, limit: 10 });
-    if (newPosts.length) {
-      page.value += 1;
-      $state.loaded();
-    } else {
-      $state.complete();
-    }
-  } catch (error) {
-    $state.error();
-  }
-};
-
-const resetInfiniteLoading = () => {
-  page.value = 1;
-  infiniteId.value = +new Date();
-};
+const loadMorePosts = () => {
+  postStore.fetchPosts()
+}
 
 const retryFetchPosts = () => {
-  postStore.error = null
-  page.value = 1
-  loadMorePosts({ loaded: () => { }, complete: () => { }, error: () => { } })
+  postStore.resetPosts()
+  postStore.fetchPosts()
 }
 
 const handlePostCreated = (newPost) => {
@@ -184,18 +158,17 @@ const sanitizeUrl = (url) => {
 }
 
 onMounted(() => {
-  if (userStore.isLoggedIn) {
-    loadMorePosts({ loaded: () => { }, complete: () => { }, error: () => { } })
+  if (userStore.isLoggedIn && postStore.posts.length === 0) {
+    postStore.fetchPosts()
   }
 })
 
 watch(() => userStore.isLoggedIn, (newValue) => {
   if (newValue) {
-    page.value = 1
-    loadMorePosts({ loaded: () => { }, complete: () => { }, error: () => { } })
+    postStore.resetPosts()
+    postStore.fetchPosts()
   } else {
-    postStore.$reset()
-    page.value = 1
+    postStore.resetPosts()
   }
 })
 </script>

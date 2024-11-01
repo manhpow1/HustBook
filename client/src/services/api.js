@@ -112,6 +112,10 @@ const apiService = {
         });
     },
 
+    getListPosts(params = {}) {
+        return this.get(API_ENDPOINTS.GET_LIST_POSTS, { params });
+    },
+
     // Comment-related API calls
     addComment(postId, content) {
         return this.post(API_ENDPOINTS.ADD_COMMENT(postId), { content });

@@ -1,4 +1,3 @@
-<!-- eslint-disable vue/multi-word-component-names -->
 <template>
     <div :class="[
         'animate-pulse bg-gray-200 rounded',

@@ -9,13 +9,13 @@ export const API_ENDPOINTS = {
     SIGNUP: `${API_BASE_URL}/auth/signup`,
     AUTH_CHECK: `${API_BASE_URL}/auth/check`,
     CHANGE_INFO_AFTER_SIGNUP: `${API_BASE_URL}/auth/change_info_after_signup`,
-
     // Post Endpoints
     ADD_POST: `${API_BASE_URL}/posts`,
     GET_POST: (postId) => `${API_BASE_URL}/posts/${postId}`,
     DELETE_POST: (postId) => `${API_BASE_URL}/posts/${postId}`,
     REPORT_POST: (postId) => `${API_BASE_URL}/posts/${postId}/report-post`,
     LIKE_POST: (postId) => `${API_BASE_URL}/posts/${postId}/like`,
+    GET_LIST_POSTS: `${API_BASE_URL}/posts/get_list_posts`,
 
     // Comment Endpoints (Nested Under Posts)
     ADD_COMMENT: (postId) => `${API_BASE_URL}/posts/${postId}/comment`,

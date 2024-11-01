@@ -13,8 +13,8 @@ export const usePostStore = defineStore('post', () => {
     const comments = ref([])
     const loadingComments = ref(false)
     const commentError = ref(null)
-    const hasMoreComments = ref(true);
-    const pageIndex = ref(0);
+    const hasMoreComments = ref(true)
+    const pageIndex = ref(0)
     const hasMorePosts = ref(true)
 
     const formattedLikes = computed(() => {
@@ -23,11 +23,26 @@ export const usePostStore = defineStore('post', () => {
     })
     const formattedComments = computed(() => formatNumber(currentPost.value?.comment || 0))
 
-    async function fetchPosts() {
+    async function fetchPosts(params = {}) {
+        if (!hasMorePosts.value) return;
+
         loading.value = true
+        error.value = null
         try {
-            const response = await apiService.get(API_ENDPOINTS.GET_POSTS)
-            posts.value = response.data.data
+            const response = await apiService.getListPosts({
+                ...params,
+                last_id: lastId.value,
+                index: posts.value.length,
+                count: 10
+            })
+            if (response.data.code === '1000') {
+                const newPosts = response.data.data.posts
+                posts.value.push(...newPosts)
+                lastId.value = response.data.data.last_id
+                hasMorePosts.value = newPosts.length === 10
+            } else {
+                throw new Error(response.data.message || 'Failed to load posts')
+            }
         } catch (err) {
             handleError(err)
             error.value = 'Failed to load posts'
@@ -185,6 +200,12 @@ export const usePostStore = defineStore('post', () => {
         hasMoreComments.value = true;
     }
 
+    function resetPosts() {
+        posts.value = []
+        lastId.value = null
+        hasMorePosts.value = true
+    }
+
     return {
         posts,
         currentPost,
@@ -198,6 +219,7 @@ export const usePostStore = defineStore('post', () => {
         formattedLikes,
         formattedComments,
         pageIndex,
+        resetPosts,
         resetComments,
         fetchPosts,
         fetchPost,
