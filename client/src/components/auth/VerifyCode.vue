@@ -76,10 +76,6 @@ const phonenumber = ref(props.initialPhoneNumber)
 const codeDigits = ref(['', '', '', '', '', ''])
 const phoneError = ref('')
 const codeError = ref('')
-const isLoading = ref(false)
-const successMessage = ref('')
-const errorMessage = ref('')
-const resendCooldown = ref(0)
 const codeInputs = ref([])
 
 const isFormValid = computed(() => {

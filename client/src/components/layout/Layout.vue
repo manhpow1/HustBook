@@ -6,7 +6,7 @@
         <div class="flex justify-between items-center h-16">
           <div class="flex items-center">
             <router-link to="/" class="flex-shrink-0">
-              <img class="h-8 w-auto" src="../assets/logo.svg" alt="HUSTBOOK" />
+              <img class="h-8 w-auto" src="../../assets/logo.svg" alt="HUSTBOOK" />
             </router-link>
             <div class="hidden sm:block sm:ml-6">
               <div class="flex space-x-4">
@@ -148,6 +148,7 @@ import { useUserStore } from '../../stores/userStore'
 import { useMenuState } from '../../composables/useMenuState'
 import LogoutButton from '../auth/Logout.vue'
 import { navItems } from '../../config/navigation'
+import { useHead } from '@unhead/vue'
 
 const createAsyncComponent = (loader) => defineAsyncComponent({
   loader,
@@ -157,7 +158,7 @@ const createAsyncComponent = (loader) => defineAsyncComponent({
 })
 
 // Lazy-load icons
-const HomeIcon = createAsyncComponent(() => import('lucide-vue-next/dist/esm/icons/home'))
+const HomeIcon = createAsyncComponent(() => import('lucide-vue-next/dist/esm/icons/house'))
 const UserIcon = createAsyncComponent(() => import('lucide-vue-next/dist/esm/icons/user'))
 const UsersIcon = createAsyncComponent(() => import('lucide-vue-next/dist/esm/icons/users'))
 const MessageCircleIcon = createAsyncComponent(() => import('lucide-vue-next/dist/esm/icons/message-circle'))
@@ -178,8 +179,6 @@ const iconComponents = {
 const router = useRouter()
 const userStore = useUserStore()
 const { showUserMenu, showMobileMenu, toggleUserMenu, toggleMobileMenu } = useMenuState()
-const { isLoggedIn } = useUserState()
-
 const isLoggedIn = computed(() => userStore.isLoggedIn)
 const currentYear = computed(() => new Date().getFullYear())
 

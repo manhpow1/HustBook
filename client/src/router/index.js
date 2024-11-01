@@ -1,5 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router'
-import { useUserState } from '../stores/userState';
+import { useUserStore } from '../stores/userStore';
 import { useCommentStore } from '../stores/commentStore';
 
 const routes = [
@@ -68,6 +68,7 @@ const routes = [
             analytics: 'PostDetail'
         },
         beforeEnter: (to, from, next) => {
+            const commentStore = useCommentStore();
             commentStore.prefetchComments(to.params.id);
             next();
         }
@@ -113,8 +114,6 @@ router.beforeEach(async (to, from, next) => {
     console.log("Global navigation guard triggered")
     console.log("Navigating to:", to.path)
 
-    const { checkAuth, isLoggedIn } = useUserState()
-
     const requiresAuth = to.matched.some(record => record.meta.requiresAuth)
 
     if (process.env.NODE_ENV === 'test') {
@@ -123,10 +122,11 @@ router.beforeEach(async (to, from, next) => {
     }
 
     if (requiresAuth) {
-        await checkAuth()
-        console.log("After checkAuth - isLoggedIn:", isLoggedIn.value)
+        const userStore = useUserStore();
+        await userStore.checkAuth();
+        console.log("After checkAuth - isLoggedIn:", userStore.isLoggedIn)
 
-        if (!isLoggedIn.value) {
+        if (!userStore.isLoggedIn) {
             console.log("User not authenticated, redirecting to login")
             next({ name: 'Login', query: { redirect: to.fullPath } })
         } else {

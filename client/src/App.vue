@@ -30,9 +30,9 @@ import { Suspense, onMounted } from 'vue'
 import Layout from './components/layout/Layout.vue'
 import ErrorBoundary from './components/shared/ErrorBoundary.vue'
 import { LoaderIcon } from 'lucide-vue-next'
-import { useHead } from '@vueuse/head'
 import { useRouter } from 'vue-router'
 import { useUserStore } from './stores/userStore'
+import { useHead } from '@unhead/vue'
 
 const router = useRouter()
 const userStore = useUserStore()
@@ -40,7 +40,10 @@ const userStore = useUserStore()
 useHead({
   meta: [
     { name: 'viewport', content: 'width=device-width, initial-scale=1' },
-    { 'http-equiv': 'Content-Security-Policy', content: "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com" },
+    {
+      'http-equiv': 'Content-Security-Policy',
+      content: "default-src 'self'; connect-src 'self' http://localhost:3000; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com"
+    },
   ],
   link: [
     { rel: 'stylesheet', href: 'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap' },

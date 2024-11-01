@@ -12,14 +12,39 @@ export const useUserStore = defineStore('user', () => {
     const isLoggedIn = computed(() => !!user.value)
     const userId = computed(() => user.value?.id)
 
+    apiService.setAuthHeaders(token.value, deviceToken.value)
+
+    async function checkAuth() {
+        console.log("Checking authentication")
+        if (token.value && deviceToken.value) {
+            try {
+                const response = await apiService.authCheck()
+                console.log("Auth check response:", response.data)
+                if (response.data.isAuthenticated) {
+                    await fetchUser()
+                } else {
+                    logout()
+                }
+            } catch (error) {
+                console.error('Auth check failed:', error)
+                logout()
+            }
+        } else {
+            console.log("No token or device token found")
+            user.value = null
+        }
+        console.log("Final authentication state:", isLoggedIn.value)
+    }
+
     async function login(phonenumber, password) {
+        console.log("Logging in with phone number:", phonenumber)
         loading.value = true
         error.value = null
         try {
             const response = await apiService.login({ phonenumber, password })
             if (response.data.code === '1000') {
-                setUser(response.data.data)
                 setTokens(response.data.data.token, response.data.data.deviceToken)
+                setUser(response.data.data)
                 return true
             }
             return false
@@ -33,17 +58,19 @@ export const useUserStore = defineStore('user', () => {
     }
 
     async function logout() {
+        console.log("Logging out")
         loading.value = true
         error.value = null
         try {
             await apiService.logout()
-            user.value = null
-            setTokens(null, null)
         } catch (err) {
             console.error('Logout error:', err)
             error.value = 'Failed to logout'
         } finally {
+            setTokens(null, null)
+            user.value = null
             loading.value = false
+            console.log("Logout complete")
         }
     }
 
@@ -52,26 +79,28 @@ export const useUserStore = defineStore('user', () => {
     }
 
     function setTokens(newToken, newDeviceToken) {
+        console.log("Setting tokens:", newToken, newDeviceToken)
         token.value = newToken
         deviceToken.value = newDeviceToken
         if (newToken && newDeviceToken) {
             localStorage.setItem('token', newToken)
             localStorage.setItem('deviceToken', newDeviceToken)
-            apiService.setAuthHeaders(newToken, newDeviceToken) // Set headers in apiService
+            apiService.setAuthHeaders(newToken, newDeviceToken)
         } else {
             localStorage.removeItem('token')
             localStorage.removeItem('deviceToken')
-            apiService.setAuthHeaders(null, null) // Clear headers in apiService
+            apiService.setAuthHeaders(null, null)
         }
     }
 
     async function fetchUser() {
-        if (token.value) {
+        if (token.value && deviceToken.value) {
             loading.value = true
             error.value = null
             try {
                 const response = await apiService.getUserProfile()
                 setUser(response.data.data)
+                console.log("Fetched user profile:", response.data.data)
             } catch (err) {
                 console.error('Failed to fetch user:', err)
                 error.value = 'Failed to fetch user profile'
@@ -79,6 +108,9 @@ export const useUserStore = defineStore('user', () => {
             } finally {
                 loading.value = false
             }
+        } else {
+            console.log("No token or device token found")
+            user.value = null
         }
     }
 
@@ -116,8 +148,7 @@ export const useUserStore = defineStore('user', () => {
         error,
         login,
         logout,
-        setUser,
-        setTokens,
+        checkAuth,
         fetchUser,
         updateProfile,
     }

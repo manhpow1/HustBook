@@ -9,7 +9,7 @@
 <script setup>
 import { ref } from 'vue'
 import { BookmarkIcon } from 'lucide-vue-next'
-import { useUserState } from '../../stores/userState'
+import { useUserStore } from '../../stores/userStore';
 import axios from 'axios'
 
 const props = defineProps({
@@ -23,7 +23,7 @@ const props = defineProps({
     }
 })
 
-const { token } = useUserState()
+const { token } = useUserStore()
 const isSaved = ref(props.initialSavedState)
 
 const toggleSave = async () => {

@@ -50,10 +50,6 @@ const { isLoading, errorMessage, successMessage, cooldownTime } = storeToRefs(au
 
 const phonenumber = ref('')
 const phoneError = ref('')
-const isLoading = ref(false)
-const successMessage = ref('')
-const errorMessage = ref('')
-const cooldownTime = ref(0)
 
 const isButtonDisabled = computed(() => isLoading.value || cooldownTime.value > 0)
 

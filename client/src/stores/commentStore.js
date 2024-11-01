@@ -3,8 +3,8 @@ import { ref } from 'vue';
 import { openDB } from 'idb';
 import apiService from '../services/api';
 import { handleError } from '../utils/errorHandler';
-import { database } from '../config/firebase';
-import { ref as dbRef, onChildAdded, off } from 'firebase/database';
+import { db } from '../config/firebase';
+import { collection, addDoc, onSnapshot, query, orderBy, limit } from 'firebase/firestore';
 
 export const useCommentStore = defineStore('comment', () => {
     const comments = ref([]);
@@ -47,15 +47,16 @@ export const useCommentStore = defineStore('comment', () => {
                 pageIndex.value += 1;
             }
 
-            const db = await dbPromise;
-            const tx = db.transaction('comments', 'readwrite');
-            fetchedComments.forEach(comment => tx.store.put(comment));
+            const idb = await dbPromise;
+            const tx = idb.transaction('comments', 'readwrite');
+            filteredComments.forEach(comment => tx.store.put(comment));
             await tx.done;
 
             return filteredComments;
         } catch (error) {
             console.error('Error in fetchComments:', error);
             handleError(error, router);
+            commentError.value = 'Failed to fetch comments';
             return [];
         } finally {
             loadingComments.value = false;
@@ -76,8 +77,11 @@ export const useCommentStore = defineStore('comment', () => {
             comments.value.unshift(newComment);
             console.debug('Updated comments in store:', comments.value);
 
-            const db = await dbPromise;
-            await db.add('comments', newComment);
+            const idb = await dbPromise;
+            await idb.add('comments', newComment);
+
+            // Add comment to Firestore
+            await addDoc(collection(db, 'comments', postId, 'commentList'), newComment);
 
             return newComment;
         } catch (error) {
@@ -91,7 +95,7 @@ export const useCommentStore = defineStore('comment', () => {
 
     const addOfflineComment = async (postId, content) => {
         const offlineComment = {
-            tempId: Date.now(),
+            tempId: Date.now().toString(),
             postId,
             content,
             createdAt: new Date().toISOString(),
@@ -99,29 +103,42 @@ export const useCommentStore = defineStore('comment', () => {
         };
         comments.value.unshift(offlineComment);
 
-        const db = await dbPromise;
-        await db.add('offline-comments', offlineComment);
+        const idb = await dbPromise;
+        await idb.add('offline-comments', offlineComment);
 
         return offlineComment;
     };
 
     const updateComment = async (postId, commentId, content) => {
-        const response = await apiService.updateComment(postId, commentId, content);
-        const index = comments.value.findIndex(c => c.id === commentId);
-        if (index !== -1) {
-            comments.value[index] = response.data;
+        try {
+            const response = await apiService.updateComment(postId, commentId, content);
+            const updatedComment = response.data;
+            const index = comments.value.findIndex(c => c.id === commentId);
+            if (index !== -1) {
+                comments.value[index] = updatedComment;
+            }
+            return updatedComment;
+        } catch (error) {
+            console.error('Failed to update comment:', error);
+            throw error;
         }
     };
 
     const deleteComment = async (postId, commentId) => {
-        await apiService.deleteComment(postId, commentId);
-        comments.value = comments.value.filter(c => c.id !== commentId);
+        try {
+            await apiService.deleteComment(postId, commentId);
+            comments.value = comments.value.filter(c => c.id !== commentId);
+        } catch (error) {
+            console.error('Failed to delete comment:', error);
+            throw error;
+        }
     };
 
     const resetComments = () => {
         comments.value = [];
         pageIndex.value = 0;
         hasMoreComments.value = true;
+        commentError.value = null;
     };
 
     const prefetchComments = async (postId) => {
@@ -131,21 +148,21 @@ export const useCommentStore = defineStore('comment', () => {
     };
 
     const syncOfflineComments = async () => {
-        const db = await dbPromise;
-        const offlineComments = await db.getAll('offline-comments');
-
+        const idb = await dbPromise;
+        const offlineComments = await idb.getAll('offline-comments');
         for (const comment of offlineComments) {
             try {
                 const response = await apiService.addComment(comment.postId, comment.content);
                 const syncedComment = response.data;
-
-                await db.delete('offline-comments', comment.tempId);
-                await db.add('comments', syncedComment);
+                await idb.delete('offline-comments', comment.tempId);
+                await idb.add('comments', syncedComment);
 
                 const index = comments.value.findIndex(c => c.tempId === comment.tempId);
                 if (index !== -1) {
                     comments.value[index] = syncedComment;
                 }
+                // Add synced comment to Firestore
+                await addDoc(collection(db, 'comments', comment.postId, 'commentList'), syncedComment);
             } catch (error) {
                 console.error('Failed to sync comment:', error);
             }
@@ -153,16 +170,22 @@ export const useCommentStore = defineStore('comment', () => {
     };
 
     const setupRealtimeComments = (postId) => {
-        const commentsRef = dbRef(database, `comments/${postId}`);
-        const callback = (snapshot) => {
-            const newComment = snapshot.val();
-            if (!comments.value.some(comment => comment.id === newComment.id)) {
-                comments.value.unshift(newComment);
-            }
-        };
-        onChildAdded(commentsRef, callback);
-
-        return () => off(commentsRef, 'child_added', callback);
+        const commentsRef = collection(db, 'comments', postId, 'commentList');
+        const q = query(commentsRef, orderBy('createdAt', 'desc'), limit(20));
+        const unsubscribe = onSnapshot(q, (snapshot) => {
+            snapshot.docChanges().forEach((change) => {
+                if (change.type === 'added') {
+                    const newComment = { id: change.doc.id, ...change.doc.data() };
+                    if (!comments.value.some(comment => comment.id === newComment.id)) {
+                        comments.value.unshift(newComment);
+                    }
+                }
+            });
+        }, (error) => {
+            console.error('Error in realtime comments:', error);
+            commentError.value = 'Failed to setup realtime comments';
+        });
+        return unsubscribe;
     };
 
     return {
