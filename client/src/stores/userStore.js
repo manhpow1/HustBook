@@ -78,6 +78,10 @@ export const useUserStore = defineStore('user', () => {
         user.value = userData
     }
 
+    function setLoggedIn(value) {
+        isLoggedIn.value = value
+    }
+
     function setTokens(newToken, newDeviceToken) {
         console.log("Setting tokens:", newToken, newDeviceToken)
         token.value = newToken
@@ -151,5 +155,6 @@ export const useUserStore = defineStore('user', () => {
         checkAuth,
         fetchUser,
         updateProfile,
+        setLoggedIn,
     }
 })

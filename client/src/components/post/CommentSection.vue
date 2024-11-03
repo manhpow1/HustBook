@@ -176,7 +176,7 @@ const onRetryLoadComments = async () => {
         }
 
         notificationStore.showNotification(t('retry'), 'error'); // Notify the user
-        await handleError(error, router, notificationStore); // Use the error handler
+        await handleError(error, router); // Use the error handler
     }
 };
 
@@ -217,7 +217,7 @@ const onAddComment = async () => {
                 isCommentSectionVisible.value = false;
                 return;
             }
-            await handleError(error, router, notificationStore);
+            await handleError(error, router);
         }
     } finally {
         isSubmitting.value = false;
@@ -249,7 +249,7 @@ const onUpdateComment = async (comment) => {
         await commentStore.updateComment(props.postId, comment.id, comment.content);
         notificationStore.showNotification(t('commentUpdated'), 'success');
     } catch (error) {
-        await handleError(error, router, notificationStore);;
+        await handleError(error, router);
     }
 };
 
@@ -258,7 +258,7 @@ const onDeleteComment = async (commentId) => {
         await commentStore.deleteComment(props.postId, commentId);
         notificationStore.showNotification(t('commentDeleted'), 'success');
     } catch (error) {
-        await handleError(error, router, notificationStore);;
+        await handleError(error, router);
     }
 };
 
@@ -285,7 +285,7 @@ const onLoadMoreComments = throttle(async () => {
     } catch (error) {
         console.error('Error loading more comments:', error);
         notificationStore.showNotification(t('loadMoreError'), 'error'); // Notify user
-        await handleError(error, router, notificationStore);; // Existing error handler
+        await handleError(error, router); // Existing error handler
     } finally {
         isLoadingMore.value = false;
         console.debug('Completed loading more comments.');

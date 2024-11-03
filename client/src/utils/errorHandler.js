@@ -1,4 +1,6 @@
-export async function handleError(error, router, notificationStore) {
+import { useNotificationStore } from '../stores/notificationStore'
+export async function handleError(error, router) {
+    const notificationStore = useNotificationStore();
     let message = 'An error occurred.';
 
     // Mapping of error codes to messages

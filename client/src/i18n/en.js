@@ -73,5 +73,8 @@ export default {
     commentsSyncedSuccessfully: "Comments synced successfully",
     failedToSyncComments: "Failed to sync comments. Please try again later.",
     commentSavedOffline: "Comment saved offline. It will be synced when you're back online.",
-    failedToSyncOfflineComments: "Failed to sync offline comments. Please try again later."
+    failedToSyncOfflineComments: "Failed to sync offline comments. Please try again later.",
+    network: 'Network error occurred',
+    unauthorized: 'Unauthorized access',
+    noMorePosts: 'No more posts available',
 }

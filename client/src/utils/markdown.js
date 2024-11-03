@@ -1,19 +1,16 @@
-import marked from 'marked'
-import DOMPurify from 'dompurify'
-
+import MarkdownIt from 'markdown-it';
+import DOMPurify from 'dompurify';
+const md = new MarkdownIt({
+    html: true,      
+    breaks: true,    
+    linkify: true,   
+});
 export function renderMarkdown(markdown) {
-    // Set up marked options
-    marked.setOptions({
-        gfm: true,
-        breaks: true,
-        sanitize: false, // We'll use DOMPurify for sanitization
-    })
-
-    // Parse markdown to HTML
-    const rawHtml = marked(markdown)
+    // Parse Markdown to HTML
+    const rawHtml = md.render(markdown);
 
     // Sanitize the HTML to prevent XSS attacks
-    const cleanHtml = DOMPurify.sanitize(rawHtml)
+    const cleanHtml = DOMPurify.sanitize(rawHtml);
 
-    return cleanHtml
+    return cleanHtml;
 }

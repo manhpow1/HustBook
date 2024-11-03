@@ -51,7 +51,8 @@ import { useI18n } from 'vue-i18n';
 import { ThumbsUpIcon } from 'lucide-vue-next';
 import { useUserStore } from '../../stores/userStore';
 import { useNotificationStore } from '../../stores/notificationStore';
-import { formatDate, renderMarkdown } from '../../utils/helpers';
+import { formatDate} from '../../utils/helpers';
+import { renderMarkdown } from '../../utils/markdown';
 import { debounce } from 'lodash-es';
 import ConfirmDialog from './ConfirmDialog.vue';
 

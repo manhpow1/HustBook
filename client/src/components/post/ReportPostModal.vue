@@ -153,7 +153,7 @@ const submitReport = async () => {
 
         // Ensure handleError is always called
         console.log('[DEBUG] Calling handleError with:', error);
-        handleError(error, router);
+        await handleError(error, router);
     } finally {
         isSubmitting.value = false;
     }

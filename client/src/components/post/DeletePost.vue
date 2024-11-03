@@ -108,10 +108,10 @@ const confirmDelete = async () => {
                 router.push({ name: 'Home' })
             }
         } else {
-            handleError({ response: { data: response.data } }, router)
+            await handleError({ response: { data: response.data } }, router)
         }
     } catch (error) {
-        handleError(error, router)
+        await handleError(error, router)
     } finally {
         isDeleting.value = false
     }

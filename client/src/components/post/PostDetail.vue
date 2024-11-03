@@ -177,7 +177,7 @@ const deletePost = async () => {
             await postStore.deletePost(post.value.id)
             router.push({ name: 'Login' })
         } catch (error) {
-            handleError(error)
+            await handleError(error, router)
         }
     }
     showDeletePostModal.value = false

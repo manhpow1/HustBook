@@ -4,6 +4,7 @@ import apiService from '../services/api'
 import { formatNumber } from '../utils/numberFormat'
 import { handleError } from '../utils/errorHandler'
 import { API_ENDPOINTS } from '../config/api'
+import { useRouter } from 'vue-router'
 
 export const usePostStore = defineStore('post', () => {
     const posts = ref([])
@@ -16,6 +17,8 @@ export const usePostStore = defineStore('post', () => {
     const hasMoreComments = ref(true)
     const pageIndex = ref(0)
     const hasMorePosts = ref(true)
+    const lastId = ref(null)
+    const router = useRouter()
 
     const formattedLikes = computed(() => {
         const likes = currentPost.value?.likes || 0
@@ -44,7 +47,7 @@ export const usePostStore = defineStore('post', () => {
                 throw new Error(response.data.message || 'Failed to load posts')
             }
         } catch (err) {
-            handleError(err)
+            await handleError(err, router)
             error.value = 'Failed to load posts'
         } finally {
             loading.value = false
@@ -100,7 +103,7 @@ export const usePostStore = defineStore('post', () => {
             await apiService.likePost(postId)
         } catch (err) {
             console.error('Error toggling like:', err)
-            handleError(err)
+            await handleError(err, router)
 
             // Revert the UI update on failure
             const post = posts.value.find(p => p.id === postId)
@@ -138,7 +141,7 @@ export const usePostStore = defineStore('post', () => {
             }
         } catch (error) {
             commentError.value = error.message;
-            handleError(error);
+            await handleError(error, router);
         } finally {
             loadingComments.value = false;
         }

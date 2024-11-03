@@ -70,6 +70,9 @@ const messages = {
         postNotFound: 'The post you are looking for does not exist.',
         characterCount: 'Characters: {count} / {max}',
         commentTooLong: 'Comment is too long. Please keep it under 1000 characters.',
+        network: 'Network error occurred',
+        unauthorized: 'Unauthorized access',
+        noMorePosts: 'No more posts available',
     },
 };
 

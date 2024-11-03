@@ -55,7 +55,7 @@ export const useCommentStore = defineStore('comment', () => {
             return filteredComments;
         } catch (error) {
             console.error('Error in fetchComments:', error);
-            handleError(error, router);
+            await handleError(error, router);
             commentError.value = 'Failed to fetch comments';
             return [];
         } finally {

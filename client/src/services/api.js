@@ -2,9 +2,10 @@ import axios from 'axios';
 import { API_ENDPOINTS } from '../config/api';
 import axiosInstance from './axiosInstance';
 import { handleError } from '../utils/errorHandler'; // Ensure handleError is imported
+import router from '../router';
 
 const api = axios.create({
-    baseURL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api'
+    baseURL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api',
 });
 
 // Initialize auth headers
@@ -27,7 +28,7 @@ api.interceptors.response.use(
     response => response,
     error => {
         try {
-            handleError(error);
+            handleError(error, router);
         } catch (e) {
             console.error('Error in handleError:', e);
         }
@@ -35,21 +36,13 @@ api.interceptors.response.use(
     }
 );
 
-// Function to set authentication headers
-const setAuthHeaders = (token, deviceToken) => {
-    authHeaders = {
-        'Authorization': token ? `Bearer ${token}` : undefined,
-        'X-Device-Token': deviceToken || undefined,
-    };
-};
-
 const apiService = {
     // Generic GET method
     async get(url, config = {}) {
         try {
             return await api.get(url, config);
         } catch (error) {
-            handleError(error);
+            handleError(error, router);
             throw error;
         }
     },
@@ -59,7 +52,7 @@ const apiService = {
         try {
             return await api.post(url, data, config);
         } catch (error) {
-            handleError(error);
+            handleError(error, router);
             throw error;
         }
     },
@@ -69,7 +62,7 @@ const apiService = {
         try {
             return await api.put(url, data, config);
         } catch (error) {
-            handleError(error);
+            handleError(error, router);
             throw error;
         }
     },
@@ -79,7 +72,7 @@ const apiService = {
         try {
             return await api.delete(url, config);
         } catch (error) {
-            handleError(error);
+            handleError(error, router);
             throw error;
         }
     },
@@ -179,7 +172,12 @@ const apiService = {
     },
 
     // Expose the setAuthHeaders function
-    setAuthHeaders,
+    setAuthHeaders(token, deviceToken) {
+        authHeaders = {
+            'Authorization': token ? `Bearer ${token}` : undefined,
+            'X-Device-Token': deviceToken || undefined,
+        };
+    },
 };
 
 export default apiService;
