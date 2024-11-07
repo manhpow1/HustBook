@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
-import { ref, computed } from 'vue'
-import apiService from '../services/api' // Import as default
+import { ref, computed, watch } from 'vue'
+import apiService from '../services/api'
 
 export const useUserStore = defineStore('user', () => {
     const user = ref(null)
@@ -15,25 +15,27 @@ export const useUserStore = defineStore('user', () => {
     apiService.setAuthHeaders(token.value, deviceToken.value)
 
     async function checkAuth() {
-        console.log("Checking authentication")
+        console.log("Checking authentication");
         if (token.value && deviceToken.value) {
             try {
-                const response = await apiService.authCheck()
-                console.log("Auth check response:", response.data)
+                const response = await apiService.authCheck();
+                console.log("Auth check response:", response.data);
                 if (response.data.isAuthenticated) {
-                    await fetchUser()
+                    await fetchUser();
+                    console.log("User authenticated, user data:", user.value);
                 } else {
-                    logout()
+                    console.log("User not authenticated. Logging out.");
+                    logout();
                 }
             } catch (error) {
-                console.error('Auth check failed:', error)
-                logout()
+                console.error('Auth check failed:', error);
+                logout();
             }
         } else {
-            console.log("No token or device token found")
-            user.value = null
+            console.log("No token or device token found. Setting user to null.");
+            user.value = null;
         }
-        console.log("Final authentication state:", isLoggedIn.value)
+        console.log("Final authentication state:", isLoggedIn.value); // Log `isLoggedIn` at end of check
     }
 
     async function login(phonenumber, password) {
@@ -74,12 +76,8 @@ export const useUserStore = defineStore('user', () => {
         }
     }
 
-    function setUser(userData) {
-        user.value = userData
-    }
-
-    function setLoggedIn(value) {
-        isLoggedIn.value = value
+    function setUser(newUser) {
+        user.value = newUser;
     }
 
     function setTokens(newToken, newDeviceToken) {
@@ -142,6 +140,10 @@ export const useUserStore = defineStore('user', () => {
         }
     }
 
+    watch(isLoggedIn, (newVal, oldVal) => {
+        console.debug(`isLoggedIn changed from ${oldVal} to ${newVal}`);
+    });
+
     return {
         user,
         token,
@@ -155,6 +157,6 @@ export const useUserStore = defineStore('user', () => {
         checkAuth,
         fetchUser,
         updateProfile,
-        setLoggedIn,
+        setUser,
     }
 })

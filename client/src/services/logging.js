@@ -25,10 +25,12 @@ class Logger {
             ...meta
         };
 
-        if (process.env.NODE_ENV === 'development') {
+        // Log to console in development and test modes
+        if (process.env.NODE_ENV === 'development' || process.env.NODE_ENV === 'test') {
             this.logToConsole(level, logEntry);
         }
 
+        // Send to logging service only in production
         if (process.env.NODE_ENV === 'production') {
             await this.sendToLoggingService(logEntry);
         }

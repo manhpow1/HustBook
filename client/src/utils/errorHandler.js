@@ -1,9 +1,6 @@
-import { useNotificationStore } from '../stores/notificationStore'
-export async function handleError(error, router) {
-    const notificationStore = useNotificationStore();
-    let message = 'An error occurred.';
+import logger from '../services/logging';
 
-    // Mapping of error codes to messages
+function getErrorMessage(code) {
     const errorMessages = {
         9992: 'Post does not exist.',
         9993: 'Verification code is incorrect.',
@@ -26,82 +23,73 @@ export async function handleError(error, router) {
         1011: 'Could not publish this post.',
         1012: 'Limited access.',
     };
+    return errorMessages[code] || 'An error occurred.';
+}
 
-    // Debugging error message decision
-    console.debug('Evaluating error object for message:', JSON.stringify(error, null, 2));
+function showErrorNotification(notificationStore, message) {
+    notificationStore.showNotification(message, 'error');
+}
 
+async function redirectToLogin(router) {
+    try {
+        await router.push('/login');
+        logger.info('Redirected to login page');
+    } catch (error) {
+        logger.error('Router push failed', { error });
+    }
+}
+
+export async function handleError(error, router) {
+    const { useNotificationStore } = await import('../stores/notificationStore');
+    const { useUserStore } = await import('../stores/userStore');
+    console.log("Entering handleError");
+    const notificationStore = useNotificationStore();
+    const userStore = useUserStore();
+    let message = 'An error occurred.';
+    const code = error.response?.data?.code;
+    const numericCode = parseInt(code, 10);
+
+    // Check if there's an error code in the response
     if (error.response?.data?.code) {
         const code = error.response.data.code;
-        console.debug(`Error Code Found: ${code}`);
+        message = getErrorMessage(code);
+        logger.debug('Error Code Found', { code, message });
 
-        // Use the predefined message for the error code
-        message = errorMessages[code] || message;
-
-        // Handle specific error codes that require redirection to /login
-        if ([9998, 9999, 1008, 1009].includes(code)) {
-            console.debug(`Error code ${code} detected. Redirecting to /login...`);
+        // Redirect for security-sensitive errors and invalid tokens
+        if ([9998, 9999, 1008, 1009, 9995].includes(numericCode) || error.response?.status === 401) {
+            console.debug("Setting user to null due to invalid token or security error");
+            userStore.setUser(null);
+            console.debug("User value after setUser(null):", userStore.user);
+            console.debug("isLoggedIn state after setting user to null:", userStore.isLoggedIn);
             notificationStore.showNotification(message, 'error');
-            try {
-                await router.push('/login');
-                console.debug('Redirection to /login completed.');
-            } catch (routerError) {
-                console.error('Router push failed:', routerError);
-            }
-            return; // Stop further processing after redirection
+            await redirectToLogin(router);
+            return;
         }
 
-        // Handle database connection error
-        if (code === 1001) {
+        // Handle network and connectivity issues separately
+        if (code === 1001 || error.message?.includes('Network Error')) {
             message = 'Cannot connect to the Internet.';
-            console.debug(`Error code ${code} detected. Displaying message: ${message}`);
-            notificationStore.showNotification(message, 'error');
-            return; // Stop further processing
+        } else if (code === 1010) {
+            message = 'This action has already been performed.';
         }
 
-        // Handle action already performed (e.g., liking a post twice)
-        if (code === 1010) {
-            console.debug('Action has already been performed by the user.');
-            notificationStore.showNotification(message, 'error');
-            return; // Stop further processing
-        }
-
-        // Handle other specific error codes as needed
-        // Add additional conditions here if necessary
     } else if (error.message) {
-        console.debug(`Error Message Found: ${error.message}`);
-        if (error.message.includes('Network Error')) {
-            message = 'Cannot connect to the Internet.';
-        } else {
-            message = error.message;
-        }
-        notificationStore.showNotification(message, 'error');
-        return; // Stop further processing
-    } else {
-        console.debug('Unexpected error structure received.', error);
-        notificationStore.showNotification(message, 'error');
-        return; // Stop further processing
+        // Handle cases where error has a direct message but no specific code
+        logger.debug('Direct error message found', { errorMessage: error.message });
+        message = error.message.includes('Network Error') ? 'Cannot connect to the Internet.' : error.message;
     }
 
-    // Display the notification
-    console.debug(`Displaying notification: "${message}" with type "error"`);
-    notificationStore.showNotification(message, 'error');
+    // Display the error message as a notification
+    showErrorNotification(notificationStore, message);
+    logger.error('Error occurred', { message, error });
 
-    // Handle redirection based on HTTP status codes if necessary
-    if (error.response?.status === 401) {
-        console.debug('Status 401 detected. Redirecting to /login...');
-        try {
-            await router.push('/login');
-            console.debug('Redirection to /login completed.');
-        } catch (routerError) {
-            console.error('Router push failed:', routerError);
-        }
-    } else if (error.response?.status === 403) {
-        console.debug('Forbidden access detected.');
-        // You can add additional handling for status 403 if needed
+    // Additional handling for forbidden access or unclassified errors
+    if (error.response?.status === 403) {
+        logger.warn('Forbidden access detected');
     } else if (!error.response) {
-        console.debug('Network error detected.');
-        // Network errors are already handled above
+        // No response indicates a network-related issue
+        logger.debug('Network error detected');
     } else {
-        console.debug('No redirection needed. Status:', error.response?.status);
+        logger.info('No redirection needed', { status: error.response.status });
     }
 }

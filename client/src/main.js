@@ -3,14 +3,13 @@ import { createHead } from '@unhead/vue'
 import { createI18n } from 'vue-i18n'
 import App from './App.vue'
 import router from './router'
-import { createPinia } from 'pinia'
+import pinia from './stores/pinia'
 import 'vue-virtual-scroller/dist/vue-virtual-scroller.css'
 import './styles/index.css'
 import { useUserStore } from './stores/userStore'
 import en from './i18n/en'
 
 const messages = { en };
-const pinia = createPinia();
 
 const i18n = createI18n({
     locale: 'en',

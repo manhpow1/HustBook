@@ -104,7 +104,6 @@ const apiService = {
             details,
         });
     },
-
     getListPosts(params = {}) {
         return this.get(API_ENDPOINTS.GET_LIST_POSTS, { params });
     },

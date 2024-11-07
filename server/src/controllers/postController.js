@@ -1,5 +1,5 @@
 const postService = require('../services/postService');
-const { validateCreatePost, validateUpdatePost, validateComment, validateLike, validateGetPost, validateGetPostComments, validateGetUserPosts, validateReportPost, } = require('../validators/postValidator');
+const { validateCreatePost, validateUpdatePost, validateComment, validateLike, validateGetPost, validateGetPostComments, validateGetUserPosts, validateReportPost, validateGetListPosts } = require('../validators/postValidator');
 const { runTransaction } = require('../config/database');
 const { sendResponse, handleError } = require('../utils/responseHandler');
 const logger = require('../utils/logger');

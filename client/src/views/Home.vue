@@ -110,13 +110,15 @@ const postStore = usePostStore()
 const userStore = useUserStore()
 
 const loadMorePosts = () => {
-  postStore.fetchPosts()
-}
+  console.log("Load more posts triggered");
+  postStore.fetchPosts({}, router);
+};
 
 const retryFetchPosts = () => {
-  postStore.resetPosts()
-  postStore.fetchPosts()
-}
+  console.log("Retry fetching posts triggered");
+  postStore.resetPosts();
+  postStore.fetchPosts({}, router);
+};
 
 const handlePostCreated = (newPost) => {
   postStore.posts.unshift(newPost)
@@ -127,12 +129,13 @@ const isImage = (url) => {
 }
 
 const likePost = async (post) => {
-  await postStore.likePost(post.id)
-}
+  console.log(`Like post triggered for post ID: ${post.id}`);
+  await postStore.toggleLike(post.id, router);
+};
 
 const showComments = (postId) => {
-  console.log(`Show comments for post ${postId}`)
-}
+  console.log(`Show comments triggered for post ID: ${postId}`);
+};
 
 const formatDate = (date) => {
   return formatDistanceToNow(new Date(date), { addSuffix: true })
@@ -158,19 +161,29 @@ const sanitizeUrl = (url) => {
 }
 
 onMounted(() => {
+  console.log("Mounted: Checking if user is logged in and fetching posts if necessary");
+  console.log("userStore.isLoggedIn:", userStore.isLoggedIn);
+  console.log("postStore.posts.length:", postStore.posts.length);
+
   if (userStore.isLoggedIn && postStore.posts.length === 0) {
-    postStore.fetchPosts()
+    console.log("User is logged in, fetching posts...");
+    postStore.fetchPosts({}, router);
+  } else {
+    console.log("User is not logged in or posts are already loaded.");
   }
-})
+});
 
 watch(() => userStore.isLoggedIn, (newValue) => {
+  console.log("User login status changed:", newValue);
   if (newValue) {
-    postStore.resetPosts()
-    postStore.fetchPosts()
+    console.log("User logged in. Resetting and fetching posts.");
+    postStore.resetPosts();
+    postStore.fetchPosts({}, router);
   } else {
-    postStore.resetPosts()
+    console.log("User logged out. Resetting posts.");
+    postStore.resetPosts();
   }
-})
+});
 </script>
 
 <style scoped>
