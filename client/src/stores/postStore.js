@@ -282,31 +282,30 @@ export const usePostStore = defineStore('post', () => {
 
         // Ensure 'like' field is a non-negative integer
         post.like = Number.isInteger(post.like) && post.like >= 0 ? post.like : 0;
-
         // Ensure 'comment' field is a non-negative integer
         post.comment = Number.isInteger(post.comment) && post.comment >= 0 ? post.comment : 0;
-
         // Ensure 'is_liked' is '0' or '1' as strings
         post.is_liked = post.is_liked === '1' ? '1' : '0';
-
         // Ensure 'can_comment' is '0' or '1' as strings
         post.can_comment = post.can_comment === '1' ? '1' : '0';
-
         // Ensure 'in_campaign' is '0' or '1' as strings
         if (post.in_campaign !== '0' && post.in_campaign !== '1') {
             post.in_campaign = '0';
         }
-
         // If 'in_campaign' is '1', ensure 'campaign_id' is a non-empty string
         if (post.in_campaign === '1') {
             post.campaign_id = typeof post.campaign_id === 'string' && post.campaign_id.trim() !== '' ? post.campaign_id : '';
         }
-
+        if (!post || (!post.content && (!post.image || !post.video))) {
+            console.debug('Excluding post due to missing content or media:', post);
+            return null;
+        }
         if (containsInappropriateContent(post.content)) {
             // Exclude the post if it contains inappropriate content
             return null;
         }
         // Return the validated and processed post
+        console.debug('Processed and validated post:', post);
         return post;
     }
 

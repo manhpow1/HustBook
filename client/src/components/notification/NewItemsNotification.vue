@@ -1,42 +1,56 @@
 <template>
     <div v-if="newItemsCount > 0"
-        class="fixed top-4 right-4 bg-blue-500 text-white p-2 rounded-md cursor-pointer shadow-lg"
-        @click="handleNotificationClick">
+        class="fixed top-4 right-4 bg-blue-500 text-white p-2 rounded-md cursor-pointer shadow-lg transition-transform duration-300"
+        @click="handleNotificationClick" tabindex="0" aria-live="polite" role="alert">
         {{ newItemsCount }} new item{{ newItemsCount !== 1 ? 's' : '' }} available. Click to refresh.
     </div>
 </template>
 
 <script setup>
-import { onMounted, onUnmounted } from 'vue'
+import { onMounted, onUnmounted } from 'vue';
 import { useNotificationStore } from '../../stores/notificationStore';
 import { usePostStore } from '../../stores/postStore';
-import { storeToRefs } from 'pinia'
+import { storeToRefs } from 'pinia';
 
-const notificationStore = useNotificationStore()
-const postStore = usePostStore()
-const { newItemsCount } = storeToRefs(notificationStore)
+const notificationStore = useNotificationStore();
+const postStore = usePostStore();
+const { newItemsCount } = storeToRefs(notificationStore);
 
-const checkInterval = 60000 // Check every minute
-let intervalId
+const NEW_ITEMS_CHECK_INTERVAL = 60000;
+let intervalId;
 
 const checkForNewItems = () => {
-    const lastPostId = postStore.posts[0]?.id // Assuming posts are sorted with newest first
+    console.log('Checking for new items...');
+    const lastPostId = postStore.posts?.[0]?.id; // Added optional chaining to postStore.posts
     if (lastPostId) {
-        notificationStore.checkNewItems(lastPostId)
+        console.log(`Last post ID: ${lastPostId}`);
+        notificationStore.checkNewItems(lastPostId, postStore.categoryId)
+            .then(() => {
+                console.log(`New items count updated: ${newItemsCount.value}`);
+            })
+            .catch(error => {
+                console.error('Error fetching new items:', error);
+            });
+    } else {
+        console.log('No posts found. Skipping new items check.');
     }
-}
+};
 
-const handleNotificationClick = () => {
-    postStore.fetchPosts() // This should be modified to fetch only new posts
-    notificationStore.resetNewItemsCount()
-}
+const handleNotificationClick = async () => {
+    console.log('Notification clicked. Fetching new posts...');
+    await postStore.fetchPosts();
+    notificationStore.resetNewItemsCount();
+    console.log('New items count reset after fetching posts.');
+};
 
 onMounted(() => {
-    checkForNewItems() // Check immediately on mount
-    intervalId = setInterval(checkForNewItems, checkInterval)
-})
+    console.log('Mounted NewItemsNotification.vue');
+    checkForNewItems();
+    intervalId = setInterval(checkForNewItems, NEW_ITEMS_CHECK_INTERVAL);
+});
 
 onUnmounted(() => {
-    clearInterval(intervalId)
-})
+    console.log('Unmounting NewItemsNotification.vue, clearing interval.');
+    if (intervalId) clearInterval(intervalId);
+});
 </script>
