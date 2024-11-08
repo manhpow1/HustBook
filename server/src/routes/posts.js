@@ -6,7 +6,7 @@ const postController = require('../controllers/postController');
 const { authenticateToken } = require('../middleware/auth');
 const upload = multer({
     dest: 'uploads/',
-    limits: { fileSize: 5 * 1024 * 1024 },
+    limits: { fileSize: 10 * 1024 * 1024 },
 });
 const reportLimiter = rateLimit({
     windowMs: 15 * 60 * 1000, // 15 minutes

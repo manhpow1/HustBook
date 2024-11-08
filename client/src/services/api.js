@@ -156,6 +156,10 @@ const apiService = {
         return this.post(API_ENDPOINTS.CHECK_VERIFY_CODE, { phonenumber, code_verify: code });
     },
 
+    checkNewItems(lastId, categoryId = '0') {
+        return this.post(API_ENDPOINTS.CHECK_NEW_ITEM, { last_id: lastId, category_id: categoryId });
+    },
+
     // File upload
     upload(url, formData, onUploadProgress) {
         return api.post(url, formData, {

@@ -1,5 +1,7 @@
 const express = require('express');
 const router = express.Router();
+const notificationController = require('../controllers/notificationController.js');
+const { authenticateToken } = require('../middleware/auth');
 
 router.get('/get_push_settings', (req, res) => {
   // Implementation for getting push notification settings
@@ -9,9 +11,7 @@ router.put('/set_push_settings', (req, res) => {
   // Implementation for updating push notification settings
 });
 
-router.get('/check_new_item', (req, res) => {
-  // Implementation for checking new items
-});
+router.post('/check_new_item', authenticateToken, notificationController.checkNewItem);
 
 router.get('/get_notification', (req, res) => {
   // Implementation for getting notifications

@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { flushPromises } from '@vue/test-utils'
-import { createPinia, setActivePinia } from 'pinia'
+import { setActivePinia } from 'pinia'
 import { createRouter, createWebHistory } from 'vue-router'
 import Home from '../views/Home.vue'
 import { usePostStore } from '../stores/postStore'

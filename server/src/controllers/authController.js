@@ -4,7 +4,6 @@ const { generateRandomCode, formatPhoneNumber } = require('../utils/helpers');
 const User = require('../models/User');
 const { sendResponse, handleError } = require('../utils/responseHandler');
 const logger = require('../utils/logger');
-const cache = require('../utils/redis');
 
 const signup = async (req, res, next) => {
     try {

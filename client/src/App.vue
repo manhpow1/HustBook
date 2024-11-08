@@ -1,5 +1,5 @@
 <template>
-  <div id="app" class="font-sans">
+  <div id="app" class="font-sans min-h-screen flex flex-col">
     <keep-alive>
       <ErrorBoundary component-name="App">
         <Suspense>
@@ -13,15 +13,14 @@
             </Layout>
           </template>
           <template #fallback>
-            <div class="loading">
+            <div class="loading flex items-center justify-center h-screen">
               <LoaderIcon class="animate-spin h-10 w-10 text-indigo-600" />
-              <p>Loading...</p>
+              <p class="ml-2 text-lg font-medium text-gray-700">Loading...</p>
             </div>
           </template>
         </Suspense>
       </ErrorBoundary>
     </keep-alive>
-
   </div>
 </template>
 
@@ -68,11 +67,16 @@ onMounted(() => {
 </script>
 
 <style scoped>
+#app {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  @apply bg-gray-100;
+}
+
 .loading {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  height: 100vh;
+  @apply flex flex-col items-center justify-center min-h-screen;
 }
 </style>
