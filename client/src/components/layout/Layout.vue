@@ -11,10 +11,7 @@
             <div class="hidden sm:block sm:ml-6">
               <div class="flex space-x-4">
                 <div class="relative">
-                  <input type="text" id="search-input" name="search" placeholder="Search HUSTBOOK" autocomplete="off"
-                    class="w-64 px-4 py-2 rounded-full bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500" />
-                  <label for="search-input" class="sr-only">Search HUSTBOOK</label>
-                  <SearchIcon class="absolute right-3 top-2.5 h-5 w-5 text-gray-400" aria-hidden="true" />
+                  <SearchPosts />
                 </div>
               </div>
             </div>
@@ -149,6 +146,7 @@ import { useMenuState } from '../../composables/useMenuState'
 import LogoutButton from '../auth/Logout.vue'
 import { navItems } from '../../config/navigation'
 import { useHead } from '@unhead/vue'
+import SearchPosts from '../search/SearchPosts.vue'
 
 const createAsyncComponent = (loader) => defineAsyncComponent({
   loader,
@@ -162,7 +160,6 @@ const HomeIcon = createAsyncComponent(() => import('lucide-vue-next/dist/esm/ico
 const UserIcon = createAsyncComponent(() => import('lucide-vue-next/dist/esm/icons/user'))
 const UsersIcon = createAsyncComponent(() => import('lucide-vue-next/dist/esm/icons/users'))
 const MessageCircleIcon = createAsyncComponent(() => import('lucide-vue-next/dist/esm/icons/message-circle'))
-const SearchIcon = createAsyncComponent(() => import('lucide-vue-next/dist/esm/icons/search'))
 const MenuIcon = createAsyncComponent(() => import('lucide-vue-next/dist/esm/icons/menu'))
 const XIcon = createAsyncComponent(() => import('lucide-vue-next/dist/esm/icons/x'))
 const FacebookIcon = createAsyncComponent(() => import('lucide-vue-next/dist/esm/icons/facebook'))

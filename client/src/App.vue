@@ -5,6 +5,7 @@
         <Suspense>
           <template #default>
             <Layout>
+              <NewItemsNotification />
               <router-view v-slot="{ Component }">
                 <keep-alive>
                   <component :is="Component" />
@@ -32,6 +33,7 @@ import { LoaderIcon } from 'lucide-vue-next'
 import { useRouter } from 'vue-router'
 import { useUserStore } from './stores/userStore'
 import { useHead } from '@unhead/vue'
+import NewItemsNotification from './components/notification/NewItemsNotification.vue'
 
 const router = useRouter()
 const userStore = useUserStore()

@@ -28,4 +28,6 @@ export const API_ENDPOINTS = {
     // User-Specific Posts
     GET_USER_POSTS: (userId) => `${API_BASE_URL}/posts/user/${userId}`,
     CHECK_NEW_ITEM: `${API_BASE_URL}/check_new_item`,
+
+    SEARCH: '/search',
 };

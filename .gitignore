@@ -3,9 +3,9 @@ node_modules
 .DS_Store
 server/serviceAccountKey.json
 /server/uploads
-repopack-output.txt
-repopack.config.json
-.repopackignore
+repomix-output.txt
+repomix.config.json
+.repomixignore
 server/config/production.json
 server/logs
 /server/logs

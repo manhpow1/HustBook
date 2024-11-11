@@ -160,6 +160,10 @@ const apiService = {
         return this.post(API_ENDPOINTS.CHECK_NEW_ITEM, { last_id: lastId, category_id: categoryId });
     },
 
+    search(keyword, user_id, index = 0, count = 20) {
+        return this.post(API_ENDPOINTS.SEARCH, { keyword, user_id, index, count });
+    },
+
     // File upload
     upload(url, formData, onUploadProgress) {
         return api.post(url, formData, {
