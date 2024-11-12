@@ -26,6 +26,7 @@
     "firebase": "^10.14.1",
     "flush-promises": "^1.0.2",
     "idb": "^8.0.0",
+    "imask": "^7.6.1",
     "lodash-es": "^4.17.21",
     "lucide-vue-next": "^0.441.0",
     "markdown-it": "^14.1.0",

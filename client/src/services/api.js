@@ -1,80 +1,22 @@
-import axios from 'axios';
+import axiosInstance, { setAuthHeaders } from './axiosInstance';
 import { API_ENDPOINTS } from '../config/api';
-import axiosInstance from './axiosInstance';
-import { handleError } from '../utils/errorHandler'; // Ensure handleError is imported
-import router from '../router';
-
-const api = axios.create({
-    baseURL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api',
-});
-
-// Initialize auth headers
-let authHeaders = {};
-
-// Request interceptor to set auth headers
-api.interceptors.request.use(config => {
-    if (authHeaders.Authorization) {
-        config.headers['Authorization'] = authHeaders.Authorization;
-    }
-
-    if (authHeaders['X-Device-Token']) {
-        config.headers['X-Device-Token'] = authHeaders['X-Device-Token'];
-    }
-    return config;
-});
-
-// Response interceptor to handle errors
-api.interceptors.response.use(
-    response => response,
-    error => {
-        try {
-            handleError(error, router);
-        } catch (e) {
-            console.error('Error in handleError:', e);
-        }
-        return Promise.reject(error);
-    }
-);
 
 const apiService = {
     // Generic GET method
-    async get(url, config = {}) {
-        try {
-            return await api.get(url, config);
-        } catch (error) {
-            handleError(error, router);
-            throw error;
-        }
+    get(url, config = {}) {
+        return axiosInstance.get(url, config);
     },
 
-    // Generic POST method
-    async post(url, data, config = {}) {
-        try {
-            return await api.post(url, data, config);
-        } catch (error) {
-            handleError(error, router);
-            throw error;
-        }
+    post(url, data, config = {}) {
+        return axiosInstance.post(url, data, config);
     },
 
-    // Generic PUT method
-    async put(url, data, config = {}) {
-        try {
-            return await api.put(url, data, config);
-        } catch (error) {
-            handleError(error, router);
-            throw error;
-        }
+    put(url, data, config = {}) {
+        return axiosInstance.put(url, data, config);
     },
 
-    // Generic DELETE method
-    async delete(url, config = {}) {
-        try {
-            return await api.delete(url, config);
-        } catch (error) {
-            handleError(error, router);
-            throw error;
-        }
+    delete(url, config = {}) {
+        return axiosInstance.delete(url, config);
     },
 
     // Post-related API calls
@@ -91,19 +33,20 @@ const apiService = {
     },
 
     updatePost(postId, postData) {
-        return this.put(`${API_ENDPOINTS.UPDATE_POST}/${postId}`, postData);
+        return this.put(API_ENDPOINTS.UPDATE_POST(postId), postData);
     },
 
     deletePost(postId) {
-        return this.delete(`${API_ENDPOINTS.DELETE_POST}/${postId}`);
+        return this.delete(API_ENDPOINTS.DELETE_POST(postId));
     },
 
     reportPost(postId, reason, details) {
-        return axiosInstance.post(API_ENDPOINTS.REPORT_POST(postId), {
+        return this.post(API_ENDPOINTS.REPORT_POST(postId), {
             reason,
             details,
         });
     },
+
     getListPosts(params = {}) {
         return this.get(API_ENDPOINTS.GET_LIST_POSTS, { params });
     },
@@ -113,26 +56,9 @@ const apiService = {
         return this.post(API_ENDPOINTS.ADD_COMMENT(postId), { content });
     },
 
-    updateComment(id, data) {
-        return this.put(`${API_ENDPOINTS.UPDATE_COMMENT}/${id}`, data);
-    },
-
-    deleteComment(id) {
-        return this.delete(`${API_ENDPOINTS.DELETE_COMMENT}/${id}`);
-    },
-
     getComments(postId, index = 0, count = 10) {
-        const url = API_ENDPOINTS.GET_COMMENTS(postId, index, count);
-        return this.get(url);
-    },
-
-    // User-related API calls
-    getUserProfile() {
-        return this.get(API_ENDPOINTS.GET_USER_PROFILE);
-    },
-
-    updateUserProfile(userData) {
-        return this.put(API_ENDPOINTS.UPDATE_USER_PROFILE, userData);
+        const url = API_ENDPOINTS.GET_COMMENTS(postId);
+        return this.get(url, { params: { index, count } });
     },
 
     // Auth-related API calls
@@ -141,7 +67,7 @@ const apiService = {
     },
 
     register(userData) {
-        return this.post(API_ENDPOINTS.REGISTER, userData);
+        return this.post(API_ENDPOINTS.SIGNUP, userData);
     },
 
     logout() {
@@ -153,15 +79,26 @@ const apiService = {
     },
 
     checkVerifyCode(phonenumber, code) {
-        return this.post(API_ENDPOINTS.CHECK_VERIFY_CODE, { phonenumber, code_verify: code });
+        return this.post(API_ENDPOINTS.CHECK_VERIFY_CODE, {
+            phonenumber,
+            code_verify: code,
+        });
     },
 
     checkNewItems(lastId, categoryId = '0') {
-        return this.post(API_ENDPOINTS.CHECK_NEW_ITEM, { last_id: lastId, category_id: categoryId });
+        return this.post(API_ENDPOINTS.CHECK_NEW_ITEM, {
+            last_id: lastId,
+            category_id: categoryId,
+        });
     },
 
     search(keyword, user_id, index = 0, count = 20) {
-        return this.post(API_ENDPOINTS.SEARCH, { keyword, user_id, index, count });
+        return this.post(API_ENDPOINTS.SEARCH, {
+            keyword,
+            user_id,
+            index,
+            count,
+        });
     },
 
     // File upload
@@ -169,22 +106,18 @@ const apiService = {
         return api.post(url, formData, {
             headers: {
                 'Content-Type': 'multipart/form-data',
-                'Authorization': authHeaders.Authorization
             },
             onUploadProgress: (progressEvent) => {
-                const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+                const percentCompleted = Math.round(
+                    (progressEvent.loaded * 100) / progressEvent.total
+                );
                 onUploadProgress(percentCompleted);
-            }
+            },
         });
     },
 
     // Expose the setAuthHeaders function
-    setAuthHeaders(token, deviceToken) {
-        authHeaders = {
-            'Authorization': token ? `Bearer ${token}` : undefined,
-            'X-Device-Token': deviceToken || undefined,
-        };
-    },
+    setAuthHeaders,
 };
 
 export default apiService;

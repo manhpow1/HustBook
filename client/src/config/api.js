@@ -12,22 +12,21 @@ export const API_ENDPOINTS = {
     // Post Endpoints
     ADD_POST: `${API_BASE_URL}/posts`,
     GET_POST: (postId) => `${API_BASE_URL}/posts/${postId}`,
+    UPDATE_POST: (postId) => `${API_BASE_URL}/posts/${postId}`,
     DELETE_POST: (postId) => `${API_BASE_URL}/posts/${postId}`,
     REPORT_POST: (postId) => `${API_BASE_URL}/posts/${postId}/report-post`,
     LIKE_POST: (postId) => `${API_BASE_URL}/posts/${postId}/like`,
     GET_LIST_POSTS: `${API_BASE_URL}/posts/get_list_posts`,
-
     // Comment Endpoints (Nested Under Posts)
     ADD_COMMENT: (postId) => `${API_BASE_URL}/posts/${postId}/comment`,
-    GET_COMMENTS: (postId, index = 0, count = 10) => `${API_BASE_URL}/posts/${postId}/comments?index=${index}&count=${count}`,
-
-    // Separate Comment Endpoints for Updates and Deletions (If Needed)
-    UPDATE_COMMENT: `${API_BASE_URL}/comments`,
-    DELETE_COMMENT: `${API_BASE_URL}/comments`,
+    GET_COMMENTS: (postId) => `${API_BASE_URL}/posts/${postId}/comments`,
 
     // User-Specific Posts
     GET_USER_POSTS: (userId) => `${API_BASE_URL}/posts/user/${userId}`,
-    CHECK_NEW_ITEM: `${API_BASE_URL}/check_new_item`,
-
-    SEARCH: '/search',
+    // Notification Endpoint
+    CHECK_NEW_ITEM: `${API_BASE_URL}/notifications/check_new_item`,
+    // Search Endpoint
+    SEARCH: `${API_BASE_URL}/search/search`,
+    // Additional Endpoints (if needed)
+    // Define friend, chat, and user endpoints as required
 };
