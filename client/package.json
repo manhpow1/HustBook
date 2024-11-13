@@ -17,6 +17,7 @@
     "@unhead/vue": "^1.11.10",
     "@vee-validate/i18n": "^4.14.6",
     "@vee-validate/rules": "^4.14.6",
+    "@vueuse/components": "^11.2.0",
     "@vueuse/core": "^11.1.0",
     "axios": "^1.7.7",
     "axios-mock-adapter": "^2.1.0",

@@ -1,11 +1,12 @@
 <template>
     <div v-if="isLoggedIn" class="max-w-4xl mx-auto p-4">
-        <h1 class="text-2xl font-bold mb-4">Search Hustbook</h1>
+        <h1 class="text-2xl font-bold mb-4">{{ t('searchTitle') }}</h1>
 
         <div class="flex flex-col space-y-4 md:flex-row md:space-x-4 md:space-y-0 mb-4">
             <div class="flex-grow">
-                <label for="keyword" class="sr-only">Keyword</label>
-                <Input id="keyword" v-model="keyword" placeholder="Search keyword" @input="debouncedSearch">
+                <label for="keyword" class="sr-only">{{ t('keywordLabel') }}</label>
+                <Input id="keyword" v-model="keyword" :placeholder="t('searchKeywordPlaceholder')"
+                    @input="debouncedSearch">
                 <template #icon>
                     <SearchIcon class="w-5 h-5 text-gray-400" />
                 </template>
@@ -13,8 +14,8 @@
             </div>
 
             <div>
-                <label for="userId" class="sr-only">User ID</label>
-                <Input id="userId" v-model="userId" placeholder="User ID" @input="debouncedSearch">
+                <label for="userId" class="sr-only">{{ t('userIdLabel') }}</label>
+                <Input id="userId" v-model="userId" :placeholder="t('userIdPlaceholder')" @input="debouncedSearch">
                 <template #icon>
                     <UserIcon class="w-5 h-5 text-gray-400" />
                 </template>
@@ -24,10 +25,10 @@
             <Button @click="handleSearch" :disabled="isLoading" :aria-disabled="isLoading">
                 <template v-if="isLoading">
                     <Loader2Icon class="mr-2 h-4 w-4 animate-spin" />
-                    Searching
+                    {{ t('searching') }}
                 </template>
                 <template v-else>
-                    Search
+                    {{ t('search') }}
                 </template>
             </Button>
         </div>
@@ -39,13 +40,14 @@
         <div v-else-if="error" class="text-red-500 mb-4">
             {{ error }}
             <Button @click="retrySearch" variant="outline" class="mt-2">
-                Retry Search
+                {{ t('retrySearch') }}
             </Button>
         </div>
 
         <div v-else-if="searchResults.length > 0" class="space-y-4">
             <TransitionGroup name="list" tag="div">
-                <Card v-for="post in searchResults" :key="post.id" class="overflow-hidden">
+                <Card v-for="post in searchResults" :key="post.id" :ref="'post-' + post.id" class="overflow-hidden"
+                    @coverError="handleCoverError(post)">
                     <div class="p-4">
                         <h2 class="text-xl font-semibold mb-2">{{ post.author.username }}</h2>
                         <p class="text-gray-600 mb-2">{{ post.described }}</p>
@@ -54,95 +56,116 @@
                             <span>{{ formatDate(post.created) }}</span>
                         </div>
                         <div class="mt-2">
-                            <Button @click="viewPost(post.id)">View Post</Button>
+                            <Button @click="viewPost(post.id)">{{ t('viewPost') }}</Button>
                         </div>
                     </div>
                 </Card>
             </TransitionGroup>
         </div>
 
-        <p v-else class="text-gray-500">No results found.</p>
+        <p v-else class="text-gray-500">{{ t('noResultsFound') }}</p>
 
         <div v-if="hasMore" class="mt-4">
             <Button @click="loadMore" variant="outline" :disabled="isLoading" :aria-disabled="isLoading">
                 <template v-if="isLoading">
                     <Loader2Icon class="mr-2 h-4 w-4 animate-spin" />
-                    Loading
+                    {{ t('loading') }}
                 </template>
                 <template v-else>
-                    Load More
+                    {{ t('loadMore') }}
                 </template>
             </Button>
         </div>
     </div>
-    <p v-else class="text-gray-500">Please log in to search posts.</p>
+    <p v-else class="text-gray-500">{{ t('pleaseLogin') }}</p>
 </template>
 
 <script setup>
 import { ref, computed, onMounted, watch } from 'vue';
+import { useI18n } from 'vue-i18n';
 import { useSearchStore } from '../../stores/searchStore';
 import { useUserStore } from '../../stores/userStore';
 import { useRouter } from 'vue-router';
 import { Button, Input, Card } from '../ui';
 import { SearchIcon, UserIcon, CalendarIcon, Loader2Icon } from 'lucide-vue-next';
-import { formatDate } from '../../utils/dateUtils';
-import { handleError } from '../../utils/errorHandler';
+import { formatDate } from '../../utils/helpers';
 import { useSearch } from '../../composables/useSearch';
 import { usePagination } from '../../composables/usePagination';
 import PostSkeleton from '../shared/PostSkeleton.vue';
+
+const { t } = useI18n();
 
 const searchStore = useSearchStore();
 const userStore = useUserStore();
 const router = useRouter();
 
-const {
-    keyword,
-    userId,
-    performSearch,
-    debouncedSearch
-} = useSearch();
+const { keyword, userId, debouncedSearch } = useSearch();
 
-const {
-    index,
-    count,
-    loadMore
-} = usePagination();
+const { index, count } = usePagination();
 
-const isLoggedIn = computed(() => userStore.isLoggedIn());
+const isLoggedIn = computed(() => userStore.isLoggedIn);
 const searchResults = computed(() => searchStore.searchResults);
 const hasMore = computed(() => searchStore.hasMore);
 const isLoading = computed(() => searchStore.isLoading);
-const error = ref(null);
+const error = computed(() => searchStore.error);
 
 const handleSearch = async () => {
-    try {
-        error.value = null;
-        await performSearch({
-            keyword: keyword.value,
-            user_id: userId.value,
-            index: index.value,
-            count: count.value
-        });
-    } catch (err) {
-        await handleError(err, router);
-    }
+    console.log("Starting search with:", { keyword: keyword.value, userId: userId.value });
+    // Reset error in searchStore
+    searchStore.error = null;
+    await searchStore.searchPosts({
+        keyword: keyword.value,
+        user_id: userId.value,
+        index: index.value,
+        count: count.value,
+    }, router);
+    console.log("Search completed.");
+};
+
+const handleCoverError = (post) => {
+    // Remove the post from searchResults
+    searchStore.searchResults = searchStore.searchResults.filter((p) => p.id !== post.id);
+};
+
+const loadMore = async () => {
+    console.log("Loading more results with:", {
+        keyword: keyword.value,
+        userId: userId.value,
+        nextIndex: index.value + count.value,
+        count: count.value,
+    });
+    await searchStore.searchPosts({
+        keyword: keyword.value,
+        user_id: userId.value,
+        index: index.value + count.value,
+        count: count.value,
+    }, router); // Pass router here
+    index.value += count.value;
+    console.log("Loaded more results, new index:", index.value);
 };
 
 const viewPost = (postId) => {
+    console.log("Navigating to post:", postId);
     router.push(`/posts/${postId}`);
 };
 
 const retrySearch = () => {
-    handleSearch();
+    console.log("Retrying search");
+    searchStore.error = null;
+    searchStore.retryLastSearch(router); // Pass router here
 };
 
 watch([keyword, userId], () => {
+    console.log("Keyword or userId changed, resetting index and search results.");
     index.value = 0;
     searchStore.resetSearch();
 });
 
-onMounted(() => {
-    if (isLoggedIn.value) {
+onMounted(async () => {
+    if (!isLoggedIn.value) {
+        console.log("User is not logged in, redirecting to login page");
+        await router.push('/login');
+    } else {
         handleSearch();
     }
 });

@@ -24,7 +24,6 @@
 
 <script setup>
 import { computed } from 'vue';
-import { useTooltip } from '@vueuse/core';
 
 const props = defineProps({
     variant: {
@@ -66,7 +65,6 @@ const iconClasses = computed(() => ({
     large: 'h-6 w-6'
 })[props.size]);
 
-const { tooltipRef } = useTooltip(props.tooltip);
 
 const handleClick = (event) => {
     if (!props.disabled && !props.loading) {

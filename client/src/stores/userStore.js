@@ -9,7 +9,7 @@ export const useUserStore = defineStore('user', () => {
     const loading = ref(false)
     const error = ref(null)
 
-    const isLoggedIn = computed(() => !!user.value)
+    const isLoggedIn = computed(() => !!user.value);
     const userId = computed(() => user.value?.id)
 
     apiService.setAuthHeaders(token.value, deviceToken.value)
