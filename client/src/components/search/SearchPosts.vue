@@ -161,6 +161,13 @@ watch([keyword, userId], () => {
     searchStore.resetSearch();
 });
 
+watch(isLoggedIn, async (newVal) => {
+    if (!newVal) {
+        console.log('User is not logged in, redirecting to login page');
+        await router.push('/login');
+    }
+});
+
 onMounted(async () => {
     if (!isLoggedIn.value) {
         console.log("User is not logged in, redirecting to login page");

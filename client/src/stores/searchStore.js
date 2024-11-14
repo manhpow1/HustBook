@@ -65,11 +65,14 @@ export const useSearchStore = defineStore('search', () => {
                 console.error('Error in searchPosts:', error.value);
             }
         } catch (err) {
-            // Use handleError to handle the error
+            // Safe check for `err.message`
+            const isNetworkError = err.message && err.message.includes('Network Error');
+            if (isNetworkError || err.response?.data?.code === 1001) {
+                error.value = 'Cannot connect to the Internet.';
+            } else {
+                error.value = err.response?.data?.message || err.message || 'An error occurred during search';
+            }
             await handleError(err, router);
-
-            // Set the error message so the component can display it
-            error.value = err.response?.data?.message || err.message || 'An error occurred during search';
         } finally {
             isLoading.value = false;
             console.log('searchPosts completed. isLoading set to false.');

@@ -3,7 +3,7 @@ node_modules
 .DS_Store
 server/serviceAccountKey.json
 /server/uploads
-repomix-output.txt
+repomix-output.xml
 repomix.config.json
 .repomixignore
 server/config/production.json

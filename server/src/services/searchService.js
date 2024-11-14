@@ -43,4 +43,29 @@ const searchPosts = async (userId, keyword, index, count) => {
     }
 };
 
-module.exports = { searchPosts };
+const getSavedSearches = async (userId, index, count) => {
+    try {
+        const query = queryDocuments(collections.savedSearches, (ref) =>
+            ref.where('userId', '==', userId)
+                .orderBy('created', 'desc')
+                .offset(index)
+                .limit(count)
+        );
+
+        const savedSearches = await query;
+
+        return savedSearches.map(search => ({
+            id: search.id,
+            keyword: search.keyword,
+            created: search.created.toDate()
+        }));
+    } catch (error) {
+        logger.error('Get saved searches service error:', error);
+        throw error;
+    }
+};
+
+module.exports = { 
+    searchPosts,
+    getSavedSearches,
+};
