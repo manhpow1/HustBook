@@ -101,6 +101,14 @@ const apiService = {
         });
     },
 
+    getSavedSearches(params = {}) {
+        return this.get(API_ENDPOINTS.GET_SAVED_SEARCH, { params });
+    },
+
+    deleteSavedSearch(searchId) {
+        return this.delete(`${API_ENDPOINTS.GET_SAVED_SEARCH}/${searchId}`);
+    },
+
     // File upload
     upload(url, formData, onUploadProgress) {
         return api.post(url, formData, {

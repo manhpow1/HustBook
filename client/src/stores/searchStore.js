@@ -98,6 +98,33 @@ export const useSearchStore = defineStore('search', () => {
         }
     };
 
+    const getSavedSearches = async (index = 0, count = 20, router) => {
+        isLoading.value = true;
+        error.value = null;
+        try {
+            const response = await apiService.getSavedSearches({ index, count });
+            return response.data;
+        } catch (err) {
+            await handleError(err, router);
+            throw err;
+        } finally {
+            isLoading.value = false;
+        }
+    };
+
+    const deleteSavedSearch = async (searchId, router) => {
+        isLoading.value = true;
+        error.value = null;
+        try {
+            await apiService.deleteSavedSearch(searchId);
+        } catch (err) {
+            await handleError(err, router);
+            throw err;
+        } finally {
+            isLoading.value = false;
+        }
+    };
+
     return {
         searchResults,
         hasMore,
@@ -106,5 +133,7 @@ export const useSearchStore = defineStore('search', () => {
         searchPosts,
         resetSearch,
         retryLastSearch,
+        getSavedSearches,
+        deleteSavedSearch,
     };
 });

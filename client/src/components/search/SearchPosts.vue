@@ -33,6 +33,25 @@
             </Button>
         </div>
 
+        <!-- Saved Searches Section -->
+        <div v-if="savedSearches.length > 0" class="mt-4 mb-6">
+            <h2 class="text-lg font-semibold mb-2">{{ t('savedSearches') }}</h2>
+            <ul class="space-y-2">
+                <li v-for="search in savedSearches" :key="search.id"
+                    class="flex items-center justify-between bg-gray-100 p-2 rounded">
+                    <span>{{ search.keyword }}</span>
+                    <div>
+                        <Button @click="applySavedSearch(search)" variant="outline" size="sm" class="mr-2">
+                            {{ t('apply') }}
+                        </Button>
+                        <Button @click="deleteSavedSearch(search.id)" variant="outline" size="sm" class="text-red-500">
+                            {{ t('delete') }}
+                        </Button>
+                    </div>
+                </li>
+            </ul>
+        </div>
+
         <div v-if="isLoading && !searchResults.length" class="space-y-4">
             <PostSkeleton v-for="i in 3" :key="i" />
         </div>
@@ -100,7 +119,6 @@ const userStore = useUserStore();
 const router = useRouter();
 
 const { keyword, userId, debouncedSearch } = useSearch();
-
 const { index, count } = usePagination();
 
 const isLoggedIn = computed(() => userStore.isLoggedIn);
@@ -108,10 +126,10 @@ const searchResults = computed(() => searchStore.searchResults);
 const hasMore = computed(() => searchStore.hasMore);
 const isLoading = computed(() => searchStore.isLoading);
 const error = computed(() => searchStore.error);
+const savedSearches = ref([]);
 
 const handleSearch = async () => {
     console.log("Starting search with:", { keyword: keyword.value, userId: userId.value });
-    // Reset error in searchStore
     searchStore.error = null;
     await searchStore.searchPosts({
         keyword: keyword.value,
@@ -123,7 +141,6 @@ const handleSearch = async () => {
 };
 
 const handleCoverError = (post) => {
-    // Remove the post from searchResults
     searchStore.searchResults = searchStore.searchResults.filter((p) => p.id !== post.id);
 };
 
@@ -139,7 +156,7 @@ const loadMore = async () => {
         user_id: userId.value,
         index: index.value + count.value,
         count: count.value,
-    }, router); // Pass router here
+    }, router);
     index.value += count.value;
     console.log("Loaded more results, new index:", index.value);
 };
@@ -152,7 +169,30 @@ const viewPost = (postId) => {
 const retrySearch = () => {
     console.log("Retrying search");
     searchStore.error = null;
-    searchStore.retryLastSearch(router); // Pass router here
+    searchStore.retryLastSearch(router);
+};
+
+const fetchSavedSearches = async () => {
+    try {
+        const response = await searchStore.getSavedSearches(index.value, count.value);
+        savedSearches.value = response.data;
+    } catch (error) {
+        console.error('Error fetching saved searches:', error);
+    }
+};
+
+const applySavedSearch = (search) => {
+    keyword.value = search.keyword;
+    handleSearch();
+};
+
+const deleteSavedSearch = async (searchId) => {
+    try {
+        await searchStore.deleteSavedSearch(searchId);
+        await fetchSavedSearches();
+    } catch (error) {
+        console.error('Error deleting saved search:', error);
+    }
 };
 
 watch([keyword, userId], () => {
@@ -165,6 +205,8 @@ watch(isLoggedIn, async (newVal) => {
     if (!newVal) {
         console.log('User is not logged in, redirecting to login page');
         await router.push('/login');
+    } else {
+        fetchSavedSearches();
     }
 });
 
@@ -174,6 +216,7 @@ onMounted(async () => {
         await router.push('/login');
     } else {
         handleSearch();
+        fetchSavedSearches();
     }
 });
 </script>

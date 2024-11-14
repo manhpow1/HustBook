@@ -27,6 +27,6 @@ export const API_ENDPOINTS = {
     CHECK_NEW_ITEM: `${API_BASE_URL}/notifications/check_new_item`,
     // Search Endpoint
     SEARCH: `${API_BASE_URL}/search/search`,
-    // Additional Endpoints (if needed)
-    // Define friend, chat, and user endpoints as required
+    GET_SAVED_SEARCH: `${API_BASE_URL}/search/get_saved_search`,
+    DELETE_SAVED_SEARCH: (searchId) => `${API_BASE_URL}/search/delete_saved_search/${searchId}`,
 };

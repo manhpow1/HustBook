@@ -20,6 +20,7 @@ const messages = {
         unlike: 'Unlike',
         edit: 'Edit',
         delete: 'Delete',
+        apply: 'Apply',
         cancel: 'Cancel',
         save: 'Save',
         posting: "Posting...",
