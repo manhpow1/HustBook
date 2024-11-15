@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia';
-import { ref } from 'vue';
+import { ref, computed } from 'vue';
 import apiService from '../services/api';
 import { handleError } from '../utils/errorHandler';
 
@@ -9,11 +9,19 @@ export const useSearchStore = defineStore('search', () => {
     const isLoading = ref(false);
     const error = ref(null);
     const lastSearchParams = ref(null);
+    const normalizedSearchResults = computed(() => {
+        return searchResults.value.map(result => ({
+            ...result,
+            keyword: result.keyword.trim(),
+        }));
+    });
+    const sortedSearchResults = computed(() => {
+        return [...normalizedSearchResults.value].sort((a, b) => new Date(b.created) - new Date(a.created));
+    });
 
     const searchPosts = async ({ keyword, user_id, filter, index = 0, count = 20 }, router) => {
         console.log('Starting searchPosts with params:', { keyword, user_id, filter, index, count });
 
-        // Block request if keyword is missing
         if (!keyword || keyword.trim() === '') {
             console.warn('Keyword is missing. Aborting search.');
             isLoading.value = false;
@@ -29,15 +37,12 @@ export const useSearchStore = defineStore('search', () => {
             const data = response.data;
 
             if (data.code === '1000') {
-                // Filter posts to include only those with valid author ID and at least one valid field (described or media)
                 const validPosts = data.data.filter((post) => {
                     return post.author?.id && (post.described || post.image || post.video);
                 });
 
-                // Combine with existing results
                 let newResults = index === 0 ? validPosts : [...searchResults.value, ...validPosts];
 
-                // Deduplicate posts based on post ID
                 const uniqueResults = [];
                 const seenIds = new Set();
 
@@ -48,8 +53,7 @@ export const useSearchStore = defineStore('search', () => {
                     }
                 }
 
-                // Limit to 20 results
-                searchResults.value = uniqueResults.slice(0, 20);
+                searchResults.value = uniqueResults;
                 hasMore.value = validPosts.length === count;
                 console.log('Search results updated:', searchResults.value);
                 console.log('Has more results:', hasMore.value);
@@ -60,18 +64,10 @@ export const useSearchStore = defineStore('search', () => {
                 hasMore.value = false;
                 console.log('No more results to load (code 9994).');
             } else {
-                // Set error message from server response
                 error.value = data.message || 'An error occurred during search';
                 console.error('Error in searchPosts:', error.value);
             }
         } catch (err) {
-            // Safe check for `err.message`
-            const isNetworkError = err.message && err.message.includes('Network Error');
-            if (isNetworkError || err.response?.data?.code === 1001) {
-                error.value = 'Cannot connect to the Internet.';
-            } else {
-                error.value = err.response?.data?.message || err.message || 'An error occurred during search';
-            }
             await handleError(err, router);
         } finally {
             isLoading.value = false;
@@ -89,44 +85,45 @@ export const useSearchStore = defineStore('search', () => {
         console.log('Search state after reset:', { searchResults: searchResults.value, hasMore: hasMore.value });
     };
 
-    const retryLastSearch = (router) => {
+    const retryLastSearch = async (router) => {
         console.log('Retrying last search with params:', lastSearchParams.value);
         if (lastSearchParams.value) {
-            searchPosts(lastSearchParams.value, router);
+            await searchPosts(lastSearchParams.value, router);
         } else {
             console.warn('No last search parameters available for retry.');
         }
     };
 
-    const getSavedSearches = async (index = 0, count = 20, router) => {
+    const getSavedSearches = async (index = 0, count = 20) => {
         isLoading.value = true;
         error.value = null;
         try {
             const response = await apiService.getSavedSearches({ index, count });
-            return response.data;
+            return {
+                ...response,
+                data: response.data.filter(search => search.id && search.keyword && search.created)
+            };
         } catch (err) {
-            await handleError(err, router);
-            throw err;
+            await handleError(err);
         } finally {
             isLoading.value = false;
         }
     };
 
-    const deleteSavedSearch = async (searchId, router) => {
+    const deleteSavedSearch = async (searchId) => {
         isLoading.value = true;
         error.value = null;
         try {
             await apiService.deleteSavedSearch(searchId);
         } catch (err) {
-            await handleError(err, router);
-            throw err;
+            await handleError(err);
         } finally {
             isLoading.value = false;
         }
     };
 
     return {
-        searchResults,
+        searchResults: sortedSearchResults,
         hasMore,
         isLoading,
         error,

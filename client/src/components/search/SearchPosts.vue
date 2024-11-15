@@ -34,17 +34,18 @@
         </div>
 
         <!-- Saved Searches Section -->
-        <div v-if="savedSearches.length > 0" class="mt-4 mb-6">
+        <div v-if="normalizedSavedSearches.length > 0" class="mt-4 mb-6">
             <h2 class="text-lg font-semibold mb-2">{{ t('savedSearches') }}</h2>
             <ul class="space-y-2">
-                <li v-for="search in savedSearches" :key="search.id"
-                    class="flex items-center justify-between bg-gray-100 p-2 rounded">
+                <li v-for="search in normalizedSavedSearches" :key="search.id"
+                    class="flex items-center justify-between bg-gray-100 p-2 rounded saved-search" :data-id="search.id">
                     <span>{{ search.keyword }}</span>
                     <div>
-                        <Button @click="applySavedSearch(search)" variant="outline" size="sm" class="mr-2">
+                        <Button @click="applySavedSearch(search)" variant="outline" size="small" class="mr-2">
                             {{ t('apply') }}
                         </Button>
-                        <Button @click="deleteSavedSearch(search.id)" variant="outline" size="sm" class="text-red-500">
+                        <Button @click="deleteSavedSearch(search.id)" variant="outline" size="small"
+                            class="text-red-500">
                             {{ t('delete') }}
                         </Button>
                     </div>
@@ -52,6 +53,7 @@
             </ul>
         </div>
 
+        <!-- Search Results Section -->
         <div v-if="isLoading && !searchResults.length" class="space-y-4">
             <PostSkeleton v-for="i in 3" :key="i" />
         </div>
@@ -65,8 +67,8 @@
 
         <div v-else-if="searchResults.length > 0" class="space-y-4">
             <TransitionGroup name="list" tag="div">
-                <Card v-for="post in searchResults" :key="post.id" :ref="'post-' + post.id" class="overflow-hidden"
-                    @coverError="handleCoverError(post)">
+                <Card v-for="post in sortedSearchResults" :key="post.id" :ref="'post-' + post.id"
+                    class="overflow-hidden search-result" @coverError="handleCoverError(post)">
                     <div class="p-4">
                         <h2 class="text-xl font-semibold mb-2">{{ post.author.username }}</h2>
                         <p class="text-gray-600 mb-2">{{ post.described }}</p>
@@ -128,15 +130,40 @@ const isLoading = computed(() => searchStore.isLoading);
 const error = computed(() => searchStore.error);
 const savedSearches = ref([]);
 
+const normalizedSavedSearches = computed(() => {
+    const uniqueSearches = new Map();
+    savedSearches.value.forEach(search => {
+        if (search.id && search.keyword && search.created) {
+            const normalizedKeyword = search.keyword.trim();
+            if (!uniqueSearches.has(normalizedKeyword) || search.created > uniqueSearches.get(normalizedKeyword).created) {
+                uniqueSearches.set(normalizedKeyword, search);
+            }
+        }
+    });
+    return Array.from(uniqueSearches.values())
+        .sort((a, b) => b.created - a.created)
+        .slice(0, 20);
+});
+
+const sortedSearchResults = computed(() => {
+    return [...searchResults.value].sort((a, b) => new Date(b.created) - new Date(a.created));
+});
+
 const handleSearch = async () => {
     console.log("Starting search with:", { keyword: keyword.value, userId: userId.value });
     searchStore.error = null;
-    await searchStore.searchPosts({
-        keyword: keyword.value,
-        user_id: userId.value,
-        index: index.value,
-        count: count.value,
-    }, router);
+    try {
+        await searchStore.searchPosts({
+            keyword: keyword.value,
+            user_id: userId.value,
+            index: index.value,
+            count: count.value,
+        }, router);
+    } catch (error) {
+        if (error.response && (error.response.status === 401 || error.response.status === 403)) {
+            await router.push('/login');
+        }
+    }
     console.log("Search completed.");
 };
 
@@ -174,7 +201,7 @@ const retrySearch = () => {
 
 const fetchSavedSearches = async () => {
     try {
-        const response = await searchStore.getSavedSearches(index.value, count.value);
+        const response = await searchStore.getSavedSearches(0, 100); // Fetch more to handle duplicates
         savedSearches.value = response.data;
     } catch (error) {
         console.error('Error fetching saved searches:', error);
@@ -195,10 +222,12 @@ const deleteSavedSearch = async (searchId) => {
     }
 };
 
-watch([keyword, userId], () => {
-    console.log("Keyword or userId changed, resetting index and search results.");
-    index.value = 0;
-    searchStore.resetSearch();
+watch([keyword, userId], ([newKeyword, newUserId], [oldKeyword, oldUserId]) => {
+    if (newKeyword !== oldKeyword || newUserId !== oldUserId) {
+        console.log("Keyword or userId changed, resetting index and search results.");
+        index.value = 0;
+        searchStore.resetSearch();
+    }
 });
 
 watch(isLoggedIn, async (newVal) => {

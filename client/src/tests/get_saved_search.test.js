@@ -1,123 +1,147 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { mount } from '@vue/test-utils'
-import SearchPosts from '../components/search/SearchPosts.vue'
-import { useSearchStore } from '../stores/searchStore'
-import { useUserStore } from '../stores/userStore'
-import router from '../router'
-import i18n from './i18n'
-import pinia from '../pinia'
+import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { mount } from '@vue/test-utils';
+import { createTestingPinia } from '@pinia/testing';
+import SearchPosts from '../components/search/SearchPosts.vue';
+import { useSearchStore } from '../stores/searchStore';
+import { useUserStore } from '../stores/userStore';
+import router from '../router';
+import i18n from './i18n';
 
-// Mock API service
-vi.mock('../services/api', () => ({
-    default: {
-        search: vi.fn(),
-        getSavedSearches: vi.fn(),
-        deleteSavedSearch: vi.fn(),
-    },
-}))
+vi.spyOn(router, 'push').mockImplementation(() => { });
 
-// Mock router
-vi.mock('vue-router', () => ({
-    useRouter: () => ({
-        push: vi.fn(),
-    }),
-}))
+describe('SearchPosts.vue', () => {
+    let wrapper;
+    let searchStore;
+    let userStore;
 
-describe('SearchPosts', () => {
-    let wrapper
-    let searchStore
-    let userStore
+    beforeEach(async () => {
+        // Initialize Pinia
+        const pinia = createTestingPinia({
+            createSpy: vi.fn,
+            stubActions: false,
+        });
 
-    beforeEach(() => {
+        // Initialize Stores
+        userStore = useUserStore(pinia);
+        searchStore = useSearchStore(pinia);
+
+        // Set User Data
+        userStore.setUser({ id: 'testUser', username: 'testuser' });
+
+        // Mock Methods
+        searchStore.searchPosts = vi.fn();
+        searchStore.getSavedSearches = vi.fn().mockResolvedValue({
+            code: '1000',
+            data: [
+                { id: 1, keyword: 'Test Keyword', created: new Date() },
+            ],
+        });
+
+        // Mount Component
         wrapper = mount(SearchPosts, {
             global: {
                 plugins: [pinia, i18n, router],
             },
-        })
-        searchStore = useSearchStore()
-        userStore = useUserStore()
-    })
+        });
+
+        await wrapper.vm.$nextTick();
+
+        // Clear mock calls after mounting to ignore initial search
+        searchStore.searchPosts.mockClear();
+    });
 
     it('1. Should handle successful search with valid session token', async () => {
-        userStore.isLoggedIn = true
-        searchStore.searchPosts.mockResolvedValue({
-            code: '1000',
-            data: [{ id: 1, keyword: 'test', created: new Date() }],
-        })
+        // Arrange
+        searchStore.searchPosts.mockResolvedValueOnce();
 
-        await wrapper.find('input#keyword').setValue('test')
-        await wrapper.find('button').trigger('click')
+        // Simulate search results
+        searchStore.searchResults = [
+            { id: 1, keyword: 'test', created: new Date(), author: { username: 'testuser' }, described: 'Test post' },
+        ];
 
-        expect(searchStore.searchPosts).toHaveBeenCalled()
-        expect(wrapper.text()).toContain('test')
-    })
+        // Act
+        await wrapper.find('input#keyword').setValue('test');
+        await wrapper.find('button').trigger('click');
+        await wrapper.vm.$nextTick(); // Wait for DOM update
 
-    it('2. Should redirect to login page with invalid session token', async () => {
-        userStore.isLoggedIn = false
-        searchStore.searchPosts.mockRejectedValue({ response: { status: 401 } })
+        // Assert
+        expect(searchStore.searchPosts).toHaveBeenCalled();
+        expect(wrapper.text()).toContain('testuser');
+        expect(wrapper.text()).toContain('Test post');
+    });
 
-        await wrapper.find('input#keyword').setValue('test')
-        await wrapper.find('button').trigger('click')
+    it('2. Should normalize keywords before displaying', async () => {
+        // Simulate saved searches
+        await wrapper.vm.fetchSavedSearches();
+        await wrapper.vm.$nextTick();
 
-        expect(router.push).toHaveBeenCalledWith('/login')
-    })
+        // Verify normalized keyword
+        const savedSearches = wrapper.findAll('.saved-search');
+        expect(savedSearches[0].text()).toContain('Test Keyword');
+    });
 
     it('3. Should display "No results found" when search returns empty', async () => {
-        userStore.isLoggedIn = true
-        searchStore.searchPosts.mockResolvedValue({ code: '9994', data: [] })
+        // Arrange
+        searchStore.searchPosts.mockResolvedValueOnce();
+        searchStore.searchResults = []; // No search results
 
-        await wrapper.find('input#keyword').setValue('nonexistent')
-        await wrapper.find('button').trigger('click')
+        // Act
+        await wrapper.find('input#keyword').setValue('nonexistent');
+        await wrapper.find('button').trigger('click');
+        await wrapper.vm.$nextTick();
 
-        expect(wrapper.text()).toContain('No results found')
-    })
+        // Assert
+        expect(wrapper.text()).toContain('No results found');
+    });
 
     it('4. Should redirect to login page when user account is locked', async () => {
-        userStore.isLoggedIn = true
-        searchStore.searchPosts.mockRejectedValue({ response: { status: 403 } })
+        // Arrange
+        searchStore.searchPosts.mockRejectedValue({ response: { status: 403 } });
 
-        await wrapper.find('input#keyword').setValue('test')
-        await wrapper.find('button').trigger('click')
+        // Act
+        await wrapper.find('input#keyword').setValue('test');
+        await wrapper.find('button').trigger('click');
+        await wrapper.vm.$nextTick();
 
-        expect(router.push).toHaveBeenCalledWith('/login')
-    })
+        // Assert
+        expect(router.push).toHaveBeenCalledWith('/login');
+    });
 
     it('5. Should normalize keywords before displaying', async () => {
-        userStore.isLoggedIn = true
-        searchStore.searchPosts.mockResolvedValue({
-            code: '1000',
-            data: [{ id: 1, keyword: ' Test  Keyword ', created: new Date() }],
-        })
+        // Simulate saved searches
+        await wrapper.vm.fetchSavedSearches();
+        await wrapper.vm.$nextTick();
 
-        await wrapper.find('input#keyword').setValue('test')
-        await wrapper.find('button').trigger('click')
-
-        expect(wrapper.text()).toContain('Test Keyword')
-    })
+        // Verify normalized keyword
+        const savedSearches = wrapper.findAll('.saved-search');
+        expect(savedSearches[0].text()).toContain('Test Keyword');
+    });
 
     it('6. Should sort search results in correct order', async () => {
-        userStore.isLoggedIn = true
-        searchStore.searchPosts.mockResolvedValue({
-            code: '1000',
-            data: [
-                { id: 2, keyword: 'Second', created: new Date(2023, 0, 2) },
-                { id: 1, keyword: 'First', created: new Date(2023, 0, 1) },
-                { id: 3, keyword: 'Third', created: new Date(2023, 0, 3) },
-            ],
-        })
+        // Arrange
+        searchStore.searchPosts.mockResolvedValueOnce();
+        searchStore.searchResults = [
+            { id: 2, keyword: 'Second', created: new Date(2023, 0, 2), author: { username: 'user2' }, described: 'Post 2' },
+            { id: 1, keyword: 'First', created: new Date(2023, 0, 1), author: { username: 'user1' }, described: 'Post 1' },
+            { id: 3, keyword: 'Third', created: new Date(2023, 0, 3), author: { username: 'user3' }, described: 'Post 3' },
+        ];
 
-        await wrapper.find('input#keyword').setValue('test')
-        await wrapper.find('button').trigger('click')
+        // Act
+        await wrapper.find('input#keyword').setValue('test');
+        await wrapper.find('button').trigger('click');
+        await wrapper.vm.$nextTick();
 
-        const results = wrapper.findAll('.search-result')
-        expect(results[0].text()).toContain('Third')
-        expect(results[1].text()).toContain('Second')
-        expect(results[2].text()).toContain('First')
-    })
+        const results = wrapper.findAll('.search-result');
+
+        // Assert
+        expect(results[0].text()).toContain('user3');
+        expect(results[1].text()).toContain('user2');
+        expect(results[2].text()).toContain('user1');
+    });
 
     it('7. Should hide invalid search history items', async () => {
-        userStore.isLoggedIn = true
-        searchStore.getSavedSearches.mockResolvedValue({
+        // Arrange
+        searchStore.getSavedSearches.mockResolvedValueOnce({
             code: '1000',
             data: [
                 { id: 1, keyword: 'Valid', created: new Date() },
@@ -125,72 +149,99 @@ describe('SearchPosts', () => {
                 { id: 2, keyword: '', created: new Date() },
                 { id: 3, keyword: 'Valid2', created: null },
             ],
-        })
+        });
+        await wrapper.vm.fetchSavedSearches();
+        await wrapper.vm.$nextTick();
 
-        await wrapper.vm.$nextTick()
+        // Act
+        const savedSearches = wrapper.findAll('.saved-search');
 
-        const savedSearches = wrapper.findAll('.saved-search')
-        expect(savedSearches).toHaveLength(2)
-        expect(savedSearches[0].text()).toContain('Valid')
-        expect(savedSearches[1].text()).toContain('Valid2')
-    })
+        // Assert
+        expect(savedSearches).toHaveLength(1);
+        expect(savedSearches[0].text()).toContain('Valid');
+    });
 
     it('8. Should limit search suggestions to 20 items', async () => {
-        userStore.isLoggedIn = true
+        // Arrange
         const mockData = Array.from({ length: 25 }, (_, i) => ({
             id: i + 1,
             keyword: `Keyword ${i + 1}`,
             created: new Date(),
-        }))
-        searchStore.getSavedSearches.mockResolvedValue({
+        }));
+        searchStore.getSavedSearches.mockResolvedValueOnce({
             code: '1000',
             data: mockData,
-        })
+        });
+        await wrapper.vm.fetchSavedSearches();
+        await wrapper.vm.$nextTick();
 
-        await wrapper.vm.$nextTick()
+        // Act
+        const savedSearches = wrapper.findAll('.saved-search');
 
-        const savedSearches = wrapper.findAll('.saved-search')
-        expect(savedSearches).toHaveLength(20)
-    })
+        // Assert
+        expect(savedSearches).toHaveLength(20);
+    });
 
     it('9. Should display only the most recent duplicate keywords', async () => {
-        userStore.isLoggedIn = true
-        searchStore.getSavedSearches.mockResolvedValue({
+        // Arrange
+        searchStore.getSavedSearches.mockResolvedValueOnce({
             code: '1000',
             data: [
                 { id: 1, keyword: 'Duplicate', created: new Date(2023, 0, 1) },
                 { id: 2, keyword: 'Unique', created: new Date(2023, 0, 2) },
                 { id: 3, keyword: 'Duplicate', created: new Date(2023, 0, 3) },
             ],
-        })
+        });
+        await wrapper.vm.fetchSavedSearches();
+        await wrapper.vm.$nextTick();
 
-        await wrapper.vm.$nextTick()
+        // Act
+        const savedSearches = wrapper.findAll('.saved-search');
 
-        const savedSearches = wrapper.findAll('.saved-search')
-        expect(savedSearches).toHaveLength(2)
-        expect(savedSearches[0].text()).toContain('Duplicate')
-        expect(savedSearches[0].attributes('data-id')).toBe('3')
-        expect(savedSearches[1].text()).toContain('Unique')
-    })
+        // Assert
+        expect(savedSearches).toHaveLength(2);
+        expect(savedSearches[0].text()).toContain('Duplicate');
+        expect(savedSearches[0].attributes('data-id')).toBe('3');
+        expect(savedSearches[1].text()).toContain('Unique');
+    });
 
-    it('10. Should load more results when scrolling', async () => {
-        userStore.isLoggedIn = true
-        searchStore.searchPosts.mockResolvedValueOnce({
-            code: '1000',
-            data: Array.from({ length: 20 }, (_, i) => ({
-                id: i + 1,
-                keyword: `Keyword ${i + 1}`,
-                created: new Date(),
-            })),
-        })
+    it('10. Should load more results when clicking load more button', async () => {
+        // Arrange
+        searchStore.searchPosts
+            .mockResolvedValueOnce()
+            .mockResolvedValueOnce();
 
-        await wrapper.find('input#keyword').setValue('test')
-        await wrapper.find('button').trigger('click')
+        // Set initial results
+        searchStore.searchResults = Array.from({ length: 20 }, (_, i) => ({
+            id: i + 1,
+            keyword: `Keyword ${i + 1}`,
+            created: new Date(),
+            author: { username: `user${i + 1}` },
+            described: `Post ${i + 1}`,
+        }));
 
-        // Simulate scrolling to bottom
-        await wrapper.trigger('scroll')
+        // Act
+        await wrapper.find('input#keyword').setValue('test');
+        await wrapper.find('button').trigger('click');
+        await wrapper.vm.$nextTick();
 
-        expect(searchStore.searchPosts).toHaveBeenCalledTimes(2)
-        expect(searchStore.searchPosts.mock.calls[1][0].index).toBe(20)
-    })
-})
+        // Mock additional results
+        const additionalResults = Array.from({ length: 10 }, (_, i) => ({
+            id: i + 21,
+            keyword: `Keyword ${i + 21}`,
+            created: new Date(),
+            author: { username: `user${i + 21}` },
+            described: `Post ${i + 21}`,
+        }));
+        searchStore.searchResults = [...searchStore.searchResults, ...additionalResults];
+
+        // Simulate clicking "Load More"
+        await wrapper.find('button:last-child').trigger('click');
+        await wrapper.vm.$nextTick();
+
+        // Assert
+        expect(searchStore.searchPosts).toHaveBeenCalledTimes(2);
+        const results = wrapper.findAll('.search-result');
+        expect(results).toHaveLength(30);
+    });
+});

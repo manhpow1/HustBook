@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { authenticateToken } = require('../middleware/auth');
-const { search } = require('../controllers/searchController');
+const { search, getSavedSearch } = require('../controllers/searchController');
 
 router.post('/search', authenticateToken, search);
 router.get('/get_saved_search', authenticateToken, getSavedSearch);
