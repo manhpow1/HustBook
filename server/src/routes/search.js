@@ -1,12 +1,10 @@
 const express = require('express');
 const router = express.Router();
 const { authenticateToken } = require('../middleware/auth');
-const { search, getSavedSearch } = require('../controllers/searchController');
+const searchController = require('../controllers/searchController');
 
-router.post('/search', authenticateToken, search);
-router.get('/get_saved_search', authenticateToken, getSavedSearch);
-router.delete('/del_saved_search/:id', (req, res) => {
-  // Implementation for deleting saved search
-});
+router.post('/search', authenticateToken, searchController.search);
+router.get('/get_saved_search', authenticateToken, searchController.getSavedSearch);
+router.delete('/del_saved_search/:search_id', authenticateToken, searchController.deleteSavedSearch);
 
 module.exports = router;

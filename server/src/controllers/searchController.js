@@ -1,6 +1,6 @@
 const { sendResponse, handleError } = require('../utils/responseHandler');
-const { validateSearch, validateGetSavedSearch } = require('../validators/searchValidator');
-const { searchPosts, getSavedSearches } = require('../services/searchService');
+const { validateSearch, validateGetSavedSearch, validateDeleteSavedSearch } = require('../validators/searchValidator');
+const { searchPosts, getSavedSearches, deleteSavedSearch } = require('../services/searchService');
 const logger = require('../utils/logger');
 
 const search = async (req, res, next) => {
@@ -56,7 +56,28 @@ const getSavedSearch = async (req, res, next) => {
     }
 };
 
-module.exports = { 
+const deleteSavedSearch = async (req, res, next) => {
+    try {
+        const { error } = validateDeleteSavedSearch(req.params, req.query);
+        if (error) {
+            return sendResponse(res, '1002', { message: error.details[0].message });
+        }
+
+        const { search_id } = req.params;
+        const { all } = req.query;
+        const userId = req.user.uid;
+
+        await deleteSavedSearch(userId, search_id, all === '1');
+
+        sendResponse(res, '1000');
+    } catch (error) {
+        logger.error('Error in deleteSavedSearch controller:', error);
+        handleError(error, req, res, next);
+    }
+};
+
+module.exports = {
     search,
     getSavedSearch,
+    deleteSavedSearch,
 };

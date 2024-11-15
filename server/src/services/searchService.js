@@ -65,7 +65,32 @@ const getSavedSearches = async (userId, index, count) => {
     }
 };
 
-module.exports = { 
+const deleteSavedSearch = async (userId, searchId, deleteAll) => {
+    try {
+        if (deleteAll) {
+            const savedSearches = await queryDocuments(collections.savedSearches, (ref) =>
+                ref.where('userId', '==', userId)
+            );
+            const deletePromises = savedSearches.map(search => deleteDocument(collections.savedSearches, search.id));
+            await Promise.all(deletePromises);
+        } else {
+            const savedSearch = await queryDocuments(collections.savedSearches, (ref) =>
+                ref.where('id', '==', searchId).where('userId', '==', userId).limit(1)
+            );
+            if (savedSearch.length > 0) {
+                await deleteDocument(collections.savedSearches, searchId);
+            } else {
+                throw new Error('Saved search not found or not authorized');
+            }
+        }
+    } catch (error) {
+        logger.error('Delete saved search service error:', error);
+        throw error;
+    }
+};
+
+module.exports = {
     searchPosts,
     getSavedSearches,
+    deleteSavedSearch,
 };
