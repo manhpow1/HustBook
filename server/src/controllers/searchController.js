@@ -11,7 +11,7 @@ const search = async (req, res, next) => {
             return sendResponse(res, '1002');
         }
 
-        const { keyword, user_id, index = 0, count = 20 } = req.body;
+        const { user_id, keyword, index = 0, count = 20 } = req.body;
 
         // Call the search service
         const matchingPosts = await searchPosts(user_id, keyword, index, count);
@@ -56,7 +56,7 @@ const getSavedSearch = async (req, res, next) => {
     }
 };
 
-const deleteSavedSearch = async (req, res, next) => {
+const deleteSavedSearches = async (req, res, next) => {
     try {
         const { error } = validateDeleteSavedSearch(req.params, req.query);
         if (error) {
@@ -79,5 +79,5 @@ const deleteSavedSearch = async (req, res, next) => {
 module.exports = {
     search,
     getSavedSearch,
-    deleteSavedSearch,
+    deleteSavedSearches,
 };

@@ -2,6 +2,7 @@ import { defineStore } from 'pinia';
 import { ref, computed } from 'vue';
 import apiService from '../services/api';
 import { handleError } from '../utils/errorHandler';
+import router from '../router';
 
 export const useSearchStore = defineStore('search', () => {
     const searchResults = ref([]);
@@ -12,66 +13,54 @@ export const useSearchStore = defineStore('search', () => {
     const normalizedSearchResults = computed(() => {
         return searchResults.value.map(result => ({
             ...result,
-            keyword: result.keyword.trim(),
+            keyword: result.keyword ? result.keyword.trim() : '',
         }));
     });
     const sortedSearchResults = computed(() => {
         return [...normalizedSearchResults.value].sort((a, b) => new Date(b.created) - new Date(a.created));
     });
 
-    const searchPosts = async ({ keyword, user_id, filter, index = 0, count = 20 }, router) => {
-        console.log('Starting searchPosts with params:', { keyword, user_id, filter, index, count });
+    const searchPosts = async ({ user_id, keyword, index = 0, count = 20 }, router) => {
+        console.log('Starting searchPosts with params:', { user_id, keyword, index, count });
 
         if (!keyword || keyword.trim() === '') {
             console.warn('Keyword is missing. Aborting search.');
+            error.value = 'Keyword cannot be empty.';
+            isLoading.value = false; // Ensure loading state is reset
+            return; // Prevent further execution
+        }
+
+        if (isNaN(index) || isNaN(count)) {
+            console.warn('Invalid index or count. Aborting search.');
             isLoading.value = false;
+            error.value = 'Parameter value is invalid.';
             return;
         }
 
         isLoading.value = true;
         error.value = null;
-        lastSearchParams.value = { keyword, user_id, filter, index, count };
+        lastSearchParams.value = { user_id, keyword, index, count };
 
         try {
-            const response = await apiService.search(keyword, user_id, filter, index, count);
+            const response = await apiService.search(user_id, keyword, index, count);
             const data = response.data;
 
             if (data.code === '1000') {
-                const validPosts = data.data.filter((post) => {
-                    return post.author?.id && (post.described || post.image || post.video);
-                });
-
-                let newResults = index === 0 ? validPosts : [...searchResults.value, ...validPosts];
-
-                const uniqueResults = [];
-                const seenIds = new Set();
-
-                for (const post of newResults) {
-                    if (!seenIds.has(post.id)) {
-                        seenIds.add(post.id);
-                        uniqueResults.push(post);
-                    }
-                }
-
-                searchResults.value = uniqueResults;
+                const validPosts = data.data.filter((post) =>
+                    post.author?.id && (post.described || post.image || post.video)
+                );
+                searchResults.value = [...new Set([...searchResults.value, ...validPosts])];
                 hasMore.value = validPosts.length === count;
-                console.log('Search results updated:', searchResults.value);
-                console.log('Has more results:', hasMore.value);
             } else if (data.code === '9994') {
-                if (index === 0) {
-                    searchResults.value = [];
-                }
+                if (index === 0) searchResults.value = [];
                 hasMore.value = false;
-                console.log('No more results to load (code 9994).');
             } else {
-                error.value = data.message || 'An error occurred during search';
-                console.error('Error in searchPosts:', error.value);
+                throw new Error(data.message || 'An error occurred during search');
             }
         } catch (err) {
             await handleError(err, router);
         } finally {
             isLoading.value = false;
-            console.log('searchPosts completed. isLoading set to false.');
         }
     };
 
@@ -104,19 +93,25 @@ export const useSearchStore = defineStore('search', () => {
                 data: response.data.filter(search => search.id && search.keyword && search.created)
             };
         } catch (err) {
-            await handleError(err);
+            await handleError(err, router);
+            return { data: [] };
         } finally {
             isLoading.value = false;
         }
     };
 
-    const deleteSavedSearch = async (searchId) => {
+    const deleteSavedSearch = async (searchId, all = false) => {
         isLoading.value = true;
         error.value = null;
         try {
-            await apiService.deleteSavedSearch(searchId);
+            await apiService.deleteSavedSearch(searchId, all);
+            if (all) {
+                searchResults.value = [];
+            } else {
+                searchResults.value = searchResults.value.filter(search => search.id !== searchId);
+            }
         } catch (err) {
-            await handleError(err);
+            await handleError(err, router);
         } finally {
             isLoading.value = false;
         }

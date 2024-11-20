@@ -92,4 +92,5 @@ export default {
     savedSearches: 'Saved Searches',
     searching: 'Searching...',
     loading: 'Loading...',
+    deleteAll: 'Delete All',
 }

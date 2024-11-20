@@ -94,10 +94,7 @@ const apiService = {
 
     search(keyword, user_id, index = 0, count = 20) {
         return this.post(API_ENDPOINTS.SEARCH, {
-            keyword,
-            user_id,
-            index,
-            count,
+            params: { keyword, user_id, index, count },
         });
     },
 
@@ -105,8 +102,8 @@ const apiService = {
         return this.get(API_ENDPOINTS.GET_SAVED_SEARCH, { params });
     },
 
-    deleteSavedSearch(searchId) {
-        return this.delete(`${API_ENDPOINTS.GET_SAVED_SEARCH}/${searchId}`);
+    deleteSavedSearch(searchId, all = false) {
+        return this.delete(API_ENDPOINTS.DELETE_SAVED_SEARCH(searchId), { params: { all: all ? '1' : '0' } });
     },
 
     // File upload

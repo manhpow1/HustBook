@@ -5,7 +5,7 @@
         <div class="flex flex-col space-y-4 md:flex-row md:space-x-4 md:space-y-0 mb-4">
             <div class="flex-grow">
                 <label for="keyword" class="sr-only">{{ t('keywordLabel') }}</label>
-                <Input id="keyword" v-model="keyword" :placeholder="t('searchKeywordPlaceholder')"
+                <Input id="keyword" v-model="keyword" name="keyword" :placeholder="t('searchKeywordPlaceholder')"
                     @input="debouncedSearch">
                 <template #icon>
                     <SearchIcon class="w-5 h-5 text-gray-400" />
@@ -45,12 +45,16 @@
                             {{ t('apply') }}
                         </Button>
                         <Button @click="deleteSavedSearch(search.id)" variant="outline" size="small"
-                            class="text-red-500">
+                            class="text-red-500" data-testid="delete-button">
                             {{ t('delete') }}
                         </Button>
                     </div>
                 </li>
             </ul>
+            <Button @click="deleteAllSavedSearches" variant="outline" size="small" class="mt-2 text-red-500"
+                data-testid="delete-all-button">
+                {{ t('deleteAll') }}
+            </Button>
         </div>
 
         <!-- Search Results Section -->
@@ -67,8 +71,9 @@
 
         <div v-else-if="searchResults.length > 0" class="space-y-4">
             <TransitionGroup name="list" tag="div">
-                <Card v-for="post in sortedSearchResults" :key="post.id" :ref="'post-' + post.id"
-                    class="overflow-hidden search-result" @coverError="handleCoverError(post)">
+                <Card v-for="post in sortedSearchResults" :key="post.id" :post="post" :ref="'post-' + post.id"
+                    :data-test="'card-' + post.id" class="overflow-hidden search-result"
+                    @coverError="handleCoverError(post)">
                     <div class="p-4">
                         <h2 class="text-xl font-semibold mb-2">{{ post.author.username }}</h2>
                         <p class="text-gray-600 mb-2">{{ post.described }}</p>
@@ -151,7 +156,15 @@ const sortedSearchResults = computed(() => {
 
 const handleSearch = async () => {
     console.log("Starting search with:", { keyword: keyword.value, userId: userId.value });
+
+    if (!keyword.value.trim() || !userId.value.trim()) {
+        console.warn('Keyword or userId is missing. Aborting search.');
+        searchStore.error = 'Keyword or UserID cannot be empty.';
+        return;
+    }
+
     searchStore.error = null;
+
     try {
         await searchStore.searchPosts({
             keyword: keyword.value,
@@ -160,11 +173,8 @@ const handleSearch = async () => {
             count: count.value,
         }, router);
     } catch (error) {
-        if (error.response && (error.response.status === 401 || error.response.status === 403)) {
-            await router.push('/login');
-        }
+        console.error("Error during search:", error.message);
     }
-    console.log("Search completed.");
 };
 
 const handleCoverError = (post) => {
@@ -214,11 +224,26 @@ const applySavedSearch = (search) => {
 };
 
 const deleteSavedSearch = async (searchId) => {
+    console.log(`Attempting to delete saved search with ID: ${searchId}`);
     try {
         await searchStore.deleteSavedSearch(searchId);
+        console.log(`Successfully deleted saved search with ID: ${searchId}`);
         await fetchSavedSearches();
+        console.log('Fetched updated list of saved searches after deletion.');
     } catch (error) {
-        console.error('Error deleting saved search:', error);
+        console.error(`Error deleting saved search with ID ${searchId}:`, error);
+    }
+};
+
+const deleteAllSavedSearches = async () => {
+    console.log('Attempting to delete all saved searches.');
+    try {
+        await searchStore.deleteSavedSearch(null, true);
+        console.log('Successfully deleted all saved searches.');
+        await fetchSavedSearches();
+        console.log('Fetched updated list of saved searches after deleting all.');
+    } catch (error) {
+        console.error('Error deleting all saved searches:', error);
     }
 };
 
@@ -228,7 +253,7 @@ watch([keyword, userId], ([newKeyword, newUserId], [oldKeyword, oldUserId]) => {
         index.value = 0;
         searchStore.resetSearch();
     }
-});
+}, { deep: true, immediate: false });
 
 watch(isLoggedIn, async (newVal) => {
     if (!newVal) {

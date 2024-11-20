@@ -42,54 +42,47 @@ async function redirectToLogin(router) {
 export async function handleError(error, router) {
     const { useNotificationStore } = await import('../stores/notificationStore');
     const { useUserStore } = await import('../stores/userStore');
-    console.log("Entering handleError");
+    const { useSearchStore } = await import('../stores/searchStore');
+
     const notificationStore = useNotificationStore();
     const userStore = useUserStore();
+    const searchStore = useSearchStore();
+
     let message = 'An error occurred.';
     const code = error.response?.data?.code;
     const numericCode = parseInt(code, 10);
 
-    // Check if there's an error code in the response
-    if (error.response?.data?.code) {
-        const code = error.response.data.code;
-        message = getErrorMessage(code);
-        logger.debug('Error Code Found', { code, message });
+    if (numericCode) {
+        message = getErrorMessage(numericCode);
 
-        // Redirect for security-sensitive errors and invalid tokens
-        if ([9998, 9999, 1008, 1009, 9995].includes(numericCode) || error.response?.status === 401) {
-            console.debug("Setting user to null due to invalid token or security error");
+        // Set the error in searchStore
+        searchStore.error = message;
+
+        if (
+            [9998, 9999, 1008, 1009, 9995].includes(numericCode) ||
+            error.response?.status === 401 ||
+            error.response?.status === 403 // Include 403 status code
+        ) {
+            // Log out user and redirect for security-sensitive errors
             userStore.setUser(null);
-            console.debug("User value after setUser(null):", userStore.user);
-            console.debug("isLoggedIn state after setting user to null:", userStore.isLoggedIn);
             notificationStore.showNotification(message, 'error');
+            console.debug('Invalid token or security error detected. Logging out user.');
             await redirectToLogin(router);
             return;
         }
 
-        // Handle network and connectivity issues separately
-        if (code === 1001 || error.message?.includes('Network Error')) {
+        if (numericCode === 1001 || (error.message && error.message.includes('Network Error'))) {
             message = 'Cannot connect to the Internet.';
-        } else if (code === 1010) {
-            message = 'This action has already been performed.';
+            searchStore.error = message;
         }
-
     } else if (error.message) {
-        // Handle cases where error has a direct message but no specific code
-        logger.debug('Direct error message found', { errorMessage: error.message });
+        // Handle errors without specific codes
         message = error.message.includes('Network Error') ? 'Cannot connect to the Internet.' : error.message;
+        searchStore.error = message;
     }
 
-    // Display the error message as a notification
-    showErrorNotification(notificationStore, message);
+    // Show notification
+    notificationStore.showNotification(message, 'error');
+    console.debug(`Error message set in searchStore: ${searchStore.error}`);
     logger.error('Error occurred', { message, error });
-
-    // Additional handling for forbidden access or unclassified errors
-    if (error.response?.status === 403) {
-        logger.warn('Forbidden access detected');
-    } else if (!error.response) {
-        // No response indicates a network-related issue
-        logger.debug('Network error detected');
-    } else {
-        logger.info('No redirection needed', { status: error.response.status });
-    }
 }

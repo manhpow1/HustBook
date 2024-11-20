@@ -28,5 +28,5 @@ export const API_ENDPOINTS = {
     // Search Endpoint
     SEARCH: `${API_BASE_URL}/search/search`,
     GET_SAVED_SEARCH: `${API_BASE_URL}/search/get_saved_search`,
-    DELETE_SAVED_SEARCH: (searchId) => `${API_BASE_URL}/search/delete_saved_search/${searchId}`,
+    DELETE_SAVED_SEARCH: (searchId) => `${API_BASE_URL}/search/del_saved_search/${searchId}`,
 };
