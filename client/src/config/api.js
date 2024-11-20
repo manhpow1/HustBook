@@ -20,7 +20,6 @@ export const API_ENDPOINTS = {
     // Comment Endpoints (Nested Under Posts)
     ADD_COMMENT: (postId) => `${API_BASE_URL}/posts/${postId}/comment`,
     GET_COMMENTS: (postId) => `${API_BASE_URL}/posts/${postId}/comments`,
-
     // User-Specific Posts
     GET_USER_POSTS: (userId) => `${API_BASE_URL}/posts/user/${userId}`,
     // Notification Endpoint
@@ -29,4 +28,6 @@ export const API_ENDPOINTS = {
     SEARCH: `${API_BASE_URL}/search/search`,
     GET_SAVED_SEARCH: `${API_BASE_URL}/search/get_saved_search`,
     DELETE_SAVED_SEARCH: (searchId) => `${API_BASE_URL}/search/del_saved_search/${searchId}`,
+    // Friend Endpoints
+    GET_REQUESTED_FRIENDS: `${API_BASE_URL}/friends/get_requested_friends`,
 };

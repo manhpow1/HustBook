@@ -106,6 +106,10 @@ const apiService = {
         return this.delete(API_ENDPOINTS.DELETE_SAVED_SEARCH(searchId), { params: { all: all ? '1' : '0' } });
     },
 
+    getRequestedFriends(params = {}) {
+        return this.get(API_ENDPOINTS.GET_REQUESTED_FRIENDS, { params });
+    },
+
     // File upload
     upload(url, formData, onUploadProgress) {
         return api.post(url, formData, {
