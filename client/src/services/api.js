@@ -110,6 +110,10 @@ const apiService = {
         return this.get(API_ENDPOINTS.GET_REQUESTED_FRIENDS, { params });
     },
 
+    getListVideos(params = {}) {
+        return this.get(API_ENDPOINTS.GET_LIST_VIDEOS, { params });
+    },
+
     // File upload
     upload(url, formData, onUploadProgress) {
         return api.post(url, formData, {
