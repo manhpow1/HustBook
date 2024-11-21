@@ -30,6 +30,7 @@ export const API_ENDPOINTS = {
     DELETE_SAVED_SEARCH: (searchId) => `${API_BASE_URL}/search/del_saved_search/${searchId}`,
     // Friend Endpoints
     GET_REQUESTED_FRIENDS: `${API_BASE_URL}/friends/get_requested_friends`,
+    GET_USER_FRIENDS: `${API_BASE_URL}/get_user_friends`,
     // Video Endpoints
     GET_LIST_VIDEOS: `${API_BASE_URL}/get_list_videos`,
 };

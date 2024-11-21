@@ -71,6 +71,33 @@ const getRequestedFriends = async (userId, index, count) => {
     }
 };
 
+const getUserFriends = async (userId, index, count) => {
+    try {
+        const friendsRef = db.collection(collections.friends).doc(userId).collection('userFriends');
+        const snapshot = await friendsRef.orderBy('created', 'desc').offset(index).limit(count).get();
+
+        const friends = snapshot.docs.map(doc => {
+            const data = doc.data();
+            return {
+                id: doc.id,
+                username: data.username,
+                avatar: data.avatar,
+                same_friends: data.sameFriends,
+                created: data.created.toDate().toISOString()
+            };
+        });
+
+        const totalSnapshot = await friendsRef.get();
+        const total = totalSnapshot.size;
+
+        return { friends, total };
+    } catch (error) {
+        logger.error('Error in getUserFriends service:', error);
+        throw error;
+    }
+};
+
 module.exports = {
-    getRequestedFriends
+    getRequestedFriends,
+    getUserFriends,
 };

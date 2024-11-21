@@ -3,9 +3,7 @@ const router = express.Router();
 import { authenticateToken } from '../middleware/auth';
 import friendController from '../controllers/friendController';
 
-router.get('/get_user_friends', (req, res) => {
-  // Implementation for getting user's friends
-});
+router.post('/get_user_friends', authenticateToken, friendController.getUserFriends);
 
 router.post('/set_request_friend', (req, res) => {
   // Implementation for sending friend request
