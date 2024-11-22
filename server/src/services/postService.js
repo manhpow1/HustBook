@@ -1,5 +1,6 @@
 const Post = require('../models/Post');
 const { db } = require('../config/firebase');
+const { getBoundingBox, getDistance } = require('../utils/geoUtils');
 const { collections, createDocument, getDocument, updateDocument, deleteDocument, queryDocuments } = require('../config/database');
 const { paginateQuery } = require('../utils/pagination');
 
@@ -142,11 +143,10 @@ const getListPosts = async ({
         }
 
         if (latitude && longitude) {
-            const center = new GeoPoint(latitude, longitude);
-            const radiusInM = 10000; // 10km radius, adjust as needed
-            const bounds = getBoundingBox(center, radiusInM);
-            query = query.where('location', '>', bounds.southwest)
-                .where('location', '<', bounds.northeast);
+            const radiusKm = 10; // 10km radius, adjust as needed
+            const bounds = getBoundingBox(latitude, longitude, radiusKm);
+            query = query.where('location.latitude', '>=', bounds.minLat)
+                .where('location.latitude', '<=', bounds.maxLat);
         }
 
         if (lastId) {
@@ -173,33 +173,38 @@ const getListPosts = async ({
         const likeChecks = posts.map(post => checkUserLike(post.id, userId));
         const likeResults = await Promise.all(likeChecks);
 
-        const postsWithDetails = posts.map((post, index) => ({
-            ...post,
-            isLiked: likeResults[index],
-            author: {
-                id: post.userId,
-                ...authorMap.get(post.userId)
+        const postsWithDetails = posts.map((post, index) => {
+            let postWithDetails = {
+                ...post,
+                isLiked: likeResults[index],
+                author: {
+                    id: post.userId,
+                    ...authorMap.get(post.userId)
+                }
+            };
+
+            if (latitude && longitude && post.location) {
+                const distance = getDistance(
+                    latitude,
+                    longitude,
+                    post.location.latitude,
+                    post.location.longitude
+                );
+                if (distance <= radiusKm) {
+                    postWithDetails.distance = distance.toFixed(2);
+                } else {
+                    return null; // Exclude posts outside the radius
+                }
             }
-        }));
+
+            return postWithDetails;
+        }).filter(Boolean); // Remove null entries (posts outside radius)
 
         return postsWithDetails;
     } catch (error) {
-        console.error('Error in getListPosts:', error);
+        logger.error('Error in getListPosts:', error);
         throw error;
     }
-};
-
-const getBoundingBox = (center, radiusInM) => {
-    const lat = 0.0144927536231884; // degrees latitude per mile
-    const lon = 0.0181818181818182; // degrees longitude per mile
-
-    const latDelta = (radiusInM / 1609.344) * lat;
-    const lonDelta = (radiusInM / 1609.344) * lon;
-
-    return {
-        southwest: new GeoPoint(center.latitude - latDelta, center.longitude - lonDelta),
-        northeast: new GeoPoint(center.latitude + latDelta, center.longitude + lonDelta),
-    };
 };
 
 const runTransactionWithRetry = async (transactionFn, retries = 3) => {

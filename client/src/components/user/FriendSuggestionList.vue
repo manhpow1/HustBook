@@ -10,19 +10,20 @@
             No friend suggestions at the moment.
         </div>
         <ul v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            <li v-for="suggestion in friendSuggestions" :key="suggestion.id" class="bg-white shadow rounded-lg p-4">
+            <li v-for="suggestion in friendSuggestions" :key="suggestion.user_id"
+                class="bg-white shadow rounded-lg p-4">
                 <div class="flex items-center mb-4">
                     <img :src="suggestion.avatar || '/default-avatar.png'" :alt="suggestion.username"
                         class="w-12 h-12 rounded-full mr-4">
                     <div>
                         <h3 class="font-semibold">{{ suggestion.username }}</h3>
-                        <p class="text-sm text-gray-500">{{ suggestion.mutualFriends }} mutual friends</p>
+                        <p class="text-sm text-gray-500">{{ suggestion.same_friends }} mutual friends</p>
                     </div>
                 </div>
-                <button @click="sendFriendRequest(suggestion.id)"
+                <button @click="sendFriendRequest(suggestion.user_id)"
                     class="w-full bg-primary-600 text-white px-4 py-2 rounded hover:bg-primary-700"
-                    :disabled="isProcessing(suggestion.id)">
-                    {{ isProcessing(suggestion.id) ? 'Sending...' : 'Add Friend' }}
+                    :disabled="isProcessing(suggestion.user_id)">
+                    {{ isProcessing(suggestion.user_id) ? 'Sending...' : 'Add Friend' }}
                 </button>
             </li>
         </ul>
@@ -30,7 +31,8 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, computed } from 'vue';
+import { storeToRefs } from 'pinia';
 import { useFriendStore } from '../../stores/friendStore';
 import { useToast } from '../../composables/useToast';
 import FriendSuggestionSkeleton from './FriendSuggestionSkeleton.vue';
@@ -38,22 +40,8 @@ import FriendSuggestionSkeleton from './FriendSuggestionSkeleton.vue';
 const friendStore = useFriendStore();
 const { showToast } = useToast();
 
-const friendSuggestions = ref([]);
-const loading = ref(true);
-const error = ref(null);
+const { friendSuggestions, loading, error } = storeToRefs(friendStore);
 const processingSuggestions = ref(new Set());
-
-const fetchFriendSuggestions = async () => {
-    try {
-        loading.value = true;
-        const response = await friendStore.getFriendSuggestions();
-        friendSuggestions.value = response.suggestions;
-    } catch (err) {
-        error.value = 'Failed to load friend suggestions';
-    } finally {
-        loading.value = false;
-    }
-};
 
 const isProcessing = (suggestionId) => processingSuggestions.value.has(suggestionId);
 
@@ -63,7 +51,7 @@ const sendFriendRequest = async (userId) => {
     processingSuggestions.value.add(userId);
     try {
         await friendStore.sendFriendRequest(userId);
-        friendSuggestions.value = friendSuggestions.value.filter(suggestion => suggestion.id !== userId);
+        friendStore.removeSuggestion(userId);
         showToast('Friend request sent', 'success');
     } catch (err) {
         console.error('Error sending friend request:', err);
@@ -73,5 +61,5 @@ const sendFriendRequest = async (userId) => {
     }
 };
 
-onMounted(fetchFriendSuggestions);
+onMounted(() => friendStore.getListSuggestedFriends());
 </script>

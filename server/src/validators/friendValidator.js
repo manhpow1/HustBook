@@ -16,6 +16,11 @@ const getUserFriendsSchema = Joi.object({
     count: Joi.number().integer().min(1).max(100).optional()
 });
 
+const getListSuggestedFriendsSchema = Joi.object({
+    index: Joi.number().integer().min(0).default(0),
+    count: Joi.number().integer().min(1).max(100).default(20)
+});
+
 const validateGetRequestedFriends = (data) => {
     return getRequestedFriendsSchema.validate(data);
 };
@@ -28,8 +33,13 @@ const validateSetAcceptFriend = (data) => {
     return setAcceptFriendSchema.validate(data);
 };
 
+const validateGetListSuggestedFriends = (data) => {
+    return getListSuggestedFriendsSchema.validate(data);
+};
+
 module.exports = {
     validateGetRequestedFriends,
     validateGetUserFriends,
     validateSetAcceptFriend,
+    validateGetListSuggestedFriends,
 };

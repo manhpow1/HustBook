@@ -1,11 +1,11 @@
 const { sendResponse, handleError } = require('../utils/responseHandler');
-const { validateCheckNewItem } = require('../validators/notificationValidator');
+const notificationValidator = require('../validators/notificationValidator');
 const notificationService = require('../services/notificationService');
 const logger = require('../utils/logger');
 
 const checkNewItem = async (req, res, next) => {
     try {
-        const { error, value } = validateCheckNewItem(req.body);
+        const { error, value } = notificationValidator.validateCheckNewItem(req.body);
         if (error) {
             return sendResponse(res, '1002', { message: error.details[0].message });
         }

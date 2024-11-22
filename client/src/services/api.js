@@ -114,6 +114,12 @@ const apiService = {
         return this.post(API_ENDPOINTS.GET_USER_FRIENDS, params);
     },
 
+    getListSuggestedFriends(index = 0, count = 20) {
+        return this.get(API_ENDPOINTS.GET_LIST_SUGGESTED_FRIENDS, {
+            params: { index, count },
+        });
+    },
+
     getListVideos(params = {}) {
         return this.get(API_ENDPOINTS.GET_LIST_VIDEOS, { params });
     },

@@ -32,6 +32,7 @@ export const API_ENDPOINTS = {
     GET_REQUESTED_FRIENDS: `${API_BASE_URL}/friends/get_requested_friends`,
     GET_USER_FRIENDS: `${API_BASE_URL}/get_user_friends`,
     SET_ACCEPT_FRIEND: '/friends/set_accept_friend',
+    GET_LIST_SUGGESTED_FRIENDS: '/friends/get_list_suggested_friends',
     // Video Endpoints
     GET_LIST_VIDEOS: `${API_BASE_URL}/get_list_videos`,
 };

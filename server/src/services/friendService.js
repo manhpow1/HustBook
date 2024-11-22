@@ -151,8 +151,76 @@ const setAcceptFriend = async (userId, requesterId, isAccept) => {
     }
 };
 
+const getListSuggestedFriends = async (userId, index = 0, count = 20) => {
+    try {
+        // Get current user's friends
+        const userFriendsRef = await db.collection(collections.friends)
+            .doc(userId)
+            .collection('userFriends')
+            .get();
+
+        const userFriendIds = new Set(userFriendsRef.docs.map(doc => doc.id));
+        userFriendIds.add(userId); // Add current user to excluded list
+
+        // Get all users except current user and their friends
+        const usersRef = await db.collection(collections.users)
+            .offset(index)
+            .limit(count)
+            .get();
+
+        const suggestedFriends = [];
+        const mutualFriendsPromises = [];
+
+        for (const userDoc of usersRef.docs) {
+            if (!userFriendIds.has(userDoc.id)) {
+                // For each potential friend, get their friends
+                const mutualFriendsPromise = async () => {
+                    const theirFriendsRef = await db.collection(collections.friends)
+                        .doc(userDoc.id)
+                        .collection('userFriends')
+                        .get();
+
+                    const theirFriendIds = new Set(theirFriendsRef.docs.map(doc => doc.id));
+                    const mutualFriends = [...userFriendIds].filter(id => theirFriendIds.has(id)).length;
+
+                    return {
+                        id: userDoc.id,
+                        userData: userDoc.data(),
+                        mutualFriends
+                    };
+                };
+
+                mutualFriendsPromises.push(mutualFriendsPromise());
+            }
+        }
+
+        const mutualFriendsResults = await Promise.all(mutualFriendsPromises);
+
+        // Sort by number of mutual friends
+        mutualFriendsResults.sort((a, b) => b.mutualFriends - a.mutualFriends);
+
+        // Format the response
+        for (const result of mutualFriendsResults) {
+            suggestedFriends.push({
+                user_id: result.id,
+                username: result.userData.username,
+                avatar: result.userData.avatar,
+                same_friends: result.mutualFriends.toString()
+            });
+        }
+
+        return {
+            list_users: suggestedFriends
+        };
+    } catch (error) {
+        logger.error('Error in getListSuggestedFriends service:', error);
+        throw error;
+    }
+};
+
 module.exports = {
     getRequestedFriends,
     getUserFriends,
     setAcceptFriend,
+    getListSuggestedFriends,
 };

@@ -1,5 +1,5 @@
 const authService = require('../services/authService');
-const { validateSignup, validateLogin, validateChangeInfo } = require('../validators/userValidator');
+const userValidator = require('../validators/userValidator');
 const { generateRandomCode, formatPhoneNumber } = require('../utils/helpers');
 const User = require('../models/User');
 const { sendResponse, handleError } = require('../utils/responseHandler');
@@ -7,7 +7,7 @@ const logger = require('../utils/logger');
 
 const signup = async (req, res, next) => {
     try {
-        const { error } = validateSignup(req.body);
+        const { error } = userValidator.validateSignup(req.body);
         if (error) {
             return sendResponse(res, '1002');
         }
@@ -40,7 +40,7 @@ const signup = async (req, res, next) => {
 
 const login = async (req, res, next) => {
     try {
-        const { error } = validateLogin(req.body);
+        const { error } = userValidator.validateLogin(req.body);
         if (error) {
             return sendResponse(res, '1002');
         }
@@ -195,7 +195,7 @@ const checkAuth = async (req, res, next) => {
 
 const changeInfoAfterSignup = async (req, res, next) => {
     try {
-        const { error } = validateChangeInfo(req.body);
+        const { error } = userValidator.validateChangeInfo(req.body);
         if (error) {
             return sendResponse(res, '1002');
         }

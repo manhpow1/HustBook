@@ -1,5 +1,5 @@
 const postService = require('../services/postService');
-const { validateCreatePost, validateUpdatePost, validateComment, validateLike, validateGetPost, validateGetPostComments, validateGetUserPosts, validateReportPost, validateGetListPosts } = require('../validators/postValidator');
+const postValidator = require('../validators/postValidator');
 const { runTransaction } = require('../config/database');
 const { sendResponse, handleError } = require('../utils/responseHandler');
 const logger = require('../utils/logger');
@@ -10,7 +10,7 @@ const VALIDATION_ERROR_CODE = '1002';
 
 const createPost = async (req, res, next) => {
     try {
-        const { error } = validateCreatePost(req.body);
+        const { error } = postValidator.validateCreatePost(req.body);
         if (error) return sendResponse(res, '1002');
 
         const { content } = req.body;
@@ -27,7 +27,7 @@ const createPost = async (req, res, next) => {
 
 const getPost = async (req, res, next) => {
     try {
-        const { error } = validateGetPost(req.params);
+        const { error } = postValidator.validateGetPost(req.params);
         if (error) {
             return sendResponse(res, '1002');
         }
@@ -57,7 +57,7 @@ const getPost = async (req, res, next) => {
 
 const updatePost = async (req, res, next) => {
     try {
-        const { error } = validateUpdatePost(req.body);
+        const { error } = postValidator.validateUpdatePost(req.body);
         if (error) {
             return sendResponse(res, '1002');
         }
@@ -105,7 +105,7 @@ const deletePost = async (req, res, next) => {
 
 const addComment = async (req, res, next) => {
     try {
-        const { error } = validateComment(req.body);  // Validate input
+        const { error } = postValidator.validateComment(req.body);  // Validate input
         if (error) return sendResponse(res, '1002');  // Parameter validation failed
 
         const { id } = req.params;  // Post ID
@@ -148,7 +148,7 @@ const addComment = async (req, res, next) => {
 
 const getComments = async (req, res, next) => {
     try {
-        const { error } = validateGetPostComments(req.query);  // Validate query parameters
+        const { error } = postValidator.validateGetPostComments(req.query);  // Validate query parameters
         if (error) {
             return sendResponse(res, '1002', { message: 'Invalid parameters.', errors: error.details });
         }
@@ -181,7 +181,7 @@ const getComments = async (req, res, next) => {
 
 const getUserPosts = async (req, res, next) => {
     try {
-        const { error } = validateGetUserPosts(req.params, req.query);
+        const { error } = postValidator.validateGetUserPosts(req.params, req.query);
         if (error) {
             return sendResponse(res, '1002');
         }
@@ -200,7 +200,7 @@ const getUserPosts = async (req, res, next) => {
 
 const reportPost = async (req, res, next) => {
     try {
-        const { error } = validateReportPost(req.body);
+        const { error } = postValidator.validateReportPost(req.body);
         if (error) {
             return sendResponse(res, '1002'); // Parameter is not enough
         }
@@ -227,7 +227,7 @@ const reportPost = async (req, res, next) => {
 
 const toggleLike = async (req, res, next) => {
     try {
-        const { error } = validateLike(req.params);
+        const { error } = postValidator.validateLike(req.params);
         if (error) return sendResponse(res, '1002');
 
         const userId = req.user.uid;
@@ -273,7 +273,7 @@ const mapPostToResponse = (post) => ({
 
 const getListPosts = async (req, res, next) => {
     try {
-        const { error, value } = validateGetListPosts(req.query);
+        const { error, value } = postValidator.validateGetListPosts(req.query);
         if (error) return sendResponse(res, VALIDATION_ERROR_CODE, { message: error.details[0].message });
 
         const {

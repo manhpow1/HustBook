@@ -1,11 +1,11 @@
-const { validateGetRequestedFriends, validateGetUserFriends, validateSetAcceptFriend } = require('../validators/friendValidator');
+const friendValidator = require('../validators/friendValidator');
 const friendService = require('../services/friendService');
 const { sendResponse, handleError } = require('../utils/responseHandler');
 const logger = require('../utils/logger');
 
 const getRequestedFriends = async (req, res, next) => {
     try {
-        const { error } = validateGetRequestedFriends(req.query);
+        const { error } = friendValidator.validateGetRequestedFriends(req.query);
         if (error) {
             return sendResponse(res, '1002', { message: error.details[0].message });
         }
@@ -31,7 +31,7 @@ const getRequestedFriends = async (req, res, next) => {
 
 const getUserFriends = async (req, res, next) => {
     try {
-        const { error, value } = validateGetUserFriends(req.body);
+        const { error, value } = friendValidator.validateGetUserFriends(req.body);
         if (error) {
             return sendResponse(res, '1002', { message: error.details[0].message });
         }
@@ -57,7 +57,7 @@ const getUserFriends = async (req, res, next) => {
 
 const setAcceptFriend = async (req, res, next) => {
     try {
-        const { error } = validateSetAcceptFriend(req.body);
+        const { error } = friendValidator.validateSetAcceptFriend(req.body);
         if (error) {
             return sendResponse(res, '1002', { message: error.details[0].message });
         }
@@ -83,8 +83,34 @@ const setAcceptFriend = async (req, res, next) => {
     }
 };
 
+const getListSuggestedFriends = async (req, res, next) => {
+    try {
+        const { error, value } = friendValidator.validateGetListSuggestedFriends(req.query);
+        if (error) {
+            return sendResponse(res, '1002', { message: error.details[0].message });
+        }
+
+        const { index, count } = value;
+        const userId = req.user.uid;
+
+        const result = await friendService.getListSuggestedFriends(userId, index, count);
+
+        if (!result.list_users || result.list_users.length === 0) {
+            return sendResponse(res, '9994'); // No data or end of list data
+        }
+
+        sendResponse(res, '1000', {
+            list_users: result.list_users
+        });
+    } catch (error) {
+        logger.error('Error in getListSuggestedFriends controller:', error);
+        handleError(error, req, res, next);
+    }
+};
+
 module.exports = {
     getRequestedFriends,
     getUserFriends,
     setAcceptFriend,
+    getListSuggestedFriends,
 };

@@ -6,9 +6,11 @@ import router from '../router'
 export const useFriendStore = defineStore('friend', () => {
     const friends = ref([])
     const friendRequests = ref([])
+    const suggestedFriends = ref([])
     const loading = ref(false)
     const error = ref(null)
     const total = ref(0)
+    const sortBy = ref('name');
 
     const getRequestedFriends = async (index = 0, count = 20) => {
         loading.value = true
@@ -129,6 +131,25 @@ export const useFriendStore = defineStore('friend', () => {
         }
     }
 
+    const getListSuggestedFriends = async (index = 0, count = 20) => {
+        loading.value = true;
+        error.value = null;
+        try {
+            const response = await apiService.getListSuggestedFriends(index, count);
+            if (response.data.code === '1000') {
+                suggestedFriends.value = response.data.data.list_users;
+                return response.data.data;
+            } else {
+                throw new Error(response.data.message || 'Failed to get suggested friends');
+            }
+        } catch (err) {
+            error.value = 'Failed to load suggested friends';
+            console.error('Error fetching suggested friends:', err);
+        } finally {
+            loading.value = false;
+        }
+    };
+
     const removeFriend = async (userId) => {
         try {
             const response = await apiService.removeFriend(userId)
@@ -177,5 +198,6 @@ export const useFriendStore = defineStore('friend', () => {
         removeFriend,
         blockUser,
         getFriendSuggestions,
+        getListSuggestedFriends,
     }
 })
