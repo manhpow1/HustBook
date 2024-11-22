@@ -11,10 +11,7 @@ router.post('/set_request_friend', (req, res) => {
 
 router.get('/get_requested_friends', authenticateToken, friendController.getRequestedFriends);
 
-router.post('/set_accept_friend', (req, res) => {
-  // Implementation for accepting friend request
-});
-
+router.post('/set_accept_friend', authenticateToken, friendController.setAcceptFriend);
 router.get('/get_list_suggested_friends', (req, res) => {
   // Implementation for getting suggested friends
 });

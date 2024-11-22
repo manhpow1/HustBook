@@ -118,6 +118,13 @@ const apiService = {
         return this.get(API_ENDPOINTS.GET_LIST_VIDEOS, { params });
     },
 
+    setAcceptFriend(userId, isAccept) {
+        return this.post(API_ENDPOINTS.SET_ACCEPT_FRIEND, {
+            user_id: userId,
+            is_accept: isAccept,
+        });
+    },
+
     // File upload
     upload(url, formData, onUploadProgress) {
         return api.post(url, formData, {

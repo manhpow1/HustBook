@@ -16,7 +16,7 @@
                         class="w-12 h-12 rounded-full mr-4">
                     <div>
                         <h3 class="font-semibold">{{ request.username }}</h3>
-                        <p class="text-sm text-gray-500">{{ request.mutualFriends }} mutual friends</p>
+                        <p class="text-sm text-gray-500">{{ request.same_friends }} mutual friends</p>
                     </div>
                 </div>
                 <div class="flex justify-between">
@@ -40,27 +40,11 @@
 import { ref, onMounted } from 'vue';
 import { useFriendStore } from '../../stores/friendStore';
 import { useToast } from '../../composables/useToast';
-import FriendRequestSkeleton from './FriendRequestSkeleton.vue';
 
 const friendStore = useFriendStore();
 const { showToast } = useToast();
 
-const friendRequests = ref([]);
-const loading = ref(true);
-const error = ref(null);
 const processingRequests = ref(new Set());
-
-const fetchFriendRequests = async () => {
-    try {
-        loading.value = true;
-        const response = await friendStore.getRequestedFriends();
-        friendRequests.value = response.requests;
-    } catch (err) {
-        error.value = 'Failed to load friend requests';
-    } finally {
-        loading.value = false;
-    }
-};
 
 const isProcessing = (requestId) => processingRequests.value.has(requestId);
 
@@ -69,12 +53,12 @@ const acceptRequest = async (userId) => {
 
     processingRequests.value.add(userId);
     try {
-        await friendStore.acceptFriendRequest(userId);
-        friendRequests.value = friendRequests.value.filter(request => request.id !== userId);
-        showToast('Friend request accepted', 'success');
-    } catch (err) {
-        console.error('Error accepting friend request:', err);
-        showToast('Failed to accept friend request', 'error');
+        const success = await friendStore.setAcceptFriend(userId, '1');
+        if (success) {
+            showToast('Friend request accepted', 'success');
+        } else {
+            showToast('Failed to accept friend request', 'error');
+        }
     } finally {
         processingRequests.value.delete(userId);
     }
@@ -85,16 +69,18 @@ const rejectRequest = async (userId) => {
 
     processingRequests.value.add(userId);
     try {
-        await friendStore.rejectFriendRequest(userId);
-        friendRequests.value = friendRequests.value.filter(request => request.id !== userId);
-        showToast('Friend request rejected', 'success');
-    } catch (err) {
-        console.error('Error rejecting friend request:', err);
-        showToast('Failed to reject friend request', 'error');
+        const success = await friendStore.setAcceptFriend(userId, '0');
+        if (success) {
+            showToast('Friend request rejected', 'success');
+        } else {
+            showToast('Failed to reject friend request', 'error');
+        }
     } finally {
         processingRequests.value.delete(userId);
     }
 };
 
-onMounted(fetchFriendRequests);
+onMounted(() => {
+    friendStore.getRequestedFriends();
+});
 </script>

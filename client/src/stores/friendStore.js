@@ -91,30 +91,41 @@ export const useFriendStore = defineStore('friend', () => {
         }
     }
 
-    const acceptFriendRequest = async (userId) => {
+    const setAcceptFriend = async (userId, isAccept) => {
+        loading.value = true
+        error.value = null
         try {
-            const response = await apiService.acceptFriendRequest(userId)
+            const response = await apiService.setAcceptFriend(userId, isAccept)
             if (response.data.code === '1000') {
+                // Remove the request from friendRequests
                 friendRequests.value = friendRequests.value.filter(request => request.id !== userId)
-                await getUserFriends()
-            } else {
-                throw new Error(response.data.message || 'Failed to accept friend request')
-            }
-        } catch (err) {
-            await handleError(err)
-        }
-    }
 
-    const rejectFriendRequest = async (userId) => {
-        try {
-            const response = await apiService.rejectFriendRequest(userId)
-            if (response.data.code === '1000') {
-                friendRequests.value = friendRequests.value.filter(request => request.id !== userId)
+                if (isAccept === '1') {
+                    // If accepted, add to friends list
+                    const acceptedFriend = friendRequests.value.find(request => request.id === userId)
+                    if (acceptedFriend) {
+                        friends.value.push({
+                            id: acceptedFriend.id,
+                            username: acceptedFriend.username,
+                            avatar: acceptedFriend.avatar,
+                            same_friends: acceptedFriend.same_friends,
+                            created: new Date().toISOString()
+                        })
+                        total.value++
+                    }
+                    // Optionally, you might want to refresh the friends list here
+                    // await getUserFriends()
+                }
+                return true
             } else {
-                throw new Error(response.data.message || 'Failed to reject friend request')
+                throw new Error(response.data.message || 'Failed to process friend request')
             }
         } catch (err) {
-            await handleError(err)
+            error.value = 'Failed to process friend request'
+            await handleError(err, router)
+            return false
+        } finally {
+            loading.value = false
         }
     }
 
@@ -156,16 +167,15 @@ export const useFriendStore = defineStore('friend', () => {
         friendSuggestions,
         loading,
         error,
-        sortedFriends,        
-        total,             
+        sortedFriends,
+        total,
         getUserFriends,
         resetFriends,
         getRequestedFriends,
-        acceptFriendRequest,
-        rejectFriendRequest,
+        setAcceptFriend,
         setSortBy,
         removeFriend,
-        blockUser,        
+        blockUser,
         getFriendSuggestions,
     }
 })

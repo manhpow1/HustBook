@@ -97,7 +97,62 @@ const getUserFriends = async (userId, index, count) => {
     }
 };
 
+const setAcceptFriend = async (userId, requesterId, isAccept) => {
+    try {
+        const friendRequestRef = db.collection(collections.friendRequests)
+            .where('senderId', '==', requesterId)
+            .where('recipientId', '==', userId)
+            .where('status', '==', 'pending')
+            .limit(1);
+
+        const snapshot = await friendRequestRef.get();
+
+        if (snapshot.empty) {
+            throw new Error('Friend request not found');
+        }
+
+        const requestDoc = snapshot.docs[0];
+        const batch = db.batch();
+
+        if (isAccept === '1') {
+            // Accept friend request
+            batch.update(requestDoc.ref, { status: 'accepted', updatedAt: new Date() });
+
+            // Create mutual friend connections
+            const user1FriendRef = db.collection(collections.friends)
+                .doc(userId)
+                .collection('userFriends')
+                .doc(requesterId);
+
+            const user2FriendRef = db.collection(collections.friends)
+                .doc(requesterId)
+                .collection('userFriends')
+                .doc(userId);
+
+            batch.set(user1FriendRef, {
+                created: new Date(),
+                status: 'active'
+            });
+
+            batch.set(user2FriendRef, {
+                created: new Date(),
+                status: 'active'
+            });
+        } else {
+            // Reject friend request
+            batch.update(requestDoc.ref, { status: 'rejected', updatedAt: new Date() });
+        }
+
+        await batch.commit();
+        return true;
+    } catch (error) {
+        logger.error('Error in setAcceptFriend service:', error);
+        throw error;
+    }
+};
+
 module.exports = {
     getRequestedFriends,
     getUserFriends,
+    setAcceptFriend,
 };
