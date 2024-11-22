@@ -50,12 +50,44 @@ export const useVideoStore = defineStore('video', () => {
         error.value = null
     }
 
+    const fetchVideos = async (params = {}) => {
+        // TODO: Implement API call to fetch videos
+        // This is a mock implementation
+        return [
+            {
+                id: 1,
+                url: 'https://example.com/video1.mp4',
+                title: 'Awesome Video 1',
+                uploader: { id: 101, username: 'user1' },
+            },
+            {
+                id: 2,
+                url: 'https://example.com/video2.mp4',
+                title: 'Cool Video 2',
+                uploader: { id: 102, username: 'user2' },
+            },
+            // Add more mock videos as needed
+        ];
+    }
+
+    const searchVideos = async (query) => {
+        // TODO: Implement API call to search videos
+        // This is a mock implementation
+        const allVideos = await this.fetchVideos();
+        return allVideos.filter(video =>
+            video.title.toLowerCase().includes(query.toLowerCase()) ||
+            video.uploader.username.toLowerCase().includes(query.toLowerCase())
+        );
+    }
+
     return {
         videos,
         loading,
         error,
         hasMore,
         getListVideos,
-        resetVideos
+        resetVideos,
+        fetchVideos,
+        searchVideos,
     }
 })

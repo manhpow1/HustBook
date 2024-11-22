@@ -2,13 +2,17 @@
   <div class="container mx-auto px-4 py-8">
     <h1 class="text-3xl font-bold mb-6">Friends</h1>
     <div v-if="userStore.isLoggedIn">
-      <ErrorBoundary component-name="FriendRequests">
-        <FriendRequests />
-      </ErrorBoundary>
-      <!-- Placeholder for future friend list or other friend-related components -->
-      <div class="mt-8">
-        <h2 class="text-2xl font-bold mb-4">Your Friends</h2>
-        <p class="text-gray-600">Friend list component will be implemented here.</p>
+      <div class="mb-8">
+        <h2 class="text-2xl font-semibold mb-4">Friend Requests</h2>
+        <FriendRequestList />
+      </div>
+      <div class="mb-8">
+        <h2 class="text-2xl font-semibold mb-4">Friend Suggestions</h2>
+        <FriendSuggestionList />
+      </div>
+      <div>
+        <h2 class="text-2xl font-semibold mb-4">Your Friends</h2>
+        <FriendList />
       </div>
     </div>
     <div v-else>
@@ -19,7 +23,9 @@
 
 <script setup>
 import { useUserStore } from '../../stores/userStore';
-import ErrorBoundary from '../../components/shared/ErrorBoundary.vue';
-import FriendRequests from '../../components/user/FriendRequests.vue';
-const userStore = useUserStore()
+import FriendRequestList from '../../components/user/FriendRequestList.vue';
+import FriendSuggestionList from '../../components/user/FriendSuggestionList.vue';
+import FriendList from '../../components/user/FriendList.vue';
+
+const userStore = useUserStore();
 </script>

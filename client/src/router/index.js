@@ -88,7 +88,8 @@ const routes = [
     {
         path: '/watch/:id',
         name: 'Watch',
-        component: () => import('../views/Watch.vue')
+        component: () => import('../views/Watch.vue'),
+        meta: { requiresAuth: true },
     },
     {
         path: '/delete-post/:id',
@@ -106,6 +107,19 @@ const routes = [
         path: '/search',
         name: 'Search',
         component: () => import('../components/search/SearchPosts.vue'),
+        meta: { requiresAuth: true },
+    },
+    {
+        path: '/videos',
+        name: 'VideoTab',
+        component: VideoTab,
+        meta: { requiresAuth: true },
+    },
+    {
+        path: '/videos/search',
+        name: 'VideoSearch',
+        component: VideoSearch,
+        meta: { requiresAuth: true },
     },
 ]
 

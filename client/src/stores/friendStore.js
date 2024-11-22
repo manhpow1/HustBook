@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import apiService from '../services/api'
+import router from '../router'
 
 export const useFriendStore = defineStore('friend', () => {
     const friends = ref([])
@@ -21,8 +22,8 @@ export const useFriendStore = defineStore('friend', () => {
                 throw new Error(response.data.message || 'Failed to get friend requests')
             }
         } catch (err) {
-            console.error('Error fetching friend requests:', err)
-            error.value = err.message
+            error.value = 'Failed to load friend requests'
+            await handleError(err, router)
         } finally {
             loading.value = false
         }
@@ -47,7 +48,7 @@ export const useFriendStore = defineStore('friend', () => {
             }
         } catch (err) {
             error.value = 'Failed to load friends'
-            await handleError(err)
+            await handleError(err, router)
         } finally {
             loading.value = false
         }
@@ -59,24 +60,112 @@ export const useFriendStore = defineStore('friend', () => {
         error.value = null
     }
 
+    const sortedFriends = computed(() => {
+        return [...friends.value].sort((a, b) => {
+            if (sortBy.value === 'name') {
+                return a.username.localeCompare(b.username)
+            } else if (sortBy.value === 'recent') {
+                return new Date(b.created) - new Date(a.created)
+            } else if (sortBy.value === 'mutual') {
+                return b.same_friends - a.same_friends
+            }
+            return 0
+        })
+    })
+
+    const getFriendSuggestions = async () => {
+        loading.value = true
+        error.value = null
+        try {
+            const response = await apiService.getFriendSuggestions()
+            if (response.data.code === '1000') {
+                friendSuggestions.value = response.data.data.suggestions
+            } else {
+                throw new Error(response.data.message || 'Failed to load friend suggestions')
+            }
+        } catch (err) {
+            error.value = 'Failed to load friend suggestions'
+            await handleError(err)
+        } finally {
+            loading.value = false
+        }
+    }
+
     const acceptFriendRequest = async (userId) => {
-        // Implement accept friend request logic
+        try {
+            const response = await apiService.acceptFriendRequest(userId)
+            if (response.data.code === '1000') {
+                friendRequests.value = friendRequests.value.filter(request => request.id !== userId)
+                await getUserFriends()
+            } else {
+                throw new Error(response.data.message || 'Failed to accept friend request')
+            }
+        } catch (err) {
+            await handleError(err)
+        }
     }
 
     const rejectFriendRequest = async (userId) => {
-        // Implement reject friend request logic
+        try {
+            const response = await apiService.rejectFriendRequest(userId)
+            if (response.data.code === '1000') {
+                friendRequests.value = friendRequests.value.filter(request => request.id !== userId)
+            } else {
+                throw new Error(response.data.message || 'Failed to reject friend request')
+            }
+        } catch (err) {
+            await handleError(err)
+        }
+    }
+
+    const removeFriend = async (userId) => {
+        try {
+            const response = await apiService.removeFriend(userId)
+            if (response.data.code === '1000') {
+                friends.value = friends.value.filter(friend => friend.id !== userId)
+            } else {
+                throw new Error(response.data.message || 'Failed to remove friend')
+            }
+        } catch (err) {
+            await handleError(err)
+        }
+    }
+
+    const blockUser = async (userId) => {
+        try {
+            const response = await apiService.blockUser(userId)
+            if (response.data.code === '1000') {
+                friends.value = friends.value.filter(friend => friend.id !== userId)
+                friendRequests.value = friendRequests.value.filter(request => request.id !== userId)
+                friendSuggestions.value = friendSuggestions.value.filter(suggestion => suggestion.id !== userId)
+            } else {
+                throw new Error(response.data.message || 'Failed to block user')
+            }
+        } catch (err) {
+            await handleError(err)
+        }
+    }
+
+    const setSortBy = (sort) => {
+        sortBy.value = sort
     }
 
     return {
+        friends,
         friendRequests,
+        friendSuggestions,
         loading,
         error,
-        friends,
-        total,
+        sortedFriends,        
+        total,             
         getUserFriends,
         resetFriends,
         getRequestedFriends,
         acceptFriendRequest,
         rejectFriendRequest,
+        setSortBy,
+        removeFriend,
+        blockUser,        
+        getFriendSuggestions,
     }
 })
