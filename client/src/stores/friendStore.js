@@ -87,7 +87,7 @@ export const useFriendStore = defineStore('friend', () => {
             }
         } catch (err) {
             error.value = 'Failed to load friend suggestions'
-            await handleError(err)
+            await handleError(err, router)
         } finally {
             loading.value = false
         }
@@ -144,11 +144,29 @@ export const useFriendStore = defineStore('friend', () => {
             }
         } catch (err) {
             error.value = 'Failed to load suggested friends';
-            console.error('Error fetching suggested friends:', err);
+            await handleError(err, router);
         } finally {
             loading.value = false;
         }
     };
+
+    const sendFriendRequest = async (userId) => {
+        loading.value = true
+        error.value = null
+        try {
+            const response = await apiService.sendFriendRequest(userId)
+            if (response.data.code === '1000') {
+                return response.data.data
+            } else {
+                throw new Error(response.data.message || 'Failed to send friend request')
+            }
+        } catch (err) {
+            error.value = 'Failed to send friend request'
+            await handleError(err, router)
+        } finally {
+            loading.value = false
+        }
+    }
 
     const removeFriend = async (userId) => {
         try {
@@ -199,5 +217,6 @@ export const useFriendStore = defineStore('friend', () => {
         blockUser,
         getFriendSuggestions,
         getListSuggestedFriends,
+        sendFriendRequest,
     }
 })

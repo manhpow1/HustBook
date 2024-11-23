@@ -2,6 +2,7 @@ const friendValidator = require('../validators/friendValidator');
 const friendService = require('../services/friendService');
 const { sendResponse, handleError } = require('../utils/responseHandler');
 const logger = require('../utils/logger');
+const { getDocument } = require('../config/database');
 
 const getRequestedFriends = async (req, res, next) => {
     try {
@@ -108,9 +109,46 @@ const getListSuggestedFriends = async (req, res, next) => {
     }
 };
 
+const setRequestFriend = async (req, res, next) => {
+    try {
+        const { error } = friendValidator.validateSetRequestFriend(req.body);
+        if (error) {
+            return sendResponse(res, '1002', { message: error.details[0].message });
+        }
+
+        const { user_id } = req.body;
+        const senderId = req.user.uid;
+
+        // Check if trying to send request to self
+        if (senderId === user_id) {
+            return sendResponse(res, '1004', { message: 'Cannot send friend request to yourself' });
+        }
+
+        // Check if recipient exists
+        const recipient = await getDocument(collections.users, user_id);
+        if (!recipient) {
+            return sendResponse(res, '9995'); // User is not validated
+        }
+
+        const result = await friendService.setRequestFriend(senderId, user_id);
+
+        sendResponse(res, '1000', result);
+    } catch (error) {
+        logger.error('Error in setRequestFriend controller:', error);
+        if (error.message === 'Friend request already exists') {
+            return sendResponse(res, '1010');
+        }
+        if (error.message === 'Users are already friends') {
+            return sendResponse(res, '1010');
+        }
+        handleError(error, req, res, next);
+    }
+};
+
 module.exports = {
     getRequestedFriends,
     getUserFriends,
     setAcceptFriend,
     getListSuggestedFriends,
+    setRequestFriend,
 };

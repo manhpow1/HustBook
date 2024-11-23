@@ -23,9 +23,9 @@
 
 <script setup>
 import { useUserStore } from '../../stores/userStore';
-import FriendRequestList from '../../components/user/FriendRequestList.vue';
-import FriendSuggestionList from '../../components/user/FriendSuggestionList.vue';
-import FriendList from '../../components/user/FriendList.vue';
+import FriendRequestList from '../../components/friend/FriendRequestList.vue';
+import FriendSuggestionList from '../../components/friend/FriendSuggestionList.vue';
+import FriendList from '../../components/friend/FriendList.vue';
 
 const userStore = useUserStore();
 </script>

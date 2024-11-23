@@ -131,6 +131,10 @@ const apiService = {
         });
     },
 
+    sendFriendRequest(userId) {
+        return this.post(API_ENDPOINTS.SET_REQUEST_FRIEND, { user_id: userId });
+    },
+
     // File upload
     upload(url, formData, onUploadProgress) {
         return api.post(url, formData, {
