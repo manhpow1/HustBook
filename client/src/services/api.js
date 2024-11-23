@@ -135,6 +135,14 @@ const apiService = {
         return this.post(API_ENDPOINTS.SET_REQUEST_FRIEND, { user_id: userId });
     },
 
+    getListBlocks: (params) => {
+        return axiosInstance.get(API_ENDPOINTS.GET_LIST_BLOCKS, { params });
+    },
+
+    unblockUser: (userId) => {
+        return axiosInstance.post(API_ENDPOINTS.UNBLOCK_USER, { user_id: userId });
+    },
+
     // File upload
     upload(url, formData, onUploadProgress) {
         return api.post(url, formData, {

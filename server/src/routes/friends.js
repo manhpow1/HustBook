@@ -8,5 +8,6 @@ router.post('/set_request_friend', authenticateToken, friendController.setReques
 router.get('/get_requested_friends', authenticateToken, friendController.getRequestedFriends);
 router.post('/set_accept_friend', authenticateToken, friendController.setAcceptFriend);
 router.get('/get_list_suggested_friends', authenticateToken, friendController.getListSuggestedFriends);
+router.get('/get_list_blocks', authenticateToken, friendController.getListBlocks);
 
 module.exports = router;

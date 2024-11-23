@@ -278,10 +278,51 @@ const setRequestFriend = async (senderId, recipientId) => {
     }
 };
 
+const getListBlocks = async (userId, index, count) => {
+    try {
+        // Query blocked users from the user's document
+        const userDoc = await getDocument(collections.users, userId);
+        if (!userDoc || !userDoc.blockedUsers) {
+            return { blocks: [], total: 0 };
+        }
+
+        // Get the blocked users' IDs with pagination
+        const blockedUserIds = userDoc.blockedUsers || [];
+        const paginatedIds = blockedUserIds.slice(index, index + count);
+
+        if (paginatedIds.length === 0) {
+            return { blocks: [], total: blockedUserIds.length };
+        }
+
+        // Get the user documents for the blocked users
+        const blockedUsers = await Promise.all(
+            paginatedIds.map(id => getDocument(collections.users, id))
+        );
+
+        // Format the response
+        const blocks = blockedUsers
+            .filter(user => user !== null) // Filter out any null results
+            .map(user => ({
+                id: user.id,
+                name: user.username || '',
+                avatar: user.avatar || ''
+            }));
+
+        return {
+            blocks,
+            total: blockedUserIds.length
+        };
+    } catch (error) {
+        logger.error('Error in getListBlocks service:', error);
+        throw error;
+    }
+};
+
 module.exports = {
     getRequestedFriends,
     getUserFriends,
     setAcceptFriend,
     getListSuggestedFriends,
     setRequestFriend,
+    getListBlocks,
 };

@@ -11,6 +11,12 @@ export const useFriendStore = defineStore('friend', () => {
     const error = ref(null)
     const total = ref(0)
     const sortBy = ref('name');
+    const blockedUsers = ref([])
+    const blockedUsersLoading = ref(false)
+    const blockedUsersError = ref(null)
+    const hasMoreBlockedUsers = ref(true)
+    const blockedUsersIndex = ref(0)
+    const blockedUsersCount = ref(20)
 
     const getRequestedFriends = async (index = 0, count = 20) => {
         loading.value = true
@@ -181,19 +187,48 @@ export const useFriendStore = defineStore('friend', () => {
         }
     }
 
-    const blockUser = async (userId) => {
+    const getListBlocks = async () => {
+        if (!hasMoreBlockedUsers.value) return
+
+        blockedUsersLoading.value = true
+        blockedUsersError.value = null
+
         try {
-            const response = await apiService.blockUser(userId)
+            const response = await apiService.getListBlocks(blockedUsersIndex.value, blockedUsersCount.value)
+
             if (response.data.code === '1000') {
-                friends.value = friends.value.filter(friend => friend.id !== userId)
-                friendRequests.value = friendRequests.value.filter(request => request.id !== userId)
-                friendSuggestions.value = friendSuggestions.value.filter(suggestion => suggestion.id !== userId)
+                blockedUsers.value = [...blockedUsers.value, ...response.data.data.blocks]
+                blockedUsersIndex.value += response.data.data.blocks.length
+                hasMoreBlockedUsers.value = response.data.data.blocks.length === blockedUsersCount.value
             } else {
-                throw new Error(response.data.message || 'Failed to block user')
+                throw new Error(response.data.message || 'Failed to fetch blocked users')
             }
         } catch (err) {
-            await handleError(err)
+            blockedUsersError.value = 'Failed to load blocked users'
+            await handleError(err, router)
+        } finally {
+            blockedUsersLoading.value = false
         }
+    }
+
+    const unblockUser = async (userId) => {
+        try {
+            const response = await apiService.unblockUser(userId)
+            if (response.data.code === '1000') {
+                blockedUsers.value = blockedUsers.value.filter(user => user.id !== userId)
+            } else {
+                throw new Error(response.data.message || 'Failed to unblock user')
+            }
+        } catch (err) {
+            await handleError(err, router)
+        }
+    }
+
+    const resetBlockedUsers = () => {
+        blockedUsers.value = []
+        blockedUsersIndex.value = 0
+        hasMoreBlockedUsers.value = true
+        blockedUsersError.value = null
     }
 
     const setSortBy = (sort) => {
@@ -208,15 +243,21 @@ export const useFriendStore = defineStore('friend', () => {
         error,
         sortedFriends,
         total,
+        blockedUsers,
+        blockedUsersLoading,
+        blockedUsersError,
+        hasMoreBlockedUsers,
         getUserFriends,
         resetFriends,
         getRequestedFriends,
         setAcceptFriend,
         setSortBy,
         removeFriend,
-        blockUser,
         getFriendSuggestions,
         getListSuggestedFriends,
         sendFriendRequest,
+        getListBlocks,
+        unblockUser,
+        resetBlockedUsers,
     }
 })
