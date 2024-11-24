@@ -24,6 +24,7 @@
                 <component :is="iconComponents[item.icon]" class="h-5 w-5 inline-block mr-1" />
                 {{ item.name }}
               </router-link>
+              <NotificationTab />
               <div class="ml-3 relative">
                 <div>
                   <button @click="toggleUserMenu"
@@ -40,10 +41,7 @@
                     </router-link>
                     <router-link to="/settings" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
                       Settings
-                    </router-link>
-                    <LogoutButton @logout-success="handleLogoutSuccess">
-                      Sign Out
-                    </LogoutButton>
+                    </router-link>                    
                   </div>
                 </transition>
               </div>
@@ -82,6 +80,7 @@
               <component :is="iconComponents[item.icon]" class="h-5 w-5 inline-block mr-1" />
               {{ item.name }}
             </router-link>
+            <NotificationTab />
             <LogoutButton v-if="isLoggedIn" @logout-success="handleLogoutSuccess" class="w-full text-left">
               Sign Out
             </LogoutButton>
@@ -147,6 +146,7 @@ import LogoutButton from '../auth/Logout.vue'
 import { navItems } from '../../config/navigation'
 import { useHead } from '@unhead/vue'
 import SearchPosts from '../search/SearchPosts.vue'
+import NotificationTab from '../notification/NotificationTab.vue'
 
 const createAsyncComponent = (loader) => defineAsyncComponent({
   loader,
@@ -165,12 +165,14 @@ const XIcon = createAsyncComponent(() => import('lucide-vue-next/dist/esm/icons/
 const FacebookIcon = createAsyncComponent(() => import('lucide-vue-next/dist/esm/icons/facebook'))
 const TwitterIcon = createAsyncComponent(() => import('lucide-vue-next/dist/esm/icons/twitter'))
 const InstagramIcon = createAsyncComponent(() => import('lucide-vue-next/dist/esm/icons/instagram'))
+const CogIcon = createAsyncComponent(() => import('lucide-vue-next/dist/esm/icons/cog'))
 
 const iconComponents = {
   HomeIcon,
   UserIcon,
   UsersIcon,
-  MessageCircleIcon
+  MessageCircleIcon,
+  CogIcon
 }
 
 const router = useRouter()
