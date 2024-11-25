@@ -140,6 +140,25 @@ export const useUserStore = defineStore('user', () => {
         }
     }
 
+    async function changePassword(currentPassword, newPassword) {
+        loading.value = true
+        error.value = null
+        try {
+            const response = await apiService.changePassword(currentPassword, newPassword)
+            if (response.data.code === '1000') {
+                return true
+            } else {
+                throw new Error(response.data.message || 'Failed to change password')
+            }
+        } catch (err) {
+            console.error('Change password error:', err)
+            error.value = err.message || 'An error occurred while changing password'
+            throw err
+        } finally {
+            loading.value = false
+        }
+    }
+
     watch(isLoggedIn, (newVal, oldVal) => {
         console.debug(`isLoggedIn changed from ${oldVal} to ${newVal}`);
     });
@@ -158,5 +177,6 @@ export const useUserStore = defineStore('user', () => {
         fetchUser,
         updateProfile,
         setUser,
+        changePassword,
     }
 })

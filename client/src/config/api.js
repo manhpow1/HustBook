@@ -9,6 +9,7 @@ export const API_ENDPOINTS = {
     SIGNUP: `${API_BASE_URL}/auth/signup`,
     AUTH_CHECK: `${API_BASE_URL}/auth/check`,
     CHANGE_INFO_AFTER_SIGNUP: `${API_BASE_URL}/auth/change_info_after_signup`,
+    CHANGE_PASSWORD: `${API_BASE_URL}/auth/change_password`,
     // Post Endpoints
     ADD_POST: `${API_BASE_URL}/posts`,
     GET_POST: (postId) => `${API_BASE_URL}/posts/${postId}`,

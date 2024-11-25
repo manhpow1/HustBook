@@ -119,7 +119,7 @@ const getVerifyCode = async (req, res, next) => {
         } else {
             return sendResponse(res, '1000', { message: 'Verification code sent.' });
         }
-        
+
     } catch (error) {
         logger.error('Error in get_verify_code:', { error: error.message, stack: error.stack });
         handleError(error, req, res, next);
@@ -245,6 +245,47 @@ const changeInfoAfterSignup = async (req, res, next) => {
     }
 };
 
+const changePassword = async (req, res, next) => {
+    try {
+        // Validate request body
+        const { error } = userValidator.validateChangePassword(req.body);
+        if (error) {
+            return sendResponse(res, '1002'); // Parameter is not enough
+        }
+
+        const { token, password, new_password } = req.body;
+
+        // Verify token and get user
+        const decodedToken = authService.verifyJWT(token);
+        const userId = decodedToken.uid;
+
+        const user = await authService.getUserById(userId);
+        if (!user) {
+            return sendResponse(res, '9995'); // User is not validated
+        }
+
+        // Check if old password matches
+        const isPasswordCorrect = await authService.comparePassword(password, user.password);
+        if (!isPasswordCorrect) {
+            return sendResponse(res, '1004'); // Parameter value is invalid
+        }
+
+        // Check if new password meets requirements
+        if (password === new_password) {
+            return sendResponse(res, '1004', { message: 'New password must be different from current password' });
+        }
+
+        // Update password
+        await authService.updatePassword(userId, new_password);
+
+        // Send success response
+        sendResponse(res, '1000'); // OK
+    } catch (error) {
+        logger.error('Change password error:', error);
+        handleError(error, req, res, next);
+    }
+};
+
 module.exports = {
     login,
     signup,
@@ -252,5 +293,6 @@ module.exports = {
     getVerifyCode,
     checkVerifyCode,
     checkAuth,
-    changeInfoAfterSignup
+    changeInfoAfterSignup,
+    changePassword,
 };

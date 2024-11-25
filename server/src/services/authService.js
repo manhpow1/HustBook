@@ -105,6 +105,24 @@ const validateUsername = (username) => {
     return true;
 };
 
+const updatePassword = async (userId, newPassword) => {
+    try {
+        const hashedPassword = await hashPassword(newPassword);
+        await updateDocument(collections.users, userId, {
+            password: hashedPassword,
+            passwordUpdatedAt: new Date()
+        });
+
+        // Optionally invalidate all existing sessions
+        await clearUserDeviceToken(userId);
+
+        return true;
+    } catch (error) {
+        logger.error('Error updating password:', error);
+        throw error;
+    }
+};
+
 module.exports = {
     generateDeviceToken,
     hashPassword,
@@ -121,5 +139,6 @@ module.exports = {
     storeVerificationCode,
     updateUserInfo,
     validateUsername,
-    generateRefreshToken
+    generateRefreshToken,
+    updatePassword,
 };

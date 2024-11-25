@@ -8,6 +8,11 @@
             <NotificationSettings />
 
             <div class="border-t pt-6">
+                <h2 class="text-xl font-semibold mb-4">Change Password</h2>
+                <ChangePasswordForm />
+            </div>
+
+            <div class="border-t pt-6">
                 <h2 class="text-xl font-semibold mb-4">Help & Support</h2>
                 <router-link to="/terms-and-policies" class="text-blue-600 hover:underline">
                     Terms & Policies
@@ -34,6 +39,7 @@ import { useUserStore } from '../../stores/userStore';
 import AccountSettings from './AccountSettings.vue';
 import PrivacySettings from './PrivacySettings.vue';
 import NotificationSettings from './NotificationSettings.vue';
+import ChangePasswordForm from './ChangePasswordForm.vue';
 
 const router = useRouter();
 const userStore = useUserStore();

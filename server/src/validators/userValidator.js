@@ -17,6 +17,21 @@ const changeInfoSchema = Joi.object({
     avatar: Joi.string().uri().optional()
 });
 
+const changePasswordSchema = Joi.object({
+    password: Joi.string().required(),
+    new_password: Joi.string()
+        .min(6)
+        .max(30)
+        .required()
+        .custom((value, helpers) => {
+            // Password strength validation
+            if (!/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)[a-zA-Z\d]{6,}$/.test(value)) {
+                return helpers.error('password.weak');
+            }
+            return value;
+        })
+});
+
 const validateSignup = (data) => {
     return signupSchema.validate(data);
 };
@@ -29,8 +44,13 @@ const validateChangeInfo = (data) => {
     return changeInfoSchema.validate(data);
 };
 
+const validateChangePassword = (data) => {
+    return changePasswordSchema.validate(data);
+};
+
 module.exports = {
     validateSignup,
     validateLogin,
-    validateChangeInfo
+    validateChangeInfo,
+    validateChangePassword,
 };

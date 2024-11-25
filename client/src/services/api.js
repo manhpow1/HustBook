@@ -85,6 +85,13 @@ const apiService = {
         });
     },
 
+    changePassword(currentPassword, newPassword) {
+        return this.post(API_ENDPOINTS.CHANGE_PASSWORD, {
+            password: currentPassword,
+            new_password: newPassword
+        });
+    },
+
     checkNewItems(lastId, categoryId = '0') {
         return this.post(API_ENDPOINTS.CHECK_NEW_ITEM, {
             last_id: lastId,
