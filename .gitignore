@@ -4,6 +4,8 @@ node_modules
 server/serviceAccountKey.json
 /server/uploads
 repomix-output.xml
+client.xml
+server.xml
 repomix.config.json
 .repomixignore
 server/config/production.json

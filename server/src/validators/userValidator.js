@@ -1,5 +1,9 @@
 const Joi = require('joi');
 
+const tokenSchema = Joi.object({
+    token: Joi.string().required().min(32).max(256)
+});
+
 const signupSchema = Joi.object({
     phoneNumber: Joi.string().pattern(/^0\d{9}$/).required(),
     password: Joi.string().min(6).max(30).required(),
@@ -32,6 +36,10 @@ const changePasswordSchema = Joi.object({
         })
 });
 
+const validateToken = (data) => {
+    return tokenSchema.validate(data);
+};
+
 const validateSignup = (data) => {
     return signupSchema.validate(data);
 };
@@ -49,6 +57,7 @@ const validateChangePassword = (data) => {
 };
 
 module.exports = {
+    validateToken,
     validateSignup,
     validateLogin,
     validateChangeInfo,
