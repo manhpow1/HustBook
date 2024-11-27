@@ -1,69 +1,52 @@
-const bcrypt = require('bcrypt');
-const jwt = require('jsonwebtoken');
 const { v4: uuidv4 } = require('uuid');
 const { collections, createDocument, getDocument, updateDocument, queryDocuments } = require('../config/database');
-const { auth } = require('../config/firebase');
-const config = require('config');
-
-const SALT_ROUNDS = 10;
-const JWT_SECRET = config.get('jwt.secret');
-const JWT_EXPIRATION = '1h';
-const REFRESH_TOKEN_SECRET = config.get('jwt.refreshSecret');
-const REFRESH_TOKEN_EXPIRATION = '7d';
-
-const generateDeviceToken = () => uuidv4();
-
-const generateRefreshToken = (userId) => {
-    return jwt.sign({ userId }, REFRESH_TOKEN_SECRET, { expiresIn: REFRESH_TOKEN_EXPIRATION });
-};
-
-const hashPassword = async (password) => {
-    return await bcrypt.hash(password, SALT_ROUNDS);
-};
-
-const comparePassword = async (password, hashedPassword) => {
-    return await bcrypt.compare(password, hashedPassword);
-};
-
-const generateJWT = (payload) => {
-    return jwt.sign(payload, JWT_SECRET, { expiresIn: JWT_EXPIRATION });
-};
-
-const verifyJWT = (token) => {
-    return jwt.verify(token, JWT_SECRET);
-};
+const { createError } = require('../utils/customError');
+const {
+    generateDeviceToken,
+    hashPassword,
+    comparePassword,
+    generateJWT,
+    verifyJWT,
+    generateRefreshToken,
+} = require('../utils/authHelper');
 
 const createUser = async (phoneNumber, password, uuid, verificationCode) => {
     const hashedPassword = await hashPassword(password);
     const deviceToken = generateDeviceToken();
 
-    const newUser = await auth.createUser({
-        phoneNumber: "+84" + phoneNumber.substring(1),
-        password: password,
-    });
+    // Generate a unique user ID
+    const userId = uuidv4();
 
     await createDocument(collections.users, {
-        uid: newUser.uid,
+        uid: userId,
         phoneNumber,
-        password: hashedPassword,
+        password: hashedPassword, // Store hashed password
         uuid,
         verificationCode,
+        verificationCodeTimestamp: Date.now(),
         isVerified: false,
-        deviceToken
+        deviceToken,
     });
 
-    return { userId: newUser.uid, verificationCode, deviceToken };
+    return { userId, verificationCode, deviceToken };
 };
 
 const getUserByPhoneNumber = async (phoneNumber) => {
     const users = await queryDocuments(collections.users, (ref) =>
         ref.where('phoneNumber', '==', phoneNumber).limit(1)
     );
+    if (users.length === 0) {
+        throw createError('9995', 'User not found');
+    }
     return users[0];
 };
 
 const getUserById = async (userId) => {
-    return await getDocument(collections.users, userId);
+    const user = await getDocument(collections.users, userId);
+    if (!user) {
+        throw createError('9995', 'User not found');
+    }
+    return user;
 };
 
 const updateUserVerification = async (userId, isVerified, deviceToken) => {
@@ -76,8 +59,7 @@ const updateUserDeviceInfo = async (userId, deviceToken, deviceId) => {
 
 const updateUserRefreshToken = async (userId, refreshToken) => {
     await updateDocument(collections.users, userId, { refreshToken });
-    // Invalidate previous tokens (if stored elsewhere, like Redis)
-    await cache.del(`refreshToken:${userId}`);
+    // Invalidate previous tokens if necessary
 };
 
 const clearUserDeviceToken = async (userId) => {
@@ -87,7 +69,7 @@ const clearUserDeviceToken = async (userId) => {
 const storeVerificationCode = async (userId, verificationCode) => {
     await updateDocument(collections.users, userId, {
         verificationCode,
-        verificationCodeTimestamp: Date.now()
+        verificationCodeTimestamp: Date.now(),
     });
 };
 
@@ -95,32 +77,14 @@ const updateUserInfo = async (userId, updateData) => {
     await updateDocument(collections.users, userId, updateData);
 };
 
-const validateUsername = (username) => {
-    if (username.length < 3 || username.length > 30) return false;
-    if (/[!@#$%^&*(),.?":{}|<>]/.test(username)) return false;
-    if (username.includes('/') || username.includes('\\')) return false;
-    if (/^\d+$/.test(username)) return false;
-    if (/^(\+\d{1,2}\s?)?1?[-.\s]?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}$/.test(username)) return false;
-    if (/^\d+\s+[\w\s]+(?:avenue|ave|street|st|road|rd|boulevard|blvd)\.?$/i.test(username)) return false;
-    return true;
-};
-
 const updatePassword = async (userId, newPassword) => {
-    try {
-        const hashedPassword = await hashPassword(newPassword);
-        await updateDocument(collections.users, userId, {
-            password: hashedPassword,
-            passwordUpdatedAt: new Date()
-        });
-
-        // Optionally invalidate all existing sessions
-        await clearUserDeviceToken(userId);
-
-        return true;
-    } catch (error) {
-        logger.error('Error updating password:', error);
-        throw error;
-    }
+    const hashedPassword = await hashPassword(newPassword);
+    await updateDocument(collections.users, userId, {
+        password: hashedPassword,
+        passwordUpdatedAt: new Date(),
+    });
+    // Optionally invalidate all existing sessions
+    await clearUserDeviceToken(userId);
 };
 
 module.exports = {
@@ -138,7 +102,6 @@ module.exports = {
     clearUserDeviceToken,
     storeVerificationCode,
     updateUserInfo,
-    validateUsername,
     generateRefreshToken,
     updatePassword,
 };

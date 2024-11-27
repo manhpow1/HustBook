@@ -1,29 +1,27 @@
-const { sendResponse, handleError } = require('../utils/responseHandler');
+const { sendResponse } = require('../utils/responseHandler');
 const { validateSearch, validateGetSavedSearch, validateDeleteSavedSearch } = require('../validators/searchValidator');
 const { searchPosts, getSavedSearches, deleteSavedSearch } = require('../services/searchService');
-const logger = require('../utils/logger');
+const { createError } = require('../utils/customError');
 
 const search = async (req, res, next) => {
     try {
-        // Validate request parameters
         const { error } = validateSearch(req.body);
         if (error) {
-            return sendResponse(res, '1002');
+            throw createError('1002', error.details.map(detail => detail.message).join(', '));
         }
 
-        const { user_id, keyword, index = 0, count = 20 } = req.body;
+        const { keyword, index = 0, count = 20 } = req.body;
+        const userId = req.user.uid;
 
-        // Call the search service
-        const matchingPosts = await searchPosts(user_id, keyword, index, count);
+        const matchingPosts = await searchPosts(userId, keyword, index, count);
 
         if (matchingPosts.length === 0) {
-            return sendResponse(res, '9994'); // No data found
+            throw createError('9994', 'No data or end of list data');
         }
 
         sendResponse(res, '1000', matchingPosts);
     } catch (error) {
-        logger.error('Search controller error:', error);
-        handleError(error, req, res, next);
+        next(error);
     }
 };
 
@@ -31,28 +29,27 @@ const getSavedSearch = async (req, res, next) => {
     try {
         const { error, value } = validateGetSavedSearch(req.query);
         if (error) {
-            return sendResponse(res, '1002', { message: error.details[0].message });
+            throw createError('1002', error.details.map(detail => detail.message).join(', '));
         }
 
         const { index, count } = value;
-        const userId = req.user.uid; // Assuming the user ID is attached to the request by the auth middleware
+        const userId = req.user.uid;
 
         const savedSearches = await getSavedSearches(userId, index, count);
 
         if (savedSearches.length === 0) {
-            return sendResponse(res, '9994'); // No data or end of list data
+            throw createError('9994', 'No data or end of list data');
         }
 
         sendResponse(res, '1000', {
             data: savedSearches.map(search => ({
                 id: search.id,
                 keyword: search.keyword,
-                created: search.created.toISOString()
-            }))
+                created: search.created.toISOString(),
+            })),
         });
     } catch (error) {
-        logger.error('Error in getSavedSearch controller:', error);
-        handleError(error, req, res, next);
+        next(error);
     }
 };
 
@@ -60,7 +57,7 @@ const deleteSavedSearches = async (req, res, next) => {
     try {
         const { error } = validateDeleteSavedSearch(req.params, req.query);
         if (error) {
-            return sendResponse(res, '1002', { message: error.details[0].message });
+            throw createError('1002', error.details.map(detail => detail.message).join(', '));
         }
 
         const { search_id } = req.params;
@@ -71,8 +68,7 @@ const deleteSavedSearches = async (req, res, next) => {
 
         sendResponse(res, '1000');
     } catch (error) {
-        logger.error('Error in deleteSavedSearch controller:', error);
-        handleError(error, req, res, next);
+        next(error);
     }
 };
 

@@ -15,7 +15,7 @@ const notificationRoutes = require('./routes/notifications');
 const authLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 5 }); // Auth routes
 const apiLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 200 }); // General routes
 
-const errorHandler = require('./middleware/errorHandler');
+const { handleError } = require('./utils/responseHandler');
 const logger = require('./utils/logger');
 
 const app = express();
@@ -38,12 +38,11 @@ app.use('/api/chat', chatRoutes);
 app.use('/api/notifications', notificationRoutes);
 
 // Error handling middleware
-app.use(errorHandler);
+app.use(handleError);
 
 // Unhandled promise rejections
 process.on('unhandledRejection', (reason, promise) => {
     logger.error('Unhandled Rejection at:', promise, 'reason:', reason);
-    // Application specific logging, throwing an error, or other logic here
 });
 
 module.exports = app;

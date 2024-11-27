@@ -2,11 +2,20 @@
     <div>
         <h2 class="text-xl font-semibold mb-4">Notification Settings</h2>
 
-        <div class="space-y-4">
+        <div v-if="loading" class="text-center py-4">
+            <LoaderIcon class="animate-spin h-8 w-8 text-gray-500 mx-auto" />
+            <p class="mt-2 text-gray-500">Loading settings...</p>
+        </div>
+
+        <div v-else-if="error" class="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mb-4" role="alert">
+            <p class="font-bold">Error</p>
+            <p>{{ error }}</p>
+        </div>
+
+        <div v-else class="space-y-4">
             <div v-for="(setting, key) in notificationSettings" :key="key" class="flex items-center justify-between">
-                <span>{{ setting.label }}</span>
-                <ToggleSwitch :modelValue="setting.enabled"
-                    @update:modelValue="updateNotificationSetting(key, $event)" />
+                <span>{{ formatSettingName(key) }}</span>
+                <ToggleSwitch :modelValue="setting" @update:modelValue="updateNotificationSetting(key, $event)" />
             </div>
         </div>
 
@@ -32,32 +41,25 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue';
-import { useSettingsStore } from '@/stores/settingsStore';
-import { useToast } from '@/composables/useToast';
+import { ref, onMounted, computed } from 'vue';
+import { useSettingsStore } from '../../stores/settingsStore';
+import { useToast } from '../../composables/useToast';
 import ToggleSwitch from '@/components/ui/ToggleSwitch.vue';
+import { LoaderIcon } from 'lucide-vue-next';
 
 const settingsStore = useSettingsStore();
 const { showToast } = useToast();
 
-const notificationSettings = ref({
-    comments: { label: 'Comments and likes on your posts', enabled: false },
-    friendUpdates: { label: 'Updates from friends', enabled: false },
-    friendRequests: { label: 'Friend requests', enabled: false },
-    peopleYouMayKnow: { label: 'People You May Know', enabled: false },
-    birthdays: { label: 'Birthdays', enabled: false },
-    videoApproval: { label: 'Approval of uploaded videos', enabled: false },
-    reportedContent: { label: 'Feedback on reported content', enabled: false },
-});
+const notificationSettings = computed(() => settingsStore.notificationSettings);
+const disableAllNotifications = computed(() => settingsStore.disableAllNotifications);
+const loading = computed(() => settingsStore.loading);
+const error = computed(() => settingsStore.error);
 
-const disableAllNotifications = ref(false);
 const selectedSound = ref('default');
 
 onMounted(async () => {
     try {
-        const settings = await settingsStore.getNotificationSettings();
-        notificationSettings.value = { ...notificationSettings.value, ...settings };
-        disableAllNotifications.value = await settingsStore.getDisableAllNotifications();
+        await settingsStore.getPushSettings();
     } catch (error) {
         showToast('Failed to load notification settings', 'error');
     }
@@ -65,8 +67,7 @@ onMounted(async () => {
 
 const updateNotificationSetting = async (key, value) => {
     try {
-        await settingsStore.updateNotificationSetting(key, value);
-        notificationSettings.value[key].enabled = value;
+        await settingsStore.updatePushSettings({ [key]: value });
         showToast('Notification setting updated', 'success');
     } catch (error) {
         showToast('Failed to update notification setting', 'error');
@@ -76,7 +77,6 @@ const updateNotificationSetting = async (key, value) => {
 const updateDisableAllNotifications = async (value) => {
     try {
         await settingsStore.updateDisableAllNotifications(value);
-        disableAllNotifications.value = value;
         showToast('All notifications ' + (value ? 'disabled' : 'enabled'), 'success');
     } catch (error) {
         showToast('Failed to update notification settings', 'error');
@@ -87,5 +87,9 @@ const previewSound = () => {
     // Implement sound preview logic here
     console.log('Preview sound:', selectedSound.value);
     // You would typically play the selected sound here
+};
+
+const formatSettingName = (key) => {
+    return key.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
 };
 </script>

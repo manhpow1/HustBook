@@ -1,9 +1,10 @@
 const { db } = require('../config/firebase');
 const { collections } = require('../config/database');
 const { getBoundingBox, getDistance } = require('../utils/geoUtils');
+const { createError } = require('../utils/customError');
 const logger = require('../utils/logger');
 
-exports.getListVideos = async ({
+const getListVideos = async ({
     userId,
     inCampaign,
     campaignId,
@@ -11,7 +12,7 @@ exports.getListVideos = async ({
     longitude,
     lastId,
     index,
-    count
+    count,
 }) => {
     try {
         let query = db.collection(collections.posts)
@@ -23,7 +24,7 @@ exports.getListVideos = async ({
         }
 
         if (latitude && longitude) {
-            const radiusKm = 10; // Set your desired radius here
+            const radiusKm = 10;
             const box = getBoundingBox(latitude, longitude, radiusKm);
 
             query = query.where('location.latitude', '>=', box.minLat)
@@ -37,7 +38,6 @@ exports.getListVideos = async ({
             }
         }
 
-        // Apply the index offset
         if (index > 0) {
             query = query.offset(index);
         }
@@ -49,14 +49,14 @@ exports.getListVideos = async ({
             const data = doc.data();
             if (latitude && longitude && data.location) {
                 const distance = getDistance(latitude, longitude, data.location.latitude, data.location.longitude);
-                if (distance > radiusKm) continue; // Skip posts outside the radius
+                if (distance > 10) continue;
             }
             posts.push({
                 id: doc.id,
                 name: data.name,
                 video: {
                     url: data.videoUrl,
-                    thumb: data.thumbnailUrl
+                    thumb: data.thumbnailUrl,
                 },
                 described: data.description,
                 created: data.createdAt.toDate().toISOString(),
@@ -71,19 +71,22 @@ exports.getListVideos = async ({
                 author: {
                     id: data.userId,
                     username: data.username,
-                    avatar: data.userAvatar
-                }
+                    avatar: data.userAvatar,
+                },
             });
         }
 
         return {
             posts,
             newItems: posts.length,
-            lastId: posts.length > 0 ? posts[posts.length - 1].id : null
+            lastId: posts.length > 0 ? posts[posts.length - 1].id : null,
         };
     } catch (error) {
         logger.error('Error in getListVideos service:', error);
-        throw error;
+        throw createError('9999', 'Exception error');
     }
 };
 
+module.exports = {
+    getListVideos,
+};

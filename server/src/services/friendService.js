@@ -1,4 +1,5 @@
-const { collections, queryDocuments, getDocument, } = require('../config/database');
+const { collections, queryDocuments, getDocument, createDocument, deleteDocument } = require('../config/database');
+const { createError } = require('../utils/customError');
 const logger = require('../utils/logger');
 const db = require('../config/firebase');
 
@@ -23,37 +24,10 @@ const getRequestedFriends = async (userId, index, count) => {
 
         const userMap = new Map(senderUsers.map(user => [user.id, user]));
 
-        const mutualFriendsPromises = senderIds.map(async (senderId) => {
-            const [senderFriends, userFriends] = await Promise.all([
-                queryDocuments(collections.friendRequests, (ref) =>
-                    ref.where('senderId', '==', senderId)
-                        .where('status', '==', 'accepted')
-                ),
-                queryDocuments(collections.friendRequests, (ref) =>
-                    ref.where('senderId', '==', userId)
-                        .where('status', '==', 'accepted')
-                )
-            ]);
-
-            const senderFriendIds = new Set(senderFriends.map(fr => fr.recipientId));
-            const userFriendIds = new Set(userFriends.map(fr => fr.recipientId));
-
-            const mutualFriends = [...senderFriendIds].filter(id => userFriendIds.has(id));
-
-            return {
-                senderId,
-                mutualCount: mutualFriends.length
-            };
-        });
-
-        const mutualFriendsResults = await Promise.all(mutualFriendsPromises);
-        const mutualFriendsMap = new Map(mutualFriendsResults.map(result => [result.senderId, result.mutualCount]));
-
         const formattedRequests = friendRequests.map(request => ({
             id: request.senderId,
             username: userMap.get(request.senderId)?.username || '',
             avatar: userMap.get(request.senderId)?.avatar || '',
-            same_friends: mutualFriendsMap.get(request.senderId)?.toString() || '0',
             created: request.createdAt.toISOString(),
         }));
 
@@ -64,37 +38,40 @@ const getRequestedFriends = async (userId, index, count) => {
 
         return {
             requests: formattedRequests,
-            total: totalRequests.length.toString()
+            total: totalRequests.length.toString(),
         };
     } catch (error) {
         logger.error('Error in getRequestedFriends service:', error);
-        throw error;
+        throw createError('9999', 'Exception error');
     }
 };
 
-const getUserFriends = async (userId, index, count) => {
+const getUserFriends = async (userId, limit = 20, startAfterDoc = null) => {
     try {
-        const friendsRef = db.collection(collections.friends).doc(userId).collection('userFriends');
-        const snapshot = await friendsRef.orderBy('created', 'desc').offset(index).limit(count).get();
+        let friendsRef = db.collection(collections.friends).doc(userId).collection('userFriends')
+            .orderBy('created', 'desc')
+            .limit(limit);
 
-        const friends = snapshot.docs.map(doc => {
-            const data = doc.data();
-            return {
-                id: doc.id,
-                username: data.username,
-                avatar: data.avatar,
-                same_friends: data.sameFriends,
-                created: data.created.toDate().toISOString()
-            };
-        });
+        if (startAfterDoc) {
+            friendsRef = friendsRef.startAfter(startAfterDoc);
+        }
 
-        const totalSnapshot = await friendsRef.get();
-        const total = totalSnapshot.size;
+        const snapshot = await friendsRef.get();
 
-        return { friends, total };
+        const friends = snapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data(),
+        }));
+
+        const lastVisible = snapshot.docs.length > 0 ? snapshot.docs[snapshot.docs.length - 1] : null;
+
+        return {
+            friends,
+            lastVisible,
+        };
     } catch (error) {
         logger.error('Error in getUserFriends service:', error);
-        throw error;
+        throw createError('9999', 'Exception error');
     }
 };
 
@@ -109,17 +86,15 @@ const setAcceptFriend = async (userId, requesterId, isAccept) => {
         const snapshot = await friendRequestRef.get();
 
         if (snapshot.empty) {
-            throw new Error('Friend request not found');
+            throw createError('1004', 'Friend request not found');
         }
 
         const requestDoc = snapshot.docs[0];
         const batch = db.batch();
 
         if (isAccept === '1') {
-            // Accept friend request
             batch.update(requestDoc.ref, { status: 'accepted', updatedAt: new Date() });
 
-            // Create mutual friend connections
             const user1FriendRef = db.collection(collections.friends)
                 .doc(userId)
                 .collection('userFriends')
@@ -132,15 +107,14 @@ const setAcceptFriend = async (userId, requesterId, isAccept) => {
 
             batch.set(user1FriendRef, {
                 created: new Date(),
-                status: 'active'
+                status: 'active',
             });
 
             batch.set(user2FriendRef, {
                 created: new Date(),
-                status: 'active'
+                status: 'active',
             });
         } else {
-            // Reject friend request
             batch.update(requestDoc.ref, { status: 'rejected', updatedAt: new Date() });
         }
 
@@ -148,22 +122,20 @@ const setAcceptFriend = async (userId, requesterId, isAccept) => {
         return true;
     } catch (error) {
         logger.error('Error in setAcceptFriend service:', error);
-        throw error;
+        throw createError('9999', 'Exception error');
     }
 };
 
 const getListSuggestedFriends = async (userId, index = 0, count = 20) => {
     try {
-        // Get current user's friends
         const userFriendsRef = await db.collection(collections.friends)
             .doc(userId)
             .collection('userFriends')
             .get();
 
         const userFriendIds = new Set(userFriendsRef.docs.map(doc => doc.id));
-        userFriendIds.add(userId); // Add current user to excluded list
+        userFriendIds.add(userId);
 
-        // Get all users except current user and their friends
         const usersRef = await db.collection(collections.users)
             .offset(index)
             .limit(count)
@@ -174,7 +146,6 @@ const getListSuggestedFriends = async (userId, index = 0, count = 20) => {
 
         for (const userDoc of usersRef.docs) {
             if (!userFriendIds.has(userDoc.id)) {
-                // For each potential friend, get their friends
                 const mutualFriendsPromise = async () => {
                     const theirFriendsRef = await db.collection(collections.friends)
                         .doc(userDoc.id)
@@ -187,7 +158,7 @@ const getListSuggestedFriends = async (userId, index = 0, count = 20) => {
                     return {
                         id: userDoc.id,
                         userData: userDoc.data(),
-                        mutualFriends
+                        mutualFriends,
                     };
                 };
 
@@ -197,41 +168,37 @@ const getListSuggestedFriends = async (userId, index = 0, count = 20) => {
 
         const mutualFriendsResults = await Promise.all(mutualFriendsPromises);
 
-        // Sort by number of mutual friends
         mutualFriendsResults.sort((a, b) => b.mutualFriends - a.mutualFriends);
 
-        // Format the response
         for (const result of mutualFriendsResults) {
             suggestedFriends.push({
                 user_id: result.id,
                 username: result.userData.username,
                 avatar: result.userData.avatar,
-                same_friends: result.mutualFriends.toString()
+                same_friends: result.mutualFriends.toString(),
             });
         }
 
         return {
-            list_users: suggestedFriends
+            list_users: suggestedFriends,
         };
     } catch (error) {
         logger.error('Error in getListSuggestedFriends service:', error);
-        throw error;
+        throw createError('9999', 'Exception error');
     }
 };
 
 const setRequestFriend = async (senderId, recipientId) => {
     try {
-        // Check if users exist
         const [sender, recipient] = await Promise.all([
             getDocument(collections.users, senderId),
-            getDocument(collections.users, recipientId)
+            getDocument(collections.users, recipientId),
         ]);
 
         if (!sender || !recipient) {
-            throw new Error('User not found');
+            throw createError('9995', 'User not found');
         }
 
-        // Check if there's an existing friend request
         const existingRequest = await queryDocuments(collections.friendRequests, (ref) =>
             ref.where('senderId', '==', senderId)
                 .where('recipientId', '==', recipientId)
@@ -240,53 +207,53 @@ const setRequestFriend = async (senderId, recipientId) => {
         );
 
         if (existingRequest.length > 0) {
-            throw new Error('Friend request already exists');
+            throw createError('1010', 'Friend request already exists');
         }
 
-        // Check if they are already friends
-        const areFriends = await queryDocuments(collections.friends, (ref) =>
-            ref.doc(senderId).collection('userFriends').doc(recipientId).get()
-        );
+        const areFriends = await db.collection(collections.friends)
+            .doc(senderId)
+            .collection('userFriends')
+            .doc(recipientId)
+            .get();
 
         if (areFriends.exists) {
-            throw new Error('Users are already friends');
+            throw createError('1010', 'Users are already friends');
         }
 
-        // Create friend request
         const friendRequestData = {
             senderId,
             recipientId,
             status: 'pending',
             createdAt: new Date(),
-            updatedAt: new Date()
+            updatedAt: new Date(),
         };
 
         await createDocument(collections.friendRequests, friendRequestData);
 
-        // Get count of pending requests
         const pendingRequests = await queryDocuments(collections.friendRequests, (ref) =>
             ref.where('recipientId', '==', recipientId)
                 .where('status', '==', 'pending')
         );
 
         return {
-            requested_friends: pendingRequests.length.toString()
+            requested_friends: pendingRequests.length.toString(),
         };
     } catch (error) {
         logger.error('Error in setRequestFriend service:', error);
-        throw error;
+        if (error.code) {
+            throw error;
+        }
+        throw createError('9999', 'Exception error');
     }
 };
 
 const getListBlocks = async (userId, index, count) => {
     try {
-        // Query blocked users from the user's document
         const userDoc = await getDocument(collections.users, userId);
         if (!userDoc || !userDoc.blockedUsers) {
             return { blocks: [], total: 0 };
         }
 
-        // Get the blocked users' IDs with pagination
         const blockedUserIds = userDoc.blockedUsers || [];
         const paginatedIds = blockedUserIds.slice(index, index + count);
 
@@ -294,27 +261,25 @@ const getListBlocks = async (userId, index, count) => {
             return { blocks: [], total: blockedUserIds.length };
         }
 
-        // Get the user documents for the blocked users
         const blockedUsers = await Promise.all(
             paginatedIds.map(id => getDocument(collections.users, id))
         );
 
-        // Format the response
         const blocks = blockedUsers
-            .filter(user => user !== null) // Filter out any null results
+            .filter(user => user !== null)
             .map(user => ({
                 id: user.id,
                 name: user.username || '',
-                avatar: user.avatar || ''
+                avatar: user.avatar || '',
             }));
 
         return {
             blocks,
-            total: blockedUserIds.length
+            total: blockedUserIds.length,
         };
     } catch (error) {
         logger.error('Error in getListBlocks service:', error);
-        throw error;
+        throw createError('9999', 'Exception error');
     }
 };
 

@@ -1,72 +1,45 @@
 const jwt = require('jsonwebtoken');
 const { getDocument, collections } = require('../config/database');
 const { createError } = require('../utils/customError');
-const { handleError } = require('../utils/responseHandler');
 const cache = require('../utils/redis');
 const config = require('config');
 
 const authenticateToken = async (req, res, next) => {
     try {
-        const authHeader = req.headers['authorization'];
-        const deviceToken = req.headers['x-device-token'];
+        const authHeader = req.headers.authorization;
 
-        // Ensure both authorization and device token are present
-        if (!authHeader || !deviceToken) {
-            return handleError(createError('9998', 'Missing authorization or device token'), req, res, next);
+        // Ensure the authorization header is present and properly formatted
+        if (!authHeader || !authHeader.startsWith('Bearer ')) {
+            throw createError('9998', 'Missing or invalid authorization header');
         }
 
-        const token = authHeader.split(' ')[1];
+        const token = authHeader.slice(7); // Remove 'Bearer ' prefix
 
         // Verify JWT token
         const decoded = jwt.verify(token, config.get('jwt.secret'));
 
-        // Check Redis cache for user data to avoid frequent database calls
+        // Check Redis cache for user data
         const cacheKey = `user:${decoded.uid}`;
         let user = await cache.get(cacheKey);
 
         if (!user) {
-            // Retrieve user from Firestore if not in cache
+            // Retrieve user from database if not in cache
             user = await getDocument(collections.users, decoded.uid);
             if (!user) {
-                return handleError(createError('9995', 'User not found'), req, res, next);
+                throw createError('9995', 'User not found');
             }
 
-            // Cache the user data for 1 hour
+            // Cache the user data
             await cache.set(cacheKey, user, 3600);
         }
 
-        // Validate the device token
-        if (user.deviceToken !== deviceToken) {
-            // Invalidate cache and return an error if device token mismatches
-            await cache.del(cacheKey);
-            return handleError(createError('9998', 'Invalid device token'), req, res, next);
-        }
-
-        // Attach user to request object for downstream usage
+        // Attach user to request object
         req.user = { ...user, uid: decoded.uid };
-
-        // Optional: Implement token rotation to improve security
-        if (tokenShouldBeRotated(decoded)) {
-            const newToken = jwt.sign({ uid: decoded.uid }, config.get('jwt.secret'), { expiresIn: '1h' });
-            res.setHeader('x-new-token', newToken); // Send new token in response header
-        }
 
         next(); // Proceed to the next middleware or route handler
     } catch (error) {
-        if (error instanceof jwt.TokenExpiredError) {
-            return handleError(createError('9996', 'Token expired'), req, res, next);
-        } else if (error instanceof jwt.JsonWebTokenError) {
-            return handleError(createError('9998', 'Invalid token'), req, res, next);
-        } else {
-            return handleError(error, req, res, next);
-        }
+        next(error);
     }
-};
-
-const tokenShouldBeRotated = (decoded) => {
-    const now = Math.floor(Date.now() / 1000); // Current time in seconds
-    const timeLeft = decoded.exp - now; // Token expiration time left
-    return timeLeft < 300; // Rotate if less than 5 minutes remain
 };
 
 module.exports = { authenticateToken };

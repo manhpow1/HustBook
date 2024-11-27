@@ -25,6 +25,8 @@ export const API_ENDPOINTS = {
     GET_USER_POSTS: (userId) => `${API_BASE_URL}/posts/user/${userId}`,
     // Notification Endpoint
     CHECK_NEW_ITEM: `${API_BASE_URL}/notifications/check_new_item`,
+    GET_PUSH_SETTINGS: `${API_BASE_URL}/settings/get_push_settings`,
+    UPDATE_PUSH_SETTINGS: `${API_BASE_URL}/settings/update_push_settings`,
     // Search Endpoint
     SEARCH: `${API_BASE_URL}/search/search`,
     GET_SAVED_SEARCH: `${API_BASE_URL}/search/get_saved_search`,

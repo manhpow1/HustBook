@@ -5,6 +5,8 @@ import apiService from '../services/api';
 export const useSettingsStore = defineStore('settings', () => {
     const notificationSettings = ref({});
     const disableAllNotifications = ref(false);
+    const loading = ref(false);
+    const error = ref(null);
 
     const updatePersonalInfo = async (personalInfo) => {
         try {
@@ -104,9 +106,42 @@ export const useSettingsStore = defineStore('settings', () => {
         }
     };
 
+    const getPushSettings = async () => {
+        loading.value = true;
+        error.value = null;
+        try {
+            const response = await apiService.get('/settings/get_push_settings');
+            notificationSettings.value = response.data.data;
+            return response.data.data;
+        } catch (error) {
+            console.error('Failed to get push notification settings:', error);
+            error.value = 'Failed to fetch push notification settings';
+            throw error;
+        } finally {
+            loading.value = false;
+        }
+    };
+
+    const updatePushSettings = async (settings) => {
+        loading.value = true;
+        error.value = null;
+        try {
+            await apiService.post('/settings/update_push_settings', settings);
+            notificationSettings.value = { ...notificationSettings.value, ...settings };
+        } catch (error) {
+            console.error('Failed to update push notification settings:', error);
+            error.value = 'Failed to update push notification settings';
+            throw error;
+        } finally {
+            loading.value = false;
+        }
+    };
+
     return {
         notificationSettings,
         disableAllNotifications,
+        loading,
+        error,
         updatePersonalInfo,
         updatePassword,
         getBlockedUsers,
@@ -117,6 +152,8 @@ export const useSettingsStore = defineStore('settings', () => {
         updateNotificationSetting,
         getDisableAllNotifications,
         updateDisableAllNotifications,
+        getPushSettings,
+        updatePushSettings,
     };
 });
 

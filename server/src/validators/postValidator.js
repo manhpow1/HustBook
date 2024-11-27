@@ -37,20 +37,19 @@ const getListPostsSchema = Joi.object({
     campaign_id: Joi.string().optional(),
     latitude: Joi.number().min(-90).max(90).optional(),
     longitude: Joi.number().min(-180).max(180).optional(),
-    last_id: Joi.string().optional(),
-    index: Joi.number().integer().min(0).required(),
-    count: Joi.number().integer().min(1).max(100).required()
+    lastVisible: Joi.string().optional(),
+    limit: Joi.number().integer().min(1).max(100).default(20),
 });
 
 const getPostCommentsSchema = Joi.object({
-    index: Joi.number().integer().min(0).default(0).optional(),  // Pagination index (default: 0)
-    count: Joi.number().integer().min(1).max(100).default(10).optional(),  // Number of comments (default: 10)
+    limit: Joi.number().integer().min(1).max(100).default(20).optional(),
+    lastVisible: Joi.string().optional(),
 });
 
 const getUserPostsSchema = Joi.object({
     userId: Joi.string().required(),
-    lastPostId: Joi.string(),
-    limit: Joi.number().integer().min(1).max(100).default(20)
+    limit: Joi.number().integer().min(1).max(100).default(20),
+    lastVisible: Joi.string().optional(),
 });
 
 const reportPostSchema = Joi.object({

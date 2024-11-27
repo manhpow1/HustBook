@@ -1,5 +1,5 @@
 class CustomError extends Error {
-    constructor(code, message, statusCode = 500) {
+    constructor(code, message, statusCode) {
         super(message);
         this.code = code;
         this.statusCode = statusCode;
@@ -30,9 +30,9 @@ const errorCodes = {
     '1012': { message: 'Limited access', statusCode: 403 },
 };
 
-const createError = (code) => {
-    const { message, statusCode } = errorCodes[code] || errorCodes['1005'];
-    return new CustomError(code, message, statusCode);
+const createError = (code, customMessage) => {
+    const error = errorCodes[code] || errorCodes['1005'];
+    return new CustomError(code, customMessage || error.message, error.statusCode);
 };
 
 module.exports = { CustomError, createError, errorCodes };

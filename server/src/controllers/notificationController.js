@@ -1,17 +1,14 @@
-const { sendResponse, handleError } = require('../utils/responseHandler');
-const { createResponse } = require('../utils/responseHelper');
-const { validateToken } = require('../validators/userValidator');
+const { sendResponse } = require('../utils/responseHandler');
 const notificationValidator = require('../validators/notificationValidator');
 const notificationService = require('../services/notificationService');
-const logger = require('../utils/logger');
+const { createError } = require('../utils/customError');
 
 class NotificationController {
-
     async checkNewItem(req, res, next) {
         try {
             const { error, value } = notificationValidator.validateCheckNewItem(req.body);
             if (error) {
-                return sendResponse(res, '1002', { message: error.details[0].message });
+                throw createError('1002', error.details[0].message);
             }
 
             const { last_id, category_id } = value;
@@ -20,46 +17,40 @@ class NotificationController {
 
             sendResponse(res, '1000', {
                 data: {
-                    new_items: newItemsCount.toString()
-                }
+                    new_items: newItemsCount.toString(),
+                },
             });
         } catch (error) {
-            logger.error('Error in checkNewItem controller:', error);
-            handleError(error, req, res, next);
+            next(error);
         }
-    };
+    }
 
-    async getPushSettings(req, res) {
+    async getPushSettings(req, res, next) {
         try {
-            // Validate token from request
-            const { token } = req.body;
-            const validationResult = validateToken({ token });
+            const userId = req.user.uid;
 
-            if (validationResult.error) {
-                return res.status(400).json(
-                    createResponse('1004', 'Invalid token format', null)
-                );
-            }
+            const settings = await notificationService.getPushSettings(userId);
 
-            // Get user settings from service
-            const settings = await notificationService.getPushSettings(token);
-
-            if (!settings) {
-                return res.status(404).json(
-                    createResponse('9995', 'User not found or invalid token', null)
-                );
-            }
-
-            // Return success response with settings
-            return res.status(200).json(
-                createResponse('1000', 'OK', settings)
-            );
-
+            sendResponse(res, '1000', settings);
         } catch (error) {
-            logger.error('Error in getPushSettings:', error);
-            return res.status(500).json(
-                createResponse('9999', 'Internal server error', null)
-            );
+            next(error);
+        }
+    }
+
+    async updatePushSettings(req, res, next) {
+        try {
+            const { error, value } = notificationValidator.validateUpdatePushSettings(req.body);
+            if (error) {
+                throw createError('1002', error.details[0].message);
+            }
+
+            const userId = req.user.uid;
+
+            const updatedSettings = await notificationService.updatePushSettings(userId, value);
+
+            sendResponse(res, '1000', updatedSettings);
+        } catch (error) {
+            next(error);
         }
     }
 }

@@ -1,6 +1,6 @@
 const { collections, queryDocuments } = require('../config/database');
-const { getUserFromToken } = require('../utils/authHelper');
 const PushSettings = require('../models/pushSettings');
+const { createError } = require('../utils/customError');
 const logger = require('../utils/logger');
 
 class NotificationService {
@@ -16,56 +16,33 @@ class NotificationService {
             return newItems.length;
         } catch (error) {
             logger.error('Error in checkNewItems service:', error);
-            throw error;
+            throw createError('9999', 'Exception error');
         }
     }
 
-    async getPushSettings(token) {
+    async getPushSettings(userId) {
         try {
-            // Get user from token
-            const userId = await getUserFromToken(token);
-            if (!userId) {
-                return null;
-            }
+            const pushSettings = new PushSettings(userId);
 
-            // Get user's push settings from database
-            const settings = await PushSettings.findOne({ userId });
+            const settings = await pushSettings.getSettings();
 
-            // If no settings exist, return default settings
-            if (!settings) {
-                return {
-                    like_comment: "1",
-                    from_friends: "1",
-                    requested_friend: "1",
-                    suggested_friend: "1",
-                    birthday: "1",
-                    video: "1",
-                    report: "1",
-                    sound_on: "1",
-                    notification_on: "1",
-                    vibrant_on: "1",
-                    led_on: "1"
-                };
-            }
-
-            // Return user's settings
-            return {
-                like_comment: settings.like_comment,
-                from_friends: settings.from_friends,
-                requested_friend: settings.requested_friend,
-                suggested_friend: settings.suggested_friend,
-                birthday: settings.birthday,
-                video: settings.video,
-                report: settings.report,
-                sound_on: settings.sound_on,
-                notification_on: settings.notification_on,
-                vibrant_on: settings.vibrant_on,
-                led_on: settings.led_on
-            };
-
+            return settings;
         } catch (error) {
             logger.error('Error in getPushSettings service:', error);
-            throw error;
+            throw createError('9999', 'Exception error');
+        }
+    }
+
+    async updatePushSettings(userId, settingsData) {
+        try {
+            const pushSettings = new PushSettings(userId);
+
+            const updatedSettings = await pushSettings.updateSettings(settingsData);
+
+            return updatedSettings;
+        } catch (error) {
+            logger.error('Error in updatePushSettings service:', error);
+            throw createError('9999', 'Exception error');
         }
     }
 }

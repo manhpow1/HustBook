@@ -1,28 +1,30 @@
-const { collections, queryDocuments } = require('../config/database');
+const { collections, queryDocuments, createDocument, deleteDocument } = require('../config/database');
+const { createError } = require('../utils/customError');
 const logger = require('../utils/logger');
 
 const searchPosts = async (userId, keyword, index, count) => {
     try {
-        // Normalize the keyword (remove extra spaces, convert to lowercase)
         const normalizedKeyword = keyword.trim().toLowerCase();
 
-        // Query posts from Firebase
         const query = queryDocuments(collections.posts, (ref) =>
-            ref.where('userId', '==', userId)
-                .orderBy('createdAt', 'desc')
+            ref.orderBy('createdAt', 'desc')
                 .offset(parseInt(index))
                 .limit(parseInt(count))
         );
 
         const posts = await query;
 
-        // Filter posts based on normalized keyword
         const matchingPosts = posts.filter(post => {
             const content = post.content?.toLowerCase() || '';
             return content.includes(normalizedKeyword);
         });
 
-        // Format response data
+        await createDocument(collections.savedSearches, {
+            userId,
+            keyword,
+            created: new Date(),
+        });
+
         return matchingPosts.map(post => ({
             id: post.id,
             image: post.images?.[0] || '',
@@ -33,13 +35,13 @@ const searchPosts = async (userId, keyword, index, count) => {
             author: {
                 id: post.userId,
                 username: post.username || '',
-                avatar: post.avatar || ''
+                avatar: post.avatar || '',
             },
-            described: post.content || ''
+            described: post.content || '',
         }));
     } catch (error) {
         logger.error('Search service error:', error);
-        throw error;
+        throw createError('9999', 'Exception error');
     }
 };
 
@@ -57,11 +59,11 @@ const getSavedSearches = async (userId, index, count) => {
         return savedSearches.map(search => ({
             id: search.id,
             keyword: search.keyword,
-            created: search.created.toDate()
+            created: search.created.toDate(),
         }));
     } catch (error) {
         logger.error('Get saved searches service error:', error);
-        throw error;
+        throw createError('9999', 'Exception error');
     }
 };
 
@@ -75,17 +77,20 @@ const deleteSavedSearch = async (userId, searchId, deleteAll) => {
             await Promise.all(deletePromises);
         } else {
             const savedSearch = await queryDocuments(collections.savedSearches, (ref) =>
-                ref.where('id', '==', searchId).where('userId', '==', userId).limit(1)
+                ref.where('__name__', '==', searchId).where('userId', '==', userId).limit(1)
             );
             if (savedSearch.length > 0) {
                 await deleteDocument(collections.savedSearches, searchId);
             } else {
-                throw new Error('Saved search not found or not authorized');
+                throw createError('1004', 'Saved search not found or not authorized');
             }
         }
     } catch (error) {
         logger.error('Delete saved search service error:', error);
-        throw error;
+        if (error.code) {
+            throw error;
+        }
+        throw createError('9999', 'Exception error');
     }
 };
 

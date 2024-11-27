@@ -11,13 +11,19 @@ const logFormat = printf(({ level, message, timestamp, ...metadata }) => {
     return msg;
 });
 
+const maskSensitiveData = winston.format((info) => {
+    if (info.message && typeof info.message === 'string') {
+        info.message = info.message.replace(/password=[^&\s]+/g, 'password=***');
+    }
+    return info;
+});
+
 const logger = winston.createLogger({
     level: process.env.LOG_LEVEL || 'info',
     format: combine(
+        maskSensitiveData(),
         colorize({ all: true }),
-        timestamp({
-            format: 'YYYY-MM-DD HH:mm:ss',
-        }),
+        timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
         align(),
         logFormat
     ),

@@ -1,13 +1,13 @@
 const { validateGetListVideos } = require('../validators/videoValidator');
 const videoService = require('../services/videoService');
-const { sendResponse, handleError } = require('../utils/responseHandler');
-const logger = require('../utils/logger');
+const { sendResponse } = require('../utils/responseHandler');
+const { createError } = require('../utils/customError');
 
-exports.getListVideos = async (req, res, next) => {
+const getListVideos = async (req, res, next) => {
     try {
         const { error, value } = validateGetListVideos(req.body);
         if (error) {
-            return sendResponse(res, '1002', { message: error.details[0].message });
+            throw createError('1002', error.details.map(detail => detail.message).join(', '));
         }
 
         const {
@@ -18,7 +18,7 @@ exports.getListVideos = async (req, res, next) => {
             longitude,
             last_id,
             index,
-            count
+            count,
         } = value;
 
         const result = await videoService.getListVideos({
@@ -29,7 +29,7 @@ exports.getListVideos = async (req, res, next) => {
             longitude: longitude ? parseFloat(longitude) : undefined,
             lastId: last_id,
             index: parseInt(index || '0'),
-            count: parseInt(count || '20')
+            count: parseInt(count || '20'),
         });
 
         sendResponse(res, '1000', {
@@ -37,11 +37,13 @@ exports.getListVideos = async (req, res, next) => {
             new_items: result.newItems.toString(),
             last_id: result.lastId,
             in_campaign: in_campaign || '0',
-            campaign_id: campaign_id || ''
+            campaign_id: campaign_id || '',
         });
     } catch (error) {
-        logger.error('Error in getListVideos controller:', error);
-        handleError(error, req, res, next);
+        next(error);
     }
 };
 
+module.exports = {
+    getListVideos,
+};

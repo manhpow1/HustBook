@@ -150,6 +150,14 @@ const apiService = {
         return axiosInstance.post(API_ENDPOINTS.UNBLOCK_USER, { user_id: userId });
     },
 
+    getPushSettings: () => {
+        return axiosInstance.get(API_ENDPOINTS.GET_PUSH_SETTINGS);
+    },
+
+    updatePushSettings: (settings) => {
+        return axiosInstance.post(API_ENDPOINTS.UPDATE_PUSH_SETTINGS, settings);
+    },
+
     // File upload
     upload(url, formData, onUploadProgress) {
         return api.post(url, formData, {
