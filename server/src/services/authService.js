@@ -9,6 +9,8 @@ const {
     verifyJWT,
     generateRefreshToken,
 } = require('../utils/authHelper');
+const { db } = require('../config/firebase');
+const admin = require('firebase-admin');
 
 const createUser = async (phoneNumber, password, uuid, verificationCode) => {
     const hashedPassword = await hashPassword(password);
@@ -20,12 +22,13 @@ const createUser = async (phoneNumber, password, uuid, verificationCode) => {
     await createDocument(collections.users, {
         uid: userId,
         phoneNumber,
-        password: hashedPassword, // Store hashed password
+        password: hashedPassword,
         uuid,
         verificationCode,
         verificationCodeTimestamp: Date.now(),
         isVerified: false,
         deviceToken,
+        tokenVersion: 0, // Initialize tokenVersion
     });
 
     return { userId, verificationCode, deviceToken };
@@ -81,7 +84,6 @@ const updateUserDeviceInfo = async (userId, deviceToken, deviceId) => {
 
 const updateUserRefreshToken = async (userId, refreshToken) => {
     await updateDocument(collections.users, userId, { refreshToken });
-    // Invalidate previous tokens if necessary
 };
 
 const clearUserDeviceToken = async (userId) => {
@@ -129,13 +131,18 @@ const updatePassword = async (userId, newPassword) => {
     const hashedPassword = await hashPassword(newPassword);
     await db.runTransaction(async (transaction) => {
         const userRef = db.collection(collections.users).doc(userId);
+        const userDoc = await transaction.get(userRef);
+
+        if (!userDoc.exists) {
+            throw createError('9995', 'User not found');
+        }
+
+        const currentTokenVersion = userDoc.data().tokenVersion || 0;
+
         transaction.update(userRef, {
             password: hashedPassword,
             passwordUpdatedAt: new Date(),
-        });
-        // Invalidate sessions
-        transaction.update(userRef, {
-            deviceTokens: [],
+            tokenVersion: currentTokenVersion + 1, // Invalidate tokens
         });
     });
 };

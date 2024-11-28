@@ -30,7 +30,10 @@ const signup = async (req, res, next) => {
             verificationCode
         );
 
-        const token = authService.generateJWT({ uid: userId, phone: formattedPhoneNumber });
+        const token = authService.generateJWT({
+            uid: user.uid,
+            phone: user.phoneNumber,
+        });
 
         sendResponse(res, '1000', {
             id: userId,
@@ -65,11 +68,13 @@ const login = async (req, res, next) => {
         const deviceToken = authService.generateDeviceToken();
         await authService.updateUserDeviceInfo(user.uid, deviceToken, deviceId);
 
-        const token = authService.generateJWT({ uid: user.uid, phone: user.phoneNumber });
+        const token = authService.generateJWT({
+            uid: user.uid,
+            phone: user.phoneNumber,
+            passwordUpdatedAt: user.passwordUpdatedAt,
+        });
 
-        const userModel = new User(user);
-
-        const refreshToken = authService.generateRefreshToken(user.uid);
+        const refreshToken = authService.generateRefreshToken(user.uid, user.passwordUpdatedAt);
         await authService.updateUserRefreshToken(user.uid, refreshToken);
 
         sendResponse(res, '1000', {
@@ -77,6 +82,7 @@ const login = async (req, res, next) => {
             username: user.username,
             phoneNumber: user.phoneNumber,
             token: token,
+            refreshToken: refreshToken,
             deviceToken: deviceToken,
         });
     } catch (error) {
@@ -89,6 +95,7 @@ const logout = async (req, res, next) => {
         const userId = req.user.uid;
 
         await authService.clearUserDeviceToken(userId);
+        await authService.updateUserRefreshToken(userId, null); // Invalidate refresh token
 
         sendResponse(res, '1000');
     } catch (error) {
@@ -149,7 +156,11 @@ const checkVerifyCode = async (req, res, next) => {
             throw createError('9993');
         }
 
-        const token = authService.generateJWT({ uid: user.uid, phone: phonenumber });
+        const token = authService.generateJWT({
+            uid: user.uid,
+            phone: user.phoneNumber,
+            passwordUpdatedAt: user.passwordUpdatedAt,
+        });
         const deviceToken = authService.generateDeviceToken();
 
         await authService.updateUserVerification(user.uid, true, deviceToken);
@@ -245,6 +256,46 @@ const changePassword = async (req, res, next) => {
     }
 };
 
+const refreshToken = async (req, res, next) => {
+    try {
+        const { refreshToken } = req.body;
+
+        if (!refreshToken) {
+            throw createError('1002', 'Refresh token is required');
+        }
+
+        // Verify refresh token
+        const decoded = authService.verifyRefreshToken(refreshToken);
+        const userId = decoded.userId;
+        const tokenVersion = decoded.tokenVersion;
+
+        const user = await authService.getUserById(userId);
+
+        if (!user) {
+            throw createError('9995', 'User not found');
+        }
+
+        // Check tokenVersion
+        if (user.tokenVersion !== tokenVersion) {
+            throw createError('9998', 'Invalid refresh token');
+        }
+
+        // Generate new tokens
+        const newAccessToken = authService.generateJWT(user);
+        const newRefreshToken = authService.generateRefreshToken(user);
+
+        // Update refresh token in database
+        await authService.updateUserRefreshToken(user.uid, newRefreshToken);
+
+        sendResponse(res, '1000', {
+            token: newAccessToken,
+            refreshToken: newRefreshToken,
+        });
+    } catch (error) {
+        next(error);
+    }
+};
+
 module.exports = {
     signup,
     login,
@@ -254,4 +305,5 @@ module.exports = {
     checkAuth,
     changeInfoAfterSignup,
     changePassword,
+    refreshToken,
 };

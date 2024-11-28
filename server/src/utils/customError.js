@@ -3,6 +3,7 @@ class CustomError extends Error {
         super(message);
         this.code = code;
         this.statusCode = statusCode;
+        this.isOperational = isOperational;
     }
 }
 

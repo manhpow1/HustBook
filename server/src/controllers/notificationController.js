@@ -41,7 +41,7 @@ class NotificationController {
         try {
             const { error, value } = notificationValidator.validateUpdatePushSettings(req.body);
             if (error) {
-                throw createError('1002', error.details[0].message);
+                throw createError('1002', 'Parameter value is invalid');
             }
 
             const userId = req.user.uid;

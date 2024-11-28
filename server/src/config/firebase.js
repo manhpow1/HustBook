@@ -6,7 +6,7 @@ const initializeFirebase = () => {
     admin.initializeApp({
       credential: admin.credential.cert({
         projectId: env.firebase.projectId,
-        privateKey: env.firebase.privateKey.replace(/\\n/g, '\n'),
+        privateKey: env.firebase.privateKey,
         clientEmail: env.firebase.clientEmail,
       }),
     });

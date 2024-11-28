@@ -1,7 +1,7 @@
 const { collections, queryDocuments, getDocument, createDocument, deleteDocument } = require('../config/database');
 const { createError } = require('../utils/customError');
 const logger = require('../utils/logger');
-const db = require('../config/firebase');
+const { db } = require('../config/firebase');
 
 const getRequestedFriends = async (userId, index, count) => {
     try {

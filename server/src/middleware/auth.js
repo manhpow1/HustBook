@@ -8,35 +8,35 @@ const authenticateToken = async (req, res, next) => {
     try {
         const authHeader = req.headers.authorization;
 
-        // Ensure the authorization header is present and properly formatted
         if (!authHeader || !authHeader.startsWith('Bearer ')) {
             throw createError('9998', 'Missing or invalid authorization header');
         }
 
-        const token = authHeader.slice(7); // Remove 'Bearer ' prefix
+        const token = authHeader.slice(7);
 
         // Verify JWT token
         const decoded = jwt.verify(token, config.get('jwt.secret'));
+        const { uid, tokenVersion } = decoded;
 
-        // Check Redis cache for user data
-        const cacheKey = `user:${decoded.uid}`;
-        let user = await cache.get(cacheKey);
+        // Fetch user data
+        let user = await cache.get(`user:${uid}`);
 
         if (!user) {
-            // Retrieve user from database if not in cache
-            user = await getDocument(collections.users, decoded.uid);
+            user = await getDocument(collections.users, uid);
             if (!user) {
                 throw createError('9995', 'User not found');
             }
-
-            // Cache the user data
-            await cache.set(cacheKey, user, 3600);
+            await cache.set(`user:${uid}`, user, 3600);
         }
 
-        // Attach user to request object
-        req.user = { ...user, uid: decoded.uid };
+        // Check if tokenVersion matches
+        if (user.tokenVersion !== tokenVersion) {
+            throw createError('9998', 'Token is invalid or expired');
+        }
 
-        next(); // Proceed to the next middleware or route handler
+        req.user = { ...user, uid };
+
+        next();
     } catch (error) {
         next(error);
     }

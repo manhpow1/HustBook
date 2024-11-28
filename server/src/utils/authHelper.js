@@ -23,16 +23,31 @@ const comparePassword = async (password, hashedPassword) => {
     return await bcrypt.compare(password, hashedPassword);
 };
 
-const generateJWT = (payload) => {
-    return jwt.sign(payload, JWT_SECRET, { expiresIn: JWT_EXPIRATION });
+const generateJWT = (user) => {
+    return jwt.sign(
+        {
+            uid: user.uid,
+            phone: user.phoneNumber,
+            tokenVersion: user.tokenVersion, // Include tokenVersion
+        },
+        JWT_SECRET,
+        { expiresIn: JWT_EXPIRATION }
+    );
 };
 
 const verifyJWT = (token) => {
     return jwt.verify(token, JWT_SECRET);
 };
 
-const generateRefreshToken = (userId) => {
-    return jwt.sign({ userId }, REFRESH_TOKEN_SECRET, { expiresIn: REFRESH_TOKEN_EXPIRATION });
+const generateRefreshToken = (user) => {
+    return jwt.sign(
+        {
+            userId: user.uid,
+            tokenVersion: user.tokenVersion, // Include tokenVersion
+        },
+        REFRESH_TOKEN_SECRET,
+        { expiresIn: REFRESH_TOKEN_EXPIRATION }
+    );
 };
 
 module.exports = {

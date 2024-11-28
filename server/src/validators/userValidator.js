@@ -39,9 +39,13 @@ const signupSchema = Joi.object({
     phoneNumber: phoneNumberSchema,
     password: passwordComplexity,
     uuid: Joi.string().required().messages({
-        'string.empty': 'UUID cannot be empty.',
+        'string.empty': 'UUID is required.',
         'any.required': 'UUID is required.',
     }),
+}).messages({
+    'any.required': 'Parameter is not enough.',
+    'string.pattern.base': 'Parameter value is invalid.',
+    // Other generic messages
 });
 
 // Login validation schema

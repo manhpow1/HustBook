@@ -15,23 +15,17 @@ const sendResponse = (res, code, data = null, customMessage = null) => {
 const handleError = (err, req, res, next) => {
     let code = err.code || '9999';
     let statusCode = err.statusCode || 500;
-    let message = err.message || 'Exception error';
 
-    if (err.name === 'ValidationError') {
-        code = '1002';
-        statusCode = 400;
+    // Get the default message
+    let message = errorCodes[code] ? errorCodes[code].message : 'Unknown error';
+
+    // Use custom message if it's safe to display
+    if (err.isOperational && err.message) {
         message = err.message;
-    } else if (err.name === 'UnauthorizedError') {
-        code = '9998';
-        statusCode = 401;
-        message = 'Token is invalid';
-    } else if (!errorCodes[code]) {
-        code = '1005';
-        statusCode = 500;
-        message = 'Unknown error';
     }
 
-    logger.error(`Error ${code}: ${message}`, { stack: err.stack });
+    // Log the detailed error
+    logger.error(`Error ${code}: ${err.message}`, { stack: err.stack });
 
     res.status(statusCode).json({ code, message });
 };
