@@ -35,10 +35,7 @@ const getUserByPhoneNumber = async (phoneNumber) => {
     const users = await queryDocuments(collections.users, (ref) =>
         ref.where('phoneNumber', '==', phoneNumber).limit(1)
     );
-    if (users.length === 0) {
-        throw createError('9995', 'User not found');
-    }
-    return users[0];
+    return users.length > 0 ? users[0] : null;
 };
 
 const getUserById = async (userId) => {
@@ -50,11 +47,36 @@ const getUserById = async (userId) => {
 };
 
 const updateUserVerification = async (userId, isVerified, deviceToken) => {
-    await updateDocument(collections.users, userId, { isVerified, deviceToken });
+    try {
+        await db.runTransaction(async (transaction) => {
+            const userRef = db.collection(collections.users).doc(userId);
+            const userDoc = await transaction.get(userRef);
+
+            if (!userDoc.exists) {
+                throw createError('9995', 'User not found');
+            }
+
+            const currentData = userDoc.data();
+
+            // Update only if not already verified or if deviceToken needs to be updated
+            if (!currentData.isVerified || currentData.deviceToken !== deviceToken) {
+                transaction.update(userRef, { isVerified, deviceToken });
+            }
+        });
+    } catch (error) {
+        logger.error('Error in updateUserVerification:', error);
+        throw createError('9999', 'Exception error');
+    }
 };
 
 const updateUserDeviceInfo = async (userId, deviceToken, deviceId) => {
-    await updateDocument(collections.users, userId, { deviceToken, deviceId });
+    await db.runTransaction(async (transaction) => {
+        const userRef = db.collection(collections.users).doc(userId);
+        transaction.update(userRef, {
+            deviceTokens: admin.firestore.FieldValue.arrayUnion(deviceToken),
+            deviceIds: admin.firestore.FieldValue.arrayUnion(deviceId),
+        });
+    });
 };
 
 const updateUserRefreshToken = async (userId, refreshToken) => {
@@ -67,10 +89,36 @@ const clearUserDeviceToken = async (userId) => {
 };
 
 const storeVerificationCode = async (userId, verificationCode) => {
-    await updateDocument(collections.users, userId, {
-        verificationCode,
-        verificationCodeTimestamp: Date.now(),
-    });
+    try {
+        await db.runTransaction(async (transaction) => {
+            const userRef = db.collection(collections.users).doc(userId);
+            const userDoc = await transaction.get(userRef);
+
+            if (!userDoc.exists) {
+                throw createError('9995', 'User not found');
+            }
+
+            const data = userDoc.data();
+            const lastCodeTimestamp = data.verificationCodeTimestamp || 0;
+            const currentTime = Date.now();
+            const cooldownPeriod = 1 * 60 * 1000; // 1 minute cooldown
+
+            if (currentTime - lastCodeTimestamp < cooldownPeriod) {
+                throw createError('1013', 'Please wait before requesting a new verification code.');
+            }
+
+            transaction.update(userRef, {
+                verificationCode,
+                verificationCodeTimestamp: currentTime,
+            });
+        });
+    } catch (error) {
+        logger.error('Error in storeVerificationCode:', error);
+        if (error.code) {
+            throw error;
+        }
+        throw createError('9999', 'Exception error');
+    }
 };
 
 const updateUserInfo = async (userId, updateData) => {
@@ -79,12 +127,17 @@ const updateUserInfo = async (userId, updateData) => {
 
 const updatePassword = async (userId, newPassword) => {
     const hashedPassword = await hashPassword(newPassword);
-    await updateDocument(collections.users, userId, {
-        password: hashedPassword,
-        passwordUpdatedAt: new Date(),
+    await db.runTransaction(async (transaction) => {
+        const userRef = db.collection(collections.users).doc(userId);
+        transaction.update(userRef, {
+            password: hashedPassword,
+            passwordUpdatedAt: new Date(),
+        });
+        // Invalidate sessions
+        transaction.update(userRef, {
+            deviceTokens: [],
+        });
     });
-    // Optionally invalidate all existing sessions
-    await clearUserDeviceToken(userId);
 };
 
 module.exports = {

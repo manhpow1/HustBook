@@ -4,7 +4,7 @@ const { formatPhoneNumber } = require('../utils/helpers');
 const User = require('../models/User');
 const { sendResponse } = require('../utils/responseHandler');
 const { createError } = require('../utils/customError');
-const { generateRandomCode } = require('../utils/authHelper');
+const { generateRandomCode, comparePassword } = require('../utils/authHelper');
 
 const signup = async (req, res, next) => {
     try {

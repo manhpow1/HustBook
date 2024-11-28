@@ -54,7 +54,33 @@ const updatePost = async (postId, userId, content, images) => {
 
 const deletePost = async (postId) => {
     try {
-        await deleteDocument(collections.posts, postId);
+        await db.runTransaction(async (transaction) => {
+            const postRef = db.collection(collections.posts).doc(postId);
+            const postDoc = await transaction.get(postRef);
+
+            if (!postDoc.exists) {
+                throw createError('9992', 'The requested post does not exist.');
+            }
+
+            // Delete associated comments and likes
+            const commentsQuery = postRef.collection('comments');
+            const likesQuery = db.collection(collections.likes).where('postId', '==', postId);
+
+            const [commentsSnapshot, likesSnapshot] = await Promise.all([
+                transaction.get(commentsQuery),
+                transaction.get(likesQuery),
+            ]);
+
+            commentsSnapshot.docs.forEach((doc) => {
+                transaction.delete(doc.ref);
+            });
+
+            likesSnapshot.docs.forEach((doc) => {
+                transaction.delete(doc.ref);
+            });
+
+            transaction.delete(postRef);
+        });
     } catch (error) {
         logger.error('Error in deletePost service:', error);
         throw createError('9999', 'Exception error');
@@ -95,20 +121,27 @@ const toggleLike = async (postId, userId) => {
 
 const addComment = async (postId, userId, content) => {
     try {
-        const batch = db.batch();
-        const commentData = {
-            userId,
-            postId,
-            content,
-            createdAt: new Date(),
-        };
-        const commentRef = db.collection(collections.comments).doc();
-        batch.set(commentRef, commentData);
-        batch.update(db.collection(collections.posts).doc(postId), {
-            comments: admin.firestore.FieldValue.increment(1),
+        await db.runTransaction(async (transaction) => {
+            const postRef = db.collection(collections.posts).doc(postId);
+            const postDoc = await transaction.get(postRef);
+
+            if (!postDoc.exists) {
+                throw createError('9992', 'Post not found');
+            }
+
+            const commentRef = db.collection(collections.comments).doc();
+            transaction.set(commentRef, {
+                userId,
+                postId,
+                content,
+                createdAt: new Date(),
+            });
+
+            transaction.update(postRef, {
+                comments: admin.firestore.FieldValue.increment(1),
+            });
         });
-        await batch.commit();
-        return commentRef.id;
+        return true;
     } catch (error) {
         logger.error('Error in addComment service:', error);
         throw createError('9999', 'Exception error');

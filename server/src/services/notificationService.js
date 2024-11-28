@@ -33,17 +33,26 @@ class NotificationService {
         }
     }
 
-    async updatePushSettings(userId, settingsData) {
-        try {
-            const pushSettings = new PushSettings(userId);
+    async updateSettings(settings) {
+        await db.runTransaction(async (transaction) => {
+            const doc = await transaction.get(this.settingsRef);
+            let existingSettings = {};
 
-            const updatedSettings = await pushSettings.updateSettings(settingsData);
+            if (doc.exists) {
+                existingSettings = doc.data();
+            }
 
-            return updatedSettings;
-        } catch (error) {
-            logger.error('Error in updatePushSettings service:', error);
-            throw createError('9999', 'Exception error');
-        }
+            const updatedSettings = {
+                ...existingSettings,
+                ...settings,
+            };
+
+            transaction.set(this.settingsRef, updatedSettings, { merge: true });
+        });
+
+        // Return the updated settings
+        const updatedDoc = await this.settingsRef.get();
+        return updatedDoc.data();
     }
 }
 

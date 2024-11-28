@@ -70,20 +70,29 @@ const getSavedSearches = async (userId, index, count) => {
 const deleteSavedSearch = async (userId, searchId, deleteAll) => {
     try {
         if (deleteAll) {
-            const savedSearches = await queryDocuments(collections.savedSearches, (ref) =>
-                ref.where('userId', '==', userId)
-            );
-            const deletePromises = savedSearches.map(search => deleteDocument(collections.savedSearches, search.id));
-            await Promise.all(deletePromises);
+            // Use batch operation to delete all saved searches atomically
+            const savedSearchesSnapshot = await db.collection(collections.savedSearches)
+                .where('userId', '==', userId)
+                .get();
+
+            if (savedSearchesSnapshot.empty) {
+                throw createError('9994', 'No saved searches to delete');
+            }
+
+            const batch = db.batch();
+            savedSearchesSnapshot.docs.forEach(doc => {
+                batch.delete(doc.ref);
+            });
+            await batch.commit();
         } else {
-            const savedSearch = await queryDocuments(collections.savedSearches, (ref) =>
-                ref.where('__name__', '==', searchId).where('userId', '==', userId).limit(1)
-            );
-            if (savedSearch.length > 0) {
-                await deleteDocument(collections.savedSearches, searchId);
-            } else {
+            // Delete a single saved search
+            const savedSearchRef = db.collection(collections.savedSearches).doc(searchId);
+            const savedSearchDoc = await savedSearchRef.get();
+
+            if (!savedSearchDoc.exists || savedSearchDoc.data().userId !== userId) {
                 throw createError('1004', 'Saved search not found or not authorized');
             }
+            await savedSearchRef.delete();
         }
     } catch (error) {
         logger.error('Delete saved search service error:', error);

@@ -77,48 +77,47 @@ const getUserFriends = async (userId, limit = 20, startAfterDoc = null) => {
 
 const setAcceptFriend = async (userId, requesterId, isAccept) => {
     try {
-        const friendRequestRef = db.collection(collections.friendRequests)
-            .where('senderId', '==', requesterId)
-            .where('recipientId', '==', userId)
-            .where('status', '==', 'pending')
-            .limit(1);
+        await db.runTransaction(async (transaction) => {
+            const friendRequestRef = db.collection(collections.friendRequests)
+                .where('senderId', '==', requesterId)
+                .where('recipientId', '==', userId)
+                .where('status', '==', 'pending')
+                .limit(1);
 
-        const snapshot = await friendRequestRef.get();
+            const snapshot = await transaction.get(friendRequestRef);
 
-        if (snapshot.empty) {
-            throw createError('1004', 'Friend request not found');
-        }
+            if (snapshot.empty) {
+                throw createError('1004', 'Friend request not found');
+            }
 
-        const requestDoc = snapshot.docs[0];
-        const batch = db.batch();
+            const requestDoc = snapshot.docs[0];
 
-        if (isAccept === '1') {
-            batch.update(requestDoc.ref, { status: 'accepted', updatedAt: new Date() });
+            if (isAccept === '1') {
+                transaction.update(requestDoc.ref, { status: 'accepted', updatedAt: new Date() });
 
-            const user1FriendRef = db.collection(collections.friends)
-                .doc(userId)
-                .collection('userFriends')
-                .doc(requesterId);
+                const user1FriendRef = db.collection(collections.friends)
+                    .doc(userId)
+                    .collection('userFriends')
+                    .doc(requesterId);
 
-            const user2FriendRef = db.collection(collections.friends)
-                .doc(requesterId)
-                .collection('userFriends')
-                .doc(userId);
+                const user2FriendRef = db.collection(collections.friends)
+                    .doc(requesterId)
+                    .collection('userFriends')
+                    .doc(userId);
 
-            batch.set(user1FriendRef, {
-                created: new Date(),
-                status: 'active',
-            });
+                transaction.set(user1FriendRef, {
+                    created: new Date(),
+                    status: 'active',
+                });
 
-            batch.set(user2FriendRef, {
-                created: new Date(),
-                status: 'active',
-            });
-        } else {
-            batch.update(requestDoc.ref, { status: 'rejected', updatedAt: new Date() });
-        }
-
-        await batch.commit();
+                transaction.set(user2FriendRef, {
+                    created: new Date(),
+                    status: 'active',
+                });
+            } else {
+                transaction.update(requestDoc.ref, { status: 'rejected', updatedAt: new Date() });
+            }
+        });
         return true;
     } catch (error) {
         logger.error('Error in setAcceptFriend service:', error);
@@ -190,46 +189,53 @@ const getListSuggestedFriends = async (userId, index = 0, count = 20) => {
 
 const setRequestFriend = async (senderId, recipientId) => {
     try {
-        const [sender, recipient] = await Promise.all([
-            getDocument(collections.users, senderId),
-            getDocument(collections.users, recipientId),
-        ]);
+        await db.runTransaction(async (transaction) => {
+            const senderRef = db.collection(collections.users).doc(senderId);
+            const recipientRef = db.collection(collections.users).doc(recipientId);
 
-        if (!sender || !recipient) {
-            throw createError('9995', 'User not found');
-        }
+            const [senderDoc, recipientDoc] = await Promise.all([
+                transaction.get(senderRef),
+                transaction.get(recipientRef),
+            ]);
 
-        const existingRequest = await queryDocuments(collections.friendRequests, (ref) =>
-            ref.where('senderId', '==', senderId)
+            if (!senderDoc.exists || !recipientDoc.exists) {
+                throw createError('9995', 'User not found');
+            }
+
+            const friendRequestRef = db.collection(collections.friendRequests)
+                .where('senderId', '==', senderId)
                 .where('recipientId', '==', recipientId)
                 .where('status', 'in', ['pending', 'accepted'])
-                .limit(1)
-        );
+                .limit(1);
 
-        if (existingRequest.length > 0) {
-            throw createError('1010', 'Friend request already exists');
-        }
+            const existingRequestSnapshot = await transaction.get(friendRequestRef);
 
-        const areFriends = await db.collection(collections.friends)
-            .doc(senderId)
-            .collection('userFriends')
-            .doc(recipientId)
-            .get();
+            if (!existingRequestSnapshot.empty) {
+                throw createError('1010', 'Friend request already exists');
+            }
 
-        if (areFriends.exists) {
-            throw createError('1010', 'Users are already friends');
-        }
+            const areFriendsRef = db.collection(collections.friends)
+                .doc(senderId)
+                .collection('userFriends')
+                .doc(recipientId);
 
-        const friendRequestData = {
-            senderId,
-            recipientId,
-            status: 'pending',
-            createdAt: new Date(),
-            updatedAt: new Date(),
-        };
+            const areFriendsDoc = await transaction.get(areFriendsRef);
 
-        await createDocument(collections.friendRequests, friendRequestData);
+            if (areFriendsDoc.exists) {
+                throw createError('1010', 'Users are already friends');
+            }
 
+            const newRequestRef = db.collection(collections.friendRequests).doc();
+            transaction.set(newRequestRef, {
+                senderId,
+                recipientId,
+                status: 'pending',
+                createdAt: new Date(),
+                updatedAt: new Date(),
+            });
+        });
+
+        // After transaction, count pending requests
         const pendingRequests = await queryDocuments(collections.friendRequests, (ref) =>
             ref.where('recipientId', '==', recipientId)
                 .where('status', '==', 'pending')
