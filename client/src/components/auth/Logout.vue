@@ -68,7 +68,7 @@
 
 <script setup>
 import { ref } from 'vue'
-import { useAuthStore } from '../../stores/authStore'
+import { useUserStore } from '../../stores/userStore'
 import { LogOutIcon, LoaderIcon, CheckCircleIcon, AlertCircleIcon } from 'lucide-vue-next'
 import { Dialog, DialogPanel, DialogTitle, TransitionChild, TransitionRoot } from '@headlessui/vue'
 import { storeToRefs } from 'pinia'
@@ -82,7 +82,7 @@ const props = defineProps({
 
 const emit = defineEmits(['logout-success', 'logout-error'])
 
-const authStore = useAuthStore()
+const userStore = useUserStore();
 const { isLoading, message, messageClass } = storeToRefs(authStore)
 
 const showConfirmation = ref(false)
@@ -91,7 +91,7 @@ const handleLogout = async () => {
     showConfirmation.value = false
 
     try {
-        await authStore.logout()
+        await userStore.logout();
         emit('logout-success')
         props.onLogoutSuccess()
     } catch (error) {

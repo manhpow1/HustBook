@@ -14,9 +14,11 @@
         </p>
       </div>
 
+      <!-- Sign Up Form -->
       <div v-if="currentStep === 'signup'">
         <form @submit.prevent="handleSignup" class="mt-8 space-y-6">
           <div class="rounded-md shadow-sm -space-y-px">
+            <!-- Phone Number Field -->
             <div>
               <label for="phonenumber" class="sr-only">Phone Number</label>
               <div class="relative">
@@ -25,9 +27,12 @@
                 </div>
                 <input v-model="phonenumber" id="phonenumber" name="phonenumber" type="tel" required
                   class="appearance-none rounded-none relative block w-full px-3 py-2 pl-10 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-t-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
-                  :class="{ 'border-red-500': phoneError }" placeholder="Phone number" />
+                  :class="{ 'border-red-500': phoneError }" placeholder="Phone number" @input="validatePhone" />
               </div>
+              <p v-if="phoneError" class="text-sm text-red-600 mt-1">{{ phoneError }}</p>
             </div>
+
+            <!-- Password Field -->
             <div>
               <label for="password" class="sr-only">Password</label>
               <div class="relative">
@@ -36,11 +41,13 @@
                 </div>
                 <input v-model="password" id="password" name="password" type="password" required
                   class="appearance-none rounded-none relative block w-full px-3 py-2 pl-10 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-b-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
-                  :class="{ 'border-red-500': passwordError }" placeholder="Password" />
+                  :class="{ 'border-red-500': passwordError }" placeholder="Password" @input="validatePassword" />
               </div>
+              <p v-if="passwordError" class="text-sm text-red-600 mt-1">{{ passwordError }}</p>
             </div>
           </div>
 
+          <!-- Remember Me Checkbox -->
           <div class="flex items-center justify-between">
             <div class="flex items-center">
               <input v-model="rememberMe" id="remember-me" name="remember-me" type="checkbox"
@@ -51,73 +58,71 @@
             </div>
           </div>
 
+          <!-- Submit Button -->
           <div>
-            <button type="submit" :disabled="isLoading"
+            <button type="submit" :disabled="isLoading || !isFormValid"
               class="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed">
               <span class="absolute left-0 inset-y-0 flex items-center pl-3">
                 <LockIcon class="h-5 w-5 text-indigo-500 group-hover:text-indigo-400" aria-hidden="true" />
               </span>
-              {{ isLoading ? "Signing up..." : "Sign Up" }}
+              <LoaderIcon v-if="isLoading" class="animate-spin -ml-1 mr-2 h-5 w-5 text-white" />
+              <span v-if="isLoading">Signing up...</span>
+              <span v-else>Sign Up</span>
             </button>
           </div>
         </form>
 
-        <div class="mt-4">
-          <p v-if="phoneError" class="text-sm text-red-600">
-            {{ phoneError }}
-          </p>
-          <p v-if="passwordError" class="text-sm text-red-600">
-            {{ passwordError }}
-          </p>
-        </div>
-
+        <!-- Password Strength Indicator -->
         <div v-if="password" class="mt-4">
-          <p class="text-sm font-medium text-gray-700">Password strength:</p>
+          <p class="text-sm font-medium text-gray-700">Password strength: {{ passwordStrengthText }}</p>
           <div class="mt-1 h-2 w-full bg-gray-200 rounded-full">
             <div class="h-full rounded-full transition-all duration-300" :class="passwordStrengthClass"
               :style="{ width: `${passwordStrength}%` }"></div>
           </div>
         </div>
-      </div>
 
-      <div v-else-if="currentStep === 'verify'">
-        <VerifyCode :initialPhoneNumber="phonenumber" @verification-success="handleVerificationSuccess"
-          @verification-error="handleVerificationError" />
-      </div>
+        <!-- Verify Code Component -->
+        <div v-else-if="currentStep === 'verify'">
+          <VerifyCode :initialPhoneNumber="phonenumber" @verification-success="handleVerificationSuccess"
+            @verification-error="handleVerificationError" />
+        </div>
 
-      <div v-else-if="currentStep === 'complete'">
-        <div class="rounded-md bg-green-50 p-4">
-          <div class="flex">
-            <div class="flex-shrink-0">
-              <CheckCircleIcon class="h-5 w-5 text-green-400" aria-hidden="true" />
-            </div>
-            <div class="ml-3">
-              <h3 class="text-sm font-medium text-green-800">
-                Account created and verified successfully
-              </h3>
-              <div class="mt-2 text-sm text-green-700">
-                <p>You can now proceed to complete your profile.</p>
+        <!-- Complete Profile Prompt -->
+        <div v-else-if="currentStep === 'complete'">
+          <div class="rounded-md bg-green-50 p-4">
+            <div class="flex">
+              <div class="flex-shrink-0">
+                <CheckCircleIcon class="h-5 w-5 text-green-400" aria-hidden="true" />
+              </div>
+              <div class="ml-3">
+                <h3 class="text-sm font-medium text-green-800">
+                  Account created and verified successfully
+                </h3>
+                <div class="mt-2 text-sm text-green-700">
+                  <p>You can now proceed to complete your profile.</p>
+                </div>
               </div>
             </div>
           </div>
+          <button @click="proceedToCompleteProfile"
+            class="mt-4 w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+            Complete Profile
+          </button>
         </div>
-        <button @click="proceedToCompleteProfile"
-          class="mt-4 w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
-          Complete Profile
-        </button>
-      </div>
 
-      <div v-if="error" class="mt-4 rounded-md bg-red-50 p-4">
-        <div class="flex">
-          <div class="flex-shrink-0">
-            <XCircleIcon class="h-5 w-5 text-red-400" aria-hidden="true" />
-          </div>
-          <div class="ml-3">
-            <h3 class="text-sm font-medium text-red-800">
-              Error
-            </h3>
-            <div class="mt-2 text-sm text-red-700">
-              <p>{{ error }}</p>
+        <!-- Error Message Display -->
+        <div v-if="errorMessage" class="mt-4 rounded-md bg-red-50 p-4">
+          <div class="flex">
+            <div class="flex-shrink-0">
+              <XCircleIcon class="h-5 w-5 text-red-400" aria-hidden="true" />
+            </div>
+            <div class="ml-3">
+              <h3 class="text-sm font-medium text-red-800">
+                Error
+              </h3>
+              <div class="mt-2 text-sm text-red-700">
+                <p>{{ errorMessage }}</p>
+              </div>
             </div>
           </div>
         </div>
@@ -127,159 +132,90 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
-import { useRouter } from 'vue-router'
-import { useUserStore } from '../../stores/userStore'
-import axios from 'axios'
-import { API_ENDPOINTS } from '../../config/api'
-import { PhoneIcon, LockIcon, CheckCircleIcon, XCircleIcon } from 'lucide-vue-next'
-import VerifyCode from './VerifyCode.vue'
+import { ref, computed } from 'vue';
+import { useRouter } from 'vue-router';
+import { useUserStore } from '../../stores/userStore';
+import { PhoneIcon, LockIcon, CheckCircleIcon, XCircleIcon, LoaderIcon } from 'lucide-vue-next';
+import VerifyCode from './VerifyCode.vue';
+import { useFormValidation } from '../../composables/useFormValidation';
 
-const emit = defineEmits(['signup-success', 'signup-error'])
+const router = useRouter();
+const userStore = useUserStore();
 
-const router = useRouter()
-const userStore = useUserStore()
+const currentStep = ref('signup');
+const phonenumber = ref('');
+const password = ref('');
+const rememberMe = ref(false);
 
-const currentStep = ref('signup')
-const phonenumber = ref('')
-const password = ref('')
-const phoneError = ref('')
-const passwordError = ref('')
-const isLoading = ref(false)
-const rememberMe = ref(false)
-const error = ref('')
+const isLoading = computed(() => userStore.isLoading);
+const errorMessage = computed(() => userStore.error);
+
+const { phoneError, passwordError, validatePhone, validatePassword } = useFormValidation();
+
+
+const isFormValid = computed(() => {
+  return validatePhone(phonenumber.value) && validatePassword(password.value, phonenumber.value);
+});
 
 const passwordStrength = computed(() => {
-  if (password.value.length === 0) return 0
-  let strength = 0
+  let strength = 0;
 
-  // Check length (must be between 6 and 10 characters)
   if (password.value.length >= 6 && password.value.length <= 10) {
-    strength += 25
-  } else {
-    return 0 // Invalid length, return 0 strength
+    strength += 20;
   }
-
-  // Check for lowercase letters (mandatory)
-  if (/[a-z]/.test(password.value)) strength += 20
-
-  // Check for uppercase letters (mandatory)
-  if (/[A-Z]/.test(password.value)) strength += 20
-
-  // Check for numbers (mandatory)
-  if (/[0-9]/.test(password.value)) strength += 20
-
-  // Check if password doesn't match phone number
-  if (password.value !== phonenumber.value) strength += 15
-
-  return Math.min(strength, 100)
-})
-
-const passwordStrengthClass = computed(() => {
-  if (passwordStrength.value < 60) return 'bg-red-500'
-  if (passwordStrength.value < 80) return 'bg-yellow-500'
-  if (passwordStrength.value < 100) return 'bg-orange-500'
-  return 'bg-green-500'
-})
-
-const validatePhone = () => {
-  if (!/^0\d{9}$/.test(phonenumber.value)) {
-    phoneError.value = "Invalid phone number format"
-    return false
+  if (/[a-z]/.test(password.value)) {
+    strength += 20;
   }
-  phoneError.value = ""
-  return true
-}
-
-const validatePassword = () => {
-  if (!password.value) {
-    passwordError.value = "Password is required"
-    console.log("Password is required")
-    return false
+  if (/[A-Z]/.test(password.value)) {
+    strength += 20;
   }
-
-  let errors = []
-  if (password.value.length < 6 || password.value.length > 10) {
-    errors.push("be 6-10 characters long")
+  if (/\d/.test(password.value)) {
+    strength += 20;
   }
   if (/[^a-zA-Z0-9]/.test(password.value)) {
-    errors.push("contain only letters and numbers")
+    strength += 20;
   }
-  if (password.value === phonenumber.value) {
-    errors.push("not match the phone number")
-  }
+  return strength;
+});
 
-  if (errors.length > 0) {
-    passwordError.value = `Password must ${errors.join(', and ')}`
-    console.log(`Password must ${errors.join(', and ')}`)
-    return false
-  }
+const passwordStrengthText = computed(() => {
+  const strength = passwordStrength.value;
+  if (strength <= 40) return 'Weak';
+  if (strength <= 60) return 'Moderate';
+  if (strength <= 80) return 'Strong';
+  return 'Very Strong';
+});
 
-  passwordError.value = ""
-  return true
-}
+const passwordStrengthClass = computed(() => {
+  const strength = passwordStrength.value;
+  if (strength <= 40) return 'bg-red-500';
+  if (strength <= 60) return 'bg-yellow-500';
+  if (strength <= 80) return 'bg-blue-500';
+  return 'bg-green-500';
+});
 
 const handleSignup = async () => {
-  phoneError.value = ""
-  passwordError.value = ""
-  error.value = ""
-
-  console.log("Handling signup")
-  const isPhoneValid = validatePhone()
-  const isPasswordValid = validatePassword()
-  if (!isPhoneValid || !isPasswordValid) {
-    console.log("Validation failed", { phoneError: phoneError.value, passwordError: passwordError.value })
-    return
-  }
-
-  isLoading.value = true
+  if (!isFormValid.value) return;
 
   try {
-    const response = await axios.post(API_ENDPOINTS.SIGNUP, {
-      phonenumber: phonenumber.value,
-      password: password.value,
-      uuid: "device-uuid",
-      rememberMe: rememberMe.value
-    })
-
-    if (response.data.code === "1000") {
-      currentStep.value = 'verify'
-      emit('signup-success', response.data.data.verificationCode)
-    } else {
-      error.value = response.data.message || "An error occurred during signup"
-      emit('signup-error', error.value)
+    const success = await userStore.register(phonenumber.value, password.value);
+    if (success) {
+      currentStep.value = 'verify';
     }
   } catch (err) {
-    console.error("Error occurred:", err)
-    error.value = err.response?.data?.message || "An unexpected error occurred. Please try again."
-    emit('signup-error', error.value)
-  } finally {
-    isLoading.value = false
+    // Error is handled in userStore
   }
+};
+
+function handleVerificationSuccess() {
+  currentStep.value = 'complete';
 }
 
-const handleVerificationSuccess = (token, deviceToken) => {
-  console.log("Verification successful. Token:", token);
-  console.log("Device Token:", deviceToken);
-
-  if (token && deviceToken) {
-    userStore.setTokens(token, deviceToken);
-    currentStep.value = 'complete';
-    error.value = '';
-  } else {
-    console.error("Token or deviceToken is missing");
-    error.value = "Authentication failed. Please try again.";
-  }
+function handleVerificationError(errorMsg) {
+  errorMessage.value = errorMsg;
 }
 
-const handleVerificationError = (errorMessage) => {
-  error.value = errorMessage
-}
-
-const proceedToCompleteProfile = () => {
-  console.log("Attempting to navigate to complete profile");
-  console.log("Current token:", userStore.token);
-  console.log("Current device token:", userStore.deviceToken);
+function proceedToCompleteProfile() {
   router.push('/complete-profile');
 }
 </script>

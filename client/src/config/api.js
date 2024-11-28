@@ -4,6 +4,7 @@ export const API_ENDPOINTS = {
     // Authentication Endpoints
     CHECK_VERIFY_CODE: `${API_BASE_URL}/auth/check_verify_code`,
     GET_VERIFY_CODE: `${API_BASE_URL}/auth/get_verify_code`,
+    REFRESH_TOKEN: `${API_BASE_URL}/auth/refresh-token`,
     LOGIN: `${API_BASE_URL}/auth/login`,
     LOGOUT: `${API_BASE_URL}/auth/logout`,
     SIGNUP: `${API_BASE_URL}/auth/signup`,

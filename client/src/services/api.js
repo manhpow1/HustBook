@@ -1,166 +1,171 @@
-import axiosInstance, { setAuthHeaders } from './axiosInstance';
+import axiosInstance from './axiosInstance';
 import { API_ENDPOINTS } from '../config/api';
 
 const apiService = {
     // Generic GET method
-    get(url, config = {}) {
+    async get(url, config = {}) {
         return axiosInstance.get(url, config);
     },
 
-    post(url, data, config = {}) {
+    async post(url, data, config = {}) {
         return axiosInstance.post(url, data, config);
     },
 
-    put(url, data, config = {}) {
+    async put(url, data, config = {}) {
         return axiosInstance.put(url, data, config);
     },
 
-    delete(url, config = {}) {
+    async delete(url, config = {}) {
         return axiosInstance.delete(url, config);
     },
 
     // Post-related API calls
-    getPost(postId) {
-        return this.get(API_ENDPOINTS.GET_POST(postId));
+    async getPost(postId) {
+        return axiosInstance.get(API_ENDPOINTS.GET_POST(postId));
     },
 
-    likePost(postId) {
-        return this.post(API_ENDPOINTS.LIKE_POST(postId));
+    async likePost(postId) {
+        return axiosInstance.post(API_ENDPOINTS.LIKE_POST(postId));
     },
 
-    createPost(postData) {
-        return this.post(API_ENDPOINTS.ADD_POST, postData);
+    async createPost(postData) {
+        return axiosInstance.post(API_ENDPOINTS.ADD_POST, postData);
     },
 
-    updatePost(postId, postData) {
-        return this.put(API_ENDPOINTS.UPDATE_POST(postId), postData);
+    async updatePost(postId, postData) {
+        return axiosInstance.put(API_ENDPOINTS.UPDATE_POST(postId), postData);
     },
 
-    deletePost(postId) {
-        return this.delete(API_ENDPOINTS.DELETE_POST(postId));
+    async deletePost(postId) {
+        return axiosInstance.delete(API_ENDPOINTS.DELETE_POST(postId));
     },
 
-    reportPost(postId, reason, details) {
-        return this.post(API_ENDPOINTS.REPORT_POST(postId), {
+    async reportPost(postId, reason, details) {
+        return axiosInstance.post(API_ENDPOINTS.REPORT_POST(postId), {
             reason,
             details,
         });
     },
 
-    getListPosts(params = {}) {
-        return this.get(API_ENDPOINTS.GET_LIST_POSTS, { params });
+    async getListPosts(params = {}) {
+        return axiosInstance.get(API_ENDPOINTS.GET_LIST_POSTS, { params });
     },
 
     // Comment-related API calls
-    addComment(postId, content) {
-        return this.post(API_ENDPOINTS.ADD_COMMENT(postId), { content });
+    async addComment(postId, content) {
+        return axiosInstance.post(API_ENDPOINTS.ADD_COMMENT(postId), { content });
     },
 
-    getComments(postId, index = 0, count = 10) {
+    async getComments(postId, index = 0, count = 10) {
         const url = API_ENDPOINTS.GET_COMMENTS(postId);
-        return this.get(url, { params: { index, count } });
+        return axiosInstance.get(url, { params: { index, count } });
     },
 
     // Auth-related API calls
-    login(credentials) {
-        return this.post(API_ENDPOINTS.LOGIN, credentials);
+    async login(data) {
+        return axiosInstance.post(API_ENDPOINTS.LOGIN, data);
     },
 
-    register(userData) {
-        return this.post(API_ENDPOINTS.SIGNUP, userData);
+    async register(data) {
+        return axiosInstance.post(API_ENDPOINTS.SIGNUP, data);
     },
 
-    logout() {
-        return this.post(API_ENDPOINTS.LOGOUT);
+    async logout() {
+        return axiosInstance.post(API_ENDPOINTS.LOGOUT);
     },
 
-    getVerifyCode(phonenumber) {
-        return this.post(API_ENDPOINTS.GET_VERIFY_CODE, { phonenumber });
+    async getVerifyCode(data) {
+        return axiosInstance.post(API_ENDPOINTS.GET_VERIFY_CODE, data);
     },
 
-    checkVerifyCode(phonenumber, code) {
-        return this.post(API_ENDPOINTS.CHECK_VERIFY_CODE, {
-            phonenumber,
-            code_verify: code,
-        });
+    async verifyCode(data) {
+        return axiosInstance.post(API_ENDPOINTS.CHECK_VERIFY_CODE, data);
     },
 
-    changePassword(currentPassword, newPassword) {
-        return this.post(API_ENDPOINTS.CHANGE_PASSWORD, {
+    async refreshToken(refreshToken) {
+        return axiosInstance.post(API_ENDPOINTS.REFRESH_TOKEN, { refreshToken });
+    },
+
+    async getUserProfile() {
+        return axiosInstance.get(API_ENDPOINTS.GET_USER_PROFILE);
+    },
+
+    async changePassword(currentPassword, newPassword) {
+        return axiosInstance.post(API_ENDPOINTS.CHANGE_PASSWORD, {
             password: currentPassword,
             new_password: newPassword
         });
     },
 
-    checkNewItems(lastId, categoryId = '0') {
-        return this.post(API_ENDPOINTS.CHECK_NEW_ITEM, {
+    async checkNewItems(lastId, categoryId = '0') {
+        return axiosInstance.post(API_ENDPOINTS.CHECK_NEW_ITEM, {
             last_id: lastId,
             category_id: categoryId,
         });
     },
 
-    search(keyword, user_id, index = 0, count = 20) {
-        return this.post(API_ENDPOINTS.SEARCH, {
+    async search(keyword, user_id, index = 0, count = 20) {
+        return axiosInstance.post(API_ENDPOINTS.SEARCH, {
             params: { keyword, user_id, index, count },
         });
     },
 
-    getSavedSearches(params = {}) {
-        return this.get(API_ENDPOINTS.GET_SAVED_SEARCH, { params });
+    async getSavedSearches(params = {}) {
+        return axiosInstance.get(API_ENDPOINTS.GET_SAVED_SEARCH, { params });
     },
 
-    deleteSavedSearch(searchId, all = false) {
-        return this.delete(API_ENDPOINTS.DELETE_SAVED_SEARCH(searchId), { params: { all: all ? '1' : '0' } });
+    async deleteSavedSearch(searchId, all = false) {
+        return axiosInstance.delete(API_ENDPOINTS.DELETE_SAVED_SEARCH(searchId), { params: { all: all ? '1' : '0' } });
     },
 
-    getRequestedFriends(params = {}) {
-        return this.get(API_ENDPOINTS.GET_REQUESTED_FRIENDS, { params });
+    async getRequestedFriends(params = {}) {
+        return axiosInstance.get(API_ENDPOINTS.GET_REQUESTED_FRIENDS, { params });
     },
 
-    getUserFriends(params = {}) {
-        return this.post(API_ENDPOINTS.GET_USER_FRIENDS, params);
+    async getUserFriends(params = {}) {
+        return axiosInstance.post(API_ENDPOINTS.GET_USER_FRIENDS, params);
     },
 
-    getListSuggestedFriends(index = 0, count = 20) {
-        return this.get(API_ENDPOINTS.GET_LIST_SUGGESTED_FRIENDS, {
+    async getListSuggestedFriends(index = 0, count = 20) {
+        return axiosInstance.get(API_ENDPOINTS.GET_LIST_SUGGESTED_FRIENDS, {
             params: { index, count },
         });
     },
 
-    getListVideos(params = {}) {
-        return this.get(API_ENDPOINTS.GET_LIST_VIDEOS, { params });
+    async getListVideos(params = {}) {
+        return axiosInstance.get(API_ENDPOINTS.GET_LIST_VIDEOS, { params });
     },
 
-    setAcceptFriend(userId, isAccept) {
-        return this.post(API_ENDPOINTS.SET_ACCEPT_FRIEND, {
+    async setAcceptFriend(userId, isAccept) {
+        return axiosInstance.post(API_ENDPOINTS.SET_ACCEPT_FRIEND, {
             user_id: userId,
             is_accept: isAccept,
         });
     },
 
-    sendFriendRequest(userId) {
-        return this.post(API_ENDPOINTS.SET_REQUEST_FRIEND, { user_id: userId });
+    async sendFriendRequest(userId) {
+        return axiosInstance.post(API_ENDPOINTS.SET_REQUEST_FRIEND, { user_id: userId });
     },
 
-    getListBlocks: (params) => {
+    async getListBlocks(params) {
         return axiosInstance.get(API_ENDPOINTS.GET_LIST_BLOCKS, { params });
     },
 
-    unblockUser: (userId) => {
+    async unblockUser(userId) {
         return axiosInstance.post(API_ENDPOINTS.UNBLOCK_USER, { user_id: userId });
     },
 
-    getPushSettings: () => {
+    async getPushSettings() {
         return axiosInstance.get(API_ENDPOINTS.GET_PUSH_SETTINGS);
     },
 
-    updatePushSettings: (settings) => {
+    async updatePushSettings(settings) {
         return axiosInstance.post(API_ENDPOINTS.UPDATE_PUSH_SETTINGS, settings);
     },
 
     // File upload
-    upload(url, formData, onUploadProgress) {
-        return api.post(url, formData, {
+    async upload(url, formData, onUploadProgress) {
+        return axiosInstance.post(url, formData, {
             headers: {
                 'Content-Type': 'multipart/form-data',
             },
@@ -172,9 +177,20 @@ const apiService = {
             },
         });
     },
+};
 
-    // Expose the setAuthHeaders function
-    setAuthHeaders,
+export function setAuthHeaders(token, deviceToken) {
+    if (token) {
+        axiosInstance.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+    } else {
+        delete axiosInstance.defaults.headers.common['Authorization'];
+    }
+
+    if (deviceToken) {
+        axiosInstance.defaults.headers.common['X-Device-Token'] = deviceToken;
+    } else {
+        delete axiosInstance.defaults.headers.common['X-Device-Token'];
+    }
 };
 
 export default apiService;

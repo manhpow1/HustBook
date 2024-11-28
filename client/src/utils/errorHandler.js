@@ -2,26 +2,27 @@ import logger from '../services/logging';
 
 function getErrorMessage(code) {
     const errorMessages = {
-        9992: 'Post does not exist.',
-        9993: 'Verification code is incorrect.',
-        9994: 'No data or end of list data.',
-        9995: 'User is not validated.',
-        9996: 'User exists.',
-        9997: 'Method is invalid.',
-        9998: 'Token is invalid.',
-        9999: 'An unexpected error occurred. Please try again later.',
-        1001: 'Cannot connect to the Internet.',
-        1002: 'Parameter is not enough.',
-        1003: 'Parameter type is invalid.',
-        1004: 'Parameter value is invalid.',
-        1005: 'Unknown error.',
-        1006: 'File size is too big.',
-        1007: 'Upload file failed.',
-        1008: 'Maximum number of images exceeded.',
-        1009: 'You do not have permission to access this resource.',
-        1010: 'This action has already been performed by you.',
-        1011: 'Could not publish this post.',
-        1012: 'Limited access.',
+        '1000': 'OK',
+        '9992': 'The requested post does not exist.',
+        '9993': 'Code verify is incorrect',
+        '9994': 'No Data or end of list data',
+        '9995': 'User is not validated',
+        '9996': 'User existed',
+        '9997': 'Method is invalid',
+        '9998': 'Token is invalid',
+        '9999': 'Exception error',
+        '1001': 'Can not connect to DB',
+        '1002': 'Parameter is not enough',
+        '1003': 'Parameter type is invalid',
+        '1004': 'Parameter value is invalid',
+        '1005': 'Unknown error',
+        '1006': 'File size is too big',
+        '1007': 'Upload File Failed',
+        '1008': 'Maximum number of images',
+        '1009': 'Not access',
+        '1010': 'Action has been done previously by this user',
+        '1011': 'Could not publish this post',
+        '1012': 'Limited access',
     };
     return errorMessages[code] || 'An error occurred.';
 }
@@ -65,7 +66,7 @@ export async function handleError(error, router) {
         ) {
             // Log out user and redirect for security-sensitive errors
             userStore.setUser(null);
-            notificationStore.showNotification(message, 'error');
+            showErrorNotification(notificationStore, message);
             console.debug('Invalid token or security error detected. Logging out user.');
             await redirectToLogin(router);
             return;
@@ -82,7 +83,7 @@ export async function handleError(error, router) {
     }
 
     // Show notification
-    notificationStore.showNotification(message, 'error');
+    showErrorNotification(notificationStore, message);
     console.debug(`Error message set in searchStore: ${searchStore.error}`);
     logger.error('Error occurred', { message, error });
 }

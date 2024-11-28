@@ -13,7 +13,7 @@
                     </div>
                     <input v-model="phonenumber" type="tel" id="phonenumber" required
                         class="block w-full pl-10 pr-12 sm:text-sm border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500"
-                        :class="{ 'border-red-500': phoneError }" placeholder="0123456789" />
+                        :class="{ 'border-red-500': phoneError }" placeholder="0123456789" @input="validatePhone" />
                 </div>
                 <p v-if="phoneError" class="mt-2 text-sm text-red-600">{{ phoneError }}</p>
             </div>
@@ -39,91 +39,47 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
-import { ShieldCheckIcon, PhoneIcon, LoaderIcon, CheckCircleIcon, XCircleIcon, ClockIcon } from 'lucide-vue-next'
-import { useAuthStore } from '../../stores/authStore'
-import { storeToRefs } from 'pinia'
-import apiService from '../../services/api'
+import { ref, computed } from 'vue';
+import {
+    ShieldCheckIcon,
+    PhoneIcon,
+    LoaderIcon,
+    CheckCircleIcon,
+    XCircleIcon,
+    ClockIcon,
+} from 'lucide-vue-next';
+import { useUserStore } from '../../stores/userStore';
+import { storeToRefs } from 'pinia';
+import { useFormValidation } from '../../composables/useFormValidation';
 
-const authStore = useAuthStore()
-const { isLoading, errorMessage, successMessage, cooldownTime } = storeToRefs(authStore)
+const userStore = useUserStore();
+const { isLoading, error, successMessage, cooldownTime } = storeToRefs(userStore);
 
-const phonenumber = ref('')
-const phoneError = ref('')
-
-const isButtonDisabled = computed(() => isLoading.value || cooldownTime.value > 0)
-
+const phonenumber = ref('');
+const { phoneError, validatePhone } = useFormValidation();
+const isButtonDisabled = computed(() => isLoading.value || cooldownTime.value > 0 || !phonenumber.value);
 const buttonText = computed(() => {
-    if (isLoading.value) return 'Sending...'
-    if (cooldownTime.value > 0) return `Resend in ${cooldownTime.value}s`
-    return 'Get Verification Code'
-})
+    if (isLoading.value) return 'Sending...';
+    if (cooldownTime.value > 0) return `Resend in ${cooldownTime.value}s`;
+    return 'Get Verification Code';
+});
 
 const formattedCooldownTime = computed(() => {
-    const minutes = Math.floor(cooldownTime.value / 60)
-    const seconds = cooldownTime.value % 60
-    return `${minutes}:${seconds.toString().padStart(2, '0')}`
-})
-
-const validatePhone = () => {
-    if (!phonenumber.value) {
-        phoneError.value = 'Phone number is required'
-        return false
-    }
-    if (!/^0\d{9}$/.test(phonenumber.value)) {
-        phoneError.value = 'Invalid phone number format'
-        return false
-    }
-    phoneError.value = ''
-    return true
-}
+    const minutes = Math.floor(cooldownTime.value / 60);
+    const seconds = cooldownTime.value % 60;
+    return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+});
 
 const handleSubmit = async () => {
-    phoneError.value = ''
-    errorMessage.value = ''
-    successMessage.value = ''
+    error.value = null;
+    successMessage.value = '';
+    if (!validatePhone()) return;
 
-    if (!validatePhone()) return
-
-    await authStore.getVerifyCode(phonenumber.value)
-
-    if (cooldownTime.value > 0) {
-        errorMessage.value = `Please wait ${cooldownTime.value} seconds before requesting a new code.`
-        return
-    }
-
-    isLoading.value = true
     try {
-        const response = await apiService.post(API_ENDPOINTS.GET_VERIFY_CODE, { phonenumber: phonenumber.value })
-
-        if (response.data.code === '1000') {
-            successMessage.value = `Verification code sent successfully. (Code: ${response.data.data.verifyCode})`
-            startCooldown()
-        } else {
-            errorMessage.value = response.data.message || 'Unknown error occurred'
-        }
-    } catch (error) {
-        console.error('Error getting verification code:', error)
-        if (error.response && error.response.data) {
-            errorMessage.value = error.response.data.message || 'Server error occurred'
-        } else if (error.request) {
-            errorMessage.value = 'Unable to connect to the server'
-        } else {
-            errorMessage.value = 'An unexpected error occurred. Please try again.'
-        }
-    } finally {
-        isLoading.value = false
+        await userStore.getVerifyCode(phonenumber.value);
+        // Success message will be handled by the store
+    } catch (err) {
+        // Error handling is managed by the store
     }
-}
-
-const startCooldown = () => {
-    cooldownTime.value = 120
-    const timer = setInterval(() => {
-        cooldownTime.value--
-        if (cooldownTime.value <= 0) {
-            clearInterval(timer)
-            cooldownTime.value = 0
-        }
-    }, 1000)
-}
+};
 </script>

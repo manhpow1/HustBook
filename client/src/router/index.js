@@ -135,31 +135,22 @@ const router = createRouter({
 
 // Global navigation guard
 router.beforeEach(async (to, from, next) => {
-    console.log("Global navigation guard triggered")
-    console.log("Navigating to:", to.path)
-
-    const requiresAuth = to.matched.some(record => record.meta.requiresAuth)
-
-    if (process.env.NODE_ENV === 'test') {
-        next();
-        return;
-    }
+    const requiresAuth = to.matched.some((record) => record.meta.requiresAuth);
+    const userStore = useUserStore();
 
     if (requiresAuth) {
-        const userStore = useUserStore();
-        await userStore.checkAuth();
-        console.log("After checkAuth - isLoggedIn:", userStore.isLoggedIn)
-
         if (!userStore.isLoggedIn) {
-            console.log("User not authenticated, redirecting to login")
-            next({ name: 'Login', query: { redirect: to.fullPath } })
+            await userStore.checkAuth();
+        }
+        if (userStore.isLoggedIn) {
+            next();
         } else {
-            next()
+            next({ name: 'Login', query: { redirect: to.fullPath } });
         }
     } else {
-        next()
+        next();
     }
-})
+});
 
 // Navigation guard for AddPost component
 router.beforeResolve((to, from, next) => {
