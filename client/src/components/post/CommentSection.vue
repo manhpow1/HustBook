@@ -56,7 +56,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, defineAsyncComponent, watch, onUnmounted } from 'vue';
+import { ref, computed, onMounted, watch, onUnmounted } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { storeToRefs } from 'pinia';
 import { useRouter } from 'vue-router';
@@ -65,10 +65,10 @@ import { usePostStore } from '../../stores/postStore';
 import { useNotificationStore } from '../../stores/notificationStore';
 import { handleError } from '../../utils/errorHandler';
 import MarkdownEditor from '../shared/MarkdownEditor.vue';
-import { debouncedValidateInput } from '../../utils/debounce';
 import { throttle } from 'lodash-es';
 import { RecycleScroller } from 'vue-virtual-scroller';
 import 'vue-virtual-scroller/dist/vue-virtual-scroller.css';
+import { useFormValidation } from '../../composables/useFormValidation';
 
 const router = useRouter();
 const CommentItem = defineAsyncComponent(() =>
@@ -85,13 +85,11 @@ const props = defineProps({
     postId: { type: String, required: true },
 });
 
-const { postId } = props;
-
 const { t } = useI18n();
 const commentStore = useCommentStore();
 const postStore = usePostStore();
 const notificationStore = useNotificationStore();
-const { comments, commentError, hasMoreComments, loadingComments } = storeToRefs(commentStore);
+const { comments, hasMoreComments, loadingComments } = storeToRefs(commentStore);
 
 const newComment = ref('');
 const commentInput = ref(null);
@@ -101,11 +99,9 @@ const isLoadingMore = ref(false);
 const isCommentSectionVisible = ref(true);
 const offlineMode = ref(false);
 const syncError = ref(null);
+const { commentError, validateComment } = useFormValidation();
 
-const isCommentValid = computed(() => {
-    console.debug('Validating comment:', newComment.value);
-    return newComment.value.trim().length > 0 && newComment.value.length <= 1000;
-});
+const isCommentValid = computed(() => validateComment(newComment.value));
 
 const checkOnlineStatus = () => {
     offlineMode.value = !navigator.onLine;
@@ -181,44 +177,17 @@ const onRetryLoadComments = async () => {
 };
 
 const onAddComment = async () => {
-    console.debug('Attempting to add comment:', newComment.value);
-
-    if (!isCommentValid.value || isSubmitting.value) {
-        console.debug('Invalid comment or submission in progress.');
+    if (!isCommentValid.value) {
+        notificationStore.showNotification(commentError.value, 'error');
         return;
     }
 
-    const commentContent = newComment.value.trim();
     isSubmitting.value = true;
-
     try {
-        console.debug(`Calling addComment with postId: ${postId} and content: ${commentContent}`);
-        await commentStore.addComment(postId, commentContent);
-
-        console.debug('Comment successfully added.');
-        newComment.value = ''; // Clear input only after success
-        scrollToBottom();
-
-        if (offlineMode.value) {
-            notificationStore.showNotification(t('commentSavedOffline'), 'info');
-        }
+        await commentStore.addComment(props.postId, newComment.value.trim());
+        newComment.value = '';
     } catch (error) {
-        console.error('Error during comment submission:', error);
-        if (!navigator.onLine) {
-            notificationStore.showNotification(t('commentSavedOffline'), 'info');
-        } else {
-            const errorCode = error.response?.data?.code;
-            if (errorCode === 1010) {
-                await postStore.removePost(postId);
-            } else if (errorCode === 9998 || errorCode === 9999) {
-                router.push('/login');
-            } else if (errorCode === 1009) {
-                await postStore.removePost(postId);
-                isCommentSectionVisible.value = false;
-                return;
-            }
-            await handleError(error, router);
-        }
+        await handleError(error, router);
     } finally {
         isSubmitting.value = false;
     }

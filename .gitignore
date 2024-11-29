@@ -3,9 +3,9 @@ node_modules
 .DS_Store
 server/serviceAccountKey.json
 /server/uploads
-repomix-output.xml
-client.xml
-server.xml
+repomix-output.txt
+client.txt
+server.txt
 repomix.config.json
 .repomixignore
 server/config/production.json

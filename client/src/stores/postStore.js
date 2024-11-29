@@ -21,11 +21,8 @@ export const usePostStore = defineStore('post', () => {
     const lastKnownCoordinates = ref(null);
     const userStore = useUserStore();
 
-    const formattedLikes = computed(() => {
-        const likes = currentPost.value?.likes || 0
-        return formatNumber(Math.max(likes, 0)) // Ensure no negative values
-    })
-    const formattedComments = computed(() => formatNumber(currentPost.value?.comment || 0))
+    const formattedLikes = computed(() => formatNumber(currentPost.value?.likes || 0));
+    const formattedComments = computed(() => formatNumber(currentPost.value?.comment || 0));
 
     async function fetchPosts(params = {}, router) {
         console.debug("Initial isLoggedIn state before fetchPosts:", userStore.isLoggedIn);
@@ -59,73 +56,86 @@ export const usePostStore = defineStore('post', () => {
             console.log("Fetch posts response data:", response.data);  // Log response.data specifically
 
             if (response.data.code === '1000') {
-                const newPostsRaw = response.data.data.posts || [];
-                const newPosts = [];
-                for (const post of newPostsRaw) {
-                    const processedPost = validateAndProcessPost(post);
-                    if (processedPost) {
-                        newPosts.push(processedPost);
-                    }
-                }
+                const newPosts = response.data.data.posts
+                    .map(validateAndProcessPost)
+                    .filter((post) => post !== null);
                 posts.value.push(...newPosts);
                 lastId.value = response.data.data.last_id;
                 hasMorePosts.value = newPosts.length === 10;
-                console.debug("isLoggedIn state after successful fetchPosts:", userStore.isLoggedIn);
-                console.log("Posts updated:", posts.value);
             } else if (response.data.code === '9994') {
-                console.log("No more posts to load.");
                 hasMorePosts.value = false;
-            }
-            else {
+            } else {
                 throw new Error(response.data.message || 'Failed to load posts');
             }
         } catch (err) {
-            console.error("Error fetching posts:", err);
             await handleError(err, router);
-            console.debug("User value directly after handleError:", userStore.user);
-            error.value = 'Failed to load posts';
-            if (err.message === 'Network Error') {
-                error.value = 'Cannot connect to the Internet.';
-            } else if (err.response && err.response.data && err.response.data.message) {
-                error.value = err.response.data.message;
-            } else if (err.message) {
-                error.value = err.message;
-            } else {
-                error.value = 'An error occurred.';
-            }
+            error.value = err.message || 'Failed to load posts';
         } finally {
             loading.value = false;
-            console.log("Loading state:", loading.value);
         }
     }
 
-    async function fetchPost(postId) {
-        loading.value = true
-        error.value = null
+    async function fetchPost(postId, router) {
+        loading.value = true;
+        error.value = null;
         try {
-            const response = await apiService.getPost(postId)
-            currentPost.value = response.data.data
+            const response = await apiService.getPost(postId);
+            if (response.data.code === '1000') {
+                currentPost.value = response.data.data;
+            } else {
+                throw new Error(response.data.message || 'Failed to load post');
+            }
         } catch (err) {
-            console.error('Error fetching post:', err)
-            error.value = 'Failed to load post'
+            await handleError(err, router);
+            error.value = err.message || 'Failed to load post';
         } finally {
-            loading.value = false
+            loading.value = false;
         }
     }
 
-    async function createPost(postData) {
-        loading.value = true
-        error.value = null
+    async function createPost(postData, router) {
+        loading.value = true;
+        error.value = null;
         try {
-            const response = await apiService.createPost(postData)
-            posts.value.unshift(response.data.data)
-            return response.data
+            const response = await apiService.createPost(postData);
+            if (response.data.code === '1000') {
+                posts.value.unshift(response.data.data);
+                return response.data;
+            } else {
+                throw new Error(response.data.message || 'Failed to create post');
+            }
         } catch (err) {
-            console.error('Error creating post:', err)
-            error.value = 'Failed to create post'
-            throw err
+            await handleError(err, router);
+            error.value = err.message || 'Failed to create post';
+            throw err;
         } finally {
-            loading.value = false
+            loading.value = false;
+        }
+    }
+
+    async function updatePost(postId, postData, router) {
+        loading.value = true;
+        error.value = null;
+        try {
+            const response = await apiService.updatePost(postId, postData);
+            if (response.data.code === '1000') {
+                const index = posts.value.findIndex((post) => post.id === postId);
+                if (index !== -1) {
+                    posts.value[index] = { ...posts.value[index], ...postData };
+                }
+                if (currentPost.value && currentPost.value.id === postId) {
+                    currentPost.value = { ...currentPost.value, ...postData };
+                }
+                return response.data;
+            } else {
+                throw new Error(response.data.message || 'Failed to update post');
+            }
+        } catch (err) {
+            await handleError(err, router);
+            error.value = err.message || 'Failed to update post';
+            throw err;
+        } finally {
+            loading.value = false;
         }
     }
 
@@ -269,51 +279,28 @@ export const usePostStore = defineStore('post', () => {
         const hasMedia = (Array.isArray(post.image) && post.image.length > 0) ||
             (typeof post.video === 'string' && post.video.trim() !== '');
 
-        if (!hasContent && !hasMedia) {
-            // If the post has neither content nor media, exclude it
-            return null;
-        }
+        if (!hasContent && !hasMedia) return null;
 
         // Ensure the post has a valid author
-        if (!post.userId || !post.author || !post.author.id) {
-            // If 'userId' or 'author.id' is missing, exclude the post
-            return null;
-        }
+        if (!post.userId || !post.author || !post.author.id) return null;
 
-        // Ensure 'like' field is a non-negative integer
+        // Ensure 'like' and 'comment' fields are non-negative integers
         post.like = Number.isInteger(post.like) && post.like >= 0 ? post.like : 0;
-        // Ensure 'comment' field is a non-negative integer
         post.comment = Number.isInteger(post.comment) && post.comment >= 0 ? post.comment : 0;
-        // Ensure 'is_liked' is '0' or '1' as strings
+
+        // Ensure 'is_liked' and 'can_comment' are '0' or '1' as strings
         post.is_liked = post.is_liked === '1' ? '1' : '0';
-        // Ensure 'can_comment' is '0' or '1' as strings
         post.can_comment = post.can_comment === '1' ? '1' : '0';
-        // Ensure 'in_campaign' is '0' or '1' as strings
-        if (post.in_campaign !== '0' && post.in_campaign !== '1') {
-            post.in_campaign = '0';
-        }
-        // If 'in_campaign' is '1', ensure 'campaign_id' is a non-empty string
-        if (post.in_campaign === '1') {
-            post.campaign_id = typeof post.campaign_id === 'string' && post.campaign_id.trim() !== '' ? post.campaign_id : '';
-        }
-        if (!post || (!post.content && (!post.image || !post.video))) {
-            console.debug('Excluding post due to missing content or media:', post);
-            return null;
-        }
-        if (containsInappropriateContent(post.content)) {
-            // Exclude the post if it contains inappropriate content
-            return null;
-        }
-        // Return the validated and processed post
-        console.debug('Processed and validated post:', post);
+
+        // Validate inappropriate content
+        if (containsInappropriateContent(post.content)) return null;
+
         return post;
     }
 
     function containsInappropriateContent(text) {
         if (!text) return false;
         const lowerCaseText = text.toLowerCase();
-
-        // Check if any inappropriate word is present in the text
         return inappropriateWords.some((word) => lowerCaseText.includes(word.toLowerCase()));
     }
 
@@ -341,6 +328,7 @@ export const usePostStore = defineStore('post', () => {
         createPost,
         toggleLike,
         fetchComments,
+        updatePost,
         addComment,
         fetchPostsByHashtag,
         removePost,

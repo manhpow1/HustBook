@@ -3,6 +3,7 @@ import { ref, computed } from 'vue';
 import apiService from '../services/api';
 import { handleError } from '../utils/errorHandler';
 import router from '../router';
+import logger from '../services/logging';
 
 export const useNotificationStore = defineStore('notification', () => {
     const notifications = ref([]);
@@ -11,7 +12,7 @@ export const useNotificationStore = defineStore('notification', () => {
     const error = ref(null);
 
     const unreadCount = computed(() => {
-        return notifications.value.filter(n => !n.read).length;
+        return notifications.value.filter((n) => !n.read).length;
     });
 
     async function fetchNotifications() {
@@ -21,7 +22,7 @@ export const useNotificationStore = defineStore('notification', () => {
             const response = await apiService.get('/notifications');
             notifications.value = response.data;
         } catch (err) {
-            console.error('Error fetching notifications:', err);
+            logger.error('Error fetching notifications:', err);
             error.value = 'Failed to fetch notifications';
             await handleError(err, router);
         } finally {

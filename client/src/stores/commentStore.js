@@ -5,6 +5,7 @@ import apiService from '../services/api';
 import { handleError } from '../utils/errorHandler';
 import { db } from '../config/firebase';
 import { collection, addDoc, onSnapshot, query, orderBy, limit } from 'firebase/firestore';
+import logger from '../services/logging';
 
 export const useCommentStore = defineStore('comment', () => {
     const comments = ref([]);
@@ -24,23 +25,23 @@ export const useCommentStore = defineStore('comment', () => {
         loadingComments.value = true;
         commentError.value = null;
 
-        console.debug('Fetching comments for postId:', postId);
+        logger.debug('Fetching comments for postId:', postId);
 
         try {
             const response = await apiService.getComments(postId, pageIndex.value, count);
             const fetchedComments = Array.isArray(response?.data) ? response.data : [];
 
-            console.debug('Fetched comments:', fetchedComments);
+            logger.debug('Fetched comments:', fetchedComments);
 
             // Filter out comments from blocked users
             const filteredComments = fetchedComments.filter(
                 (comment) => comment.user?.name !== 'Blocked User'
             );
 
-            console.debug('Filtered comments:', filteredComments);
+            logger.debug('Filtered comments:', filteredComments);
 
             if (filteredComments.length === 0) {
-                console.debug('No more comments. Setting hasMoreComments to false.');
+                logger.debug('No more comments. Setting hasMoreComments to false.');
                 hasMoreComments.value = false;
             } else {
                 comments.value.push(...filteredComments);
@@ -49,12 +50,12 @@ export const useCommentStore = defineStore('comment', () => {
 
             const idb = await dbPromise;
             const tx = idb.transaction('comments', 'readwrite');
-            filteredComments.forEach(comment => tx.store.put(comment));
+            filteredComments.forEach((comment) => tx.store.put(comment));
             await tx.done;
 
             return filteredComments;
         } catch (error) {
-            console.error('Error in fetchComments:', error);
+            logger.error('Error in fetchComments:', error);
             await handleError(error, router);
             commentError.value = 'Failed to fetch comments';
             return [];
@@ -72,10 +73,10 @@ export const useCommentStore = defineStore('comment', () => {
             const response = await apiService.addComment(postId, content);
             const newComment = response.data;
 
-            console.debug('New comment from API:', newComment);
+            logger.debug('New comment from API:', newComment);
 
             comments.value.unshift(newComment);
-            console.debug('Updated comments in store:', comments.value);
+            logger.debug('Updated comments in store:', comments.value);
 
             const idb = await dbPromise;
             await idb.add('comments', newComment);
@@ -88,7 +89,7 @@ export const useCommentStore = defineStore('comment', () => {
             if (!navigator.onLine) {
                 return await addOfflineComment(postId, content);
             }
-            console.error('Failed to add comment:', error);
+            logger.error('Failed to add comment:', error);
             throw error;
         }
     };

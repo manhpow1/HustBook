@@ -5,30 +5,35 @@
             Edit Post
         </h2>
         <form @submit.prevent="handleSubmit" class="space-y-4">
-            <FileUpload v-model="files" @error="fileError = $event" :initialFiles="initialFiles" />
+            <FileUpload v-model:files="files" :initialFiles="initialFiles" />
+            <p v-if="fileError" class="text-red-500 text-sm">{{ fileError }}</p>
 
             <div>
                 <label for="description" class="block text-sm font-medium text-gray-700 mb-2">
                     Description
                 </label>
-                <textarea id="description" v-model="description" rows="3" :maxlength="500"
-                    class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring focus:ring-primary focus:ring-opacity-50 transition duration-300 ease-in-out"
-                    placeholder="What's on your mind?" @input="handleDescriptionInput"></textarea>
+                <textarea id="description" v-model="description" rows="3" :maxlength="500" :class="[
+                    'mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring focus:ring-primary focus:ring-opacity-50 transition duration-300 ease-in-out',
+                    { 'border-red-500': descriptionError },
+                ]" placeholder="What's on your mind?"></textarea>
+                <p v-if="descriptionError" class="text-red-500 text-sm mt-1">{{ descriptionError }}</p>
                 <p class="mt-2 text-sm text-gray-500">{{ description.length }}/500 characters</p>
-                <div v-html="highlightedDescription" class="mt-2 text-sm text-gray-700"></div>
             </div>
 
             <div>
                 <label for="status-select" class="block text-sm font-medium text-gray-700 mb-2">
                     How are you feeling?
                 </label>
-                <select id="status-select" v-model="status"
-                    class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-primary focus:border-primary sm:text-sm rounded-md">
+                <select id="status-select" v-model="status" :class="[
+                    'mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-primary focus:border-primary sm:text-sm rounded-md',
+                    { 'border-red-500': statusError },
+                ]">
                     <option value="">Select a status</option>
                     <option v-for="option in statusOptions" :key="option.value" :value="option.value">
                         {{ option.label }}
                     </option>
                 </select>
+                <p v-if="statusError" class="text-red-500 text-sm mt-1">{{ statusError }}</p>
             </div>
 
             <div>
@@ -54,7 +59,7 @@
                 </button>
                 <button type="submit" :disabled="isLoading || !isFormValid"
                     class="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-primary hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary disabled:opacity-50 disabled:cursor-not-allowed">
-                    {{ isLoading ? "Updating..." : "Update Post" }}
+                    {{ isLoading ? 'Updating...' : 'Update Post' }}
                 </button>
             </div>
         </form>
@@ -99,29 +104,38 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onBeforeUnmount, watch } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
-import { EditIcon, SmileIcon } from 'lucide-vue-next'
-import { usePostStore } from '../../stores/postStore'
-import apiService from '../../services/api'
-import logger from '../../services/logging'
-import FileUpload from '../shared/FileUpload.vue'
+import { ref, computed, onMounted, onBeforeUnmount, watch } from 'vue';
+import { useRoute, useRouter } from 'vue-router';
+import { EditIcon, SmileIcon } from 'lucide-vue-next';
+import { usePostStore } from '../../stores/postStore';
+import logger from '../../services/logging';
+import FileUpload from '../shared/FileUpload.vue';
+import { useFormValidation } from '../../composables/useFormValidation';
+import { sanitizeInput } from '../../utils/sanitize';
 
-const route = useRoute()
-const router = useRouter()
-const postStore = usePostStore()
+const route = useRoute();
+const router = useRouter();
+const postStore = usePostStore();
 
-const postId = ref(route.params.id)
-const description = ref('')
-const status = ref('')
-const files = ref([])
-const initialFiles = ref([])
-const fileError = ref('')
-const isLoading = ref(false)
-const successMessage = ref('')
-const errorMessage = ref('')
-const showEmojiPicker = ref(false)
-const showUnsavedChangesModal = ref(false)
+const postId = ref(route.params.id);
+const description = ref('');
+const status = ref('');
+const files = ref([]);
+const initialFiles = ref([]);
+const isLoading = ref(false);
+const successMessage = ref('');
+const errorMessage = ref('');
+const showEmojiPicker = ref(false);
+const showUnsavedChangesModal = ref(false);
+
+const { descriptionError, statusError, fileError, validateDescription, validateStatus, validateFiles } =
+    useFormValidation();
+
+const isFormValid = computed(() => {
+    const isDescriptionValid = validateDescription(description.value);
+    const isStatusValid = validateStatus(status.value);
+    return isDescriptionValid && isStatusValid;
+});
 
 const statusOptions = [
     { value: 'happy', label: 'Happy' },
@@ -130,71 +144,61 @@ const statusOptions = [
     { value: 'angry', label: 'Angry' },
     { value: 'neutral', label: 'Neutral' },
     { value: 'loved', label: 'Loved' },
-]
+];
 
-const emojis = ['😀', '😂', '😍', '🥳', '😎', '🤔', '😊', '👍', '❤️', '🎉']
+const emojis = ['😀', '😂', '😍', '🥳', '😎', '🤔', '😊', '👍', '❤️', '🎉'];
 
-const isFormValid = computed(() => {
-    return (files.value.length > 0 || description.value.trim() !== '') && !fileError.value
-})
-
-const hasUnsavedChanges = computed(() => {
-    return description.value !== initialDescription.value ||
-        status.value !== initialStatus.value ||
-        JSON.stringify(files.value) !== JSON.stringify(initialFiles.value)
-})
-
-const highlightedDescription = computed(() => {
-    return detectLinks(description.value)
-})
-
-const initialDescription = ref('')
-const initialStatus = ref('')
+const insertEmoji = (emoji) => {
+    description.value += emoji;
+};
 
 onMounted(async () => {
     try {
-        const postData = await postStore.fetchPost(postId.value)
-        description.value = convertTextToEmoticons(postData.described)
-        initialDescription.value = description.value
-        status.value = postData.status
-        initialStatus.value = status.value
-        initialFiles.value = postData.media.map(url => ({ url }))
-        files.value = [...initialFiles.value]
+        const postData = await postStore.fetchPost(postId.value);
+        description.value = postData.described;
+        status.value = postData.status;
+        initialFiles.value = postData.media.map((url) => ({ url }));
+        files.value = [...initialFiles.value];
     } catch (error) {
-        logger.error('Failed to load post data', error)
-        errorMessage.value = 'Failed to load post data'
+        logger.error('Failed to load post data', error);
+        errorMessage.value = 'Failed to load post data';
     }
-})
+});
 
 const handleSubmit = async () => {
-    isLoading.value = true
-    errorMessage.value = ''
-    successMessage.value = ''
+    if (!isFormValid.value) {
+        errorMessage.value = 'Please fix the errors before submitting.';
+        return;
+    }
+
+    isLoading.value = true;
+    errorMessage.value = '';
+    successMessage.value = '';
 
     try {
         const updatedPostData = {
-            described: convertEmoticonsToText(description.value),
+            described: sanitizeInput(description.value),
             status: status.value,
-            files: files.value.filter(file => file instanceof File)
-        }
+            files: files.value.filter((file) => file instanceof File),
+        };
 
-        const response = await apiService.put(`/posts/edit_post/${postId.value}`, updatedPostData)
+        const response = await postStore.updatePost(postId.value, updatedPostData);
 
         if (response.code === '1000') {
-            successMessage.value = 'Post updated successfully!'
-            logger.info('Post updated successfully', { postId: postId.value })
-            router.push({ name: 'PostDetail', params: { id: postId.value } })
+            successMessage.value = 'Post updated successfully!';
+            logger.info('Post updated successfully', { postId: postId.value });
+            router.push({ name: 'PostDetail', params: { id: postId.value } });
         } else {
-            errorMessage.value = response.message || 'An error occurred while updating the post'
-            logger.warn('Failed to update post', { responseCode: response.code, message: response.message })
+            errorMessage.value = response.message || 'An error occurred while updating the post';
+            logger.warn('Failed to update post', { responseCode: response.code, message: response.message });
         }
     } catch (error) {
-        logger.error('Error in handleSubmit', error)
-        errorMessage.value = 'Failed to update post'
+        logger.error('Error in handleSubmit', error);
+        errorMessage.value = 'Failed to update post';
     } finally {
-        isLoading.value = false
+        isLoading.value = false;
     }
-}
+};
 
 const cancelEdit = () => {
     if (hasUnsavedChanges.value) {

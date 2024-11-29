@@ -12,6 +12,7 @@
                     <label for="edit-comment" class="sr-only">{{ t('editComment') }}</label>
                     <textarea id="edit-comment" v-model="editedContent" class="edit-textarea" rows="3"
                         :placeholder="t('editCommentPlaceholder')"></textarea>
+                    <p v-if="commentError" class="text-red-500 text-sm mt-1">{{ commentError }}</p>
                 </div>
                 <div class="comment-actions">
                     <button @click="debouncedToggleLike" class="action-button" :class="{ 'liked': comment.is_liked }"
@@ -51,10 +52,12 @@ import { useI18n } from 'vue-i18n';
 import { ThumbsUpIcon } from 'lucide-vue-next';
 import { useUserStore } from '../../stores/userStore';
 import { useNotificationStore } from '../../stores/notificationStore';
-import { formatDate} from '../../utils/helpers';
+import { formatDate } from '../../utils/helpers';
 import { renderMarkdown } from '../../utils/markdown';
 import { debounce } from 'lodash-es';
 import ConfirmDialog from './ConfirmDialog.vue';
+import { useFormValidation } from '../../composables/useFormValidation';
+import logger from '../../services/logging';
 
 const props = defineProps({
     comment: {
@@ -75,31 +78,48 @@ const isLikeLoading = ref(false);
 const isSaveLoading = ref(false);
 const isDeleteLoading = ref(false);
 
+const { commentError, validateComment } = useFormValidation();
+
 const canEditDelete = computed(() => userStore.userId === props.comment.user.id);
 const renderedContent = computed(() => renderMarkdown(props.comment.content));
 const formattedDate = computed(() => formatDate(props.comment.created));
 
-watch(() => props.comment.content, (newContent) => {
-    editedContent.value = newContent;
-});
+watch(
+    () => props.comment.content,
+    (newContent) => {
+        editedContent.value = newContent;
+    }
+);
 
 const toggleEdit = () => {
     isEditing.value = !isEditing.value;
-    if (isEditing.value) editedContent.value = props.comment.content;
+    if (isEditing.value) {
+        editedContent.value = props.comment.content;
+        commentError.value = '';
+    }
 };
 
 const saveEdit = async () => {
-    if (editedContent.value.trim() !== props.comment.content) {
+    const trimmedContent = editedContent.value.trim();
+    const isCommentValid = validateComment(trimmedContent);
+    if (!isCommentValid) {
+        notificationStore.showNotification(commentError.value, 'error');
+        return;
+    }
+
+    if (trimmedContent !== props.comment.content) {
         isSaveLoading.value = true;
         try {
             await emit('update', {
                 id: props.comment.id,
-                content: editedContent.value.trim(),
+                content: trimmedContent,
             });
             isEditing.value = false;
             notificationStore.showNotification(t('commentUpdated'), 'success');
+            logger.info('Comment updated successfully', { commentId: props.comment.id });
         } catch (error) {
             notificationStore.showNotification(t('saveEditError'), 'error');
+            logger.error('Error updating comment', error);
         } finally {
             isSaveLoading.value = false;
         }
@@ -113,6 +133,7 @@ const debouncedSaveEdit = debounce(saveEdit, 300);
 const cancelEdit = () => {
     isEditing.value = false;
     editedContent.value = props.comment.content;
+    commentError.value = '';
 };
 
 const openDeleteDialog = () => {
@@ -129,8 +150,10 @@ const confirmDelete = async () => {
         await emit('delete', props.comment.id);
         closeDeleteDialog();
         notificationStore.showNotification(t('commentDeleted'), 'success');
+        logger.info('Comment deleted successfully', { commentId: props.comment.id });
     } catch (error) {
         notificationStore.showNotification(t('deleteError'), 'error');
+        logger.error('Error deleting comment', error);
     } finally {
         isDeleteLoading.value = false;
     }
@@ -146,8 +169,10 @@ const toggleLike = async () => {
             is_liked: !props.comment.is_liked,
             like: props.comment.like + (props.comment.is_liked ? -1 : 1),
         });
+        logger.info('Comment like toggled', { commentId: props.comment.id });
     } catch (error) {
         notificationStore.showNotification(t('likeError'), 'error');
+        logger.error('Error toggling like on comment', error);
     } finally {
         isLikeLoading.value = false;
     }

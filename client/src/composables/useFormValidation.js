@@ -49,10 +49,74 @@ export function useFormValidation() {
         return true;
     };
 
+    const validateDescription = (description) => {
+        if (!description.trim()) {
+            descriptionError.value = 'Description cannot be empty';
+            return false;
+        }
+        if (description.length > 500) {
+            descriptionError.value = 'Description cannot exceed 500 characters';
+            return false;
+        }
+        descriptionError.value = '';
+        return true;
+    };
+
+    const validateStatus = (status) => {
+        if (!status) {
+            statusError.value = 'Status is required';
+            return false;
+        }
+        statusError.value = '';
+        return true;
+    };
+
+    const validateFiles = (files) => {
+        if (!files || files.length === 0) {
+            fileError.value = 'At least one image or video is required';
+            return false;
+        }
+        // Add additional file validation if needed
+        fileError.value = '';
+        return true;
+    };
+
+    const validateCode = (codeDigits) => {
+        if (codeDigits.some((digit) => !/^\d$/.test(digit))) {
+            codeError.value = 'Verification code must be 6 digits';
+            return false;
+        }
+        codeError.value = '';
+        return true;
+    };
+
+    const validateComment = (comment) => {
+        if (!comment.trim()) {
+            commentError.value = 'Comment cannot be empty';
+            return false;
+        }
+        if (comment.length > 1000) {
+            commentError.value = 'Comment cannot exceed 1000 characters';
+            return false;
+        }
+        commentError.value = '';
+        return true;
+    };
+
     return {
         phoneError,
         passwordError,
+        descriptionError,
+        statusError,
+        fileError,
+        codeError,
+        commentError,
         validatePhone,
         validatePassword,
+        validateDescription,
+        validateStatus,
+        validateFiles,
+        validateCode,
+        validateComment,
     };
 }

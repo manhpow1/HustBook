@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia';
-import { ref, computed } from 'vue';
+import { ref } from 'vue';
 import apiService from '../services/api';
 import { handleError } from '../utils/errorHandler';
 import router from '../router';
@@ -10,115 +10,101 @@ export const useSearchStore = defineStore('search', () => {
     const isLoading = ref(false);
     const error = ref(null);
     const lastSearchParams = ref(null);
-    const normalizedSearchResults = computed(() => {
-        return searchResults.value.map(result => ({
-            ...result,
-            keyword: result.keyword ? result.keyword.trim() : '',
-        }));
-    });
-    const sortedSearchResults = computed(() => {
-        return [...normalizedSearchResults.value].sort((a, b) => new Date(b.created) - new Date(a.created));
-    });
 
-    const searchPosts = async ({ user_id, keyword, index = 0, count = 20 }, router) => {
-        console.log('Starting searchPosts with params:', { user_id, keyword, index, count });
-
+    const searchPosts = async ({ keyword, index = 0, count = 20 }) => {
         if (!keyword || keyword.trim() === '') {
-            console.warn('Keyword is missing. Aborting search.');
             error.value = 'Keyword cannot be empty.';
-            isLoading.value = false; // Ensure loading state is reset
-            return; // Prevent further execution
-        }
-
-        if (isNaN(index) || isNaN(count)) {
-            console.warn('Invalid index or count. Aborting search.');
-            isLoading.value = false;
-            error.value = 'Parameter value is invalid.';
             return;
         }
 
         isLoading.value = true;
         error.value = null;
-        lastSearchParams.value = { user_id, keyword, index, count };
+        lastSearchParams.value = { keyword, index, count };
 
         try {
-            const response = await apiService.search(user_id, keyword, index, count);
-            const data = response.data;
+            const response = await apiService.search(keyword, index, count)
+            const data = response.data
 
             if (data.code === '1000') {
-                const validPosts = data.data.filter((post) =>
-                    post.author?.id && (post.described || post.image || post.video)
-                );
-                searchResults.value = [...new Set([...searchResults.value, ...validPosts])];
-                hasMore.value = validPosts.length === count;
+                searchResults.value = [...searchResults.value, ...data.data]
+                hasMore.value = data.data.length === count
             } else if (data.code === '9994') {
-                if (index === 0) searchResults.value = [];
-                hasMore.value = false;
+                if (index === 0) searchResults.value = []
+                hasMore.value = false
             } else {
-                throw new Error(data.message || 'An error occurred during search');
+                throw new Error(data.message || 'An error occurred during search')
             }
         } catch (err) {
-            await handleError(err, router);
+            error.value = 'Failed to perform search'
+            await handleError(err, router)
         } finally {
-            isLoading.value = false;
+            isLoading.value = false
         }
-    };
+    }
 
     const resetSearch = () => {
-        console.log('Resetting search state.');
-        searchResults.value = [];
-        hasMore.value = true;
-        isLoading.value = false;
-        error.value = null;
-        lastSearchParams.value = null;
-        console.log('Search state after reset:', { searchResults: searchResults.value, hasMore: hasMore.value });
-    };
+        searchResults.value = []
+        hasMore.value = true
+        isLoading.value = false
+        error.value = null
+        lastSearchParams.value = null
+    }
 
-    const retryLastSearch = async (router) => {
-        console.log('Retrying last search with params:', lastSearchParams.value);
+    const retryLastSearch = async () => {
         if (lastSearchParams.value) {
-            await searchPosts(lastSearchParams.value, router);
-        } else {
-            console.warn('No last search parameters available for retry.');
+            await searchPosts(lastSearchParams.value)
         }
-    };
+    }
 
     const getSavedSearches = async (index = 0, count = 20) => {
-        isLoading.value = true;
-        error.value = null;
+        isLoading.value = true
+        error.value = null
         try {
-            const response = await apiService.getSavedSearches({ index, count });
-            return {
-                ...response,
-                data: response.data.filter(search => search.id && search.keyword && search.created)
-            };
-        } catch (err) {
-            await handleError(err, router);
-            return { data: [] };
-        } finally {
-            isLoading.value = false;
-        }
-    };
+            const response = await apiService.getSavedSearches({ index, count })
+            const data = response.data
 
-    const deleteSavedSearch = async (searchId, all = false) => {
-        isLoading.value = true;
-        error.value = null;
-        try {
-            await apiService.deleteSavedSearch(searchId, all);
-            if (all) {
-                searchResults.value = [];
+            if (data.code === '1000') {
+                return data.data.data
+            } else if (data.code === '9994') {
+                return []
             } else {
-                searchResults.value = searchResults.value.filter(search => search.id !== searchId);
+                throw new Error(data.message || 'Failed to fetch saved searches')
             }
         } catch (err) {
-            await handleError(err, router);
+            error.value = 'Failed to fetch saved searches'
+            await handleError(err, router)
+            return []
         } finally {
-            isLoading.value = false;
+            isLoading.value = false
         }
-    };
+    }
+
+    const deleteSavedSearch = async (searchId, all = false) => {
+        isLoading.value = true
+        error.value = null
+        try {
+            const response = await apiService.deleteSavedSearch(searchId, all)
+            const data = response.data
+
+            if (data.code === '1000') {
+                if (all) {
+                    searchResults.value = []
+                } else {
+                    searchResults.value = searchResults.value.filter(search => search.id !== searchId)
+                }
+            } else {
+                throw new Error(data.message || 'Failed to delete saved search')
+            }
+        } catch (err) {
+            error.value = 'Failed to delete saved search'
+            await handleError(err, router)
+        } finally {
+            isLoading.value = false
+        }
+    }
 
     return {
-        searchResults: sortedSearchResults,
+        searchResults,
         hasMore,
         isLoading,
         error,
@@ -127,5 +113,5 @@ export const useSearchStore = defineStore('search', () => {
         retryLastSearch,
         getSavedSearches,
         deleteSavedSearch,
-    };
-});
+    }
+})
