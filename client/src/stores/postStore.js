@@ -3,7 +3,6 @@ import { ref, computed } from 'vue';
 import apiService from '../services/api';
 import { formatNumber } from '../utils/numberFormat';
 import { handleError } from '../utils/errorHandler';
-import { useUserStore } from './userStore';
 import inappropriateWords from '../i18n/inappropriateWords';
 import router from '../router';
 
@@ -20,11 +19,11 @@ export const usePostStore = defineStore('post', () => {
     const hasMorePosts = ref(true);
     const lastVisible = ref(null);
     const lastKnownCoordinates = ref(null);
-    const userStore = useUserStore();
 
     const formattedLikes = computed(() => formatNumber(currentPost.value?.likes || 0));
     const formattedComments = computed(() => formatNumber(currentPost.value?.comments || 0));
 
+    // Fetch Posts
     async function fetchPosts(params = {}) {
         if (!hasMorePosts.value) {
             console.log("No more posts to load.");
@@ -64,6 +63,7 @@ export const usePostStore = defineStore('post', () => {
         }
     }
 
+    // Fetch Single Post
     async function fetchPost(postId) {
         loading.value = true;
         error.value = null;
@@ -84,6 +84,7 @@ export const usePostStore = defineStore('post', () => {
         }
     }
 
+    // Create Post
     async function createPost(postData) {
         loading.value = true;
         error.value = null;
@@ -106,6 +107,7 @@ export const usePostStore = defineStore('post', () => {
         }
     }
 
+    // Update Post
     async function updatePost(postId, postData) {
         loading.value = true;
         error.value = null;
@@ -134,18 +136,19 @@ export const usePostStore = defineStore('post', () => {
         }
     }
 
+    // Toggle Like
     async function toggleLike(postId) {
         try {
             const post = posts.value.find(p => p.id === postId);
-            const isLiked = post?.isLiked;
+            const isLiked = post?.isLiked === '1';
 
             // Optimistic UI update
             if (post) {
-                post.isLiked = !isLiked;
+                post.isLiked = isLiked ? '0' : '1';
                 post.likes += isLiked ? -1 : 1;
             }
             if (currentPost.value && currentPost.value.id === postId) {
-                currentPost.value.isLiked = !isLiked;
+                currentPost.value.isLiked = isLiked ? '0' : '1';
                 currentPost.value.likes += isLiked ? -1 : 1;
             }
 
@@ -157,18 +160,19 @@ export const usePostStore = defineStore('post', () => {
             // Revert the UI update on failure
             const post = posts.value.find(p => p.id === postId);
             if (post) {
-                const isLiked = post.isLiked;
-                post.isLiked = !isLiked;
+                const isLiked = post.isLiked === '1';
+                post.isLiked = isLiked ? '0' : '1';
                 post.likes += isLiked ? -1 : 1;
             }
             if (currentPost.value && currentPost.value.id === postId) {
-                const isLiked = currentPost.value.isLiked;
-                currentPost.value.isLiked = !isLiked;
+                const isLiked = currentPost.value.isLiked === '1';
+                currentPost.value.isLiked = isLiked ? '0' : '1';
                 currentPost.value.likes += isLiked ? -1 : 1;
             }
         }
     }
 
+    // Fetch Comments
     async function fetchComments(postId, limit = 10) {
         if (!hasMoreComments.value) return;
 
@@ -178,7 +182,7 @@ export const usePostStore = defineStore('post', () => {
         try {
             const response = await apiService.getComments(postId, {
                 limit,
-                lastVisible: comments.value.length ? comments.value[comments.value.length - 1].id : null,
+                lastVisible: lastVisible.value, // Assuming server uses lastVisible for pagination
             });
 
             const data = response.data;
@@ -200,6 +204,7 @@ export const usePostStore = defineStore('post', () => {
         }
     }
 
+    // Add Comment
     async function addComment(postId, content) {
         try {
             const response = await apiService.addComment(postId, content);
@@ -219,6 +224,7 @@ export const usePostStore = defineStore('post', () => {
         }
     }
 
+    // Remove Post
     async function removePost(postId) {
         try {
             const response = await apiService.deletePost(postId);
@@ -242,21 +248,25 @@ export const usePostStore = defineStore('post', () => {
         }
     }
 
+    // Reset Comments
     function resetComments() {
         comments.value = [];
         hasMoreComments.value = true;
     }
 
+    // Reset Posts
     function resetPosts() {
         posts.value = [];
         lastVisible.value = null;
         hasMorePosts.value = true;
     }
 
+    // Set Last Known Coordinates
     function setLastKnownCoordinates(coordinates) {
         lastKnownCoordinates.value = coordinates;
     }
 
+    // Validate and Process Post
     function validateAndProcessPost(post) {
         // Ensure the post has either content or media
         const hasContent = typeof post.content === 'string' && post.content.trim() !== '';
@@ -278,12 +288,14 @@ export const usePostStore = defineStore('post', () => {
         return post;
     }
 
+    // Check for Inappropriate Content
     function containsInappropriateContent(text) {
         if (!text) return false;
         const lowerCaseText = text.toLowerCase();
         return inappropriateWords.some((word) => lowerCaseText.includes(word.toLowerCase()));
     }
 
+    // Validate Coordinate
     function isValidCoordinate(coord) {
         return typeof coord === 'number' && !isNaN(coord);
     }
