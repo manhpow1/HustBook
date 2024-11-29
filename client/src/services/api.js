@@ -2,6 +2,26 @@ import axiosInstance from './axiosInstance';
 import { API_ENDPOINTS } from '../config/api';
 
 const apiService = {
+    // Generic GET method
+    async get(url, config = {}) {
+        return axiosInstance.get(url, config);
+    },
+
+    // Generic POST method
+    async post(url, data, config = {}) {
+        return axiosInstance.post(url, data, config);
+    },
+
+    // Generic PUT method
+    async put(url, data, config = {}) {
+        return axiosInstance.put(url, data, config);
+    },
+
+    // Generic DELETE method
+    async delete(url, config = {}) {
+        return axiosInstance.delete(url, config);
+    },
+
     // Authentication APIs
     async login(data) {
         return axiosInstance.post(API_ENDPOINTS.LOGIN, data);
@@ -108,23 +128,19 @@ const apiService = {
             headers: { 'Content-Type': 'multipart/form-data' },
             onUploadProgress: (progressEvent) => {
                 const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
-                onUploadProgress(percentCompleted);
+                if (onUploadProgress) {
+                    onUploadProgress(percentCompleted);
+                }
             },
         });
     },
 };
 
-export function setAuthHeaders(token, deviceToken) {
+export function setAuthHeaders(token) {
     if (token) {
         axiosInstance.defaults.headers.common['Authorization'] = `Bearer ${token}`;
     } else {
         delete axiosInstance.defaults.headers.common['Authorization'];
-    }
-
-    if (deviceToken) {
-        axiosInstance.defaults.headers.common['X-Device-Token'] = deviceToken;
-    } else {
-        delete axiosInstance.defaults.headers.common['X-Device-Token'];
     }
 };
 

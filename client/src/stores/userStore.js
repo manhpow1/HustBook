@@ -1,8 +1,8 @@
 import { defineStore } from 'pinia';
 import { ref, computed } from 'vue';
 import apiService from '../services/api';
-import VueCookies from 'vue-cookies';
-import router from '../router'; // Ensure you have access to the router
+import Cookies from 'js-cookie';
+import router from '../router';
 
 export const useUserStore = defineStore('user', () => {
     // State
@@ -15,41 +15,36 @@ export const useUserStore = defineStore('user', () => {
     const isLoggedIn = computed(() => !!user.value);
 
     // Initialize tokens from cookies
-    const accessToken = ref(VueCookies.get('accessToken') || null);
-    const refreshToken = ref(VueCookies.get('refreshToken') || null);
-    const deviceToken = ref(VueCookies.get('deviceToken') || null);
+    const accessToken = ref(Cookies.get('accessToken') || null);
+    const refreshToken = ref(Cookies.get('refreshToken') || null);
 
     // Set default axios headers
-    if (accessToken.value && deviceToken.value) {
-        apiService.setAuthHeaders(accessToken.value, deviceToken.value);
+    if (accessToken.value) {
+        apiService.setAuthHeaders(accessToken.value);
     }
 
     // Actions
 
     // Set tokens in cookies and axios headers
-    function setTokens(newAccessToken, newRefreshToken, newDeviceToken) {
+    function setTokens(newAccessToken, newRefreshToken) {
         accessToken.value = newAccessToken;
         refreshToken.value = newRefreshToken;
-        deviceToken.value = newDeviceToken;
 
-        VueCookies.set('accessToken', newAccessToken);
-        VueCookies.set('refreshToken', newRefreshToken);
-        VueCookies.set('deviceToken', newDeviceToken);
+        Cookies.set('accessToken', newAccessToken);
+        Cookies.set('refreshToken', newRefreshToken);
 
-        apiService.setAuthHeaders(newAccessToken, newDeviceToken);
+        apiService.setAuthHeaders(newAccessToken);
     }
 
     // Clear tokens from cookies and axios headers
     function clearTokens() {
         accessToken.value = null;
         refreshToken.value = null;
-        deviceToken.value = null;
 
-        VueCookies.remove('accessToken');
-        VueCookies.remove('refreshToken');
-        VueCookies.remove('deviceToken');
+        Cookies.remove('accessToken');
+        Cookies.remove('refreshToken');
 
-        apiService.setAuthHeaders(null, null);
+        apiService.setAuthHeaders(null);
     }
 
     // Set user data
@@ -63,20 +58,22 @@ export const useUserStore = defineStore('user', () => {
     }
 
     // Login
-    async function login(phonenumber, password) {
+    async function login(phoneNumber, password, deviceId) {
         isLoading.value = true;
         error.value = null;
         successMessage.value = '';
 
         try {
-            const response = await apiService.login({ phonenumber, password });
-            if (response.data.code === '1000') {
-                const { token, refreshToken: newRefreshToken, deviceToken: newDeviceToken } = response.data.data;
-                setTokens(token, newRefreshToken, newDeviceToken);
+            const response = await apiService.login({ phoneNumber, password, deviceId });
+            const data = response.data;
+
+            if (data.code === '1000') {
+                const { token, refreshToken: newRefreshToken } = data.data;
+                setTokens(token, newRefreshToken);
                 await fetchUserProfile();
                 return true;
             } else {
-                error.value = response.data.message || 'Login failed';
+                error.value = data.message || 'Login failed';
                 return false;
             }
         } catch (err) {
@@ -89,18 +86,20 @@ export const useUserStore = defineStore('user', () => {
     }
 
     // Register
-    async function register(phonenumber, password) {
+    async function register(phoneNumber, password, uuid) {
         isLoading.value = true;
         error.value = null;
         successMessage.value = '';
 
         try {
-            const response = await apiService.register({ phonenumber, password });
-            if (response.data.code === '1000') {
+            const response = await apiService.register({ phoneNumber, password, uuid });
+            const data = response.data;
+
+            if (data.code === '1000') {
                 successMessage.value = 'Registration successful. Please verify your account.';
                 return true;
             } else {
-                error.value = response.data.message || 'Registration failed';
+                error.value = data.message || 'Registration failed';
                 return false;
             }
         } catch (err) {
@@ -133,19 +132,20 @@ export const useUserStore = defineStore('user', () => {
     }
 
     // Get Verification Code
-    async function getVerifyCode(phonenumber) {
+    async function getVerifyCode(phoneNumber) {
         isLoading.value = true;
         error.value = null;
         successMessage.value = '';
 
         try {
-            const response = await apiService.getVerifyCode({ phonenumber });
-            if (response.data.code === '1000') {
+            const response = await apiService.getVerifyCode({ phoneNumber });
+            const data = response.data;
+
+            if (data.code === '1000') {
                 successMessage.value = 'Verification code sent successfully';
-                // Start cooldown if necessary
                 return true;
             } else {
-                error.value = response.data.message || 'Failed to send verification code';
+                error.value = data.message || 'Failed to send verification code';
                 return false;
             }
         } catch (err) {
@@ -158,21 +158,23 @@ export const useUserStore = defineStore('user', () => {
     }
 
     // Verify Code
-    async function verifyCode(phonenumber, code) {
+    async function verifyCode(phoneNumber, code) {
         isLoading.value = true;
         error.value = null;
         successMessage.value = '';
 
         try {
-            const response = await apiService.verifyCode({ phonenumber, code_verify: code });
-            if (response.data.code === '1000') {
-                const { token, refreshToken: newRefreshToken, deviceToken: newDeviceToken } = response.data.data;
-                setTokens(token, newRefreshToken, newDeviceToken);
+            const response = await apiService.verifyCode({ phoneNumber, code_verify: code });
+            const data = response.data;
+
+            if (data.code === '1000') {
+                const { token, refreshToken: newRefreshToken } = data.data;
+                setTokens(token, newRefreshToken);
                 await fetchUserProfile();
                 successMessage.value = 'Verification successful';
                 return true;
             } else {
-                error.value = response.data.message || 'Verification failed';
+                error.value = data.message || 'Verification failed';
                 return false;
             }
         } catch (err) {
@@ -186,7 +188,7 @@ export const useUserStore = defineStore('user', () => {
 
     // Fetch User Profile
     async function fetchUserProfile() {
-        if (!accessToken.value || !deviceToken.value) {
+        if (!accessToken.value) {
             clearUserData();
             return;
         }
@@ -196,10 +198,12 @@ export const useUserStore = defineStore('user', () => {
 
         try {
             const response = await apiService.getUserProfile();
-            if (response.data.code === '1000') {
-                setUserData(response.data.data);
+            const data = response.data;
+
+            if (data.code === '1000') {
+                setUserData(data.data);
             } else {
-                error.value = response.data.message || 'Failed to fetch user profile';
+                error.value = data.message || 'Failed to fetch user profile';
                 clearTokens();
                 clearUserData();
             }
@@ -215,7 +219,7 @@ export const useUserStore = defineStore('user', () => {
 
     // Refresh Access Token
     async function refreshAccessToken() {
-        const currentRefreshToken = VueCookies.get('refreshToken');
+        const currentRefreshToken = Cookies.get('refreshToken');
         if (!currentRefreshToken) {
             await logout();
             return null;
@@ -223,9 +227,11 @@ export const useUserStore = defineStore('user', () => {
 
         try {
             const response = await apiService.refreshToken(currentRefreshToken);
-            if (response.data.code === '1000') {
-                const { token: newAccessToken, refreshToken: newRefreshToken } = response.data.data;
-                setTokens(newAccessToken, newRefreshToken, deviceToken.value);
+            const data = response.data;
+
+            if (data.code === '1000') {
+                const { token: newAccessToken, refreshToken: newRefreshToken } = data.data;
+                setTokens(newAccessToken, newRefreshToken);
                 return newAccessToken;
             } else {
                 await logout();

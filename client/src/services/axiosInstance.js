@@ -2,31 +2,25 @@ import axios from 'axios';
 import router from '../router';
 import { handleError } from '../utils/errorHandler';
 import { useUserStore } from '../stores/userStore';
-import VueCookies from 'vue-cookies';
-
-// Initialize VueCookies
-VueCookies.config('7d'); // Set default cookie expiration to 7 days (adjust as needed)
+import Cookies from 'js-cookie';
+import setAuthHeaders from './api';
 
 const axiosInstance = axios.create({
     baseURL: import.meta.env.VITE_APP_API_BASE_URL || 'http://localhost:3000/api',
 });
 
-// Request interceptor to set auth headers
+// Request interceptor to set Authorization header
 axiosInstance.interceptors.request.use(
     (config) => {
-        const accessToken = VueCookies.get('accessToken');
-        const deviceToken = VueCookies.get('deviceToken');
+        const accessToken = Cookies.get('accessToken');
         if (accessToken) {
             config.headers['Authorization'] = `Bearer ${accessToken}`;
-        }
-        if (deviceToken) {
-            config.headers['X-Device-Token'] = deviceToken;
+        } else {
+            delete config.headers['Authorization'];
         }
         return config;
     },
-    (error) => {
-        return Promise.reject(error);
-    }
+    (error) => Promise.reject(error)
 );
 
 // Token refreshing logic
@@ -44,58 +38,79 @@ const processQueue = (error, token = null) => {
     failedQueue = [];
 };
 
-// Response interceptor to handle errors
+// Response interceptor to handle 401 errors and refresh tokens
 axiosInstance.interceptors.response.use(
     (response) => response,
     async (error) => {
         const userStore = useUserStore();
         const originalRequest = error.config;
 
-        if (error.response && error.response.status === 401 && !originalRequest._retry) {
-            if (isRefreshing) {
-                return new Promise(function (resolve, reject) {
-                    failedQueue.push({ resolve, reject });
-                })
-                    .then((token) => {
-                        originalRequest.headers['Authorization'] = 'Bearer ' + token;
-                        return axiosInstance(originalRequest);
-                    })
-                    .catch((err) => {
-                        return Promise.reject(err);
-                    });
-            }
-
-            originalRequest._retry = true;
-            isRefreshing = true;
-
-            try {
-                const newToken = await userStore.refreshAccessToken();
-                if (newToken) {
-                    originalRequest.headers['Authorization'] = 'Bearer ' + newToken;
-                    processQueue(null, newToken);
-                    return axiosInstance(originalRequest);
-                } else {
-                    processQueue(new Error('Refresh token expired'), null);
-                    await userStore.logout();
-                    return Promise.reject(error);
-                }
-            } catch (err) {
-                processQueue(err, null);
-                await userStore.logout();
-                return Promise.reject(err);
-            } finally {
-                isRefreshing = false;
-            }
-        }
-
-        // Handle other errors
-        try {
+        // If the error is not due to authentication, reject it
+        if (!error.response || error.response.status !== 401) {
             handleError(error, router);
-        } catch (e) {
-            console.error('Error in handleError:', e);
+            return Promise.reject(error);
         }
 
-        return Promise.reject(error);
+        // Prevent infinite loops
+        if (originalRequest._retry) {
+            handleError(error, router);
+            return Promise.reject(error);
+        }
+
+        // If already refreshing, queue the request
+        if (isRefreshing) {
+            return new Promise(function (resolve, reject) {
+                failedQueue.push({ resolve, reject });
+            })
+                .then((token) => {
+                    originalRequest.headers['Authorization'] = 'Bearer ' + token;
+                    return axiosInstance(originalRequest);
+                })
+                .catch((err) => {
+                    return Promise.reject(err);
+                });
+        }
+
+        originalRequest._retry = true;
+        isRefreshing = true;
+
+        const currentRefreshToken = Cookies.get('refreshToken');
+
+        if (!currentRefreshToken) {
+            await userStore.logout();
+            return Promise.reject(error);
+        }
+
+        try {
+            const response = await axios.post(`${axiosInstance.defaults.baseURL}/auth/refresh-token`, {
+                refreshToken: currentRefreshToken,
+            });
+
+            if (response.data.code === '1000') {
+                const { token: newAccessToken, refreshToken: newRefreshToken } = response.data.data;
+
+                // Update tokens in cookies
+                Cookies.set('accessToken', newAccessToken);
+                Cookies.set('refreshToken', newRefreshToken);
+
+                // Update Authorization header
+                setAuthHeaders(newAccessToken);
+
+                processQueue(null, newAccessToken);
+
+                originalRequest.headers['Authorization'] = 'Bearer ' + newAccessToken;
+                return axiosInstance(originalRequest);
+            } else {
+                throw new Error(response.data.message || 'Failed to refresh token');
+            }
+        } catch (err) {
+            processQueue(err, null);
+            await userStore.logout();
+            handleError(err, router);
+            return Promise.reject(err);
+        } finally {
+            isRefreshing = false;
+        }
     }
 );
 
