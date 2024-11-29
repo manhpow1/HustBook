@@ -2,8 +2,8 @@ import DOMPurify from 'dompurify';
 
 export const sanitizeInput = (input) => {
     return DOMPurify.sanitize(input, {
-        ALLOWED_TAGS: [], // This will strip all HTML tags
-        ALLOWED_ATTR: []
+        ALLOWED_TAGS: [],
+        ALLOWED_ATTR: [],
     });
 };
 

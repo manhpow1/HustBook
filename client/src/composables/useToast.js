@@ -1,27 +1,26 @@
 import { ref } from 'vue';
 
-const message = ref('');
-const type = ref('');
-const isVisible = ref(false);
-let timeout;
-
 export function useToast() {
-    const showToast = (msg, toastType = 'default', duration = 3000) => {
-        message.value = msg;
-        type.value = toastType;
-        isVisible.value = true;
+    const toast = ref({
+        message: '',
+        type: 'default', // 'success', 'error', 'info', etc.
+        isVisible: false,
+    });
 
-        clearTimeout(timeout);
-        timeout = setTimeout(() => {
-            isVisible.value = false;
+    const showToast = (message, type = 'default', duration = 3000) => {
+        toast.value.message = message;
+        toast.value.type = type;
+        toast.value.isVisible = true;
+
+        setTimeout(() => {
+            toast.value.isVisible = false;
+            toast.value.message = '';
+            toast.value.type = 'default';
         }, duration);
     };
 
     return {
-        message,
-        type,
-        isVisible,
+        toast,
         showToast,
     };
 }
-

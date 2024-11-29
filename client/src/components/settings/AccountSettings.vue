@@ -62,7 +62,7 @@
 
 <script setup>
 import { ref } from 'vue';
-import { useSettingsStore } from '@/stores/settingsStore';
+import { useSettingsStore } from '../../stores/settingsStore';
 import { useToast } from '../../composables/useToast';
 
 const settingsStore = useSettingsStore();

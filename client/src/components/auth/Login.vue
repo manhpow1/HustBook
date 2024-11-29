@@ -1,6 +1,7 @@
 <template>
   <div class="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
     <div class="max-w-md w-full space-y-8">
+      <!-- Header Section -->
       <div>
         <img class="mx-auto h-12 w-auto" src="../../assets/logo.svg" alt="HUSTBOOK" />
         <h2 class="mt-6 text-center text-3xl font-extrabold text-gray-900">
@@ -13,26 +14,42 @@
           </router-link>
         </p>
       </div>
-      <form @submit.prevent="handleSubmit" class="mt-8 space-y-6">
+      <!-- Login Form -->
+      <form @submit.prevent="handleSubmit" class="mt-8 space-y-6" novalidate>
         <div class="rounded-md shadow-sm -space-y-px">
+          <!-- Phone Number Field -->
           <div>
             <label for="phonenumber" class="sr-only">Phone Number</label>
             <input v-model="phonenumber" id="phonenumber" name="phonenumber" type="tel" autocomplete="tel" required
+              aria-describedby="phonenumber-error" @input="validatePhone"
               class="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-t-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
-              placeholder="Phone number" @input="validatePhone" />
+              :class="{ 'border-red-500': phoneError }" placeholder="Phone number" />
+            <p v-if="phoneError" id="phonenumber-error" class="mt-2 text-sm text-red-600">
+              {{ phoneError }}
+            </p>
           </div>
+
+          <!-- Password Field -->
           <div>
             <label for="password" class="sr-only">Password</label>
             <input v-model="password" id="password" name="password" type="password" autocomplete="current-password"
-              required
+              required aria-describedby="password-error" @input="validatePassword"
               class="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-b-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
-              placeholder="Password" @input="validatePassword" />
+              :class="{ 'border-red-500': passwordError }" placeholder="Password" />
+            <p v-if="passwordError" id="password-error" class="mt-2 text-sm text-red-600">
+              {{ passwordError }}
+            </p>
           </div>
         </div>
-        <div v-if="errorMessage" class="mt-2 text-sm text-red-600">
+
+        <!-- Error Message -->
+        <div v-if="errorMessage" class="mt-2 text-sm text-red-600" role="alert">
           {{ errorMessage }}
         </div>
+
+        <!-- Options Section -->
         <div class="flex items-center justify-between">
+          <!-- Remember Me -->
           <div class="flex items-center">
             <input v-model="rememberMe" id="remember-me" name="remember-me" type="checkbox"
               class="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded" />
@@ -40,75 +57,84 @@
               Remember me
             </label>
           </div>
+          <!-- Forgot Password Link -->
           <div class="text-sm">
             <router-link to="/forgot-password" class="font-medium text-indigo-600 hover:text-indigo-500">
               Forgot your password?
             </router-link>
           </div>
         </div>
+        <!-- Submit Button -->
         <div>
           <button type="submit" :disabled="isLoading || !isFormValid"
-            class="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed">
+            class="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
+            :aria-disabled="isLoading || !isFormValid">
             <span class="absolute left-0 inset-y-0 flex items-center pl-3">
               <LockIcon class="h-5 w-5 text-indigo-500 group-hover:text-indigo-400" aria-hidden="true" />
             </span>
-            <LoaderIcon v-if="isLoading" class="animate-spin -ml-1 mr-2 h-5 w-5 text-white" />
+            <LoaderIcon v-if="isLoading" class="animate-spin -ml-1 mr-2 h-5 w-5 text-white" aria-hidden="true" />
             <span v-if="isLoading">Signing in...</span>
             <span v-else>Sign in</span>
           </button>
         </div>
       </form>
-      <div v-if="loginSuccess" class="mt-4 p-4 bg-green-100 rounded-md">
-        <p class="text-green-700 flex items-center">
-          <CheckCircleIcon class="h-5 w-5 mr-2" />
-          Login successful! Redirecting...
-        </p>
+      <!-- Success Message -->
+      <div v-if="loginSuccess" class="mt-4 p-4 bg-green-100 rounded-md flex items-center" role="alert">
+        <CheckCircleIcon class="h-5 w-5 text-green-400 mr-2" aria-hidden="true" />
+        <p class="text-green-700">Login successful! Redirecting...</p>
       </div>
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref, computed, watch } from 'vue';
+import { ref, computed } from 'vue';
 import { useRouter } from 'vue-router';
 import { useUserStore } from '../../stores/userStore';
 import { LockIcon, LoaderIcon, CheckCircleIcon } from 'lucide-vue-next';
 import { useFormValidation } from '../../composables/useFormValidation';
+import { storeToRefs } from 'pinia';
 
 const router = useRouter();
 const userStore = useUserStore();
+const { isLoading, successMessage } = storeToRefs(userStore);
 
 const phonenumber = ref('');
 const password = ref('');
 const rememberMe = ref(false);
+const { phoneError, passwordError, validatePhone, validatePassword } = useFormValidation();
 
-const {validatePhone, validatePassword } = useFormValidation();
-
-const errorMessage = ref('');
-const isLoading = ref(false);
-const loginSuccess = ref(false);
-
+// Computed property to determine if the form is valid
 const isFormValid = computed(() => {
-  return validatePhone(phonenumber.value) && validatePassword(password.value, phonenumber.value);
+  return !phoneError.value && !passwordError.value && phonenumber.value && password.value;
 });
 
+// Computed property to check if login was successful
+const loginSuccess = computed(() => {
+  return successMessage.value !== '';
+});
 
+// Handle form submission
 const handleSubmit = async () => {
   if (!isFormValid.value) return;
 
   try {
-    const success = await userStore.login(phonenumber.value, password.value);
+    const success = await userStore.login(phonenumber.value, password.value, rememberMe.value);
     if (success) {
-      router.push('/');
+      router.push({ name: 'Home' });
     }
   } catch (err) {
-    // Error is handled in userStore
+    // Error is handled via the store's reactive properties
   }
 };
 
-watch(() => userStore.error, (newError) => {
-  if (newError) {
-    errorMessage.value = newError;
+// Watch for successful login to redirect
+watch(loginSuccess, (newVal) => {
+  if (newVal) {
+    // Redirect after a short delay to allow users to see the success message
+    setTimeout(() => {
+      router.push('/');
+    }, 2000);
   }
 });
 </script>

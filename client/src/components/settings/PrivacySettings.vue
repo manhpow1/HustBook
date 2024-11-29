@@ -41,8 +41,8 @@
 
 <script setup>
 import { ref, onMounted } from 'vue';
-import { useSettingsStore } from '@/stores/settingsStore';
-import { useToast } from '@/composables/useToast';
+import { useSettingsStore } from '../../stores/settingsStore';
+import { useToast } from '../../composables/useToast';
 
 const settingsStore = useSettingsStore();
 const { showToast } = useToast();

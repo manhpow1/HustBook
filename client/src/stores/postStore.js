@@ -3,7 +3,7 @@ import { ref, computed } from 'vue';
 import apiService from '../services/api';
 import { formatNumber } from '../utils/numberFormat';
 import { handleError } from '../utils/errorHandler';
-import inappropriateWords from '../i18n/inappropriateWords';
+import inappropriateWords from '../words/inappropriateWords';
 import router from '../router';
 
 export const usePostStore = defineStore('post', () => {

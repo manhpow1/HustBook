@@ -1,41 +1,56 @@
 <template>
-    <transition name="toast">
-        <div v-if="isVisible" :class="['fixed bottom-4 right-4 p-4 rounded-md shadow-md', bgClass]">
-            {{ message }}
+    <transition name="fade">
+        <div v-if="toast.isVisible"
+            :class="['fixed bottom-4 right-4 px-4 py-2 rounded-md shadow-lg flex items-center space-x-2', toastClass]"
+            role="status" aria-live="polite">
+            <component :is="iconComponent" class="w-5 h-5" aria-hidden="true" />
+            <span>{{ toast.message }}</span>
         </div>
     </transition>
 </template>
 
 <script setup>
 import { computed } from 'vue';
+import { useToast } from '../../composables/useToast';
+import { CheckCircleIcon, XCircleIcon, InformationIcon } from 'lucide-vue-next';
 
-const props = defineProps({
-    message: String,
-    type: String,
-    isVisible: Boolean,
-});
+const { toast } = useToast();
 
-const bgClass = computed(() => {
-    switch (props.type) {
+const toastClass = computed(() => {
+    switch (toast.type) {
         case 'success':
             return 'bg-green-500 text-white';
         case 'error':
             return 'bg-red-500 text-white';
+        case 'info':
+            return 'bg-blue-500 text-white';
         default:
-            return 'bg-gray-700 text-white';
+            return 'bg-gray-800 text-white';
+    }
+});
+
+const iconComponent = computed(() => {
+    switch (toast.type) {
+        case 'success':
+            return CheckCircleIcon;
+        case 'error':
+            return XCircleIcon;
+        case 'info':
+            return InformationIcon;
+        default:
+            return InformationIcon;
     }
 });
 </script>
 
 <style scoped>
-.toast-enter-active,
-.toast-leave-active {
-    transition: opacity 0.3s, transform 0.3s;
+.fade-enter-active,
+.fade-leave-active {
+    transition: opacity 0.5s;
 }
 
-.toast-enter-from,
-.toast-leave-to {
+.fade-enter-from,
+.fade-leave-to {
     opacity: 0;
-    transform: translateY(20px);
 }
 </style>
