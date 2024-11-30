@@ -54,18 +54,23 @@
 
 <script setup>
 import { ref, computed, watch } from 'vue';
-import { ShieldCheckIcon, PhoneIcon, LoaderIcon, CheckCircleIcon, XCircleIcon, ClockIcon,} from 'lucide-vue-next';
+import { ShieldCheckIcon, PhoneIcon, LoaderIcon, CheckCircleIcon, XCircleIcon, ClockIcon } from 'lucide-vue-next';
 import { useUserStore } from '../../stores/userStore';
-import { storeToRefs } from 'pinia';
 import { useFormValidation } from '../../composables/useFormValidation';
+import { useToast } from '../../composables/useToast';
+import { useErrorHandler } from '../../composables/useErrorHandler';
 
 const userStore = useUserStore();
-const { isLoading, error, successMessage, cooldownTime } = storeToRefs(userStore);
+const { handleError } = useErrorHandler();
+const { showToast } = useToast();
 
 const phonenumber = ref('');
 const { phoneError, validatePhone } = useFormValidation();
 
-// Computed property to determine if the submit button should be disabled
+// Get reactive references from the store
+const { isLoading, error, successMessage, cooldownTime } = storeToRefs(userStore);
+
+const errorMessage = computed(() => userStore.error || '');
 const isButtonDisabled = computed(() => isLoading.value || cooldownTime.value > 0 || !phonenumber.value || phoneError.value);
 
 // Computed property for the button text based on state
@@ -82,22 +87,47 @@ const formattedCooldownTime = computed(() => {
     return `${minutes}:${seconds.toString().padStart(2, '0')}`;
 });
 
-// Watch for changes in the error state from the store and emit local error messages
-watch(error, (newError) => {
-    if (newError) {
-        // Additional handling can be done here if needed
-    }
-});
-
 // Handle form submission
 const handleSubmit = async () => {
-    // Validate phone before submitting
-    if (phoneError.value) return;
+    if (!isFormValid.value) {
+        showToast('Please fix the errors before submitting.', 'error');
+        return;
+    }
+
     try {
-        await userStore.getVerifyCode(phonenumber.value);
-        // Success and error messages are handled via the store's reactive properties
+        const success = await userStore.getVerifyCode(phonenumber.value);
+        if (success) {
+            showToast('Verification code sent successfully!', 'success');
+        } else {
+            showToast(userStore.error || 'Failed to send verification code.', 'error');
+        }
     } catch (err) {
-        // Additional error handling can be done here if needed
+        handleError(err);
+        showToast('An unexpected error occurred. Please try again.', 'error');
     }
 };
+
+// Computed property to validate the form
+const isFormValid = computed(() => {
+    return !phoneError.value && phonenumber.value;
+});
+
+// Watch for changes in success and error messages to display toasts
+watch([successMessage, error], ([newSuccess, newError]) => {
+    if (newSuccess) {
+        showToast(newSuccess, 'success');
+    }
+    if (newError) {
+        showToast(newError, 'error');
+    }
+});
 </script>
+
+<style scoped>
+/* Ensure accessibility for focus states */
+button:focus {
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.5);
+    /* Focus ring color */
+}
+</style>

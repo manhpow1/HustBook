@@ -1,7 +1,7 @@
 <template>
     <div>
         <slot v-if="!error"></slot>
-        <div v-else class="p-6 rounded-lg bg-red-50 border border-red-200 shadow-sm">
+        <div v-else class="p-6 rounded-lg bg-red-50 border border-red-200 shadow-sm" role="alert">
             <div class="flex items-center mb-4">
                 <AlertCircleIcon class="w-6 h-6 text-red-500 mr-2" aria-hidden="true" />
                 <h2 class="text-lg font-semibold text-red-700">Something went wrong</h2>
@@ -26,43 +26,43 @@
 </template>
 
 <script setup>
-import { ref, onErrorCaptured, provide } from 'vue'
-import { useRouter } from 'vue-router'
-import { AlertCircleIcon } from 'lucide-vue-next'
-import logger from '../../services/logging'
-import { useUserStore } from '../../stores/userStore'
+import { ref, onErrorCaptured, provide } from 'vue';
+import { AlertCircleIcon } from 'lucide-vue-next';
+import { useErrorHandler } from '../../composables/useErrorHandler';
 
 const props = defineProps({
     componentName: {
         type: String,
         required: true
     }
-})
+});
 
-const router = useRouter()
-const { logout } = useUserStore()
+const { handleError } = useErrorHandler();
 
-const error = ref(null)
+const error = ref(null);
 
 const resetError = () => {
-    error.value = null
-}
+    error.value = null;
+};
 
-const handleError = (err, instance, info) => {
-    error.value = err
-    logger.error(err.message, { component: props.componentName, info, stack: err.stack })
+// Error capture handler
+const captureError = (err) => {
+    error.value = err;
+    // Delegate to centralized error handler
+    handleError(err);
+    return false; // Prevent further propagation
+};
 
-    // Check if the error is related to authentication
-    if (err.response && (err.response.status === 401 || err.response.data?.code === '9998')) {
-        logout()
-        router.push('/login')
-    }
+onErrorCaptured(captureError);
 
-    return false // Prevent the error from propagating further
-}
-
-onErrorCaptured(handleError)
-
-// Provide the error handling function to child components
-provide('handleError', handleError)
+// Provide the handleError to child components if needed
+provide('handleError', handleError);
 </script>
+
+<style scoped>
+/* Ensure accessibility for focus states */
+button:focus {
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(248, 113, 113, 0.6);
+}
+</style>

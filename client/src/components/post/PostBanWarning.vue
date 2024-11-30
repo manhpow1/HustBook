@@ -9,7 +9,6 @@
 
 <script setup>
 import { AlertTriangleIcon } from 'lucide-vue-next'
-import { useI18n } from 'vue-i18n'
 
 const props = defineProps({
     banStatus: {
@@ -18,12 +17,10 @@ const props = defineProps({
     }
 })
 
-const { t } = useI18n()
-
 const getBanReason = (banStatus) => {
-    if (banStatus === '1') return t('banReasonViolation')
-    if (banStatus === '2') return t('banReasonBlocked')
-    if (banStatus.includes(',')) return t('banReasonPartialBlock')
-    return t('banReasonFlagged')
+    if (banStatus === '1') return 'Your account has been banned due to violations.';
+    if (banStatus === '2') return 'You have been blocked.';
+    if (banStatus.includes(',')) return 'Your account has been partially blocked.';
+    return 'Your account has been flagged for review.';
 }
 </script>

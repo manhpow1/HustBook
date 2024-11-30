@@ -80,23 +80,30 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue';
+import { ref, computed, watch } from 'vue';
 import { useUserStore } from '../../stores/userStore';
 import { ShieldCheckIcon, PhoneIcon, LoaderIcon, CheckCircleIcon, XCircleIcon } from 'lucide-vue-next';
 import { storeToRefs } from 'pinia';
 import { useFormValidation } from '../../composables/useFormValidation';
+import { useToast } from '../../composables/useToast';
+import { useErrorHandler } from '../../composables/useErrorHandler';
 
 const userStore = useUserStore();
-const { isLoading, error, successMessage, cooldownTime } = storeToRefs(userStore);
+const { handleError } = useErrorHandler();
+const { showToast } = useToast();
 
 const phonenumber = ref('');
 const codeDigits = ref(['', '', '', '', '', '']);
 const codeError = ref('');
 const codeInputs = ref([]);
-
 const { phoneError, validatePhone } = useFormValidation();
 
-// Computed property to determine if the form is valid
+// Get reactive references from the store
+const { isLoading, error, successMessage, cooldownTime } = storeToRefs(userStore);
+
+const errorMessage = computed(() => userStore.error || '');
+
+// Computed property to validate the form
 const isFormValid = computed(() => {
     return validatePhone(phonenumber.value) && validateCode();
 });
@@ -110,17 +117,24 @@ const formattedCooldownTime = computed(() => {
 
 // Handle form submission
 const handleSubmit = async () => {
-    if (!isFormValid.value) return;
+    if (!isFormValid.value) {
+        showToast('Please fix the errors before submitting.', 'error');
+        return;
+    }
 
     try {
         const success = await userStore.verifyCode(phonenumber.value, codeDigits.value.join(''));
         if (success) {
-            // Emit an event or handle success accordingly
+            showToast('Verification successful!', 'success');
             emit('verification-success');
+        } else {
+            showToast(userStore.error || 'Verification failed. Please try again.', 'error');
+            emit('verification-error', userStore.error);
         }
     } catch (err) {
-        // Error is handled via the store's reactive properties
-        emit('verification-error', err.message);
+        handleError(err);
+        showToast('An unexpected error occurred. Please try again.', 'error');
+        emit('verification-error', 'An unexpected error occurred.');
     }
 };
 
@@ -154,31 +168,51 @@ const validateCode = () => {
 
 // Resend verification code
 const resendCode = async () => {
+    if (cooldownTime.value > 0) return;
+
     try {
-        await userStore.getVerifyCode(phonenumber.value);
-        // Success and error messages are handled via the store's reactive properties
+        const success = await userStore.getVerifyCode(phonenumber.value);
+        if (success) {
+            showToast('Verification code resent successfully!', 'success');
+        } else {
+            showToast(userStore.error || 'Failed to resend verification code.', 'error');
+        }
     } catch (err) {
-        // Error is handled via the store's reactive properties
+        handleError(err);
+        showToast('An unexpected error occurred. Please try again.', 'error');
     }
 };
 
 // Continue without avatar (if applicable)
 const continueWithoutAvatar = () => {
     // Implement logic to proceed without avatar if needed
+    showToast('Continuing without avatar.', 'info');
+    // Example: Proceed to complete profile or next step
 };
 
 // Retry upload (if applicable)
 const retryUpload = () => {
     // Implement logic to retry upload if needed
+    showToast('Retrying upload...', 'info');
+    // Example: Re-initiate upload process
 };
 
-// Watch for changes in success and error messages
+// Watch for changes in success and error messages to display toasts
 watch([successMessage, error], ([newSuccess, newError]) => {
     if (newSuccess) {
-        // Handle successful verification if needed
+        showToast(newSuccess, 'success');
     }
     if (newError) {
-        // Handle errors if needed
+        showToast(newError, 'error');
     }
 });
 </script>
+
+<style scoped>
+/* Ensure accessibility for focus states */
+button:focus {
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.5);
+    /* Focus ring color */
+}
+</style>

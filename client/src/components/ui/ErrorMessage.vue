@@ -5,19 +5,16 @@
             <p class="text-red-700 font-medium">{{ title }}</p>
         </div>
         <p class="mt-2 text-red-600">{{ message }}</p>
-        <button v-if="showRetry" @click="emit('retry')"
+        <button v-if="showRetry" @click="$emit('retry')"
             class="mt-3 px-4 py-2 bg-red-100 text-red-700 rounded hover:bg-red-200 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2"
-            :aria-label="$t('retryAction')">
-            {{ t('retry') }}
+            aria-label="Retry">
+            Retry
         </button>
     </div>
 </template>
 
 <script setup>
-import { computed, defineAsyncComponent } from 'vue';
-import { useI18n } from 'vue-i18n';
-
-const AlertCircleIcon = defineAsyncComponent(() => import('lucide-vue-next').then(m => m.AlertCircleIcon));
+import AlertCircleIcon from 'lucide-vue-next';
 
 const props = defineProps({
     message: {
@@ -34,9 +31,7 @@ const props = defineProps({
     },
 });
 
-const { t } = useI18n();
-
 const emit = defineEmits(['retry']);
 
-const title = computed(() => props.title || t('error'));
+const title = computed(() => props.title || 'Error');
 </script>

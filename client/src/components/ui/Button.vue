@@ -5,8 +5,8 @@
         sizeClasses,
         { 'opacity-50 cursor-not-allowed': disabled || loading },
         { 'pointer-events-none': loading }
-    ]" :disabled="disabled || loading" v-bind="$attrs" @click="handleClick">
-        <span v-if="loading" class="mr-2">
+    ]" :disabled="disabled || loading" v-bind="{ 'aria-label': ariaLabel, ...$attrs }" @click="handleClick">
+        <span v-if="loading" class="mr-2" aria-hidden="true">
             <svg class="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none"
                 viewBox="0 0 24 24">
                 <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
@@ -15,10 +15,12 @@
                 </path>
             </svg>
         </span>
-        <span v-if="icon && !loading" class="mr-2">
+        <span v-if="icon && !loading" class="mr-2" aria-hidden="true">
             <component :is="icon" :class="iconClasses" />
         </span>
-        <slot></slot>
+        <span v-if="$slots.default">
+            <slot></slot>
+        </span>
     </button>
 </template>
 
@@ -44,6 +46,7 @@ const props = defineProps({
 
 const emit = defineEmits(['click']);
 
+// Compute variant classes
 const variantClasses = computed(() => ({
     primary: 'bg-primary-600 text-white hover:bg-primary-700 focus:ring-primary-500',
     secondary: 'bg-secondary-600 text-white hover:bg-secondary-700 focus:ring-secondary-500',
@@ -53,22 +56,40 @@ const variantClasses = computed(() => ({
     warning: 'bg-yellow-600 text-white hover:bg-yellow-700 focus:ring-yellow-500'
 })[props.variant]);
 
+// Compute size classes
 const sizeClasses = computed(() => ({
     small: 'px-2 py-1 text-sm',
     medium: 'px-4 py-2 text-base',
     large: 'px-6 py-3 text-lg'
 })[props.size]);
 
+// Compute icon size classes
 const iconClasses = computed(() => ({
     small: 'h-4 w-4',
     medium: 'h-5 w-5',
     large: 'h-6 w-6'
 })[props.size]);
 
+// Compute aria-label for accessibility
+const ariaLabel = computed(() => {
+    if (props.tooltip) {
+        return props.tooltip;
+    }
+    return undefined;
+});
 
+// Handle click events
 const handleClick = (event) => {
     if (!props.disabled && !props.loading) {
         emit('click', event);
     }
 };
 </script>
+
+<style scoped>
+button:focus {
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.5);
+    /* Focus ring color */
+}
+</style>

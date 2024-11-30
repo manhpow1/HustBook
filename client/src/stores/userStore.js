@@ -1,8 +1,11 @@
 import { defineStore } from 'pinia';
 import { ref, computed } from 'vue';
 import apiService from '../services/api';
+import { setAuthHeaders } from '../services/api';
 import Cookies from 'js-cookie';
 import router from '../router';
+import logger from '../services/logging';
+import { useErrorHandler } from '../composables/useErrorHandler';
 
 export const useUserStore = defineStore('user', () => {
     // State
@@ -11,6 +14,7 @@ export const useUserStore = defineStore('user', () => {
     const error = ref(null);
     const successMessage = ref('');
 
+    const { handleError } = useErrorHandler();
     // Getters
     const isLoggedIn = computed(() => !!user.value);
 
@@ -20,7 +24,7 @@ export const useUserStore = defineStore('user', () => {
 
     // Set default axios headers
     if (accessToken.value) {
-        apiService.setAuthHeaders(accessToken.value);
+        setAuthHeaders(accessToken.value);
     }
 
     // Actions
@@ -33,7 +37,7 @@ export const useUserStore = defineStore('user', () => {
         Cookies.set('accessToken', newAccessToken);
         Cookies.set('refreshToken', newRefreshToken);
 
-        apiService.setAuthHeaders(newAccessToken);
+        setAuthHeaders(newAccessToken);
     }
 
     // Clear tokens from cookies and axios headers
@@ -44,7 +48,7 @@ export const useUserStore = defineStore('user', () => {
         Cookies.remove('accessToken');
         Cookies.remove('refreshToken');
 
-        apiService.setAuthHeaders(null);
+        setAuthHeaders(null);
     }
 
     // Set user data
@@ -58,27 +62,30 @@ export const useUserStore = defineStore('user', () => {
     }
 
     // Login
-    async function login(phoneNumber, password, deviceId) {
+    async function login(phoneNumber, password, rememberMe) {
         isLoading.value = true;
         error.value = null;
         successMessage.value = '';
 
         try {
-            const response = await apiService.login({ phoneNumber, password, deviceId });
+            const response = await apiService.login({ phoneNumber, password, deviceId: 'device-uuid', rememberMe });
             const data = response.data;
 
             if (data.code === '1000') {
                 const { token, refreshToken: newRefreshToken } = data.data;
                 setTokens(token, newRefreshToken);
                 await fetchUserProfile();
+                successMessage.value = 'Login successful.';
                 return true;
             } else {
                 error.value = data.message || 'Login failed';
+                logger.warn('Login failed', { message: data.message });
                 return false;
             }
         } catch (err) {
-            console.error('Login error:', err);
+            handleError(err);
             error.value = err.response?.data?.message || 'An error occurred during login';
+            logger.error('Login error', { error: err });
             return false;
         } finally {
             isLoading.value = false;
@@ -97,14 +104,17 @@ export const useUserStore = defineStore('user', () => {
 
             if (data.code === '1000') {
                 successMessage.value = 'Registration successful. Please verify your account.';
+                logger.info('Registration successful', { phoneNumber });
                 return true;
             } else {
                 error.value = data.message || 'Registration failed';
+                logger.warn('Registration failed', { message: data.message });
                 return false;
             }
         } catch (err) {
-            console.error('Registration error:', err);
+            handleError(err);
             error.value = err.response?.data?.message || 'An error occurred during registration';
+            logger.error('Registration error', { error: err });
             return false;
         } finally {
             isLoading.value = false;
@@ -122,10 +132,14 @@ export const useUserStore = defineStore('user', () => {
             clearTokens();
             clearUserData();
             successMessage.value = 'Logout successful';
+            logger.info('User logged out');
             router.push('/login');
+            return true;
         } catch (err) {
-            console.error('Logout error:', err);
+            handleError(err);
             error.value = 'An error occurred during logout';
+            logger.error('Logout error', { error: err });
+            return false;
         } finally {
             isLoading.value = false;
         }
@@ -143,14 +157,17 @@ export const useUserStore = defineStore('user', () => {
 
             if (data.code === '1000') {
                 successMessage.value = 'Verification code sent successfully';
+                logger.info('Verification code sent', { phoneNumber });
                 return true;
             } else {
                 error.value = data.message || 'Failed to send verification code';
+                logger.warn('Failed to send verification code', { message: data.message });
                 return false;
             }
         } catch (err) {
-            console.error('Get verify code error:', err);
+            handleError(err);
             error.value = err.response?.data?.message || 'An error occurred while sending verification code';
+            logger.error('GetVerifyCode error', { error: err });
             return false;
         } finally {
             isLoading.value = false;
@@ -172,14 +189,17 @@ export const useUserStore = defineStore('user', () => {
                 setTokens(token, newRefreshToken);
                 await fetchUserProfile();
                 successMessage.value = 'Verification successful';
+                logger.info('Verification successful', { phoneNumber });
                 return true;
             } else {
                 error.value = data.message || 'Verification failed';
+                logger.warn('Verification failed', { message: data.message });
                 return false;
             }
         } catch (err) {
-            console.error('Verify code error:', err);
+            handleError(err);
             error.value = err.response?.data?.message || 'An error occurred during verification';
+            logger.error('VerifyCode error', { error: err });
             return false;
         } finally {
             isLoading.value = false;
@@ -202,16 +222,19 @@ export const useUserStore = defineStore('user', () => {
 
             if (data.code === '1000') {
                 setUserData(data.data);
+                logger.info('User profile fetched', { userId: data.data.id });
             } else {
                 error.value = data.message || 'Failed to fetch user profile';
                 clearTokens();
                 clearUserData();
+                logger.warn('Failed to fetch user profile', { message: data.message });
             }
         } catch (err) {
-            console.error('Fetch user profile error:', err);
+            handleError(err);
             error.value = err.response?.data?.message || 'An error occurred while fetching user profile';
             clearTokens();
             clearUserData();
+            logger.error('FetchUserProfile error', { error: err });
         } finally {
             isLoading.value = false;
         }
@@ -232,14 +255,17 @@ export const useUserStore = defineStore('user', () => {
             if (data.code === '1000') {
                 const { token: newAccessToken, refreshToken: newRefreshToken } = data.data;
                 setTokens(newAccessToken, newRefreshToken);
+                logger.info('Access token refreshed');
                 return newAccessToken;
             } else {
                 await logout();
+                logger.warn('Failed to refresh access token', { message: data.message });
                 return null;
             }
         } catch (error) {
-            console.error('Failed to refresh access token:', error);
+            handleError(error);
             await logout();
+            logger.error('Failed to refresh access token', { error });
             return null;
         }
     }
@@ -250,6 +276,7 @@ export const useUserStore = defineStore('user', () => {
         successMessage.value = '';
     }
 
+    // Expose state and actions
     return {
         // State
         user,

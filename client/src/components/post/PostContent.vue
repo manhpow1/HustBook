@@ -4,21 +4,20 @@
             <template v-for="(part, index) in parsedContent" :key="index">
                 <span v-if="part.type === 'text'" v-html="preserveSpaces(part.content)"></span>
                 <span v-else-if="part.type === 'hashtag'" @click.prevent="$emit('hashtagClick', part.content)"
-                    class="cursor-pointer">
+                    class="cursor-pointer text-blue-500 hover:underline">
                     {{ part.content }}
                 </span>
             </template>
         </p>
         <button v-if="post.described.length > 300" @click="toggleContent"
             class="text-blue-500 hover:underline mt-2 focus:outline-none">
-            {{ showFullContent ? t('collapse') : t('seeMore') }}
+            {{ showFullContent ? 'Collapse' : 'See More' }}
         </button>
     </div>
 </template>
 
 <script setup>
 import { computed } from 'vue'
-import { useI18n } from 'vue-i18n'
 import DOMPurify from 'dompurify'
 
 const props = defineProps({
@@ -33,8 +32,6 @@ const props = defineProps({
 })
 
 const emit = defineEmits(['toggleContent', 'hashtagClick'])
-
-const { t } = useI18n()
 
 const parsedContent = computed(() => {
     const regex = /(#\w+)|\s+/g

@@ -11,16 +11,16 @@
         <TransitionRoot appear :show="showConfirmation" as="template">
             <Dialog as="div" @close="cancelLogout" class="relative z-10" id="logout-confirmation"
                 aria-labelledby="logout-dialog-title" aria-modal="true">
-                <TransitionChild as="template" enter="duration-300 ease-out" enter-from="opacity-0"
-                    enter-to="opacity-100" leave="duration-200 ease-in" leave-from="opacity-100" leave-to="opacity-0">
+                <TransitionChild enter="duration-300 ease-out" enter-from="opacity-0" enter-to="opacity-100"
+                    leave="duration-200 ease-in" leave-from="opacity-100" leave-to="opacity-0" as="template">
                     <div class="fixed inset-0 bg-black bg-opacity-25" />
                 </TransitionChild>
 
                 <div class="fixed inset-0 overflow-y-auto">
                     <div class="flex min-h-full items-center justify-center p-4 text-center">
-                        <TransitionChild as="template" enter="duration-300 ease-out" enter-from="opacity-0 scale-95"
+                        <TransitionChild enter="duration-300 ease-out" enter-from="opacity-0 scale-95"
                             enter-to="opacity-100 scale-100" leave="duration-200 ease-in"
-                            leave-from="opacity-100 scale-100" leave-to="opacity-0 scale-95">
+                            leave-from="opacity-100 scale-100" leave-to="opacity-0 scale-95" as="template">
                             <DialogPanel
                                 class="w-full max-w-md transform overflow-hidden rounded-2xl bg-white p-6 text-left align-middle shadow-xl transition-all">
                                 <DialogTitle as="h3" class="text-lg font-medium leading-6 text-gray-900"
@@ -71,16 +71,16 @@
 </template>
 
 <script setup>
-import { ref, watch } from 'vue';
-import { useUserStore } from '../../stores/userStore';
+import { ref } from 'vue';
+import { useUserStore } from '@/stores/userStore';
 import { LogOutIcon, LoaderIcon, CheckCircleIcon, AlertCircleIcon } from 'lucide-vue-next';
 import { Dialog, DialogPanel, DialogTitle, TransitionChild, TransitionRoot } from '@headlessui/vue';
-import { storeToRefs } from 'pinia';
-
-const emit = defineEmits(['logout-success', 'logout-error']);
+import { useToast } from '@/composables/useToast';
+import { useErrorHandler } from '@/composables/useErrorHandler';
 
 const userStore = useUserStore();
-const { isLoading, message, messageClass } = storeToRefs(userStore);
+const { handleError } = useErrorHandler();
+const { showToast } = useToast();
 
 const showConfirmation = ref(false);
 
@@ -89,11 +89,15 @@ const handleLogout = async () => {
     showConfirmation.value = false;
 
     try {
-        await userStore.logout();
-        emit('logout-success');
-        // Optionally, you can handle redirection here or within the store
+        const success = await userStore.logout();
+        if (success) {
+            showToast('Logout successful!', 'success');
+        } else {
+            showToast(userStore.error || 'Logout failed. Please try again.', 'error');
+        }
     } catch (error) {
-        emit('logout-error', error);
+        handleError(error);
+        showToast('An unexpected error occurred. Please try again.', 'error');
     }
 };
 
@@ -101,14 +105,13 @@ const handleLogout = async () => {
 const cancelLogout = () => {
     showConfirmation.value = false;
 };
-
-// Watch for messages to display toast notifications
-watch(message, (newMessage) => {
-    if (newMessage) {
-        // Automatically hide the toast after a certain duration (e.g., 3 seconds)
-        setTimeout(() => {
-            userStore.clearMessage();
-        }, 3000);
-    }
-});
 </script>
+
+<style scoped>
+/* Ensure accessibility for focus states */
+button:focus {
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.5);
+    /* Focus ring color */
+}
+</style>

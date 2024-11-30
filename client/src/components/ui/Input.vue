@@ -14,13 +14,14 @@
                 { 'pr-10': suffix || icon },
                 { 'border-red-300': error },
                 { 'bg-gray-100': disabled }
-            ]" :disabled="disabled" v-bind="$attrs" :placeholder="placeholder" ref="inputRef">
+            ]" :disabled="disabled" v-bind="$attrs" :placeholder="placeholder" ref="inputRef"
+                :aria-invalid="error ? 'true' : 'false'" :aria-describedby="error ? `${id}-error` : undefined">
             <div v-if="suffix || icon" class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
                 <span v-if="suffix" class="text-gray-500 sm:text-sm">{{ suffix }}</span>
-                <component v-if="icon" :is="icon" class="h-5 w-5 text-gray-400" />
+                <component v-if="icon" :is="icon" class="h-5 w-5 text-gray-400" aria-hidden="true" />
             </div>
         </div>
-        <p v-if="error" class="mt-2 text-sm text-red-600">{{ error }}</p>
+        <p v-if="error" :id="`${id}-error`" class="mt-2 text-sm text-red-600">{{ error }}</p>
     </div>
 </template>
 
@@ -30,7 +31,10 @@ import IMask from 'imask';
 
 const props = defineProps({
     label: String,
-    id: String,
+    id: {
+        type: String,
+        required: true
+    },
     type: {
         type: String,
         default: 'text'
@@ -54,14 +58,14 @@ let maskRef = null;
 onMounted(() => {
     if (props.mask && inputRef.value) {
         maskRef = IMask(inputRef.value, { mask: props.mask });
-        maskRef.on('complete', () => {
+        maskRef.on('accept', () => {
             emit('update:modelValue', maskRef.value);
         });
     }
 });
 
 watch(() => props.modelValue, (newValue) => {
-    if (maskRef) {
+    if (maskRef && maskRef.value !== newValue) {
         maskRef.value = newValue;
     }
 });
@@ -71,9 +75,17 @@ const handleInput = (event) => {
     if (props.validation) {
         const isValid = props.validation(value);
         if (!isValid) {
-            return;
+            // Optionally, handle validation feedback here
         }
     }
     emit('update:modelValue', value);
 };
 </script>
+
+<style scoped>
+/* Ensure accessibility for focus states */
+input:focus {
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.5);
+}
+</style>

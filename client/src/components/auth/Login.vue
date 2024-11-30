@@ -3,7 +3,7 @@
     <div class="max-w-md w-full space-y-8">
       <!-- Header Section -->
       <div>
-        <img class="mx-auto h-12 w-auto" src="../../assets/logo.svg" alt="HUSTBOOK" />
+        <img class="mx-auto h-12 w-auto" src="@/assets/logo.svg" alt="HUSTBOOK" />
         <h2 class="mt-6 text-center text-3xl font-extrabold text-gray-900">
           Sign in to your account
         </h2>
@@ -14,6 +14,7 @@
           </router-link>
         </p>
       </div>
+
       <!-- Login Form -->
       <form @submit.prevent="handleSubmit" class="mt-8 space-y-6" novalidate>
         <div class="rounded-md shadow-sm -space-y-px">
@@ -42,12 +43,7 @@
           </div>
         </div>
 
-        <!-- Error Message -->
-        <div v-if="errorMessage" class="mt-2 text-sm text-red-600" role="alert">
-          {{ errorMessage }}
-        </div>
-
-        <!-- Options Section -->
+        <!-- Remember Me and Forgot Password -->
         <div class="flex items-center justify-between">
           <!-- Remember Me -->
           <div class="flex items-center">
@@ -64,6 +60,7 @@
             </router-link>
           </div>
         </div>
+
         <!-- Submit Button -->
         <div>
           <button type="submit" :disabled="isLoading || !isFormValid"
@@ -78,6 +75,7 @@
           </button>
         </div>
       </form>
+
       <!-- Success Message -->
       <div v-if="loginSuccess" class="mt-4 p-4 bg-green-100 rounded-md flex items-center" role="alert">
         <CheckCircleIcon class="h-5 w-5 text-green-400 mr-2" aria-hidden="true" />
@@ -88,16 +86,18 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue';
+import { ref, computed, watch } from 'vue';
 import { useRouter } from 'vue-router';
-import { useUserStore } from '../../stores/userStore';
+import { useUserStore } from '@/stores/userStore';
 import { LockIcon, LoaderIcon, CheckCircleIcon } from 'lucide-vue-next';
-import { useFormValidation } from '../../composables/useFormValidation';
-import { storeToRefs } from 'pinia';
+import { useFormValidation } from '@/composables/useFormValidation';
+import { useToast } from '@/composables/useToast';
+import { useErrorHandler } from '@/composables/useErrorHandler';
 
 const router = useRouter();
 const userStore = useUserStore();
-const { isLoading, successMessage } = storeToRefs(userStore);
+const { handleError } = useErrorHandler();
+const { showToast } = useToast();
 
 const phonenumber = ref('');
 const password = ref('');
@@ -111,20 +111,25 @@ const isFormValid = computed(() => {
 
 // Computed property to check if login was successful
 const loginSuccess = computed(() => {
-  return successMessage.value !== '';
+  return userStore.successMessage !== '';
 });
 
 // Handle form submission
 const handleSubmit = async () => {
-  if (!isFormValid.value) return;
-
+  if (!isFormValid.value) {
+    showToast('Please fix the errors before submitting.', 'error');
+    return;
+  }
   try {
     const success = await userStore.login(phonenumber.value, password.value, rememberMe.value);
     if (success) {
-      router.push({ name: 'Home' });
+      showToast('Login successful!', 'success');
+    } else {
+      showToast(userStore.error || 'Login failed. Please try again.', 'error');
     }
   } catch (err) {
-    // Error is handled via the store's reactive properties
+    handleError(err);
+    showToast('An unexpected error occurred. Please try again.', 'error');
   }
 };
 
@@ -133,8 +138,17 @@ watch(loginSuccess, (newVal) => {
   if (newVal) {
     // Redirect after a short delay to allow users to see the success message
     setTimeout(() => {
-      router.push('/');
+      router.push({ name: 'Home' });
     }, 2000);
   }
 });
 </script>
+
+<style scoped>
+/* Ensure accessibility for focus states */
+button:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.5);
+  /* Focus ring color */
+}
+</style>

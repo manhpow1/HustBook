@@ -3,7 +3,8 @@
         'animate-pulse rounded',
         { 'rounded-full': circle },
         { 'bg-gradient-to-r from-gray-200 via-gray-300 to-gray-200': gradient },
-    ]" :style="{ ...computedSize, animationDuration: `${speed}s` }">
+        sizeClasses
+    ]" :style="{ ...computedSize, animationDuration: `${speed}s` }" role="status" aria-live="polite">
         <slot></slot>
     </div>
 </template>
@@ -15,7 +16,7 @@ const props = defineProps({
     circle: Boolean,
     size: {
         type: String,
-        default: 'custom',
+        default: 'medium',
         validator: (value) => ['small', 'medium', 'large', 'custom'].includes(value)
     },
     speed: {
@@ -23,6 +24,14 @@ const props = defineProps({
         default: 1.5
     },
     gradient: Boolean,
+    width: {
+        type: String,
+        default: '100%'
+    },
+    height: {
+        type: String,
+        default: '1rem'
+    },
 });
 
 const sizeMap = {
@@ -38,6 +47,19 @@ const computedSize = computed(() => {
     return sizeMap[props.size];
 });
 
+const sizeClasses = computed(() => {
+    if (props.size === 'custom') return '';
+    switch (props.size) {
+        case 'small':
+            return 'w-8 h-8';
+        case 'medium':
+            return 'w-16 h-16';
+        case 'large':
+            return 'w-24 h-24';
+        default:
+            return '';
+    }
+});
 </script>
 
 <style scoped>
@@ -49,7 +71,7 @@ const computedSize = computed(() => {
     }
 
     50% {
-        opacity: .5;
+        opacity: 0.5;
     }
 }
 

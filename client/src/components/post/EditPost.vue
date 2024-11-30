@@ -12,7 +12,7 @@
                 <label for="description" class="block text-sm font-medium text-gray-700 mb-2">
                     Description
                 </label>
-                <textarea id="description" v-model="description" rows="3" :maxlength="500" :class="[
+                <textarea id="description" v-model="description" rows="3" maxlength="500" :class="[
                     'mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring focus:ring-primary focus:ring-opacity-50 transition duration-300 ease-in-out',
                     { 'border-red-500': descriptionError },
                 ]" placeholder="What's on your mind?"></textarea>
@@ -37,7 +37,7 @@
             </div>
 
             <div>
-                <button type="button" @click="showEmojiPicker = !showEmojiPicker"
+                <button type="button" @click="toggleEmojiPicker"
                     class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-primary hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary"
                     aria-label="Toggle emoji picker">
                     <SmileIcon class="w-5 h-5 mr-2" />
@@ -46,7 +46,7 @@
                 <div v-if="showEmojiPicker" class="mt-2">
                     <button v-for="emoji in emojis" :key="emoji" @click="insertEmoji(emoji)"
                         class="inline-flex items-center justify-center w-8 h-8 m-1 text-lg hover:bg-gray-200 rounded"
-                        :aria-label="`Insert ${emoji} emoji`">
+                        aria-label="Insert emoji">
                         {{ emoji }}
                     </button>
                 </div>
@@ -74,11 +74,11 @@
                 </p>
                 <div class="flex justify-end space-x-2">
                     <button @click="cancelNavigation"
-                        class="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary">
+                        class="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2">
                         Cancel
                     </button>
                     <button @click="discardChanges"
-                        class="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500">
+                        class="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500">
                         Discard Changes
                     </button>
                     <button @click="saveChanges"
@@ -104,9 +104,8 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onBeforeUnmount, watch } from 'vue';
+import { ref, computed, onMounted, onBeforeUnmount, watch} from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { EditIcon, SmileIcon } from 'lucide-vue-next';
 import { usePostStore } from '../../stores/postStore';
 import logger from '../../services/logging';
 import FileUpload from '../shared/FileUpload.vue';
@@ -148,6 +147,13 @@ const statusOptions = [
 
 const emojis = ['😀', '😂', '😍', '🥳', '😎', '🤔', '😊', '👍', '❤️', '🎉'];
 
+const initialDescription = ref('');
+const initialStatus = ref('');
+
+const hasUnsavedChanges = computed(() => {
+    return description.value !== initialDescription.value || status.value !== initialStatus.value || files.value.length !== initialFiles.value.length;
+});
+
 const insertEmoji = (emoji) => {
     description.value += emoji;
 };
@@ -157,6 +163,8 @@ onMounted(async () => {
         const postData = await postStore.fetchPost(postId.value);
         description.value = postData.described;
         status.value = postData.status;
+        initialDescription.value = postData.described;
+        initialStatus.value = postData.status;
         initialFiles.value = postData.media.map((url) => ({ url }));
         files.value = [...initialFiles.value];
     } catch (error) {
@@ -202,94 +210,55 @@ const handleSubmit = async () => {
 
 const cancelEdit = () => {
     if (hasUnsavedChanges.value) {
-        showUnsavedChangesModal.value = true
+        showUnsavedChangesModal.value = true;
     } else {
-        router.back()
+        router.back();
     }
-}
-
-const handleDescriptionInput = () => {
-    // Update UI or perform any necessary actions when description changes
-}
-
-const insertEmoji = (emoji) => {
-    description.value += emoji
-}
-
-const detectLinks = (text) => {
-    const urlRegex = /(https?:\/\/[^\s]+)/g
-    return text.replace(urlRegex, (url) => `<span class="text-primary">${url}</span>`)
-}
-
-const convertEmoticonsToText = (text) => {
-    const emoticonMap = {
-        ':)': '[smile]',
-        ':(': '[frown]',
-        ':D': '[grin]',
-        ':P': '[tongue]',
-        ';)': '[wink]',
-        // Add more emoticons as needed
-    }
-
-    return text.replace(/:\)|:$$|:D|:P|;$$/g, (match) => emoticonMap[match] || match)
-}
-
-const convertTextToEmoticons = (text) => {
-    const textToEmoticonMap = {
-        '[smile]': ':)',
-        '[frown]': ':(',
-        '[grin]': ':D',
-        '[tongue]': ':P',
-        '[wink]': ';)',
-        // Add more mappings as needed
-    }
-
-    return text.replace(/\[(\w+)\]/g, (_, emotion) => textToEmoticonMap[`[${emotion}]`] || `[${emotion}]`)
-}
+};
 
 const handleBeforeUnload = (e) => {
     if (hasUnsavedChanges.value) {
-        e.preventDefault()
-        e.returnValue = ''
+        e.preventDefault();
+        e.returnValue = '';
     }
-}
+};
 
 const handleRouteChange = (to, from, next) => {
     if (hasUnsavedChanges.value) {
-        showUnsavedChangesModal.value = true
-        next(false)
+        showUnsavedChangesModal.value = true;
+        next(false);
     } else {
-        next()
+        next();
     }
-}
+};
 
 const saveChanges = async () => {
-    await handleSubmit()
-    showUnsavedChangesModal.value = false
-}
+    await handleSubmit();
+    showUnsavedChangesModal.value = false;
+};
 
 const discardChanges = () => {
-    description.value = initialDescription.value
-    status.value = initialStatus.value
-    files.value = [...initialFiles.value]
-    showUnsavedChangesModal.value = false
-    router.back()
-}
+    description.value = initialDescription.value;
+    status.value = initialStatus.value;
+    files.value = [...initialFiles.value];
+    showUnsavedChangesModal.value = false;
+    router.back();
+};
 
 const cancelNavigation = () => {
-    showUnsavedChangesModal.value = false
-}
+    showUnsavedChangesModal.value = false;
+};
 
 onMounted(() => {
-    window.addEventListener('beforeunload', handleBeforeUnload)
-    router.beforeEach(handleRouteChange)
-})
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    router.beforeEach(handleRouteChange);
+});
 
 onBeforeUnmount(() => {
-    window.removeEventListener('beforeunload', handleBeforeUnload)
-})
+    window.removeEventListener('beforeunload', handleBeforeUnload);
+});
 
 watch([description, status, files], () => {
     // Perform any necessary actions when form data changes
-}, { deep: true })
+}, { deep: true });
 </script>

@@ -11,7 +11,7 @@
                 <p>{{ error }}</p>
                 <button @click="fetchPost"
                     class="mt-4 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors duration-200">
-                    {{ t('retry') }}
+                    Retry
                 </button>
             </div>
 
@@ -47,15 +47,17 @@
                                     <path class="opacity-75" fill="currentColor"
                                         d="M4 12a8 8 0 018-8v8h8a8 8 0 01-16 0z"></path>
                                 </svg>
-                                <p class="mt-2 text-gray-500">{{ t('loadingComments') }}</p>
+                                <p class="mt-2 text-gray-500">Loading comments...</p>
                             </div>
                         </template>
                     </Suspense>
                 </div>
             </article>
 
-            <MediaViewer v-if="showMediaViewer" :post="post" :initialMediaIndex="currentMediaIndex"
-                @close="closeMediaViewer" />
+            <MediaViewer v-if="showMediaViewer" :isOpen="showMediaViewer" :mediaList="mediaList"
+                :initialIndex="currentMediaIndex" :likes="post.like" :comments="post.comment"
+                :isLiked="post.is_liked === '1'" @close="closeMediaViewer" @like="handleLike"
+                @comment="handleComment" />
 
             <AdvancedOptionsModal v-if="showAdvancedOptionsModal" :isOwnPost="isOwnPost" :post="post"
                 @close="showAdvancedOptionsModal = false" @edit="editPost" @delete="deletePost"
@@ -70,7 +72,6 @@
 <script setup>
 import { ref, computed, defineAsyncComponent } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { useI18n } from 'vue-i18n'
 import { usePostStore } from '../../stores/postStore'
 import { useUserStore } from '../../stores/userStore'
 import { AlertCircleIcon } from 'lucide-vue-next'
@@ -93,7 +94,7 @@ const ReportPostModal = defineAsyncComponent(() => import('./ReportPostModal.vue
 
 const route = useRoute()
 const router = useRouter()
-const { t } = useI18n({ useScope: 'global' })
+// Removed i18n usage
 const postStore = usePostStore()
 const userStore = useUserStore()
 const notificationStore = useNotificationStore();
@@ -172,7 +173,7 @@ const editPost = () => {
 
 const deletePost = async () => {
     // Show confirmation modal before deleting
-    if (await confirm(t('confirmDelete'))) {
+    if (await confirm('Are you sure you want to delete this post? This action cannot be undone.')) {
         try {
             await postStore.deletePost(post.value.id)
             router.push({ name: 'Login' })
@@ -191,7 +192,7 @@ const handleReportPost = async () => {
 const handleReportSubmitted = () => {
     showReportPostModal.value = false;
     // Optionally show a success notification
-    notificationStore.showNotification(t('reportSubmittedSuccess'), 'success');
+    notificationStore.showNotification('Report submitted successfully.', 'success');
 };
 
 const hidePost = async () => {

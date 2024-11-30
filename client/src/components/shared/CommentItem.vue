@@ -9,53 +9,53 @@
                 </div>
                 <div v-if="!isEditing" class="comment-text" v-html="renderedContent"></div>
                 <div v-else class="edit-area">
-                    <label for="edit-comment" class="sr-only">{{ t('editComment') }}</label>
+                    <label for="edit-comment" class="sr-only">Edit Comment</label>
                     <textarea id="edit-comment" v-model="editedContent" class="edit-textarea" rows="3"
-                        :placeholder="t('editCommentPlaceholder')"></textarea>
+                        placeholder="Edit your comment..."></textarea>
                     <p v-if="commentError" class="text-red-500 text-sm mt-1">{{ commentError }}</p>
                 </div>
                 <div class="comment-actions">
                     <button @click="debouncedToggleLike" class="action-button" :class="{ 'liked': comment.is_liked }"
-                        :disabled="isLikeLoading" :aria-label="comment.is_liked ? t('unlike') : t('like')">
+                        :disabled="isLikeLoading" :aria-label="comment.is_liked ? 'Unlike' : 'Like'">
                         <ThumbsUpIcon class="action-icon" />
-                        <span>{{ comment.like }} {{ comment.like === 1 ? t('like') : t('likes') }}</span>
+                        <span>{{ comment.like }} {{ comment.like === 1 ? 'Like' : 'Likes' }}</span>
                         <span v-if="isLikeLoading" class="loader" aria-live="polite">Loading...</span>
                     </button>
                     <button v-if="canEditDelete" @click="toggleEdit" class="action-button"
-                        :aria-label="isEditing ? t('cancelEdit') : t('edit')">
-                        {{ isEditing ? t('cancel') : t('edit') }}
+                        :aria-label="isEditing ? 'Cancel Edit' : 'Edit'">
+                        {{ isEditing ? 'Cancel' : 'Edit' }}
                     </button>
                     <button v-if="canEditDelete && !isEditing" @click="openDeleteDialog"
-                        class="action-button delete-button" :aria-label="t('delete')">
-                        {{ t('delete') }}
+                        class="action-button delete-button" :aria-label="'Delete'">
+                        Delete
                     </button>
                 </div>
             </div>
         </div>
         <div v-if="isEditing" class="edit-actions">
-            <button @click="debouncedSaveEdit" class="save-button" :disabled="isSaveLoading" :aria-label="t('save')">
-                {{ t('save') }}
+            <button @click="debouncedSaveEdit" class="save-button" :disabled="isSaveLoading" :aria-label="'Save'">
+                Save
                 <span v-if="isSaveLoading" class="loader"></span>
             </button>
-            <button @click="cancelEdit" class="cancel-button" :aria-label="t('cancel')">
-                {{ t('cancel') }}
+            <button @click="cancelEdit" class="cancel-button" :aria-label="'Cancel'">
+                Cancel
             </button>
         </div>
-        <ConfirmDialog v-if="showDeleteDialog" :title="t('confirmDelete')" :message="t('deleteWarning')"
-            @confirm="debouncedConfirmDelete" @cancel="closeDeleteDialog" :isLoading="isDeleteLoading" />
+        <ConfirmDialog v-if="showDeleteDialog" :title="'Confirm Delete'"
+            :message="'Are you sure you want to delete this comment?'" @confirm="debouncedConfirmDelete"
+            @cancel="closeDeleteDialog" :isLoading="isDeleteLoading" />
     </div>
 </template>
 
 <script setup>
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue';
-import { useI18n } from 'vue-i18n';
 import { ThumbsUpIcon } from 'lucide-vue-next';
 import { useUserStore } from '../../stores/userStore';
 import { useNotificationStore } from '../../stores/notificationStore';
 import { formatDate } from '../../utils/helpers';
 import { renderMarkdown } from '../../utils/markdown';
 import { debounce } from 'lodash-es';
-import ConfirmDialog from './ConfirmDialog.vue';
+import ConfirmDialog from '../ui/ConfirmDialog.vue';
 import { useFormValidation } from '../../composables/useFormValidation';
 import logger from '../../services/logging';
 
@@ -68,7 +68,6 @@ const props = defineProps({
 
 const emit = defineEmits(['update', 'delete']);
 
-const { t } = useI18n();
 const userStore = useUserStore();
 const notificationStore = useNotificationStore();
 const isEditing = ref(false);
@@ -115,10 +114,10 @@ const saveEdit = async () => {
                 content: trimmedContent,
             });
             isEditing.value = false;
-            notificationStore.showNotification(t('commentUpdated'), 'success');
+            notificationStore.showNotification('Comment updated successfully', 'success');
             logger.info('Comment updated successfully', { commentId: props.comment.id });
         } catch (error) {
-            notificationStore.showNotification(t('saveEditError'), 'error');
+            notificationStore.showNotification('Failed to save the edited comment', 'error');
             logger.error('Error updating comment', error);
         } finally {
             isSaveLoading.value = false;
@@ -149,10 +148,10 @@ const confirmDelete = async () => {
     try {
         await emit('delete', props.comment.id);
         closeDeleteDialog();
-        notificationStore.showNotification(t('commentDeleted'), 'success');
+        notificationStore.showNotification('Comment deleted successfully', 'success');
         logger.info('Comment deleted successfully', { commentId: props.comment.id });
     } catch (error) {
-        notificationStore.showNotification(t('deleteError'), 'error');
+        notificationStore.showNotification('Failed to delete the comment', 'error');
         logger.error('Error deleting comment', error);
     } finally {
         isDeleteLoading.value = false;
@@ -171,7 +170,7 @@ const toggleLike = async () => {
         });
         logger.info('Comment like toggled', { commentId: props.comment.id });
     } catch (error) {
-        notificationStore.showNotification(t('likeError'), 'error');
+        notificationStore.showNotification('Failed to toggle like on comment', 'error');
         logger.error('Error toggling like on comment', error);
     } finally {
         isLikeLoading.value = false;

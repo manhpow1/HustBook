@@ -66,7 +66,7 @@
           <!-- Submit Button -->
           <div>
             <button type="submit" :disabled="isLoading || !isFormValid"
-              class="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
+              class="group relative w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
               :aria-disabled="isLoading || !isFormValid">
               <span class="absolute left-0 inset-y-0 flex items-center pl-3">
                 <LockIcon class="h-5 w-5 text-indigo-500 group-hover:text-indigo-400" aria-hidden="true" />
@@ -86,35 +86,35 @@
               :style="{ width: `${passwordStrength}%` }"></div>
           </div>
         </div>
+      </div>
 
-        <!-- Verify Code Component -->
-        <div v-if="currentStep === 'verify'">
-          <VerifyCode :initialPhoneNumber="phonenumber" @verification-success="handleVerificationSuccess"
-            @verification-error="handleVerificationError" />
-        </div>
+      <!-- Verify Code Component -->
+      <div v-if="currentStep === 'verify'">
+        <VerifyCode :initialPhoneNumber="phonenumber" @verification-success="handleVerificationSuccess"
+          @verification-error="handleVerificationError" />
+      </div>
 
-        <!-- Complete Profile Prompt -->
-        <div v-if="currentStep === 'complete'" class="rounded-md bg-green-50 p-4">
-          <div class="flex">
-            <CheckCircleIcon class="h-5 w-5 text-green-400 mr-2" aria-hidden="true" />
-            <div>
-              <h3 class="text-sm font-medium text-green-800">Account created and verified successfully</h3>
-              <p class="mt-2 text-sm text-green-700">You can now proceed to complete your profile.</p>
-            </div>
-          </div>
-          <button @click="proceedToCompleteProfile"
-            class="mt-4 w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
-            Complete Profile
-          </button>
-        </div>
-
-        <!-- Error Message Display -->
-        <div v-if="errorMessage" class="mt-4 rounded-md bg-red-100 p-4 flex items-start" role="alert">
-          <XCircleIcon class="h-5 w-5 text-red-400 mr-2" aria-hidden="true" />
+      <!-- Complete Profile Prompt -->
+      <div v-if="currentStep === 'complete'" class="rounded-md bg-green-50 p-4">
+        <div class="flex">
+          <CheckCircleIcon class="h-5 w-5 text-green-400 mr-2" aria-hidden="true" />
           <div>
-            <h3 class="text-sm font-medium text-red-800">Error</h3>
-            <p class="mt-2 text-sm text-red-700">{{ errorMessage }}</p>
+            <h3 class="text-sm font-medium text-green-800">Account created and verified successfully</h3>
+            <p class="mt-2 text-sm text-green-700">You can now proceed to complete your profile.</p>
           </div>
+        </div>
+        <button @click="proceedToCompleteProfile"
+          class="mt-4 w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+          Complete Profile
+        </button>
+      </div>
+
+      <!-- Error Message Display -->
+      <div v-if="errorMessage" class="mt-4 rounded-md bg-red-100 p-4 flex items-start" role="alert">
+        <XCircleIcon class="h-5 w-5 text-red-400 mr-2 mt-0.5 flex-shrink-0" aria-hidden="true" />
+        <div>
+          <h3 class="text-sm font-medium text-red-800">Error</h3>
+          <p class="mt-2 text-sm text-red-700">{{ errorMessage }}</p>
         </div>
       </div>
     </div>
@@ -125,20 +125,21 @@
 import { ref, computed, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import { useUserStore } from '../../stores/userStore';
-import { CheckCircleIcon, XCircleIcon, LockIcon, LoaderIcon } from 'lucide-vue-next';
+import { CheckCircleIcon, XCircleIcon, LockIcon, LoaderIcon, PhoneIcon } from 'lucide-vue-next';
 import VerifyCode from './VerifyCode.vue';
 import { useFormValidation } from '../../composables/useFormValidation';
-import { storeToRefs } from 'pinia';
+import { useToast } from '../../composables/useToast';
+import { useErrorHandler } from '../../composables/useErrorHandler';
 
 const router = useRouter();
 const userStore = useUserStore();
-const { isLoading, error } = storeToRefs(userStore);
+const { handleError } = useErrorHandler();
+const { showToast } = useToast();
 
 const currentStep = ref('signup');
 const phonenumber = ref('');
 const password = ref('');
 const rememberMe = ref(false);
-
 const { phoneError, passwordError, validatePhone, validatePassword } = useFormValidation();
 
 // Computed property to determine if the form is valid
@@ -184,39 +185,61 @@ const passwordStrengthClass = computed(() => {
   return 'bg-green-500';
 });
 
+// Get reactive references from the store
+const { isLoading, error } = storeToRefs(userStore);
+
+const errorMessage = computed(() => userStore.error || '');
+
 // Handle form submission
 const handleSignup = async () => {
-  if (!isFormValid.value) return;
+  if (!isFormValid.value) {
+    showToast('Please fix the errors before submitting.', 'error');
+    return;
+  }
 
   try {
-    const success = await userStore.register(phonenumber.value, password.value, rememberMe.value);
+    const success = await userStore.register(phonenumber.value, password.value, 'device-uuid'); // Replace 'device-uuid' with actual device ID if available
     if (success) {
+      showToast('Registration successful. Please verify your account.', 'success');
       currentStep.value = 'verify';
+    } else {
+      showToast(userStore.error || 'Registration failed. Please try again.', 'error');
     }
   } catch (err) {
-    // Error is handled via the store's reactive properties
+    handleError(err);
+    showToast('An unexpected error occurred. Please try again.', 'error');
   }
 };
 
 // Handle successful verification
 const handleVerificationSuccess = () => {
+  showToast('Verification successful!', 'success');
   currentStep.value = 'complete';
 };
 
 // Handle verification errors
 const handleVerificationError = (errorMsg) => {
-  userStore.setError(errorMsg);
+  showToast(errorMsg || 'Verification failed. Please try again.', 'error');
 };
 
 // Proceed to complete profile
 const proceedToCompleteProfile = () => {
-  router.push('/complete-profile');
+  router.push('/complete-profile'); // Ensure this route exists
 };
 
-// Watch for error messages from the store
+// Watch for errors to display toast notifications
 watch(error, (newError) => {
   if (newError) {
-    // Additional handling can be done here if needed
+    showToast(newError, 'error');
   }
 });
 </script>
+
+<style scoped>
+/* Ensure accessibility for focus states */
+button:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.5);
+  /* Focus ring color */
+}
+</style>

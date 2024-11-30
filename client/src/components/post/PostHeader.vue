@@ -15,17 +15,17 @@
                 <div v-if="showAdvancedOptions"
                     class="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg z-10 py-1 text-sm">
                     <button @click="editPost" class="block px-4 py-2 text-gray-700 hover:bg-gray-100 w-full text-left">
-                        {{ t('editPost') }}
+                        Edit Post
                     </button>
                     <button @click="deletePost" class="block px-4 py-2 text-red-600 hover:bg-gray-100 w-full text-left">
-                        {{ t('deletePost') }}
+                        Delete Post
                     </button>
                     <button @click="reportPost"
                         class="block px-4 py-2 text-gray-700 hover:bg-gray-100 w-full text-left">
-                        {{ t('reportPost') }}
+                        Report Post
                     </button>
                     <button @click="sharePost" class="block px-4 py-2 text-gray-700 hover:bg-gray-100 w-full text-left">
-                        {{ t('sharePost') }}
+                        Share Post
                     </button>
                 </div>
             </transition>
@@ -36,7 +36,7 @@
 <script setup>
 import { ref } from 'vue'
 import { MoreVerticalIcon } from 'lucide-vue-next'
-import { useI18n } from 'vue-i18n'
+import { usePostStore } from '../../stores/postStore'
 import { formatDate } from '../../utils/helpers';
 
 const props = defineProps({
@@ -52,7 +52,6 @@ const props = defineProps({
 
 const emit = defineEmits(['editPost', 'deletePost', 'reportPost', 'sharePost'])
 
-const { t } = useI18n()
 const showAdvancedOptions = ref(false)
 
 const defaultAvatar = '/path/to/default/avatar.jpg'
@@ -67,7 +66,7 @@ const editPost = () => {
 }
 
 const deletePost = () => {
-    if (confirm(t('confirmDelete'))) {
+    if (confirm('Are you sure you want to delete this post? This action cannot be undone.')) {
         emit('deletePost')
     }
     showAdvancedOptions.value = false
@@ -82,7 +81,6 @@ const sharePost = () => {
     emit('sharePost')
     showAdvancedOptions.value = false
 }
-
 </script>
 
 <style scoped>
