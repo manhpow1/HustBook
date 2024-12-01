@@ -13,7 +13,7 @@
             <li v-for="suggestion in friendSuggestions" :key="suggestion.user_id"
                 class="bg-white shadow rounded-lg p-4">
                 <div class="flex items-center mb-4">
-                    <img :src="suggestion.avatar || '/default-avatar.png'" :alt="suggestion.username"
+                    <img :src="suggestion.avatar || '../../assets/avatar-default.svg'" :alt="suggestion.username"
                         class="w-12 h-12 rounded-full mr-4">
                     <div>
                         <h3 class="font-semibold">{{ suggestion.username }}</h3>

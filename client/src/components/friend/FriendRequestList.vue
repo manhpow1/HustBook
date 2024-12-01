@@ -12,7 +12,7 @@
         <ul v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             <li v-for="request in friendRequests" :key="request.id" class="bg-white shadow rounded-lg p-4">
                 <div class="flex items-center mb-4">
-                    <img :src="request.avatar || '/default-avatar.png'" :alt="request.username"
+                    <img :src="request.avatar || '../../assets/avatar-default.svg'" :alt="request.username"
                         class="w-12 h-12 rounded-full mr-4">
                     <div>
                         <h3 class="font-semibold">{{ request.username }}</h3>

@@ -18,7 +18,7 @@
       <div class="flex flex-col lg:flex-row gap-8">
         <section class="lg:w-2/3">
           <div class="bg-white shadow rounded-lg p-6 mb-6">
-            <img :src="user.avatar || '/default-avatar.png'" :alt="user.username"
+            <img :src="user.avatar || '../../assets/avatar-default.svg'" :alt="user.username"
               class="w-32 h-32 rounded-full mx-auto mb-4 object-cover">
             <h1 class="text-3xl font-bold text-center mb-2 text-gray-800">{{ user.username }}</h1>
             <p class="text-gray-600 text-center mb-4">{{ user.bio || 'No bio available' }}</p>

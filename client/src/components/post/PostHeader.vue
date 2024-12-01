@@ -76,7 +76,7 @@ const postStore = usePostStore();
 const showAdvancedOptions = ref(false);
 
 // Default avatar image path
-const defaultAvatar = '/path/to/default/avatar.jpg';
+const defaultAvatar = '../../assets/avatar-default.svg';
 
 // Computed property for formatted post date
 const formattedDate = computed(() => formatDate(props.post.created));

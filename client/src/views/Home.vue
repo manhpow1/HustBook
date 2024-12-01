@@ -32,7 +32,7 @@
                 <Card>
                   <template #header>
                     <div class="flex items-center">
-                      <img :src="sanitizeUrl(post.userAvatar) || '/default-avatar.png'"
+                      <img :src="sanitizeUrl(post.userAvatar) || '../assets/avatar-default.svg'"
                         :alt="`${sanitizeText(post.userName)}'s avatar`" class="w-10 h-10 rounded-full mr-4"
                         loading="lazy" />
                       <div>

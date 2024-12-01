@@ -25,7 +25,7 @@
         <ul v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             <li v-for="friend in filteredFriends" :key="friend.id" class="bg-white shadow rounded-lg p-4">
                 <div class="flex items-center mb-4">
-                    <img :src="friend.avatar || '/default-avatar.png'" :alt="friend.username"
+                    <img :src="friend.avatar || '../../assets/avatar-default.svg'" :alt="friend.username"
                         class="w-12 h-12 rounded-full mr-4">
                     <div>
                         <h3 class="font-semibold">{{ friend.username }}</h3>

@@ -19,7 +19,7 @@
             <li v-for="user in blockedUsers" :key="user.id"
                 class="flex items-center justify-between bg-white p-4 rounded-lg shadow">
                 <div class="flex items-center">
-                    <img :src="user.avatar || '/default-avatar.png'" :alt="user.name"
+                    <img :src="user.avatar || '../../assets/avatar-default.svg'" :alt="user.name"
                         class="w-10 h-10 rounded-full mr-4" />
                     <span class="font-medium">{{ user.name }}</span>
                 </div>

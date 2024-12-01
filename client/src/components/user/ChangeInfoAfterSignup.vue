@@ -10,7 +10,7 @@
                 <label for="username" class="block text-sm font-medium text-gray-700">Username</label>
                 <div class="mt-1 relative rounded-md shadow-sm">
                     <input v-model="username" type="text" id="username" name="username" required
-                        aria-describedby="username-error" @input="validateUsername"
+                        aria-describedby="username-error" @input="validateUsernameField"
                         class="block w-full pr-10 border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
                         :class="{ 'border-red-300': usernameError }" placeholder="Enter your username" />
                     <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
@@ -19,7 +19,7 @@
                         <XCircleIcon v-if="usernameError" class="h-5 w-5 text-red-500" aria-hidden="true" />
                     </div>
                 </div>
-                <p v-if="usernameError" id="username-error" class="text-sm text-red-600 mt-1">
+                <p v-if="usernameError" id="username-error" class="text-sm text-red-600 mt-1" role="alert">
                     {{ usernameError }}
                 </p>
             </div>
@@ -32,7 +32,8 @@
                         <img :src="avatarPreview" alt="Avatar preview" class="h-16 w-16 rounded-full object-cover" />
                     </div>
                     <label for="avatar-upload"
-                        class="cursor-pointer bg-white py-2 px-3 border border-gray-300 rounded-md shadow-sm text-sm leading-4 font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                        class="cursor-pointer bg-white py-2 px-3 border border-gray-300 rounded-md shadow-sm text-sm leading-4 font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                        aria-label="Upload Avatar">
                         <span>{{ avatar ? 'Change' : 'Upload' }}</span>
                         <input id="avatar-upload" name="avatar-upload" type="file" @change="handleFileChange"
                             accept="image/*" class="sr-only" />
@@ -42,7 +43,7 @@
                         Remove
                     </button>
                 </div>
-                <p v-if="avatarError" class="text-sm text-red-600 mt-1">
+                <p v-if="avatarError" class="text-sm text-red-600 mt-1" role="alert">
                     {{ avatarError }}
                 </p>
             </div>
@@ -72,10 +73,12 @@
                 <p class="text-red-700">{{ errorMessage }}</p>
                 <!-- Additional Actions Based on Error -->
                 <div v-if="errorMessage.includes('File upload failed')" class="mt-2 flex space-x-2">
-                    <button @click="continueWithoutAvatar" class="bg-blue-500 text-white px-4 py-2 rounded text-sm">
+                    <button @click="continueWithoutAvatar" class="bg-blue-500 text-white px-4 py-2 rounded text-sm"
+                        aria-label="Continue without avatar">
                         Continue without avatar
                     </button>
-                    <button @click="retryUpload" class="bg-green-500 text-white px-4 py-2 rounded text-sm">
+                    <button @click="retryUpload" class="bg-green-500 text-white px-4 py-2 rounded text-sm"
+                        aria-label="Retry Upload">
                         Try again
                     </button>
                 </div>
@@ -85,48 +88,34 @@
 </template>
 
 <script setup>
-import { ref, watch } from 'vue';
+import { ref, watch, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
-import { useAuthStore } from '../../stores/authStore';
+import { useUserStore } from '../../stores/userStore';
 import { UserPlusIcon, CheckCircleIcon, XCircleIcon, LoaderIcon } from 'lucide-vue-next';
-import { storeToRefs } from 'pinia';
 import { useFormValidation } from '../../composables/useFormValidation';
+import { sanitizeInput } from '../../utils/sanitize';
+import { useToast } from '../../composables/useToast';
 
 const router = useRouter();
-const authStore = useAuthStore();
-const { token, isLoading, errorMessage, successMessage, user } = storeToRefs(authStore);
+const userStore = useUserStore();
 
+// Destructure store refs for reactivity
+const { user, isLoading, errorMessage, successMessage } = storeToRefs(userStore);
+
+// Initialize composables
+const { showToast } = useToast();
+
+// Local component state
 const username = ref('');
 const usernameError = ref('');
 const avatar = ref(null);
 const avatarPreview = ref('');
 const avatarError = ref('');
 
-const { phoneError, validatePhone, validateUsername } = useFormValidation();
+// Initialize form validation
+const { validateUsername } = useFormValidation();
 
-// Check if the user is authenticated
-const checkToken = (tokenValue) => {
-    if (!tokenValue) {
-        authStore.setError('Invalid token');
-        router.push({ name: 'Login' });
-    } else {
-        authStore.setError('');
-    }
-};
-
-// Ensure the user is authenticated on component mount
-onMounted(() => {
-    if (!token.value) {
-        router.push({ name: 'Login' });
-    }
-});
-
-// Watch for token changes
-watch(() => token.value, (newToken) => {
-    checkToken(newToken);
-});
-
-// Validate the username
+// Validate the username field in real-time
 const validateUsernameField = () => {
     usernameError.value = validateUsername(username.value);
 };
@@ -164,17 +153,23 @@ const handleSubmit = async () => {
     if (usernameError.value) return;
 
     try {
-        await authStore.updateProfile(username.value, avatar.value);
-        if (authStore.user.is_blocked) {
+        // Sanitize inputs
+        const sanitizedUsername = sanitizeInput(username.value);
+
+        await userStore.updateProfile(sanitizedUsername, avatar.value);
+
+        if (userStore.user.value?.is_blocked) {
+            showToast('Your account has been blocked.', 'error');
             router.push({ name: 'Login' });
         } else {
-            // Redirect to home after a short delay to allow users to see the success message
+            showToast('Profile updated successfully.', 'success');
+            // Optionally, redirect to another page after a delay
             setTimeout(() => {
                 router.push({ name: 'Home' });
             }, 2000);
         }
     } catch (error) {
-        // Error is handled via the store's reactive properties
+        // Error handling is managed by the store and useErrorHandler
     }
 };
 
@@ -191,8 +186,60 @@ const retryUpload = () => {
     if (fileInput) fileInput.value = '';
 };
 
-// Watch for changes in username to validate in real-time
-watch(username, (newValue) => {
-    validateUsernameField();
+// Watch for token changes to ensure the user is authenticated
+onMounted(() => {
+    if (!userStore.token) {
+        router.push({ name: 'Login' });
+    } else {
+        // Initialize form with existing user data if available
+        if (user.value) {
+            username.value = user.value.username || '';
+            if (user.value.avatar_url) {
+                avatarPreview.value = user.value.avatar_url;
+            }
+        }
+    }
 });
+
+// Watch for changes in the store's errorMessage and successMessage to show toast notifications
+watch(
+    () => errorMessage.value,
+    (newError) => {
+        if (newError) {
+            showToast(newError, 'error');
+        }
+    }
+);
+
+watch(
+    () => successMessage.value,
+    (newSuccess) => {
+        if (newSuccess) {
+            showToast(newSuccess, 'success');
+        }
+    }
+);
 </script>
+
+<style scoped>
+/* Ensures the form is visually appealing and responsive */
+
+/* Adjust focus styles for accessibility */
+input:focus,
+button:focus {
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.5);
+    /* Indigo focus ring */
+}
+
+/* Loader icon positioning within the button */
+button .animate-spin {
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+</style>
