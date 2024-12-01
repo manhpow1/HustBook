@@ -1,170 +1,170 @@
 <template>
     <div v-if="isCommentSectionVisible" class="comment-section">
-        <div v-if="offlineMode" class="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 mb-4"
-            role="alert">
-            <p class="font-bold">Offline Mode</p>
-            <p>You are currently offline. Your comments will be synced once you are back online.</p>
-        </div>
-        <div v-if="syncError" class="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mb-4" role="alert">
-            <p class="font-bold">Sync Error</p>
-            <p>{{ syncError }}</p>
-            <button @click="retrySyncComments"
-                class="mt-2 px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600 transition-colors duration-200">
-                Retry Sync
-            </button>
-        </div>
+        <!-- Offline Mode Alert -->
+        <Alert v-if="offlineMode" type="warning" title="Offline Mode"
+            message="You are currently offline. Your comments will be synced once you are back online." />
+
+        <!-- Sync Error Alert -->
+        <Alert v-if="syncError" type="error" title="Sync Error" :message="syncError" :showRetry="true"
+            @retry="retrySyncComments" />
+
+        <!-- New Comment Input -->
         <div class="mb-4">
             <MarkdownEditor v-model="newComment" :rows="3" ref="commentInput" placeholder="Write your comment here..."
-                :maxLength="1000" @input="onInput" />
+                :maxLength="1000" @input="onInput" data-testid="new-comment-editor" />
             <p class="text-sm mt-1">
                 {{ newComment.length }}/1000 characters
             </p>
             <p v-if="inputError" class="text-red-500 text-sm mt-1">{{ inputError }}</p>
-            <button @click.prevent="onAddComment"
-                class="mt-2 px-4 py-2 bg-primary text-primary-foreground rounded hover:bg-primary/90 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-                :disabled="!isCommentValid || isSubmitting" aria-label="Post Comment" data-testid="add-comment-button">
-                {{ isSubmitting ? 'Posting...' : 'Comment' }}
-            </button>
+            <Button @click.prevent="onAddComment" :disabled="!isCommentValid || isSubmitting" variant="primary"
+                class="mt-2" aria-label="Post Comment" data-testid="post-comment-button">
+                <span v-if="isSubmitting">Posting...</span>
+                <span v-else>Comment</span>
+            </Button>
         </div>
+
+        <!-- Error Message -->
         <ErrorMessage v-if="commentError" :message="commentError" title="Comment Error" showRetry
             @retry="onRetryLoadComments" />
+
+        <!-- Comments List -->
         <div v-if="comments.length > 0" class="mt-6">
             <h3 class="text-lg font-semibold mb-4">Comments</h3>
-            <RecycleScroller class="scroller" :items="comments" :item-size="100" key-field="id"
-                v-slot="{ item: comment }">
+            <RecycleScroller class="scroller" :items="comments" :item-size="150" <!-- Adjusted based on CommentItem
+                height -->
+                key-field="id"
+                v-slot="{ item: comment }"
+                >
                 <TransitionGroup name="slide" tag="div">
                     <CommentItem v-if="comment" :key="comment.id" :comment="comment" @update="onUpdateComment"
-                        @delete="onDeleteComment" />
+                        @delete="onDeleteComment" data-testid="comment-item" />
                 </TransitionGroup>
             </RecycleScroller>
         </div>
+
+        <!-- No Comments Message -->
         <div v-else-if="!loadingComments && !commentError" class="text-center py-8">
             <MessageSquareIcon class="h-12 w-12 text-gray-400 mx-auto mb-4" />
             <p class="text-gray-500">Be the first to comment!</p>
         </div>
+
+        <!-- Loading Comments -->
         <div v-if="loadingComments" class="text-center py-4">
             <LoaderIcon class="animate-spin h-5 w-5 mx-auto text-gray-500" />
             <p class="text-gray-500 mt-2">Loading comments...</p>
         </div>
-        <button v-if="hasMoreComments && !loadingComments && !commentError" @click="onLoadMoreComments"
-            :disabled="isLoadingMore"
-            class="w-full mt-4 px-4 py-2 bg-secondary text-secondary-foreground rounded hover:bg-secondary/90 transition-colors duration-200 disabled:opacity-50">
-            {{ isLoadingMore ? 'Loading more comments...' : 'Load More Comments' }}
-        </button>
+
+        <!-- Load More Comments Button -->
+        <Button v-if="hasMoreComments && !loadingComments && !commentError" @click="onLoadMoreComments"
+            :disabled="isLoadingMore" variant="secondary" class="w-full mt-4" aria-label="Load More Comments"
+            data-testid="load-more-comments-button">
+            <span v-if="isLoadingMore">Loading more comments...</span>
+            <span v-else>Load More Comments</span>
+        </Button>
     </div>
 </template>
 
 <script setup>
-import { ref, computed, onMounted, watch, onUnmounted } from 'vue';
-import { defineAsyncComponent } from 'vue';
+import { ref, computed, onMounted, onBeforeUnmount } from 'vue';
 import { useRouter } from 'vue-router';
 import { useCommentStore } from '../../stores/commentStore';
-import { usePostStore } from '../../stores/postStore';
 import { useNotificationStore } from '../../stores/notificationStore';
-import { handleError } from '../../utils/errorHandler';
+import { useErrorHandler } from '../../composables/useErrorHandler';
+import { useFormValidation } from '../../composables/useFormValidation';
+import {debounce} from 'lodash-es';
+import logger from '../../services/logging';
+
+// Components
 import MarkdownEditor from '../shared/MarkdownEditor.vue';
-import { throttle } from 'lodash-es';
+import CommentItem from '../shared/CommentItem.vue';
+import ErrorMessage from '../shared/ErrorMessage.vue';
 import { RecycleScroller } from 'vue-virtual-scroller';
 import 'vue-virtual-scroller/dist/vue-virtual-scroller.css';
-import { useFormValidation } from '../../composables/useFormValidation';
+import Alert from '../ui/Alert.vue';
+import Button from '../ui/Button.vue';
 
-const router = useRouter();
-const CommentItem = defineAsyncComponent(() =>
-    import('../shared/CommentItem.vue').catch((error) => {
-        console.error('Failed to load CommentItem:', error);
-        throw error;
-    })
-);
-const ErrorMessage = defineAsyncComponent(() => import('../ui/ErrorMessage.vue'));
-const LoaderIcon = defineAsyncComponent(() => import('lucide-vue-next').then(m => m.LoaderIcon));
-const MessageSquareIcon = defineAsyncComponent(() => import('lucide-vue-next').then(m => m.MessageSquareIcon));
-
+// Props
 const props = defineProps({
     postId: { type: String, required: true },
 });
 
-const commentStore = useCommentStore();
-const postStore = usePostStore();
-const notificationStore = useNotificationStore();
-const { comments, hasMoreComments, loadingComments } = storeToRefs(commentStore);
+// Emits
+const emit = defineEmits(['close']);
 
+// Router
+const router = useRouter();
+
+// Stores
+const commentStore = useCommentStore();
+const notificationStore = useNotificationStore();
+const { handleError } = useErrorHandler();
+
+// Reactive References
 const newComment = ref('');
 const commentInput = ref(null);
 const inputError = ref('');
 const isSubmitting = ref(false);
 const isLoadingMore = ref(false);
 const isCommentSectionVisible = ref(true);
-const offlineMode = ref(false);
+const offlineMode = ref(!navigator.onLine);
 const syncError = ref(null);
-const { commentError, validateComment } = useFormValidation();
+const { comments, hasMoreComments, loadingComments } = commentStore;
+const { commentError } = commentStore;
 
+// Form Validation
+const { validateComment } = useFormValidation();
 const isCommentValid = computed(() => validateComment(newComment.value));
 
-const checkOnlineStatus = () => {
-    offlineMode.value = !navigator.onLine;
-};
-
-const retrySyncComments = async () => {
-    try {
-        await commentStore.syncOfflineComments();
-        syncError.value = null;
-        notificationStore.showNotification('Comments synced successfully.', 'success');
-    } catch (error) {
-        syncError.value = 'Failed to sync comments. Please try again.';
-        notificationStore.showNotification('Failed to sync comments. Please try again.', 'error');
+// Debounced Functions
+const debouncedValidateInput = debounce((input, errorRef) => {
+    if (input.length > 1000) {
+        errorRef.value = 'Comment is too long.';
+    } else if (input.trim() === '') {
+        errorRef.value = 'Comment cannot be empty.';
+    } else {
+        errorRef.value = '';
     }
-};
+}, 300);
 
+// Input Handler
 const onInput = () => {
-    console.debug('Input changed:', newComment.value);
-    debouncedValidateInput(newComment.value, inputError, null);
+    debouncedValidateInput(newComment.value, inputError);
 };
 
-const scrollToBottom = () => {
+// Scroll Management
+const onScroll = () => {
     const scroller = document.querySelector('.scroller');
     if (scroller) {
-        console.debug('Scrolling to bottom');
-        scroller.scrollTop = scroller.scrollHeight;
+        const nearBottom = scroller.scrollHeight - scroller.scrollTop <= scroller.clientHeight + 50;
+        if (nearBottom && hasMoreComments.value && !isLoadingMore.value) {
+            onLoadMoreComments();
+        }
     }
 };
 
-const isNearBottom = () => {
-    const scroller = document.querySelector('.scroller');
-    const nearBottom = scroller
-        ? scroller.scrollHeight - scroller.scrollTop <= scroller.clientHeight + 50
-        : false;
-    console.debug('Checking if near bottom:', nearBottom);
-    return nearBottom;
-};
-
+// Analytics Tracking
 const trackAnalyticsEvent = (action, details) => {
-    console.debug(`Tracking analytics event: ${action}`, details);
     window.analytics?.track(action, details);
 };
 
+// Event Handlers
 const onRetryLoadComments = async () => {
-    console.debug(`Retrying to load comments for postId: ${postId}`);
-    commentStore.resetComments(); // Reset state to ensure a fresh load
+    commentStore.resetComments();
     try {
-        const result = await commentStore.fetchComments(postId, 10, router);
+        const result = await commentStore.fetchComments(props.postId, 10, router);
         if (!result || result.length === 0) {
-            console.warn(`No comments found for postId: ${postId}`);
             notificationStore.showNotification('No comments found.', 'warning');
         } else {
-            console.debug('Successfully loaded comments:', result);
-            commentStore.comments.value = result;
+            commentStore.comments = result;
         }
     } catch (error) {
-        console.error('Error during comment retry load:', error);
-        // Handle specific error codes to hide the comment section
         const errorCode = error.response?.data?.code;
         if (errorCode === 1010 || errorCode === 1009) {
-            console.debug(`Error ${errorCode} detected. Hiding comment section.`);
             isCommentSectionVisible.value = false;
             return;
         }
-        notificationStore.showNotification('Retry failed. Please try again.', 'error'); // Notify the user
-        await handleError(error, router); // Use the error handler
+        notificationStore.showNotification('Retry failed. Please try again.', 'error');
+        await handleError(error);
     }
 };
 
@@ -178,39 +178,45 @@ const onAddComment = async () => {
     try {
         await commentStore.addComment(props.postId, newComment.value.trim());
         newComment.value = '';
+        notificationStore.showNotification('Comment posted successfully.', 'success');
+        logger.info('Comment posted successfully', { postId: props.postId });
     } catch (error) {
-        await handleError(error, router);
+        await handleError(error);
     } finally {
         isSubmitting.value = false;
     }
 };
 
-let cleanupRealtimeComments;
+const debouncedLoadMoreComments = debounce(async () => {
+    if (isLoadingMore.value) return;
 
-const onScroll = throttle(() => {
-    const nearBottom = isNearBottom();
-    console.debug('User scrolled. Near bottom:', nearBottom);
-    if (nearBottom) {
-        console.debug('User is near bottom, triggering load of more comments...');
-        onLoadMoreComments();
-    }
-}, 300); // Throttle to prevent rapid calls
-
-watch(() => props.postId, (newId) => {
-    console.debug(`postId changed from ${props.postId} to ${newId}. Reloading comments.`);
-    onRetryLoadComments();
-});
-
-watch(comments, (newComments) => {
-    console.debug('Comments updated:', newComments);
-});
-
-const onUpdateComment = async (comment) => {
+    isLoadingMore.value = true;
     try {
-        await commentStore.updateComment(props.postId, comment.id, comment.content);
+        const newComments = await commentStore.fetchComments(props.postId, 10, router);
+        if (newComments.length > 0) {
+            commentStore.comments.push(...newComments);
+            trackAnalyticsEvent('Load More Comments', { postId: props.postId, count: newComments.length });
+        } else {
+            commentStore.hasMoreComments = false;
+        }
+    } catch (error) {
+        notificationStore.showNotification('Failed to load more comments.', 'error');
+        await handleError(error);
+    } finally {
+        isLoadingMore.value = false;
+    }
+}, 1000);
+
+const onLoadMoreComments = () => {
+    debouncedLoadMoreComments();
+};
+
+const onUpdateComment = async (updatedComment) => {
+    try {
+        await commentStore.updateComment(props.postId, updatedComment.id, updatedComment.content);
         notificationStore.showNotification('Comment updated successfully.', 'success');
     } catch (error) {
-        await handleError(error, router);
+        await handleError(error);
     }
 };
 
@@ -219,85 +225,59 @@ const onDeleteComment = async (commentId) => {
         await commentStore.deleteComment(props.postId, commentId);
         notificationStore.showNotification('Comment deleted successfully.', 'success');
     } catch (error) {
-        await handleError(error, router);
+        await handleError(error);
     }
 };
 
-const onLoadMoreComments = async () => {
-    if (isLoadingMore.value || !hasMoreComments.value) return;
-
-    isLoadingMore.value = true;
+const retrySyncComments = async () => {
     try {
-        console.debug(`Fetching more comments for postId: ${postId}`);
-        const newComments = await commentStore.fetchComments(postId, 10, router);
-        if (newComments.length > 0) {
-            console.debug('Fetched comments:', newComments);
-            comments.value.push(...newComments);
-        } else {
-            console.debug('No more comments available.');
-            hasMoreComments.value = false;
-        }
-        trackAnalyticsEvent('Load More Comments', { postId, count: newComments.length });
+        await commentStore.syncOfflineComments();
+        syncError.value = null;
+        notificationStore.showNotification('Comments synced successfully.', 'success');
     } catch (error) {
-        console.error('Error loading more comments:', error);
-        notificationStore.showNotification('Failed to load more comments.', 'error'); // Notify user
-        await handleError(error, router); // Existing error handler
-    } finally {
-        isLoadingMore.value = false;
-        console.debug('Completed loading more comments.');
+        syncError.value = 'Failed to sync comments. Please try again.';
+        notificationStore.showNotification('Failed to sync comments. Please try again.', 'error');
+        logger.error('Sync comments error:', error);
     }
 };
 
-onMounted(() => {
-    console.debug('Mounted CommentSection component for postId:', props.postId);
-    const scroller = document.querySelector('.scroller');
-    if (scroller) {
-        console.debug('Adding scroll event listener.');
-        scroller.addEventListener('scroll', onScroll);
+// Network Status Handlers
+const checkOnlineStatus = () => {
+    offlineMode.value = !navigator.onLine;
+    if (navigator.onLine) {
+        retrySyncComments();
     }
+};
+
+// Lifecycle Hooks
+onMounted(() => {
     onRetryLoadComments();
-    commentStore.syncOfflineComments().catch(error => {
+    commentStore.syncOfflineComments().catch((error) => {
         syncError.value = 'Failed to sync offline comments.';
         notificationStore.showNotification('Failed to sync offline comments.', 'error');
     });
-    cleanupRealtimeComments = commentStore.setupRealtimeComments(props.postId);
 
     window.addEventListener('online', checkOnlineStatus);
     window.addEventListener('offline', checkOnlineStatus);
-    checkOnlineStatus();
-});
 
-onUnmounted(() => {
     const scroller = document.querySelector('.scroller');
     if (scroller) {
-        console.debug('Removing scroll event listener.');
-        scroller.removeEventListener('scroll', onScroll); // Cleanup listener
+        scroller.addEventListener('scroll', onScroll);
     }
-    if (cleanupRealtimeComments) {
-        cleanupRealtimeComments();
-    }
+});
+
+onBeforeUnmount(() => {
     window.removeEventListener('online', checkOnlineStatus);
     window.removeEventListener('offline', checkOnlineStatus);
+
+    const scroller = document.querySelector('.scroller');
+    if (scroller) {
+        scroller.removeEventListener('scroll', onScroll);
+    }
 });
 </script>
 
 <style scoped>
-.scroller {
-    height: 400px;
-    overflow-y: auto;
-}
-
-.slide-enter-active,
-.slide-leave-active {
-    transition: all 0.5s ease;
-}
-
-.slide-enter-from,
-.slide-leave-to {
-    opacity: 0;
-    transform: translateY(30px);
-}
-
 .comment-section {
     display: flex;
     flex-direction: column;
@@ -312,9 +292,20 @@ onUnmounted(() => {
     contain: layout paint;
 }
 
-.comment-section button:focus {
-    outline: 2px solid var(--primary);
-    outline-offset: 2px;
+.scroller {
+    height: 400px;
+    overflow-y: auto;
+}
+
+.slide-enter-active,
+.slide-leave-active {
+    transition: all 0.5s ease;
+}
+
+.slide-enter-from,
+.slide-leave-to {
+    opacity: 0;
+    transform: translateY(30px);
 }
 
 @media (min-width: 768px) {

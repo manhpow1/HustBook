@@ -1,5 +1,6 @@
-import { useDebounceFn } from '@vueuse/core';
+import { debounce } from 'lodash-es';
 
 export function useDebounce(fn, delay = 300) {
-    return useDebounceFn(fn, delay);
+    const debouncedFn = debounce(fn, delay);
+    return debouncedFn;
 }

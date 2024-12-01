@@ -1,33 +1,46 @@
 <template>
     <div class="max-w-2xl mx-auto mt-8 p-6 bg-white rounded-lg shadow-xl">
         <h2 class="text-2xl font-bold mb-4 text-gray-800 flex items-center">
-            <EditIcon class="w-6 h-6 mr-2 text-primary" />
+            <EditIcon class="w-6 h-6 mr-2 text-primary" aria-hidden="true" />
             Edit Post
         </h2>
         <form @submit.prevent="handleSubmit" class="space-y-4">
-            <FileUpload v-model:files="files" :initialFiles="initialFiles" />
-            <p v-if="fileError" class="text-red-500 text-sm">{{ fileError }}</p>
+            <!-- File Upload Component -->
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">
+                    Upload Images or Videos
+                </label>
+                <FileUpload v-model:files="files" :initialFiles="initialFiles" :maxFiles="4"
+                    @upload-progress="handleUploadProgress" @upload-error="handleUploadError"
+                    aria-describedby="file-error" data-testid="edit-file-upload" />
+                <p v-if="fileError" id="file-error" class="text-red-500 text-sm">{{ fileError }}</p>
+            </div>
 
+            <!-- Description Field -->
             <div>
                 <label for="description" class="block text-sm font-medium text-gray-700 mb-2">
                     Description
                 </label>
                 <textarea id="description" v-model="description" rows="3" maxlength="500" :class="[
                     'mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring focus:ring-primary focus:ring-opacity-50 transition duration-300 ease-in-out',
-                    { 'border-red-500': descriptionError },
-                ]" placeholder="What's on your mind?"></textarea>
-                <p v-if="descriptionError" class="text-red-500 text-sm mt-1">{{ descriptionError }}</p>
+                    { 'border-red-500': descriptionError }
+                ]" placeholder="What's on your mind?" aria-describedby="description-error" @input="onDescriptionInput"
+                    data-testid="edit-description-textarea"></textarea>
+                <p v-if="descriptionError" id="description-error" class="text-red-500 text-sm mt-1">
+                    {{ descriptionError }}
+                </p>
                 <p class="mt-2 text-sm text-gray-500">{{ description.length }}/500 characters</p>
             </div>
 
+            <!-- Status Select Field -->
             <div>
                 <label for="status-select" class="block text-sm font-medium text-gray-700 mb-2">
                     How are you feeling?
                 </label>
                 <select id="status-select" v-model="status" :class="[
                     'mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-primary focus:border-primary sm:text-sm rounded-md',
-                    { 'border-red-500': statusError },
-                ]">
+                    { 'border-red-500': statusError }
+                ]" data-testid="edit-status-select">
                     <option value="">Select a status</option>
                     <option v-for="option in statusOptions" :key="option.value" :value="option.value">
                         {{ option.label }}
@@ -36,87 +49,89 @@
                 <p v-if="statusError" class="text-red-500 text-sm mt-1">{{ statusError }}</p>
             </div>
 
-            <div>
+            <!-- Emoji Picker -->
+            <div class="relative">
                 <button type="button" @click="toggleEmojiPicker"
                     class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-primary hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary"
-                    aria-label="Toggle emoji picker">
-                    <SmileIcon class="w-5 h-5 mr-2" />
+                    aria-label="Toggle emoji picker" data-testid="edit-toggle-emoji-picker-button">
+                    <SmileIcon class="w-5 h-5 mr-2" aria-hidden="true" />
                     Add Emoji
                 </button>
-                <div v-if="showEmojiPicker" class="mt-2">
-                    <button v-for="emoji in emojis" :key="emoji" @click="insertEmoji(emoji)"
-                        class="inline-flex items-center justify-center w-8 h-8 m-1 text-lg hover:bg-gray-200 rounded"
-                        aria-label="Insert emoji">
-                        {{ emoji }}
-                    </button>
-                </div>
+                <EmojiPicker v-if="showEmojiPicker" @select="insertEmoji"
+                    class="absolute z-10 mt-2 w-48 bg-white border border-gray-200 rounded-lg shadow-lg p-2" />
             </div>
 
+            <!-- Action Buttons -->
             <div class="flex justify-between">
-                <button type="button" @click="cancelEdit"
-                    class="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary">
+                <Button type="button" @click="cancelEdit" variant="secondary" class="px-4 py-2"
+                    aria-label="Cancel Editing" data-testid="edit-cancel-button">
                     Cancel
-                </button>
-                <button type="submit" :disabled="isLoading || !isFormValid"
-                    class="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-primary hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary disabled:opacity-50 disabled:cursor-not-allowed">
-                    {{ isLoading ? 'Updating...' : 'Update Post' }}
-                </button>
+                </Button>
+                <Button type="submit" :disabled="isLoading || !isFormValid" variant="primary" class="px-4 py-2"
+                    aria-label="Update Post" data-testid="edit-submit-button">
+                    <span v-if="isLoading" class="flex items-center">
+                        <LoaderIcon class="animate-spin -ml-1 mr-2 h-5 w-5 text-white" aria-hidden="true" />
+                        Updating...
+                    </span>
+                    <span v-else>Update Post</span>
+                </Button>
             </div>
         </form>
 
         <!-- Unsaved Changes Modal -->
-        <div v-if="showUnsavedChangesModal"
-            class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div class="bg-white p-6 rounded-lg shadow-xl max-w-md w-full">
-                <h3 class="text-lg font-medium text-gray-900 mb-4">Unsaved Changes</h3>
-                <p class="text-sm text-gray-500 mb-4">
-                    You have unsaved changes. Are you sure you want to leave this page?
-                </p>
-                <div class="flex justify-end space-x-2">
-                    <button @click="cancelNavigation"
-                        class="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2">
-                        Cancel
-                    </button>
-                    <button @click="discardChanges"
-                        class="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500">
-                        Discard Changes
-                    </button>
-                    <button @click="saveChanges"
-                        class="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-primary hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary">
-                        Save Changes
-                    </button>
+        <UnsavedChangesModal v-model="showUnsavedChangesModal" @save="saveChanges" @discard="discardChanges"
+            @cancel="cancelNavigation" />
+
+        <!-- Success and Error Messages -->
+        <Alert v-if="successMessage" type="success" title="Success" :message="successMessage" />
+        <Alert v-if="errorMessage" type="error" title="Error" :message="errorMessage" :showRetry="false" />
+
+        <!-- Upload Progress -->
+        <transition name="fade">
+            <div v-if="showUploadProgress" class="fixed top-4 right-4 bg-white p-4 rounded-lg shadow-md" role="status"
+                aria-live="polite" data-testid="edit-upload-progress">
+                <p class="text-sm font-medium text-gray-700 mb-2">Uploading changes...</p>
+                <div class="w-48 h-2 bg-gray-200 rounded-full">
+                    <div class="h-full bg-primary rounded-full transition-width duration-300"
+                        :style="{ width: `${uploadProgress}%` }"></div>
                 </div>
             </div>
-        </div>
-
-        <!-- Success Message -->
-        <div v-if="successMessage" class="mt-4 p-4 bg-green-100 border border-green-400 text-green-700 rounded-md">
-            <p class="font-bold">Success</p>
-            <p>{{ successMessage }}</p>
-        </div>
-
-        <!-- Error Message -->
-        <div v-if="errorMessage" class="mt-4 p-4 bg-red-100 border border-red-400 text-red-700 rounded-md">
-            <p class="font-bold">Error</p>
-            <p>{{ errorMessage }}</p>
-        </div>
+        </transition>
     </div>
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onBeforeUnmount, watch} from 'vue';
-import { useRoute, useRouter } from 'vue-router';
-import { usePostStore } from '../../stores/postStore';
-import logger from '../../services/logging';
+import { ref, computed, onMounted, onBeforeUnmount } from 'vue';
+import { useRouter } from 'vue-router';
+import { EditIcon, LoaderIcon, SmileIcon } from 'lucide-vue-next';
 import FileUpload from '../shared/FileUpload.vue';
+import EmojiPicker from '../ui/EmojiPicker.vue';
+import Button from '../ui/Button.vue';
+import Alert from '../ui/Alert.vue';
+import UnsavedChangesModal from '../shared/UnsavedChangesModal.vue';
+import { usePostStore } from '../../stores/postStore';
 import { useFormValidation } from '../../composables/useFormValidation';
+import { useErrorHandler } from '../../composables/useErrorHandler';
+import { debounce } from 'lodash-es';
 import { sanitizeInput } from '../../utils/sanitize';
+import logger from '../../services/logging';
 
-const route = useRoute();
 const router = useRouter();
 const postStore = usePostStore();
+const { handleError } = useErrorHandler();
 
-const postId = ref(route.params.id);
+// Props
+const props = defineProps({
+    postId: {
+        type: String,
+        required: true,
+    },
+});
+
+// Emits
+const emit = defineEmits(['post-updated']);
+
+// Form State
 const description = ref('');
 const status = ref('');
 const files = ref([]);
@@ -125,17 +140,25 @@ const isLoading = ref(false);
 const successMessage = ref('');
 const errorMessage = ref('');
 const showEmojiPicker = ref(false);
+const showUploadProgress = ref(false);
+const uploadProgress = ref(0);
+
+// Modal State
 const showUnsavedChangesModal = ref(false);
+const pendingNavigation = ref(null);
 
-const { descriptionError, statusError, fileError, validateDescription, validateStatus, validateFiles } =
-    useFormValidation();
+// Form Validation
+const {
+    descriptionError,
+    statusError,
+    fileError,
+    validateDescription,
+    validateStatus,
+    validateFiles,
+} = useFormValidation();
 
-const isFormValid = computed(() => {
-    const isDescriptionValid = validateDescription(description.value);
-    const isStatusValid = validateStatus(status.value);
-    return isDescriptionValid && isStatusValid;
-});
 
+// Status Options
 const statusOptions = [
     { value: 'happy', label: 'Happy' },
     { value: 'sad', label: 'Sad' },
@@ -145,34 +168,59 @@ const statusOptions = [
     { value: 'loved', label: 'Loved' },
 ];
 
-const emojis = ['😀', '😂', '😍', '🥳', '😎', '🤔', '😊', '👍', '❤️', '🎉'];
-
-const initialDescription = ref('');
-const initialStatus = ref('');
-
-const hasUnsavedChanges = computed(() => {
-    return description.value !== initialDescription.value || status.value !== initialStatus.value || files.value.length !== initialFiles.value.length;
+// Computed Properties
+const isFormValid = computed(() => {
+    const isDescriptionValid = validateDescription(description.value);
+    const isStatusValid = validateStatus(status.value);
+    const areFilesValid = validateFiles(files.value);
+    return isDescriptionValid && isStatusValid && areFilesValid && !fileError.value;
 });
 
-const insertEmoji = (emoji) => {
-    description.value += emoji;
+// Debounced Functions
+const debouncedValidateInput = debounce((input, errorRef) => {
+    if (input.length > 500) {
+        errorRef.value = 'Description is too long.';
+    } else if (input.trim() === '') {
+        errorRef.value = 'Description cannot be empty.';
+    } else {
+        errorRef.value = '';
+    }
+}, 300);
+
+// Input Handler
+const onDescriptionInput = () => {
+    debouncedValidateInput(description.value, descriptionError);
+    debouncedSaveDraft();
 };
 
-onMounted(async () => {
+// Autosave Functionality
+const debouncedSaveDraft = debounce(() => {
+    const draft = {
+        description: description.value,
+        status: status.value,
+        files: files.value,
+    };
+    localStorage.setItem('editPostDraft', JSON.stringify(draft));
+    logger.debug('Edit post draft saved to localStorage');
+}, 1000);
+
+// Load Post Data
+const loadPostData = async () => {
     try {
-        const postData = await postStore.fetchPost(postId.value);
+        const postData = await postStore.fetchPost(props.postId);
         description.value = postData.described;
         status.value = postData.status;
-        initialDescription.value = postData.described;
-        initialStatus.value = postData.status;
         initialFiles.value = postData.media.map((url) => ({ url }));
         files.value = [...initialFiles.value];
+        logger.debug('Post data loaded successfully');
     } catch (error) {
         logger.error('Failed to load post data', error);
-        errorMessage.value = 'Failed to load post data';
+        errorMessage.value = 'Failed to load post data.';
+        await handleError(error);
     }
-});
+};
 
+// Submit Edited Post
 const handleSubmit = async () => {
     if (!isFormValid.value) {
         errorMessage.value = 'Please fix the errors before submitting.';
@@ -182,83 +230,162 @@ const handleSubmit = async () => {
     isLoading.value = true;
     errorMessage.value = '';
     successMessage.value = '';
+    showUploadProgress.value = true;
+
+    const sanitizedDescription = sanitizeInput(description.value);
 
     try {
         const updatedPostData = {
-            described: sanitizeInput(description.value),
+            described: sanitizedDescription,
             status: status.value,
-            files: files.value.filter((file) => file instanceof File),
+            files: files.value, // Assuming files are handled as File objects or URLs
         };
 
-        const response = await postStore.updatePost(postId.value, updatedPostData);
+        const response = await postStore.updatePost(props.postId, updatedPostData);
 
         if (response.code === '1000') {
             successMessage.value = 'Post updated successfully!';
-            logger.info('Post updated successfully', { postId: postId.value });
-            router.push({ name: 'PostDetail', params: { id: postId.value } });
+            logger.info('Post updated successfully', { postId: props.postId });
+            resetForm();
+            emit('post-updated');
+            router.push({ name: 'PostDetail', params: { id: props.postId } }); // Navigate to post detail
         } else {
-            errorMessage.value = response.message || 'An error occurred while updating the post';
+            errorMessage.value = response.message || 'An error occurred while updating the post.';
             logger.warn('Failed to update post', { responseCode: response.code, message: response.message });
         }
     } catch (error) {
         logger.error('Error in handleSubmit', error);
-        errorMessage.value = 'Failed to update post';
+        errorMessage.value = 'An error occurred while updating the post. Please try again.';
+        await handleError(error);
     } finally {
         isLoading.value = false;
+        showUploadProgress.value = false;
+        uploadProgress.value = 0;
     }
 };
 
-const cancelEdit = () => {
-    if (hasUnsavedChanges.value) {
-        showUnsavedChangesModal.value = true;
-    } else {
-        router.back();
+// Reset Form Fields
+const resetForm = () => {
+    description.value = '';
+    status.value = '';
+    files.value = [];
+    initialFiles.value = [];
+    showEmojiPicker.value = false;
+    localStorage.removeItem('editPostDraft');
+};
+
+// Insert Emoji into Description
+const insertEmoji = (emoji) => {
+    description.value += emoji;
+};
+
+// Toggle Emoji Picker
+const toggleEmojiPicker = () => {
+    showEmojiPicker.value = !showEmojiPicker.value;
+};
+
+// Handle Upload Progress
+const handleUploadProgress = (progress) => {
+    uploadProgress.value = progress;
+};
+
+// Handle Upload Errors
+const handleUploadError = (error) => {
+    errorMessage.value = 'Failed to upload files. Please try again.';
+    logger.error('File upload error:', error);
+};
+
+// Handle Unsaved Changes
+const saveChanges = async () => {
+    await handleSubmit();
+    if (!errorMessage.value) {
+        showUnsavedChangesModal.value = false;
+        pendingNavigation.value.next();
     }
 };
 
-const handleBeforeUnload = (e) => {
-    if (hasUnsavedChanges.value) {
-        e.preventDefault();
-        e.returnValue = '';
-    }
+const discardChanges = () => {
+    resetForm();
+    showUnsavedChangesModal.value = false;
+    pendingNavigation.value.next();
 };
 
+const cancelNavigation = () => {
+    showUnsavedChangesModal.value = false;
+    pendingNavigation.value.next(false);
+};
+
+// Navigation Guard
 const handleRouteChange = (to, from, next) => {
     if (hasUnsavedChanges.value) {
         showUnsavedChangesModal.value = true;
-        next(false);
+        pendingNavigation.value = { to, from, next };
     } else {
         next();
     }
 };
 
-const saveChanges = async () => {
-    await handleSubmit();
-    showUnsavedChangesModal.value = false;
-};
+// Watchers
+watch(
+    () => props.postId,
+    () => {
+        loadPostData();
+    },
+    { immediate: true }
+);
 
-const discardChanges = () => {
-    description.value = initialDescription.value;
-    status.value = initialStatus.value;
-    files.value = [...initialFiles.value];
-    showUnsavedChangesModal.value = false;
-    router.back();
-};
+// Computed for Unsaved Changes
+const hasUnsavedChanges = computed(() => {
+    return (
+        description.value.trim() !== '' ||
+        status.value !== '' ||
+        files.value.length !== initialFiles.value.length
+    );
+});
 
-const cancelNavigation = () => {
-    showUnsavedChangesModal.value = false;
-};
-
+// Lifecycle Hooks
 onMounted(() => {
+    loadPostData();
     window.addEventListener('beforeunload', handleBeforeUnload);
     router.beforeEach(handleRouteChange);
 });
 
 onBeforeUnmount(() => {
     window.removeEventListener('beforeunload', handleBeforeUnload);
+    router.beforeEach(() => { }); // Remove the navigation guard
 });
 
-watch([description, status, files], () => {
-    // Perform any necessary actions when form data changes
-}, { deep: true });
+// Handle Browser Before Unload Event
+const handleBeforeUnload = (e) => {
+    if (hasUnsavedChanges.value) {
+        e.preventDefault();
+        e.returnValue = '';
+    }
+};
 </script>
+
+<style scoped>
+.fade-enter-active,
+.fade-leave-active {
+    transition: opacity 0.2s ease;
+}
+
+.fade-enter-from,
+.fade-leave-to {
+    opacity: 0;
+}
+
+button:focus {
+    outline: 2px solid #4299e1;
+    /* Tailwind's focus ring equivalent */
+    outline-offset: 2px;
+}
+
+.relative {
+    position: relative;
+}
+
+.absolute {
+    position: absolute;
+}
+</style>
