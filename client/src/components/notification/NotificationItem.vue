@@ -1,17 +1,17 @@
 <template>
-    <div :class="['flex items-center', { 'bg-blue-50': !notification.read }]">
+    <div :class="['flex items-center p-2 rounded-md', { 'bg-blue-50': !notification.read }]">
         <div class="flex-shrink-0">
-            <img :src="notification.sender.avatar" alt="" class="h-10 w-10 rounded-full" />
+            <img :src="notification.sender.avatar" alt="Sender Avatar" class="h-10 w-10 rounded-full object-cover" />
         </div>
-        <div class="ml-3 w-0 flex-1">
+        <div class="ml-3 flex-1">
             <p class="text-sm font-medium text-gray-900">{{ notification.sender.name }}</p>
             <p class="text-sm text-gray-500">{{ notification.message }}</p>
-            <p class="mt-1 text-xs text-gray-500">{{ formatNotificationTime(notification.createdAt) }}</p>
+            <p class="mt-1 text-xs text-gray-500">{{ formattedTime }}</p>
         </div>
         <div class="ml-4 flex-shrink-0">
-            <button @click="removeNotification(notification.id)"
-                class="rounded-md bg-white text-gray-400 hover:text-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2">
-                <span class="sr-only">Remove</span>
+            <button @click="handleRemove"
+                class="rounded-md bg-white text-gray-400 hover:text-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
+                aria-label="Remove Notification">
                 <XIcon class="h-5 w-5" aria-hidden="true" />
             </button>
         </div>
@@ -19,10 +19,12 @@
 </template>
 
 <script setup>
-import { defineProps } from 'vue';
+import { defineProps, computed } from 'vue';
 import { XIcon } from 'lucide-vue-next';
 import { useNotificationStore } from '../../stores/notificationStore';
 import { formatNotificationTime } from '../../utils/helpers';
+import { useErrorHandler } from '../../composables/useErrorHandler';
+import { useToast } from '../../composables/useToast';
 
 const props = defineProps({
     notification: {
@@ -32,20 +34,22 @@ const props = defineProps({
 });
 
 const notificationStore = useNotificationStore();
+const { handleError } = useErrorHandler();
+const { showToast } = useToast();
 
-const removeNotification = async (id) => {
+// Computed property for formatted time
+const formattedTime = computed(() => {
+    return formatNotificationTime(props.notification.createdAt);
+});
+
+// Handle removing a notification
+const handleRemove = async () => {
     try {
-        await notificationStore.removeNotification(id);
-        // Show toast message
-        // You can use a toast library or implement a custom toast component
-        showToast('Notification removed', 'success');
+        await notificationStore.removeNotification(props.notification.id);
+        showToast('Notification removed.', 'success');
     } catch (error) {
-        showToast('Failed to remove notification', 'error');
+        handleError(error);
+        showToast('Failed to remove notification.', 'error');
     }
-};
-
-const showToast = (message, type) => {
-    // Implement your toast logic here
-    console.log(`Toast: ${message} (${type})`);
 };
 </script>

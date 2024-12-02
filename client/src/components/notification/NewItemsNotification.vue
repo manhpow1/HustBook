@@ -1,8 +1,12 @@
 <template>
     <div v-if="newItemsCount > 0"
-        class="fixed top-4 right-4 bg-blue-500 text-white p-2 rounded-md cursor-pointer shadow-lg transition-transform duration-300"
-        @click="handleNotificationClick" tabindex="0" aria-live="polite" role="alert">
-        {{ newItemsCount }} new item{{ newItemsCount !== 1 ? 's' : '' }} available. Click to refresh.
+        class="fixed top-4 right-4 bg-blue-500 text-white p-3 rounded-md cursor-pointer shadow-lg transition-transform duration-300 hover:bg-blue-600"
+        @click="handleNotificationClick" tabindex="0" aria-live="polite" role="alert"
+        @keydown.enter="handleNotificationClick" @keydown.space.prevent="handleNotificationClick">
+        <div class="flex items-center">
+            <NewItemsIcon class="w-6 h-6 mr-2" aria-hidden="true" />
+            <span>{{ newItemsCount }} new item{{ newItemsCount !== 1 ? 's' : '' }} available. Click to refresh.</span>
+        </div>
     </div>
 </template>
 
@@ -11,46 +15,54 @@ import { onMounted, onUnmounted } from 'vue';
 import { useNotificationStore } from '../../stores/notificationStore';
 import { usePostStore } from '../../stores/postStore';
 import { storeToRefs } from 'pinia';
+import { useErrorHandler } from '../../composables/useErrorHandler';
+import { useToast } from '../../composables/useToast';
+import { NewItemsIcon } from 'lucide-vue-next';
 
 const notificationStore = useNotificationStore();
 const postStore = usePostStore();
 const { newItemsCount } = storeToRefs(notificationStore);
+const { handleError } = useErrorHandler();
+const { showToast } = useToast();
 
-const NEW_ITEMS_CHECK_INTERVAL = 60000;
+const NEW_ITEMS_CHECK_INTERVAL = 60000; // 60 seconds
 let intervalId;
 
-const checkForNewItems = () => {
-    console.log('Checking for new items...');
-    const lastPostId = postStore.posts?.[0]?.id; // Added optional chaining to postStore.posts
-    if (lastPostId) {
-        console.log(`Last post ID: ${lastPostId}`);
-        notificationStore.checkNewItems(lastPostId, postStore.categoryId)
-            .then(() => {
-                console.log(`New items count updated: ${newItemsCount.value}`);
-            })
-            .catch(error => {
-                console.error('Error fetching new items:', error);
-            });
-    } else {
-        console.log('No posts found. Skipping new items check.');
+// Function to check for new items
+const checkForNewItems = async () => {
+    try {
+        const lastPost = postStore.posts?.[0];
+        const lastPostId = lastPost ? lastPost.id : null;
+        if (lastPostId) {
+            await notificationStore.checkNewItems(lastPostId, postStore.categoryId);
+            logger.debug(`New items count: ${newItemsCount.value}`);
+        } else {
+            logger.debug('No posts found. Skipping new items check.');
+        }
+    } catch (error) {
+        handleError(error);
     }
 };
 
+// Handle notification click
 const handleNotificationClick = async () => {
-    console.log('Notification clicked. Fetching new posts...');
-    await postStore.fetchPosts();
-    notificationStore.resetNewItemsCount();
-    console.log('New items count reset after fetching posts.');
+    try {
+        await postStore.fetchPosts();
+        notificationStore.resetNewItemsCount();
+        showToast('Posts refreshed with new items.', 'success');
+    } catch (error) {
+        handleError(error);
+    }
 };
 
+// Setup interval on mount
 onMounted(() => {
-    console.log('Mounted NewItemsNotification.vue');
     checkForNewItems();
     intervalId = setInterval(checkForNewItems, NEW_ITEMS_CHECK_INTERVAL);
 });
 
+// Cleanup interval on unmount
 onUnmounted(() => {
-    console.log('Unmounting NewItemsNotification.vue, clearing interval.');
     if (intervalId) clearInterval(intervalId);
 });
 </script>

@@ -1,9 +1,7 @@
 import axios from 'axios';
-import router from '../router';
 import { handleError } from '../utils/errorHandler';
 import { useUserStore } from '../stores/userStore';
 import Cookies from 'js-cookie';
-import setAuthHeaders from './api';
 
 const axiosInstance = axios.create({
     baseURL: import.meta.env.VITE_APP_API_BASE_URL || 'http://localhost:3000/api',
@@ -47,13 +45,13 @@ axiosInstance.interceptors.response.use(
 
         // If the error is not due to authentication, reject it
         if (!error.response || error.response.status !== 401) {
-            handleError(error, router);
+            handleError(error);
             return Promise.reject(error);
         }
 
         // Prevent infinite loops
         if (originalRequest._retry) {
-            handleError(error, router);
+            handleError(error);
             return Promise.reject(error);
         }
 
@@ -90,11 +88,11 @@ axiosInstance.interceptors.response.use(
                 const { token: newAccessToken, refreshToken: newRefreshToken } = response.data.data;
 
                 // Update tokens in cookies
-                Cookies.set('accessToken', newAccessToken);
-                Cookies.set('refreshToken', newRefreshToken);
+                Cookies.set('accessToken', newAccessToken, { secure: true, sameSite: 'strict' });
+                Cookies.set('refreshToken', newRefreshToken, { secure: true, sameSite: 'strict' });
 
                 // Update Authorization header
-                setAuthHeaders(newAccessToken);
+                axiosInstance.defaults.headers.common['Authorization'] = `Bearer ${newAccessToken}`;
 
                 processQueue(null, newAccessToken);
 
@@ -106,7 +104,7 @@ axiosInstance.interceptors.response.use(
         } catch (err) {
             processQueue(err, null);
             await userStore.logout();
-            handleError(err, router);
+            handleError(err);
             return Promise.reject(err);
         } finally {
             isRefreshing = false;

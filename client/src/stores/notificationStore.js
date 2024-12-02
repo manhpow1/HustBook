@@ -1,73 +1,70 @@
 import { defineStore } from 'pinia';
 import { ref, computed } from 'vue';
 import apiService from '../services/api';
-import { handleError } from '../utils/errorHandler';
-import router from '../router';
+import { useErrorHandler } from '../composables/useErrorHandler';
 import logger from '../services/logging';
+import { useToast } from '../composables/useToast';
 
 export const useNotificationStore = defineStore('notification', () => {
+    // State
     const notifications = ref([]);
     const newItemsCount = ref(0);
     const loading = ref(false);
     const error = ref(null);
-
+    // Initialize composables
+    const { showToast } = useToast();
+    const { handleError } = useErrorHandler();
+    // Computed properties
     const unreadCount = computed(() => {
         return notifications.value.filter((n) => !n.read).length;
     });
-
+    // Actions
     async function fetchNotifications() {
         loading.value = true;
         error.value = null;
         try {
-            const response = await apiService.get('/notifications');
-            notifications.value = response.data;
+            const response = await apiService.getNotifications();
+            if (response.data.code === '1000') {
+                notifications.value = response.data.data.notifications; // Adjust based on server response structure
+            } else {
+                throw new Error(response.data.message || 'Failed to fetch notifications');
+            }
         } catch (err) {
             logger.error('Error fetching notifications:', err);
             error.value = 'Failed to fetch notifications';
-            await handleError(err, router);
+            await handleError(err);
         } finally {
             loading.value = false;
         }
     }
 
     async function checkNewItems(lastId, categoryId = '0') {
-        console.debug(`Initiating checkNewItems with lastId: ${lastId}, categoryId: ${categoryId}`);
+        logger.debug(`Checking for new items with lastId: ${lastId}, categoryId: ${categoryId}`);
         loading.value = true;
         error.value = null;
 
         try {
             const response = await apiService.checkNewItems(lastId, categoryId);
-            console.debug('Received response from checkNewItems API:', response);
-
-            if (response.code === '1000') {
-                const newItems = parseInt(response.data.new_items, 10);
+            if (response.data.code === '1000') {
+                const newItems = parseInt(response.data.data.new_items, 10);
                 newItemsCount.value = isNaN(newItems) ? 0 : newItems;
-                console.log(`New items count updated to: ${newItemsCount.value}`);
+                logger.debug(`New items count updated to: ${newItemsCount.value}`);
             } else {
-                console.error('API responded with an error:', response.message);
-                error.value = response.message;
-                if (process.env.NODE_ENV === 'development') {
-                    await handleError(new Error(response.message), router);
-                }
+                throw new Error(response.data.message || 'Failed to check new items');
             }
         } catch (err) {
-            console.error('Error occurred in checkNewItems:', err);
+            logger.error('Error checking new items:', err);
             error.value = 'Failed to check for new items';
-            await handleError(err, router);
+            await handleError(err);
         } finally {
             loading.value = false;
-            console.debug('checkNewItems process completed. Loading state:', loading.value);
+            logger.debug('checkNewItems process completed. Loading state:', loading.value);
         }
-    }
-
-    function resetNewItemsCount() {
-        console.debug('Resetting new items count');
-        newItemsCount.value = 0;
     }
 
     function showNotification(message, type = 'info', duration = 5000) {
         const id = Date.now();
-        console.debug(`Showing notification: ${message}`);
+        logger.debug(`Showing notification: ${message}`);
         notifications.value.push({ id, message, type, read: false });
 
         if (process.env.NODE_ENV !== 'test') {
@@ -77,33 +74,59 @@ export const useNotificationStore = defineStore('notification', () => {
         }
     }
 
-    function removeNotification(id) {
-        console.debug(`Removing notification with id: ${id}`);
-        notifications.value = notifications.value.
-            filter((n) => n.id !== id);
-    }
-
     async function markAllAsRead() {
+        loading.value = true;
+        error.value = null;
         try {
-            await apiService.post('/notifications/mark-all-read');
-            notifications.value = notifications.value.map(n => ({ ...n, read: true }));
+            const response = await apiService.setReadNotifications();
+            if (response.data.code === '1000') {
+                notifications.value = notifications.value.map((n) => ({ ...n, read: true }));
+                logger.info('All notifications marked as read');
+                showToast('All notifications marked as read.', 'success');
+            } else {
+                throw new Error(response.data.message || 'Failed to mark notifications as read');
+            }
         } catch (err) {
-            console.error('Error marking notifications as read:', err);
-            await handleError(err, router);
+            logger.error('Error marking all notifications as read:', err);
+            error.value = 'Failed to mark notifications as read';
+            await handleError(err);
+            showToast('Failed to mark notifications as read.', 'error');
+        } finally {
+            loading.value = false;
         }
     }
 
+    async function removeNotification(id) {
+        try {
+            await apiService.deleteNotification(id);
+            notifications.value = notifications.value.filter((n) => n.id !== id);
+            showToast('Notification removed.', 'success');
+        } catch (error) {
+            logger.error(`Failed to remove notification with ID ${id}:`, error);
+            showToast('Failed to remove notification.', 'error');
+        }
+    }
+
+    function resetNewItemsCount() {
+        logger.debug('Resetting new items count');
+        newItemsCount.value = 0;
+    }
+
+    // Expose state and actions
     return {
+        // State
         notifications,
         newItemsCount,
-        unreadCount,
         loading,
         error,
+        // Computed
+        unreadCount,
+        // Actions
         fetchNotifications,
-        showNotification,
-        removeNotification,
         checkNewItems,
-        resetNewItemsCount,
         markAllAsRead,
+        removeNotification,
+        resetNewItemsCount,
+        showNotification,
     };
 });

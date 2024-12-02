@@ -26,8 +26,11 @@ export const API_ENDPOINTS = {
     GET_USER_POSTS: (userId) => `${API_BASE_URL}/posts/user/${userId}`,
     // Notification Endpoints
     CHECK_NEW_ITEM: `${API_BASE_URL}/notifications/check_new_item`,
-    GET_PUSH_SETTINGS: `${API_BASE_URL}/notifications/push-settings`,
+    GET_PUSH_SETTINGS: `${API_BASE_URL}/notifications/get_push_settings`,
     UPDATE_PUSH_SETTINGS: `${API_BASE_URL}/notifications/set_push_settings`,
+    GET_NOTIFICATIONS: `${API_BASE_URL}/notifications/get_notification`,
+    SET_READ_NOTIFICATIONS: `${API_BASE_URL}/notifications/set_read_notification`,
+    DELETE_NOTIFICATION: (notificationId) => `${API_BASE_URL}/notifications/${notificationId}`,
     // Search Endpoints
     SEARCH: `${API_BASE_URL}/search/search`,
     GET_SAVED_SEARCH: `${API_BASE_URL}/search/get_saved_search`,

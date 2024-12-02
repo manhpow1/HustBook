@@ -11,7 +11,7 @@
 import { defineProps } from 'vue';
 import NotificationItem from './NotificationItem.vue';
 
-defineProps({
+const props = defineProps({
     title: {
         type: String,
         required: true

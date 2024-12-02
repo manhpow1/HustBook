@@ -13,29 +13,29 @@
         </div>
 
         <div v-else class="space-y-4">
-            <div v-for="(setting, key) in notificationSettings" :key="key" class="flex items-center justify-between">
-                <span>{{ formatSettingName(key) }}</span>
-                <ToggleSwitch :modelValue="setting" @update:modelValue="updateNotificationSetting(key, $event)" />
-            </div>
-        </div>
-
-        <h3 class="text-lg font-semibold mt-6 mb-4">Notification Customization</h3>
-
-        <div class="space-y-4">
+            <!-- Toggle for disabling all notifications -->
             <div class="flex items-center justify-between">
                 <span>Disable All Push Notifications</span>
                 <ToggleSwitch :modelValue="disableAllNotifications"
-                    @update:modelValue="updateDisableAllNotifications" />
+                    @update:modelValue="toggleDisableAllNotifications" />
             </div>
 
-            <div>
-                <h4 class="text-md font-medium mb-2">Notification Sound</h4>
-                <select v-model="selectedSound" @change="previewSound"
-                    class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
-                    <option value="custom">Custom Voice Recording</option>
-                    <option value="default">Default SMS Sound</option>
-                </select>
+            <!-- Individual Notification Settings -->
+            <div v-for="(setting, key) in notificationSettings" :key="key" class="flex items-center justify-between">
+                <span>{{ formatSettingName(key) }}</span>
+                <ToggleSwitch :modelValue="setting === '1'" @update:modelValue="updateIndividualSetting(key, $event)"
+                    :disabled="disableAllNotifications" />
             </div>
+        </div>
+
+        <!-- Sound Customization (Optional) -->
+        <div class="mt-6">
+            <h3 class="text-lg font-medium mb-2">Notification Sound</h3>
+            <select v-model="selectedSound" @change="previewSound"
+                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <option value="custom">Custom Voice Recording</option>
+                <option value="default">Default SMS Sound</option>
+            </select>
         </div>
     </div>
 </template>
@@ -50,12 +50,7 @@ import { LoaderIcon } from 'lucide-vue-next';
 const settingsStore = useSettingsStore();
 const { showToast } = useToast();
 
-const notificationSettings = computed(() => settingsStore.notificationSettings);
-const disableAllNotifications = computed(() => settingsStore.disableAllNotifications);
-const loading = computed(() => settingsStore.loading);
-const error = computed(() => settingsStore.error);
-
-const selectedSound = ref('default');
+const selectedSound = ref('default'); // For sound customization
 
 onMounted(async () => {
     try {
@@ -65,31 +60,40 @@ onMounted(async () => {
     }
 });
 
-const updateNotificationSetting = async (key, value) => {
+// Computed properties for easy access
+const notificationSettings = computed(() => settingsStore.notificationSettings);
+const loading = computed(() => settingsStore.loading);
+const error = computed(() => settingsStore.error);
+const disableAllNotifications = computed(() => settingsStore.disableAllNotifications);
+
+// Method to format setting names for display
+const formatSettingName = (key) => {
+    return key.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
+};
+
+// Method to update individual settings
+const updateIndividualSetting = async (key, value) => {
     try {
-        await settingsStore.updatePushSettings({ [key]: value });
+        await settingsStore.updatePushSettings({ [key]: value ? '1' : '0' });
         showToast('Notification setting updated', 'success');
     } catch (error) {
         showToast('Failed to update notification setting', 'error');
     }
 };
 
-const updateDisableAllNotifications = async (value) => {
+// Method to toggle all notifications
+const toggleDisableAllNotifications = async (value) => {
     try {
-        await settingsStore.updateDisableAllNotifications(value);
+        await settingsStore.toggleDisableAllNotifications(value);
         showToast('All notifications ' + (value ? 'disabled' : 'enabled'), 'success');
     } catch (error) {
         showToast('Failed to update notification settings', 'error');
     }
 };
 
+// Method to preview selected sound (Placeholder)
 const previewSound = () => {
-    // Implement sound preview logic here
     console.log('Preview sound:', selectedSound.value);
-    // You would typically play the selected sound here
-};
-
-const formatSettingName = (key) => {
-    return key.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
+    // Implement actual sound preview logic here
 };
 </script>

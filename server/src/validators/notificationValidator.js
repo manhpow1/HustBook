@@ -13,10 +13,7 @@ const updatePushSettingsSchema = Joi.object({
     birthday: Joi.string().valid('0', '1'),
     video: Joi.string().valid('0', '1'),
     report: Joi.string().valid('0', '1'),
-    sound_on: Joi.string().valid('0', '1'),
     notification_on: Joi.string().valid('0', '1'),
-    vibrant_on: Joi.string().valid('0', '1'),
-    led_on: Joi.string().valid('0', '1'),
 }).min(1);
 
 const validateCheckNewItem = (data) => {

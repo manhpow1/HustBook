@@ -118,6 +118,15 @@ const apiService = {
     async checkNewItems(lastId, categoryId = '0') {
         return axiosInstance.post(API_ENDPOINTS.CHECK_NEW_ITEM, { last_id: lastId, category_id: categoryId });
     },
+    async getNotifications() {
+        return axiosInstance.get(API_ENDPOINTS.GET_NOTIFICATIONS);
+    },
+    async setReadNotifications() {
+        return axiosInstance.post(API_ENDPOINTS.SET_READ_NOTIFICATIONS);
+    },
+    async deleteNotification(notificationId) {
+        return axiosInstance.delete(API_ENDPOINTS.DELETE_NOTIFICATION(notificationId));
+    },
     // Video APIs
     async getListVideos(params = {}) {
         return axiosInstance.post(API_ENDPOINTS.GET_LIST_VIDEOS, params);

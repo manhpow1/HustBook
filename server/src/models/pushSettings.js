@@ -21,10 +21,7 @@ class PushSettings {
                 birthday: '1',
                 video: '1',
                 report: '1',
-                sound_on: '1',
                 notification_on: '1',
-                vibrant_on: '1',
-                led_on: '1',
             };
         }
     }
@@ -39,10 +36,7 @@ class PushSettings {
             birthday: settings.birthday || '1',
             video: settings.video || '1',
             report: settings.report || '1',
-            sound_on: settings.sound_on || '1',
             notification_on: settings.notification_on || '1',
-            vibrant_on: settings.vibrant_on || '1',
-            led_on: settings.led_on || '1',
         };
         await this.settingsRef.set(validSettings, { merge: true });
         return validSettings;
