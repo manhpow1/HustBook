@@ -1,10 +1,14 @@
 <template>
-    <button
-        :class="['relative inline-flex items-center h-6 rounded-full w-11 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2', switchClasses]"
-        role="switch" :aria-checked="modelValue" :disabled="disabled" @click="toggle" @keydown.space.prevent="toggle"
-        @keydown.enter.prevent="toggle" tabindex="0">
-        <span
-            :class="['inline-block w-4 h-4 transform bg-white rounded-full transition-transform duration-200', knobClasses]"></span>
+    <button :class="[
+        'relative inline-flex items-center h-6 rounded-full w-11 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2',
+        switchClasses,
+        { 'cursor-not-allowed opacity-50': disabled }
+    ]" role="switch" :aria-checked="modelValue" :disabled="disabled" @click="toggle"
+        @keydown.space.prevent="toggle" @keydown.enter.prevent="toggle" tabindex="0" :aria-label="ariaLabel">
+        <span :class="[
+            'inline-block w-4 h-4 transform bg-white rounded-full transition-transform duration-200',
+            knobClasses
+        ]"></span>
     </button>
 </template>
 

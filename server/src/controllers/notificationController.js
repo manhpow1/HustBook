@@ -2,13 +2,15 @@ const { sendResponse } = require('../utils/responseHandler');
 const notificationValidator = require('../validators/notificationValidator');
 const notificationService = require('../services/notificationService');
 const { createError } = require('../utils/customError');
+const logger = require('../utils/logger');
 
 class NotificationController {
     async checkNewItem(req, res, next) {
         try {
             const { error, value } = notificationValidator.validateCheckNewItem(req.body);
             if (error) {
-                throw createError('1002', error.details[0].message);
+                const messages = error.details.map(detail => detail.message).join(', ');
+                throw createError('1002', messages);
             }
 
             const { last_id, category_id } = value;
@@ -16,11 +18,10 @@ class NotificationController {
             const newItemsCount = await notificationService.checkNewItems(last_id, category_id);
 
             sendResponse(res, '1000', {
-                data: {
-                    new_items: newItemsCount.toString(),
-                },
+                new_items: newItemsCount.toString(),
             });
         } catch (error) {
+            logger.error('Error in checkNewItem controller:', error);
             next(error);
         }
     }
@@ -33,24 +34,27 @@ class NotificationController {
 
             sendResponse(res, '1000', settings);
         } catch (error) {
+            logger.error('Error in getPushSettings controller:', error);
             next(error);
         }
     }
 
-    async updatePushSettings(req, res, next) {
+    async setPushSettings(req, res, next) {
         try {
-            const { error, value } = notificationValidator.validateUpdatePushSettings(req.body);
+            const { error, value } = notificationValidator.validateSetPushSettings(req.body);
             if (error) {
-                throw createError('1002', 'Parameter value is invalid');
+                // Aggregate all validation error messages
+                const messages = error.details.map(detail => detail.message).join(', ');
+                throw createError('1003', messages);
             }
-
             const userId = req.user.uid;
+            const settings = value;
 
-            const updatedSettings = await notificationService.updatePushSettings(userId, value);
-
-            sendResponse(res, '1000', updatedSettings);
-        } catch (error) {
-            next(error);
+            const updatedSettings = await notificationService.updatePushSettings(userId, settings);
+            return sendResponse(res, '1000', updatedSettings);
+        } catch (err) {
+            logger.error(`Error in setPushSettings controller for user ${req.user.uid}:`, err);
+            next(err);
         }
     }
 }

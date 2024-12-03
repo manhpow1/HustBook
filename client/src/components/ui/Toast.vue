@@ -4,10 +4,10 @@
             <div v-for="toast in toasts" :key="toast.id"
                 :class="['px-4 py-2 rounded-md shadow-lg flex items-center space-x-2', toastClasses[toast.type]]"
                 role="status" aria-live="polite">
-                <component :is="toast.icon" class="w-5 h-5" aria-hidden="true" />
+                <component :is="toastIcons[toast.type]" class="w-5 h-5" aria-hidden="true" />
                 <span>{{ toast.message }}</span>
-                <button @click="removeToast(toast.id)"
-                    class="ml-auto text-white hover:text-gray-200 focus:outline-none">
+                <button @click="removeToast(toast.id)" class="ml-auto text-white hover:text-gray-200 focus:outline-none"
+                    aria-label="Dismiss">
                     &times;
                 </button>
             </div>

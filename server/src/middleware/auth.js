@@ -18,7 +18,7 @@ const authenticateToken = async (req, res, next) => {
         const decoded = jwt.verify(token, config.get('jwt.secret'));
         const { uid, tokenVersion } = decoded;
 
-        // Fetch user data
+        // Fetch user data from cache or database
         let user = await cache.get(`user:${uid}`);
 
         if (!user) {
@@ -26,7 +26,7 @@ const authenticateToken = async (req, res, next) => {
             if (!user) {
                 throw createError('9995', 'User not found');
             }
-            await cache.set(`user:${uid}`, user, 3600);
+            await cache.set(`user:${uid}`, user, 3600); // Cache for 1 hour
         }
 
         // Check if tokenVersion matches

@@ -7,7 +7,9 @@ export const useSettingsStore = defineStore('settings', () => {
     const notificationSettings = ref({});
     const loading = ref(false);
     const error = ref(null);
-    const disableAllNotifications = ref(false);
+    const disableAllNotifications = computed(() => {
+        return Object.values(notificationSettings.value).every(setting => setting === '0');
+    });
     const { handleError } = useErrorHandler();
 
     const getPushSettings = async () => {
@@ -19,7 +21,6 @@ export const useSettingsStore = defineStore('settings', () => {
 
             if (data.code === '1000') {
                 notificationSettings.value = data.data;
-                disableAllNotifications.value = Object.values(data.data).every(setting => setting === '0');
             } else {
                 throw new Error(data.message || 'Failed to fetch push settings');
             }
@@ -39,8 +40,8 @@ export const useSettingsStore = defineStore('settings', () => {
             const data = response.data;
 
             if (data.code === '1000') {
+                // Merge the updated settings
                 notificationSettings.value = { ...notificationSettings.value, ...data.data };
-                disableAllNotifications.value = Object.values(notificationSettings.value).every(setting => setting === '0');
             } else {
                 throw new Error(data.message || 'Failed to update push settings');
             }
