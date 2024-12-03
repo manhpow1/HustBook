@@ -1,5 +1,3 @@
-// File: src/validators/userValidator.js
-
 const Joi = require('joi');
 
 // Password complexity requirements
@@ -32,6 +30,8 @@ const tokenSchema = Joi.object({
         'string.max': 'Token is too long.',
         'any.required': 'Token is required.',
     }),
+}).messages({
+    'object.base': 'Invalid input format.',
 });
 
 // Signup validation schema
@@ -43,9 +43,8 @@ const signupSchema = Joi.object({
         'any.required': 'UUID is required.',
     }),
 }).messages({
-    'any.required': 'Parameter is not enough.',
+    'any.required': 'Required parameters are missing.',
     'string.pattern.base': 'Parameter value is invalid.',
-    // Other generic messages
 });
 
 // Login validation schema
@@ -59,6 +58,8 @@ const loginSchema = Joi.object({
         'string.empty': 'Device ID cannot be empty.',
         'any.required': 'Device ID is required.',
     }),
+}).messages({
+    'any.required': 'Required parameters are missing.',
 });
 
 // Change user info schema
@@ -72,6 +73,8 @@ const changeInfoSchema = Joi.object({
     avatar: Joi.string().uri().optional().messages({
         'string.uri': 'Avatar must be a valid URI.',
     }),
+}).messages({
+    'any.required': 'Required parameters are missing.',
 });
 
 // Change password schema
@@ -81,9 +84,26 @@ const changePasswordSchema = Joi.object({
         'any.required': 'Current password is required.',
     }),
     new_password: passwordComplexity,
+}).messages({
+    'any.required': 'Required parameters are missing.',
 });
 
-// Validation functions
+const setBlockSchema = Joi.object({
+    user_id: Joi.number().integer().required().messages({
+        'number.base': 'User ID must be a number.',
+        'number.integer': 'User ID must be an integer.',
+        'any.required': 'User ID is required.',
+    }),
+    type: Joi.number().integer().valid(0, 1).required().messages({
+        'number.base': 'Type must be a number.',
+        'number.integer': 'Type must be an integer.',
+        'any.only': 'Type must be 0 (block) or 1 (unblock).',
+        'any.required': 'Type is required.',
+    }),
+}).messages({
+    'object.base': 'Invalid input format.',
+});
+
 const validateToken = (data) => {
     return tokenSchema.validate(data, { abortEarly: false });
 };
@@ -104,10 +124,15 @@ const validateChangePassword = (data) => {
     return changePasswordSchema.validate(data, { abortEarly: false });
 };
 
+const validateSetBlock = (data) => {
+    return setBlockSchema.validate(data, { abortEarly: false });
+};
+
 module.exports = {
     validateToken,
     validateSignup,
     validateLogin,
     validateChangeInfo,
     validateChangePassword,
+    validateSetBlock,
 };

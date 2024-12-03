@@ -1,7 +1,7 @@
-const authService = require('../services/authService');
+const userService = require('../services/userService');
 const userValidator = require('../validators/userValidator');
 const { formatPhoneNumber } = require('../utils/helpers');
-const User = require('../models/User');
+const User = require('../models/userModel');
 const { sendResponse } = require('../utils/responseHandler');
 const { createError } = require('../utils/customError');
 const { generateRandomCode, comparePassword } = require('../utils/authHelper');
@@ -15,7 +15,7 @@ const signup = async (req, res, next) => {
 
         const { phoneNumber, password, uuid } = req.body;
 
-        const existingUser = await authService.getUserByPhoneNumber(phoneNumber);
+        const existingUser = await userService.getUserByPhoneNumber(phoneNumber);
         if (existingUser) {
             throw createError('9996');
         }
@@ -23,14 +23,14 @@ const signup = async (req, res, next) => {
         const formattedPhoneNumber = formatPhoneNumber(phoneNumber);
         const verificationCode = generateRandomCode();
 
-        const { userId, deviceToken } = await authService.createUser(
+        const { userId, deviceToken } = await userService.createUser(
             formattedPhoneNumber,
             password,
             uuid,
             verificationCode
         );
 
-        const token = authService.generateJWT({
+        const token = userService.generateJWT({
             uid: user.uid,
             phone: user.phoneNumber,
         });
@@ -55,7 +55,7 @@ const login = async (req, res, next) => {
 
         const { phoneNumber, password, deviceId } = req.body;
 
-        const user = await authService.getUserByPhoneNumber(phoneNumber);
+        const user = await userService.getUserByPhoneNumber(phoneNumber);
         if (!user) {
             throw createError('9995', 'User not found');
         }
@@ -65,17 +65,17 @@ const login = async (req, res, next) => {
             throw createError('1004', 'Incorrect password');
         }
 
-        const deviceToken = authService.generateDeviceToken();
-        await authService.updateUserDeviceInfo(user.uid, deviceToken, deviceId);
+        const deviceToken = userService.generateDeviceToken();
+        await userService.updateUserDeviceInfo(user.uid, deviceToken, deviceId);
 
-        const token = authService.generateJWT({
+        const token = userService.generateJWT({
             uid: user.uid,
             phone: user.phoneNumber,
             passwordUpdatedAt: user.passwordUpdatedAt,
         });
 
-        const refreshToken = authService.generateRefreshToken(user.uid, user.passwordUpdatedAt);
-        await authService.updateUserRefreshToken(user.uid, refreshToken);
+        const refreshToken = userService.generateRefreshToken(user.uid, user.passwordUpdatedAt);
+        await userService.updateUserRefreshToken(user.uid, refreshToken);
 
         sendResponse(res, '1000', {
             id: user.uid,
@@ -94,8 +94,8 @@ const logout = async (req, res, next) => {
     try {
         const userId = req.user.uid;
 
-        await authService.clearUserDeviceToken(userId);
-        await authService.updateUserRefreshToken(userId, null); // Invalidate refresh token
+        await userService.clearUserDeviceToken(userId);
+        await userService.updateUserRefreshToken(userId, null); // Invalidate refresh token
 
         sendResponse(res, '1000');
     } catch (error) {
@@ -111,13 +111,13 @@ const getVerifyCode = async (req, res, next) => {
             throw createError('1004', 'Invalid phone number format');
         }
 
-        const user = await authService.getUserByPhoneNumber(phonenumber);
+        const user = await userService.getUserByPhoneNumber(phonenumber);
         if (!user) {
             throw createError('9995');
         }
 
         const verificationCode = generateRandomCode();
-        await authService.storeVerificationCode(user.uid, verificationCode);
+        await userService.storeVerificationCode(user.uid, verificationCode);
 
         if (process.env.NODE_ENV !== 'production') {
             sendResponse(res, '1000', { verifyCode: verificationCode });
@@ -141,7 +141,7 @@ const checkVerifyCode = async (req, res, next) => {
             throw createError('1004', 'Invalid phone number format');
         }
 
-        const user = await authService.getUserByPhoneNumber(phonenumber);
+        const user = await userService.getUserByPhoneNumber(phonenumber);
         if (!user) {
             throw createError('9995');
         }
@@ -156,14 +156,14 @@ const checkVerifyCode = async (req, res, next) => {
             throw createError('9993');
         }
 
-        const token = authService.generateJWT({
+        const token = userService.generateJWT({
             uid: user.uid,
             phone: user.phoneNumber,
             passwordUpdatedAt: user.passwordUpdatedAt,
         });
-        const deviceToken = authService.generateDeviceToken();
+        const deviceToken = userService.generateDeviceToken();
 
-        await authService.updateUserVerification(user.uid, true, deviceToken);
+        await userService.updateUserVerification(user.uid, true, deviceToken);
 
         sendResponse(res, '1000', {
             id: user.uid,
@@ -206,9 +206,9 @@ const changeInfoAfterSignup = async (req, res, next) => {
             updateData.avatar = `http://example.com/avatars/${avatar.filename}`;
         }
 
-        await authService.updateUserInfo(userId, updateData);
+        await userService.updateUserInfo(userId, updateData);
 
-        const updatedUser = await authService.getUserById(userId);
+        const updatedUser = await userService.getUserById(userId);
 
         sendResponse(res, '1000', {
             id: userId,
@@ -234,12 +234,12 @@ const changePassword = async (req, res, next) => {
         const { password, new_password } = req.body;
         const userId = req.user.uid;
 
-        const user = await authService.getUserById(userId);
+        const user = await userService.getUserById(userId);
         if (!user) {
             throw createError('9995', 'User not found');
         }
 
-        const isPasswordCorrect = await authService.comparePassword(password, user.password);
+        const isPasswordCorrect = await userService.comparePassword(password, user.password);
         if (!isPasswordCorrect) {
             throw createError('1004', 'Current password is incorrect');
         }
@@ -248,7 +248,7 @@ const changePassword = async (req, res, next) => {
             throw createError('1004', 'New password must be different from current password');
         }
 
-        await authService.updatePassword(userId, new_password);
+        await userService.updatePassword(userId, new_password);
 
         sendResponse(res, '1000', { message: 'Password changed successfully' });
     } catch (error) {
@@ -265,11 +265,11 @@ const refreshToken = async (req, res, next) => {
         }
 
         // Verify refresh token
-        const decoded = authService.verifyRefreshToken(refreshToken);
+        const decoded = userService.verifyRefreshToken(refreshToken);
         const userId = decoded.userId;
         const tokenVersion = decoded.tokenVersion;
 
-        const user = await authService.getUserById(userId);
+        const user = await userService.getUserById(userId);
 
         if (!user) {
             throw createError('9995', 'User not found');
@@ -281,11 +281,11 @@ const refreshToken = async (req, res, next) => {
         }
 
         // Generate new tokens
-        const newAccessToken = authService.generateJWT(user);
-        const newRefreshToken = authService.generateRefreshToken(user);
+        const newAccessToken = userService.generateJWT(user);
+        const newRefreshToken = userService.generateRefreshToken(user);
 
         // Update refresh token in database
-        await authService.updateUserRefreshToken(user.uid, newRefreshToken);
+        await userService.updateUserRefreshToken(user.uid, newRefreshToken);
 
         sendResponse(res, '1000', {
             token: newAccessToken,
@@ -293,6 +293,38 @@ const refreshToken = async (req, res, next) => {
         });
     } catch (error) {
         next(error);
+    }
+};
+const setBlock = async (req, res, next) => {
+    try {
+        // Validate the request body
+        const { error, value } = validateSetBlock(req.body);
+        if (error) {
+            // Aggregate all validation error messages
+            const messages = error.details.map(detail => detail.message).join(', ');
+            throw createError('1003', messages); // Assuming '1003' is for invalid parameters
+        }
+
+        const { user_id, type } = value;
+        const currentUserId = req.user.uid; // Extracted from authenticateToken middleware
+
+        // Prevent users from blocking themselves
+        if (currentUserId === user_id) {
+            throw createError('1010', 'Users cannot block themselves.');
+        }
+
+        // Block or unblock the user via the service layer
+        await userService.setBlock(currentUserId, user_id, type);
+
+        // Send a successful response
+        const message = type === 0 ? 'User blocked successfully.' : 'User unblocked successfully.';
+        return sendResponse(res, '1000', { message });
+    } catch (err) {
+        // Log the error
+        logger.error('Error in setBlock controller:', err);
+
+        // Pass the error to the error handling middleware
+        next(err);
     }
 };
 
@@ -306,4 +338,5 @@ module.exports = {
     changeInfoAfterSignup,
     changePassword,
     refreshToken,
+    setBlock,
 };

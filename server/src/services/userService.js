@@ -1,14 +1,7 @@
 const { v4: uuidv4 } = require('uuid');
 const { collections, createDocument, getDocument, updateDocument, queryDocuments } = require('../config/database');
 const { createError } = require('../utils/customError');
-const {
-    generateDeviceToken,
-    hashPassword,
-    comparePassword,
-    generateJWT,
-    verifyJWT,
-    generateRefreshToken,
-} = require('../utils/authHelper');
+const { generateDeviceToken, hashPassword, comparePassword, generateJWT, verifyJWT, generateRefreshToken,} = require('../utils/authHelper');
 const { db } = require('../config/firebase');
 const admin = require('firebase-admin');
 
@@ -147,6 +140,26 @@ const updatePassword = async (userId, newPassword) => {
     });
 };
 
+const setBlock = async (currentUserId, targetUserId, type) => {
+    try {
+        const user = new UserModel(currentUserId);
+        const targetUser = new UserModel(targetUserId);
+
+        if (type === 0) {
+            // Block the user
+            await user.blockUser(targetUserId);
+        } else if (type === 1) {
+            // Unblock the user
+            await user.unblockUser(targetUserId);
+        } else {
+            throw createError('1004', 'Invalid type for blocking/unblocking.');
+        }
+    } catch (error) {
+        logger.error('Error in setBlock service:', error);
+        throw createError('9999', 'Exception error');
+    }
+}
+
 module.exports = {
     generateDeviceToken,
     hashPassword,
@@ -164,4 +177,5 @@ module.exports = {
     updateUserInfo,
     generateRefreshToken,
     updatePassword,
+    setBlock,
 };
