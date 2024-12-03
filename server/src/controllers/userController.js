@@ -1,27 +1,27 @@
 const userService = require('../services/userService');
 const userValidator = require('../validators/userValidator');
 const { formatPhoneNumber } = require('../utils/helpers');
-const User = require('../models/userModel');
 const { sendResponse } = require('../utils/responseHandler');
 const { createError } = require('../utils/customError');
-const { generateRandomCode, comparePassword } = require('../utils/authHelper');
+const logger = require('../utils/logger');
 
 const signup = async (req, res, next) => {
     try {
-        const { error } = userValidator.validateSignup(req.body);
+        const { error, value } = userValidator.validateSignup(req.body);
         if (error) {
-            throw createError('1002', error.details[0].message);
+            const errorMessage = error.details.map(detail => detail.message).join(', ');
+            throw createError('1002', errorMessage);
         }
 
-        const { phoneNumber, password, uuid } = req.body;
+        const { phoneNumber, password, uuid } = value;
 
         const existingUser = await userService.getUserByPhoneNumber(phoneNumber);
         if (existingUser) {
-            throw createError('9996');
+            throw createError('9996'); // User already exists
         }
 
         const formattedPhoneNumber = formatPhoneNumber(phoneNumber);
-        const verificationCode = generateRandomCode();
+        const verificationCode = userService.generateRandomCode();
 
         const { userId, deviceToken } = await userService.createUser(
             formattedPhoneNumber,
@@ -31,38 +31,41 @@ const signup = async (req, res, next) => {
         );
 
         const token = userService.generateJWT({
-            uid: user.uid,
-            phone: user.phoneNumber,
+            uid: userId,
+            phone: formattedPhoneNumber,
         });
 
         sendResponse(res, '1000', {
             id: userId,
             token: token,
             deviceToken: deviceToken,
-            verifyCode: verificationCode,
+            // Include verifyCode only in non-production for testing
+            ...(process.env.NODE_ENV !== 'production' && { verifyCode: verificationCode }),
         });
     } catch (error) {
+        logger.error('Signup Error:', error);
         next(error);
     }
 };
 
 const login = async (req, res, next) => {
     try {
-        const { error } = userValidator.validateLogin(req.body);
+        const { error, value } = userValidator.validateLogin(req.body);
         if (error) {
-            throw createError('1002', error.details[0].message);
+            const errorMessage = error.details.map(detail => detail.message).join(', ');
+            throw createError('1002', errorMessage);
         }
 
-        const { phoneNumber, password, deviceId } = req.body;
+        const { phoneNumber, password, deviceId } = value;
 
         const user = await userService.getUserByPhoneNumber(phoneNumber);
         if (!user) {
-            throw createError('9995', 'User not found');
+            throw createError('9995', 'User not found.');
         }
 
-        const isPasswordCorrect = await comparePassword(password, user.password);
+        const isPasswordCorrect = await userService.comparePassword(password, user.password);
         if (!isPasswordCorrect) {
-            throw createError('1004', 'Incorrect password');
+            throw createError('1004', 'Incorrect password.');
         }
 
         const deviceToken = userService.generateDeviceToken();
@@ -71,10 +74,10 @@ const login = async (req, res, next) => {
         const token = userService.generateJWT({
             uid: user.uid,
             phone: user.phoneNumber,
-            passwordUpdatedAt: user.passwordUpdatedAt,
+            tokenVersion: user.tokenVersion,
         });
 
-        const refreshToken = userService.generateRefreshToken(user.uid, user.passwordUpdatedAt);
+        const refreshToken = userService.generateRefreshToken(user);
         await userService.updateUserRefreshToken(user.uid, refreshToken);
 
         sendResponse(res, '1000', {
@@ -86,6 +89,7 @@ const login = async (req, res, next) => {
             deviceToken: deviceToken,
         });
     } catch (error) {
+        logger.error('Login Error:', error);
         next(error);
     }
 };
@@ -97,69 +101,66 @@ const logout = async (req, res, next) => {
         await userService.clearUserDeviceToken(userId);
         await userService.updateUserRefreshToken(userId, null); // Invalidate refresh token
 
-        sendResponse(res, '1000');
+        sendResponse(res, '1000', { message: 'Logout successful.' });
     } catch (error) {
+        logger.error('Logout Error:', error);
         next(error);
     }
 };
 
 const getVerifyCode = async (req, res, next) => {
     try {
-        const { phonenumber } = req.body;
-
-        if (!/^0\d{9}$/.test(phonenumber)) {
-            throw createError('1004', 'Invalid phone number format');
+        const { error, value } = userValidator.validateGetVerifyCode(req.body);
+        if (error) {
+            const errorMessage = error.details.map(detail => detail.message).join(', ');
+            throw createError('1002', errorMessage);
         }
+
+        const { phonenumber } = value;
 
         const user = await userService.getUserByPhoneNumber(phonenumber);
         if (!user) {
-            throw createError('9995');
+            throw createError('9995', 'User not found.');
         }
 
-        const verificationCode = generateRandomCode();
+        const verificationCode = userService.generateRandomCode();
         await userService.storeVerificationCode(user.uid, verificationCode);
 
-        if (process.env.NODE_ENV !== 'production') {
-            sendResponse(res, '1000', { verifyCode: verificationCode });
-        } else {
-            sendResponse(res, '1000', { message: 'Verification code sent.' });
-        }
+        // Send verifyCode only in non-production for testing purposes
+        sendResponse(res, '1000', {
+            ...(process.env.NODE_ENV !== 'production' && { verifyCode: verificationCode }),
+            message: process.env.NODE_ENV !== 'production' ? 'Verification code generated.' : 'Verification code sent.',
+        });
     } catch (error) {
+        logger.error('GetVerifyCode Error:', error);
         next(error);
     }
 };
 
 const checkVerifyCode = async (req, res, next) => {
     try {
-        const { phonenumber, code } = req.body;
-
-        if (!phonenumber || !code) {
-            throw createError('1002', 'Phone number and code are required');
+        const { error, value } = userValidator.validateCheckVerifyCode(req.body);
+        if (error) {
+            const errorMessage = error.details.map(detail => detail.message).join(', ');
+            throw createError('1002', errorMessage);
         }
 
-        if (!/^0\d{9}$/.test(phonenumber)) {
-            throw createError('1004', 'Invalid phone number format');
-        }
+        const { phonenumber, code } = value;
 
         const user = await userService.getUserByPhoneNumber(phonenumber);
         if (!user) {
-            throw createError('9995');
+            throw createError('9995', 'User not found.');
         }
 
-        const currentTime = Date.now();
-        const codeExpirationTime = 5 * 60 * 1000; // 5 minutes
-
-        if (
-            user.verificationCode !== code ||
-            currentTime - user.verificationCodeTimestamp > codeExpirationTime
-        ) {
-            throw createError('9993');
+        const isValid = await userService.verifyUserCode(user.uid, code);
+        if (!isValid) {
+            throw createError('9993', 'Verification code is incorrect or expired.');
         }
 
         const token = userService.generateJWT({
             uid: user.uid,
             phone: user.phoneNumber,
-            passwordUpdatedAt: user.passwordUpdatedAt,
+            tokenVersion: user.tokenVersion,
         });
         const deviceToken = userService.generateDeviceToken();
 
@@ -172,6 +173,7 @@ const checkVerifyCode = async (req, res, next) => {
             active: user.active || '1',
         });
     } catch (error) {
+        logger.error('CheckVerifyCode Error:', error);
         next(error);
     }
 };
@@ -180,30 +182,33 @@ const checkAuth = async (req, res, next) => {
     try {
         sendResponse(res, '1000', { isAuthenticated: true });
     } catch (error) {
+        logger.error('CheckAuth Error:', error);
         next(error);
     }
 };
 
 const changeInfoAfterSignup = async (req, res, next) => {
     try {
-        const { error } = userValidator.validateChangeInfo(req.body);
+        const { error, value } = userValidator.validateChangeInfo(req.body);
         if (error) {
-            throw createError('1002', error.details.map(detail => detail.message).join(', '));
+            const errorMessage = error.details.map(detail => detail.message).join(', ');
+            throw createError('1002', errorMessage);
         }
 
-        const { username } = req.body;
-        const avatar = req.file;
+        const { username } = value;
+        const avatar = req.file; // Assuming avatar is handled by multer middleware
         const userId = req.user.uid;
 
         if (username === req.user.phoneNumber) {
-            throw createError('1004', 'Username cannot be the same as phone number');
+            throw createError('1004', 'Username cannot be the same as phone number.');
         }
 
         const updateData = { username };
 
         if (avatar) {
             // Handle avatar upload and get the URL
-            updateData.avatar = `http://example.com/avatars/${avatar.filename}`;
+            const avatarUrl = await userService.uploadAvatar(avatar);
+            updateData.avatar = avatarUrl;
         }
 
         await userService.updateUserInfo(userId, updateData);
@@ -220,68 +225,78 @@ const changeInfoAfterSignup = async (req, res, next) => {
             online: updatedUser.online || false,
         });
     } catch (error) {
+        logger.error('ChangeInfoAfterSignup Error:', error);
         next(error);
     }
 };
 
 const changePassword = async (req, res, next) => {
     try {
-        const { error } = userValidator.validateChangePassword(req.body);
+        const { error, value } = userValidator.validateChangePassword(req.body);
         if (error) {
-            throw createError('1002', error.details.map(detail => detail.message).join(', '));
+            const errorMessage = error.details.map(detail => detail.message).join(', ');
+            throw createError('1002', errorMessage);
         }
 
-        const { password, new_password } = req.body;
+        const { password, new_password } = value;
         const userId = req.user.uid;
 
         const user = await userService.getUserById(userId);
         if (!user) {
-            throw createError('9995', 'User not found');
+            throw createError('9995', 'User not found.');
         }
 
         const isPasswordCorrect = await userService.comparePassword(password, user.password);
         if (!isPasswordCorrect) {
-            throw createError('1004', 'Current password is incorrect');
+            throw createError('1004', 'Current password is incorrect.');
         }
 
         if (password === new_password) {
-            throw createError('1004', 'New password must be different from current password');
+            throw createError('1004', 'New password must be different from current password.');
         }
 
         await userService.updatePassword(userId, new_password);
 
-        sendResponse(res, '1000', { message: 'Password changed successfully' });
+        sendResponse(res, '1000', { message: 'Password changed successfully.' });
     } catch (error) {
+        logger.error('ChangePassword Error:', error);
         next(error);
     }
 };
 
 const refreshToken = async (req, res, next) => {
     try {
-        const { refreshToken } = req.body;
-
-        if (!refreshToken) {
-            throw createError('1002', 'Refresh token is required');
+        const { error, value } = userValidator.validateRefreshToken(req.body);
+        if (error) {
+            const errorMessage = error.details.map(detail => detail.message).join(', ');
+            throw createError('1002', errorMessage);
         }
 
+        const { refreshToken } = value;
+
         // Verify refresh token
-        const decoded = userService.verifyRefreshToken(refreshToken);
-        const userId = decoded.userId;
-        const tokenVersion = decoded.tokenVersion;
+        let decoded;
+        try {
+            decoded = userService.verifyJWT(refreshToken);
+        } catch (err) {
+            throw createError('9998', 'Invalid refresh token.');
+        }
+
+        const { userId, tokenVersion } = decoded;
 
         const user = await userService.getUserById(userId);
 
-        if (!user) {
-            throw createError('9995', 'User not found');
-        }
-
-        // Check tokenVersion
+        // Check tokenVersion to invalidate old tokens
         if (user.tokenVersion !== tokenVersion) {
-            throw createError('9998', 'Invalid refresh token');
+            throw createError('9998', 'Invalid refresh token.');
         }
 
         // Generate new tokens
-        const newAccessToken = userService.generateJWT(user);
+        const newAccessToken = userService.generateJWT({
+            uid: user.uid,
+            phone: user.phoneNumber,
+            tokenVersion: user.tokenVersion,
+        });
         const newRefreshToken = userService.generateRefreshToken(user);
 
         // Update refresh token in database
@@ -292,21 +307,21 @@ const refreshToken = async (req, res, next) => {
             refreshToken: newRefreshToken,
         });
     } catch (error) {
+        logger.error('RefreshToken Error:', error);
         next(error);
     }
 };
+
 const setBlock = async (req, res, next) => {
     try {
-        // Validate the request body
-        const { error, value } = validateSetBlock(req.body);
+        const { error, value } = userValidator.validateSetBlock(req.body);
         if (error) {
-            // Aggregate all validation error messages
-            const messages = error.details.map(detail => detail.message).join(', ');
-            throw createError('1003', messages); // Assuming '1003' is for invalid parameters
+            const errorMessage = error.details.map(detail => detail.message).join(', ');
+            throw createError('1003', errorMessage);
         }
 
         const { user_id, type } = value;
-        const currentUserId = req.user.uid; // Extracted from authenticateToken middleware
+        const currentUserId = req.user.uid;
 
         // Prevent users from blocking themselves
         if (currentUserId === user_id) {
@@ -318,13 +333,10 @@ const setBlock = async (req, res, next) => {
 
         // Send a successful response
         const message = type === 0 ? 'User blocked successfully.' : 'User unblocked successfully.';
-        return sendResponse(res, '1000', { message });
-    } catch (err) {
-        // Log the error
-        logger.error('Error in setBlock controller:', err);
-
-        // Pass the error to the error handling middleware
-        next(err);
+        sendResponse(res, '1000', { message });
+    } catch (error) {
+        logger.error('SetBlock Error:', error);
+        next(error);
     }
 };
 

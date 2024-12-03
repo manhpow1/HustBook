@@ -1,10 +1,12 @@
-require('dotenv').config();
+const env = require('./env');
 
 module.exports = {
-    port: process.env.PORT || 3000,
-    env: process.env.NODE_ENV || 'development',
-    jwtSecret: process.env.JWT_SECRET,
-    refreshSecret: process.env.JWT_REFRESH_SECRET,
-    corsOrigin: process.env.CORS_ORIGIN || 'http://localhost:5173',
+    port: env.server.port,
+    env: env.nodeEnv,
+    jwtSecret: env.jwt.secret,
+    refreshSecret: env.jwt.refreshSecret,
+    corsOrigin: env.server.corsOrigin,
+    jwtExpiration: env.jwt.expiration,
+    refreshTokenExpiration: env.jwt.refreshExpiration,
     // Add other server-related configurations here
 };

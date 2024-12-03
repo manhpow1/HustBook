@@ -1,38 +1,71 @@
 const admin = require('firebase-admin');
 const { db } = require('./firebase');
+const logger = require('../utils/logger');
 
 const collections = {
     users: 'users',
     posts: 'posts',
     comments: 'comments',
     reports: 'reports',
+    auditLogs: 'auditLogs',
+    blockedUsers: 'blockedUsers',
 };
 
 const createDocument = async (collection, data) => {
-    const docRef = await db.collection(collection).add(data);
-    return docRef.id;
+    try {
+        const docRef = await db.collection(collection).add(data);
+        return docRef.id;
+    } catch (error) {
+        logger.error(`Error creating document in ${collection}:`, error);
+        throw error;
+    }
 };
 
 const getDocument = async (collection, id) => {
-    const docRef = await db.collection(collection).doc(id).get();
-    return docRef.exists ? { id: docRef.id, ...docRef.data() } : null;
+    try {
+        const docRef = await db.collection(collection).doc(id).get();
+        return docRef.exists ? { id: docRef.id, ...docRef.data() } : null;
+    } catch (error) {
+        logger.error(`Error fetching document ${id} from ${collection}:`, error);
+        throw error;
+    }
 };
 
 const updateDocument = async (collection, id, data) => {
-    await db.collection(collection).doc(id).update(data);
+    try {
+        await db.collection(collection).doc(id).update(data);
+    } catch (error) {
+        logger.error(`Error updating document ${id} in ${collection}:`, error);
+        throw error;
+    }
 };
 
 const deleteDocument = async (collection, id) => {
-    await db.collection(collection).doc(id).delete();
+    try {
+        await db.collection(collection).doc(id).delete();
+    } catch (error) {
+        logger.error(`Error deleting document ${id} from ${collection}:`, error);
+        throw error;
+    }
 };
 
 const queryDocuments = async (collection, queryFn) => {
-    const snapshot = await queryFn(db.collection(collection)).get();
-    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    try {
+        const snapshot = await queryFn(db.collection(collection)).get();
+        return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    } catch (error) {
+        logger.error(`Error querying documents from ${collection}:`, error);
+        throw error;
+    }
 };
 
 const runTransaction = async (transactionFn) => {
-    return db.runTransaction(transactionFn);
+    try {
+        return await db.runTransaction(transactionFn);
+    } catch (error) {
+        logger.error('Error running Firestore transaction:', error);
+        throw error;
+    }
 };
 
 const incrementField = (value) => {
@@ -62,5 +95,5 @@ module.exports = {
     incrementField,
     arrayUnion,
     arrayRemove,
-    serverTimestamp
+    serverTimestamp,
 };

@@ -1,15 +1,20 @@
 {
+    "firebase": {
+        "projectId": "your-firebase-project-id",
+        "privateKey": "your-firebase-private-key",
+        "clientEmail": "your-firebase-client-email"
+    },
+    "jwt": {
+        "secret": "your-jwt-secret",
+        "refreshSecret": "your-jwt-refresh-secret",
+        "expiration": "1h",
+        "refreshExpiration": "7d"
+    },
+    "auth": {
+        "saltRounds": 10
+    },
     "server": {
         "port": 3000,
         "corsOrigin": "http://localhost:5173"
-    },
-    "firebase": {
-        "projectId": "",
-        "privateKey": "",
-        "clientEmail": ""
-    },
-    "jwt": {
-        "secret": "",
-        "refreshSecret": ""
     }
 }

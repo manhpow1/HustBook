@@ -12,4 +12,16 @@ const pushSettingsLimiter = rateLimit({
     legacyHeaders: false, // Disable the `X-RateLimit-*` headers
 });
 
-module.exports = { pushSettingsLimiter };
+const setBlockLimiter = rateLimit({
+    windowMs: 60 * 1000, // 1 minute
+    max: 10, // Limit each user to 10 requests per windowMs
+    keyGenerator: (req) => req.user.uid, // Rate limit per authenticated user
+    handler: (req, res) => {
+        res.status(429).json({
+            code: '1014',
+            message: 'Too many requests. Please try again later.',
+        });
+    },
+});
+
+module.exports = { pushSettingsLimiter, setBlockLimiter };

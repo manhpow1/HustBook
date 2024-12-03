@@ -1,11 +1,9 @@
 const { db } = require('../config/firebase');
-const { collections } = require('../config/database');
-const { createError } = require('../utils/customError');
 const logger = require('../utils/logger');
 
 class AuditLogModel {
     constructor() {
-        this.auditLogsRef = db.collection(collections.auditLogs);
+        this.auditLogsRef = db.collection('auditLogs');
     }
 
     async logAction(userId, targetUserId, action) {
@@ -17,8 +15,8 @@ class AuditLogModel {
                 timestamp: new Date().toISOString(),
             });
         } catch (error) {
-            logger.error('Error in AuditLogModel.logAction:', error);
-            throw createError('9999', 'Failed to log audit action.');
+            logger.error('Failed to log audit action:', error);
+            throw new Error('Failed to log audit action.');
         }
     }
 }
