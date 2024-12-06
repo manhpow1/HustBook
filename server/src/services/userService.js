@@ -50,14 +50,42 @@ class userService {
 
     async getUserById(userId) {
         try {
-            const userData = await getDocument(collections.users, userId);
-            if (!userData) {
-                throw createError('9995', 'User not found.');
+            const userDoc = await db.collection(collections.users).doc(userId).get();
+            if (!userDoc.exists) {
+                return null;
             }
-            return userData;
+            return userDoc.data();
         } catch (error) {
             logger.error('Error fetching user by ID:', error);
-            throw error;
+            throw createError('9999', 'Exception error');
+        }
+    }
+
+    async getFriendCount(userId) {
+        try {
+            const friendsSnapshot = await db.collection(collections.friends)
+                .doc(userId)
+                .collection('userFriends')
+                .get();
+            return friendsSnapshot.size.toString();
+        } catch (error) {
+            logger.error('Error fetching friend count:', error);
+            throw createError('9999', 'Exception error');
+        }
+    }
+
+    async areUsersFriends(userIdA, userIdB) {
+        // Check if B is in A's userFriends collection
+        try {
+            const friendDoc = await db.collection(collections.friends)
+                .doc(userIdA)
+                .collection('userFriends')
+                .doc(userIdB)
+                .get();
+            return friendDoc.exists;
+        } catch (error) {
+            logger.error('Error checking friendship:', error);
+            throw createError('9999', 'Exception error');
         }
     }
 

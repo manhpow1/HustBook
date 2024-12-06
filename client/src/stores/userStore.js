@@ -206,6 +206,33 @@ export const useUserStore = defineStore('user', () => {
         }
     }
 
+    async function getUserProfile(userId = null) {
+        isLoading.value = true;
+        error.value = null;
+
+        try {
+            const response = await apiService.getUserInfo(userId);
+            const data = response.data;
+
+            if (data.code === '1000') {
+                // If fetching current user's profile (no userId), store it in user store
+                if (!userId) {
+                    setUserData(data.data);
+                }
+                return data.data; // Return the user info data
+            } else {
+                error.value = data.message || 'Failed to fetch user info';
+                return null;
+            }
+        } catch (err) {
+            await handleError(err);
+            error.value = err.response?.data?.message || 'An error occurred while fetching user info';
+            return null;
+        } finally {
+            isLoading.value = false;
+        }
+    }
+
     // Fetch User Profile
     async function fetchUserProfile() {
         if (!accessToken.value) {
@@ -213,30 +240,10 @@ export const useUserStore = defineStore('user', () => {
             return;
         }
 
-        isLoading.value = true;
-        error.value = null;
-
-        try {
-            const response = await apiService.getUserProfile();
-            const data = response.data;
-
-            if (data.code === '1000') {
-                setUserData(data.data);
-                logger.info('User profile fetched', { userId: data.data.id });
-            } else {
-                error.value = data.message || 'Failed to fetch user profile';
-                clearTokens();
-                clearUserData();
-                logger.warn('Failed to fetch user profile', { message: data.message });
-            }
-        } catch (err) {
-            handleError(err);
-            error.value = err.response?.data?.message || 'An error occurred while fetching user profile';
+        const profileData = await getUserProfile(); // no userId means current user
+        if (!profileData) {
             clearTokens();
             clearUserData();
-            logger.error('FetchUserProfile error', { error: err });
-        } finally {
-            isLoading.value = false;
         }
     }
 
@@ -293,5 +300,7 @@ export const useUserStore = defineStore('user', () => {
         fetchUserProfile,
         refreshAccessToken,
         clearMessages,
+        getUserProfile,
+        fetchUserProfile,        
     };
 });

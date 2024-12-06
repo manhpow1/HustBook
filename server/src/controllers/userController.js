@@ -331,6 +331,77 @@ class UserController {
             next(error);
         }
     }
+
+    async getUserInfo(req, res, next) {
+        try {
+            let targetUserId = req.params.id;
+            const requestingUser = req.user; // Set by authenticateToken middleware if token is provided
+
+            // If no targetUserId provided, use requestingUser
+            if (!targetUserId && !requestingUser) {
+                // Neither token nor user_id provided
+                throw createError('1002', 'Parameter is not enough'); // or '9998' if token is invalid
+            }
+
+            if (!targetUserId && requestingUser) {
+                targetUserId = requestingUser.uid;
+            }
+
+            // Fetch user data
+            const userData = await userService.getUserById(targetUserId);
+            if (!userData) {
+                throw createError('9995', 'User not found.');
+            }
+
+            // Extract and prepare response data
+            const {
+                uid: id,
+                username = '',
+                createdAt: created,
+                description = '',
+                avatar = '',
+                coverImage = '',
+                link = '',
+                address = '',
+                city = '',
+                country = '',
+                online = false
+            } = userData;
+
+            const listing = await userService.getFriendCount(id);
+
+            let is_friend = '0';
+            if (requestingUser && requestingUser.uid !== id) {
+                // Check friendship
+                const friendStatus = await userService.areUsersFriends(requestingUser.uid, id);
+                is_friend = friendStatus ? '1' : '0';
+            }
+
+            // `online` expected as '1' or '0'
+            const onlineStatus = online ? '1' : '0';
+
+            const responseData = {
+                id,
+                username,
+                created: created ? created.toISOString() : '',
+                description,
+                avatar,
+                cover_image: coverImage,
+                link,
+                address,
+                city,
+                country,
+                listing,
+                is_friend,
+                online: onlineStatus,
+            };
+
+            sendResponse(res, '1000', responseData);
+        } catch (error) {
+            logger.error('Error in getUserInfo controller:', error);
+            next(error);
+        }
+    }
 }
 
 module.exports = new UserController();

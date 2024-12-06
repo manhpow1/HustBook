@@ -47,6 +47,11 @@ const apiService = {
             new_password: newPassword
         });
     },
+    async getUserInfo(userId = null) {
+        // If userId is provided, use the route with ID, else without ID
+        const url = API_ENDPOINTS.GET_USER_INFO(userId);
+        return axiosInstance.get(url);
+    },
     // Post APIs
     async createPost(postData) {
         return axiosInstance.post(API_ENDPOINTS.ADD_POST, postData);
