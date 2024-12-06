@@ -118,8 +118,10 @@ const apiService = {
     async checkNewItems(lastId, categoryId = '0') {
         return axiosInstance.post(API_ENDPOINTS.CHECK_NEW_ITEM, { last_id: lastId, category_id: categoryId });
     },
-    async getNotifications() {
-        return axiosInstance.get(API_ENDPOINTS.GET_NOTIFICATIONS);
+    async getNotifications(index = 0, count = 20) {
+        return axiosInstance.get(API_ENDPOINTS.GET_NOTIFICATIONS, {
+            params: { index, count }
+        });
     },
     async setReadNotifications() {
         return axiosInstance.post(API_ENDPOINTS.SET_READ_NOTIFICATIONS);

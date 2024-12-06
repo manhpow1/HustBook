@@ -1,42 +1,18 @@
 import { defineStore } from 'pinia';
-import { ref, computed } from 'vue';
+import { ref } from 'vue';
 import apiService from '../services/api';
 import { useErrorHandler } from '../composables/useErrorHandler';
 import logger from '../services/logging';
 import { useToast } from '../composables/useToast';
+import { useNotifications } from '../composables/useNotifications';
 
 export const useNotificationStore = defineStore('notification', () => {
     // State
-    const notifications = ref([]);
+    const { notifications, badge, lastUpdate, loading, error, unreadCount, fetchNotifications } = useNotifications();
     const newItemsCount = ref(0);
-    const loading = ref(false);
-    const error = ref(null);
     // Initialize composables
     const { showToast } = useToast();
     const { handleError } = useErrorHandler();
-    // Computed properties
-    const unreadCount = computed(() => {
-        return notifications.value.filter((n) => !n.read).length;
-    });
-    // Actions
-    async function fetchNotifications() {
-        loading.value = true;
-        error.value = null;
-        try {
-            const response = await apiService.getNotifications();
-            if (response.data.code === '1000') {
-                notifications.value = response.data.data.notifications; // Adjust based on server response structure
-            } else {
-                throw new Error(response.data.message || 'Failed to fetch notifications');
-            }
-        } catch (err) {
-            logger.error('Error fetching notifications:', err);
-            error.value = 'Failed to fetch notifications';
-            await handleError(err);
-        } finally {
-            loading.value = false;
-        }
-    }
 
     async function checkNewItems(lastId, categoryId = '0') {
         logger.debug(`Checking for new items with lastId: ${lastId}, categoryId: ${categoryId}`);
@@ -119,9 +95,9 @@ export const useNotificationStore = defineStore('notification', () => {
         newItemsCount,
         loading,
         error,
-        // Computed
+        badge,
+        lastUpdate,
         unreadCount,
-        // Actions
         fetchNotifications,
         checkNewItems,
         markAllAsRead,

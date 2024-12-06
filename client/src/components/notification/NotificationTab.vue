@@ -40,12 +40,13 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, watch, onBeforeUnmount } from 'vue';
+import { ref, computed, onMounted, onBeforeUnmount } from 'vue';
 import { useNotificationStore } from '../../stores/notificationStore';
 import { BellIcon } from 'lucide-vue-next';
 import NotificationGroup from './NotificationGroup.vue';
 import { useErrorHandler } from '../../composables/useErrorHandler';
 import { useToast } from '../../composables/useToast';
+import { storeToRefs } from 'pinia';
 
 const notificationStore = useNotificationStore();
 const { notifications, loading, error, unreadCount } = storeToRefs(notificationStore);
@@ -54,17 +55,17 @@ const { showToast } = useToast();
 
 const showNotifications = ref(false);
 
+// Separate notifications into recent and earlier based on today's date
 const recentNotifications = computed(() => {
     const today = new Date().toDateString();
-    return notifications.value.filter(n => new Date(n.createdAt).toDateString() === today);
+    return notifications.value.filter(n => new Date(n.created).toDateString() === today);
 });
 
 const earlierNotifications = computed(() => {
     const today = new Date().toDateString();
-    return notifications.value.filter(n => new Date(n.createdAt).toDateString() !== today);
+    return notifications.value.filter(n => new Date(n.created).toDateString() !== today);
 });
 
-// Toggle the visibility of the notification dropdown
 const toggleNotifications = () => {
     showNotifications.value = !showNotifications.value;
     if (showNotifications.value) {
@@ -72,16 +73,15 @@ const toggleNotifications = () => {
     }
 };
 
-// Fetch notifications from the store
 const fetchNotifications = async () => {
     try {
+        // If pagination is needed, pass index and count, e.g. fetchNotifications(0, 20)
         await notificationStore.fetchNotifications();
     } catch (err) {
         handleError(err);
     }
 };
 
-// Mark all notifications as read
 const markAllAsRead = async () => {
     try {
         await notificationStore.markAllAsRead();
@@ -99,12 +99,10 @@ const handleClickOutside = (event) => {
     }
 };
 
-// Add event listener for clicks outside the component
 onMounted(() => {
     document.addEventListener('click', handleClickOutside);
 });
 
-// Remove event listener on unmount
 onBeforeUnmount(() => {
     document.removeEventListener('click', handleClickOutside);
 });

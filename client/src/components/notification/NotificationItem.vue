@@ -1,11 +1,10 @@
 <template>
-    <div :class="['flex items-center p-2 rounded-md', { 'bg-blue-50': !notification.read }]">
+    <div :class="['flex items-center p-2 rounded-md', { 'bg-blue-50': notification.read === '0' }]">
         <div class="flex-shrink-0">
-            <img :src="notification.sender.avatar" alt="Sender Avatar" class="h-10 w-10 rounded-full object-cover" />
+            <img :src="notification.avatar" alt="Notification Avatar" class="h-10 w-10 rounded-full object-cover" />
         </div>
         <div class="ml-3 flex-1">
-            <p class="text-sm font-medium text-gray-900">{{ notification.sender.name }}</p>
-            <p class="text-sm text-gray-500">{{ notification.message }}</p>
+            <p class="text-sm font-medium text-gray-900">{{ notification.title }}</p>
             <p class="mt-1 text-xs text-gray-500">{{ formattedTime }}</p>
         </div>
         <div class="ml-4 flex-shrink-0">
@@ -37,15 +36,13 @@ const notificationStore = useNotificationStore();
 const { handleError } = useErrorHandler();
 const { showToast } = useToast();
 
-// Computed property for formatted time
 const formattedTime = computed(() => {
-    return formatNotificationTime(props.notification.createdAt);
+    return formatNotificationTime(props.notification.created);
 });
 
-// Handle removing a notification
 const handleRemove = async () => {
     try {
-        await notificationStore.removeNotification(props.notification.id);
+        await notificationStore.removeNotification(props.notification.notification_id);
         showToast('Notification removed.', 'success');
     } catch (error) {
         handleError(error);

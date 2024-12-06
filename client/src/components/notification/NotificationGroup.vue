@@ -1,7 +1,8 @@
 <template>
     <div class="py-2">
         <div class="px-4 py-2 text-sm font-semibold text-gray-700">{{ title }}</div>
-        <div v-for="notification in notifications" :key="notification.id" class="px-4 py-2 hover:bg-gray-100">
+        <div v-for="notification in notifications" :key="notification.notification_id"
+            class="px-4 py-2 hover:bg-gray-100">
             <NotificationItem :notification="notification" />
         </div>
     </div>
