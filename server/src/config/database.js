@@ -9,6 +9,10 @@ const collections = {
     reports: 'reports',
     auditLogs: 'auditLogs',
     blockedUsers: 'blockedUsers',
+    notifications: 'notifications',
+    friendRequests: 'friendRequests',
+    friends: 'friends',
+    savedSearches: 'savedSearches',    
 };
 
 const createDocument = async (collection, data) => {

@@ -9,5 +9,6 @@ router.put('/set_push_settings', authenticateToken, pushSettingsLimiter, notific
 router.post('/check_new_item', authenticateToken, notificationController.checkNewItem);
 router.get('/get_notification', authenticateToken, notificationController.getNotifications);
 router.post('/set_read_notification', authenticateToken, notificationController.markAllAsRead);
+router.post('/get_notification', authenticateToken, notificationController.getNotifications);
 
 module.exports = router;

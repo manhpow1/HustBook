@@ -22,6 +22,11 @@ const setPushSettingsSchema = Joi.object({
         'any.only': 'Invalid value for {#label}. Must be "0" or "1".',
     });
 
+const getNotificationsSchema = Joi.object({
+    index: Joi.number().integer().min(0).required(),
+    count: Joi.number().integer().min(1).max(100).required()
+});
+
 const validateCheckNewItem = (data) => {
     return checkNewItemSchema.validate(data);
 };
@@ -30,7 +35,12 @@ const validateSetPushSettings = (data) => {
     return setPushSettingsSchema.validate(data, { abortEarly: false });
 };
 
+const validateGetNotifications = (data) => {
+    return getNotificationsSchema.validate(data, { abortEarly: false });
+};
+
 module.exports = {
     validateCheckNewItem,
     validateSetPushSettings,
+    validateGetNotifications,
 };

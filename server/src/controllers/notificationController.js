@@ -57,6 +57,31 @@ class NotificationController {
             next(err);
         }
     }
+
+    async getNotifications(req, res, next) {
+        try {
+            const { error, value } = notificationValidator.validateGetNotifications(req.body);
+            if (error) {
+                const messages = error.details.map(detail => detail.message).join(', ');
+                throw createError('1002', messages);
+            }
+            const { index, count } = value;
+            const userId = req.user.uid; // set by authenticateToken middleware
+            const { notifications, badge, last_update } = await notificationService.getNotifications(userId, index, count);
+            if (notifications.length === 0) {
+                throw createError('9994', 'No data or end of list data');
+            }
+            const responseData = {
+                data: notifications,
+                badge,
+                last_update
+            };
+            sendResponse(res, '1000', responseData);
+        } catch (err) {
+            logger.error('Error in getNotifications controller:', err);
+            next(err);
+        }
+    }
 }
 
 module.exports = new NotificationController();

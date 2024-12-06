@@ -3,7 +3,7 @@ const { createError } = require('../utils/customError');
 const logger = require('../utils/logger');
 const { db } = require('../config/firebase');
 
-class NotificationService {
+class notificationService {
     async checkNewItems(lastId, categoryId) {
         try {
             const querySnapshot = await db.collection('posts')
@@ -40,6 +40,51 @@ class NotificationService {
             throw createError('9999', 'Failed to update push settings.');
         }
     }
+
+    async getNotifications(userId, index, count) {
+        try {
+            // Query notifications
+            const notificationsRef = db.collection(collections.notifications)
+                .where('userId', '==', userId)
+                .orderBy('created', 'desc')
+                .offset(index)
+                .limit(count);
+
+            const snapshot = await notificationsRef.get();
+
+            const notifications = snapshot.docs.map(doc => {
+                const data = doc.data();
+                const createdDate = data.created instanceof Date
+                    ? data.created
+                    : data.created.toDate();
+
+                return {
+                    type: data.type || '',
+                    object_id: data.object_id || '',
+                    title: data.title || '',
+                    notification_id: doc.id,
+                    created: createdDate.toISOString(),
+                    avatar: data.avatar || '',
+                    group: data.group ? data.group.toString() : '0',
+                    read: data.read === true ? '1' : '0'
+                };
+            });
+
+            // Count unread notifications
+            const unreadSnapshot = await db.collection(collections.notifications)
+                .where('userId', '==', userId)
+                .where('read', '==', false)
+                .get();
+
+            const badge = unreadSnapshot.size.toString();
+            const last_update = new Date().toISOString();
+
+            return { notifications, badge, last_update };
+        } catch (error) {
+            logger.error('Error in getNotifications service:', error);
+            throw createError('9999', 'Exception error');
+        }
+    }
 }
 
-module.exports = new NotificationService();
+module.exports = new notificationService();
