@@ -85,6 +85,43 @@ class notificationService {
             throw createError('9999', 'Exception error');
         }
     }
+
+    async setReadNotification(userId, notificationId) {
+        try {
+            const notifRef = db.collection(collections.notifications).doc(notificationId);
+            const notifDoc = await notifRef.get();
+
+            if (!notifDoc.exists) {
+                throw createError('9992', 'Notification not found.');
+            }
+
+            const notifData = notifDoc.data();
+
+            if (notifData.userId !== userId) {
+                throw createError('1009', 'Not access');
+            }
+
+            // Update the read field
+            await notifRef.update({ read: true });
+
+            // Count unread notifications
+            const unreadSnapshot = await db.collection(collections.notifications)
+                .where('userId', '==', userId)
+                .where('read', '==', false)
+                .get();
+
+            const badge = unreadSnapshot.size.toString();
+            const last_update = new Date().toISOString();
+
+            return { badge, last_update };
+        } catch (error) {
+            logger.error('Error in setReadNotification:', error);
+            if (error.code) {
+                throw error;
+            }
+            throw createError('9999', 'Exception error');
+        }
+    }
 }
 
 module.exports = new notificationService();

@@ -50,6 +50,30 @@ export const useNotificationStore = defineStore('notification', () => {
         }
     }
 
+    async function markNotificationAsRead(notificationId) {
+        try {
+            const response = await apiService.setReadNotification(notificationId);
+            if (response.data.code === '1000') {
+                // Update the local state
+                const idx = notifications.value.findIndex((n) => n.notification_id === notificationId);
+                if (idx !== -1) {
+                    notifications.value[idx].read = '1';
+                }
+                // Update badge and last_update
+                if (response.data.data?.Version) {
+                    badge.value = response.data.data.Version.badge;
+                    lastUpdate.value = response.data.data.Version.last_update;
+                }
+                showToast('Notification marked as read.', 'success');
+            } else {
+                throw new Error(response.data.message || 'Failed to set notification as read');
+            }
+        } catch (err) {
+            await handleError(err);
+            showToast('Failed to set notification as read.', 'error');
+        }
+    }
+
     async function markAllAsRead() {
         loading.value = true;
         error.value = null;
@@ -104,5 +128,6 @@ export const useNotificationStore = defineStore('notification', () => {
         removeNotification,
         resetNewItemsCount,
         showNotification,
+        markNotificationAsRead,
     };
 });

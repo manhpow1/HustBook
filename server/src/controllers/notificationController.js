@@ -82,6 +82,26 @@ class NotificationController {
             next(err);
         }
     }
+
+    async setReadNotification(req, res, next) {
+        try {
+            const { error, value } = notificationValidator.validateSetReadNotification(req.body);
+            if (error) {
+                const messages = error.details.map(detail => detail.message).join(', ');
+                throw createError('1002', messages);
+            }
+
+            const { notification_id } = value;
+            const userId = req.user.uid; // From authenticateToken
+
+            const { badge, last_update } = await notificationService.setReadNotification(userId, notification_id);
+
+            sendResponse(res, '1000', { Version: { badge, last_update } });
+        } catch (err) {
+            logger.error('Error in setReadNotification controller:', err);
+            next(err);
+        }
+    }
 }
 
 module.exports = new NotificationController();

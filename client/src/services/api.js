@@ -123,8 +123,8 @@ const apiService = {
             params: { index, count }
         });
     },
-    async setReadNotifications() {
-        return axiosInstance.post(API_ENDPOINTS.SET_READ_NOTIFICATIONS);
+    async setReadNotification(notificationId) {
+        return axiosInstance.patch(API_ENDPOINTS.SET_READ_NOTIFICATION(notificationId));
     },
     async deleteNotification(notificationId) {
         return axiosInstance.delete(API_ENDPOINTS.DELETE_NOTIFICATION(notificationId));

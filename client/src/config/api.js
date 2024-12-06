@@ -29,7 +29,7 @@ export const API_ENDPOINTS = {
     GET_PUSH_SETTINGS: `${API_BASE_URL}/notifications/get_push_settings`,
     UPDATE_PUSH_SETTINGS: `${API_BASE_URL}/notifications/set_push_settings`,
     GET_NOTIFICATIONS: `${API_BASE_URL}/notifications/get_notification`,
-    SET_READ_NOTIFICATIONS: `${API_BASE_URL}/notifications/set_read_notification`,
+    SET_READ_NOTIFICATION: (notificationId) => `${API_BASE_URL}/notifications/${notificationId}/read`,
     DELETE_NOTIFICATION: (notificationId) => `${API_BASE_URL}/notifications/${notificationId}`,
     // Search Endpoints
     SEARCH: `${API_BASE_URL}/search/search`,

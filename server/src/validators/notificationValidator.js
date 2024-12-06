@@ -27,6 +27,10 @@ const getNotificationsSchema = Joi.object({
     count: Joi.number().integer().min(1).max(100).required()
 });
 
+const setReadNotificationSchema = Joi.object({
+    notification_id: Joi.string().required(),
+});
+
 const validateCheckNewItem = (data) => {
     return checkNewItemSchema.validate(data);
 };
@@ -39,8 +43,13 @@ const validateGetNotifications = (data) => {
     return getNotificationsSchema.validate(data, { abortEarly: false });
 };
 
+const validateSetReadNotification = (data) => {
+    return setReadNotificationSchema.validate(data, { abortEarly: false });
+};
+
 module.exports = {
     validateCheckNewItem,
     validateSetPushSettings,
     validateGetNotifications,
+    validateSetReadNotification,
 };
