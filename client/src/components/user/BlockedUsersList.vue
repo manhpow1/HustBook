@@ -21,10 +21,10 @@
                 <div class="flex items-center">
                     <img :src="user.avatar || '../../assets/avatar-default.svg'" :alt="user.name"
                         class="w-10 h-10 rounded-full mr-4" />
-                    <span class="font-medium">{{ user.name }}</span>
+                    <span class="font-medium">{{ user.username }}</span>
                 </div>
-                <button @click="unblockUser(user.id)"
-                    class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded transition duration-300"
+                <button @click="confirmUnblock(user.id)"
+                    class="text-blue-500 hover:underline bg-transparent border border-blue-500 rounded px-2 py-1 transition duration-300"
                     aria-label="Unblock User">
                     Unblock
                 </button>
@@ -35,41 +35,95 @@
         <p v-else class="text-gray-500 text-center py-4">You haven't blocked any users.</p>
 
         <!-- Load More Button -->
-        <div v-if="hasMore" class="text-center mt-4">
+        <div v-if="hasMoreBlockedUsers" class="text-center mt-4">
             <button @click="loadMore"
                 class="bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded transition duration-300"
-                :disabled="isLoading" :aria-disabled="isLoading">
+                :disabled="loading" :aria-disabled="loading">
                 Load More
             </button>
         </div>
+
+        <!-- Confirm Dialog for Unblocking -->
+        <ConfirmDialog v-model="confirmDialog" :title="'Unblock User'"
+            :message="'Are you sure you want to unblock this user? They will be able to send you messages and friend requests again.'"
+            confirmText="Unblock" cancelText="Cancel" :isLoading="isProcessing" loadingText="Processing..."
+            @confirm="unblockConfirmed" @cancel="cancelUnblock" />
     </div>
 </template>
 
 <script setup>
-import { onMounted } from 'vue';
-import { useFriendStore } from '../../stores/friendStore';
-import { storeToRefs } from 'pinia';
+import { ref, onMounted } from 'vue';
+import { usefriendStore } from '../../stores/friendStore';
+import { useToast } from '../../composables/useToast';
+import ConfirmDialog from '../shared/ConfirmDialog.vue';
 
-const friendStore = useFriendStore();
-const { blockedUsers, loading, error, hasMore, isLoading } = storeToRefs(friendStore);
+const friendStore = usefriendStore();
+const { showToast } = useToast();
 
-// Load initial blocked users on component mount
-onMounted(() => {
-    friendStore.getListBlocks();
+const blockedUsers = ref([]);
+const loading = ref(true);
+const error = ref(null);
+
+// Confirmation Dialog State
+const confirmDialog = ref(false);
+const dialogTitle = ref('');
+const dialogMessage = ref('');
+const userIdToUnblock = ref('');
+const isProcessing = ref(false);
+
+onMounted(async () => {
+    await loadBlockedUsers();
 });
 
-// Load more blocked users
-const loadMore = () => {
-    friendStore.getListBlocks();
+const loadBlockedUsers = async () => {
+    try {
+        loading.value = true;
+        await friendStore.getBlockedUsers();
+        blockedUsers.value = friendStore.blockedUsers;
+    } catch (err) {
+        showToast('Failed to load blocked users', 'error');
+    } finally {
+        loading.value = false;
+    }
 };
 
-// Unblock a specific user
-const unblockUser = async (userId) => {
+const confirmUnblock = (userId) => {
+    userIdToUnblock.value = userId;
+    dialogTitle.value = 'Unblock User';
+    dialogMessage.value = 'Are you sure you want to unblock this user? They will be able to send you messages and friend requests again.';
+    confirmDialog.value = true;
+};
+
+const unblockConfirmed = async () => {
+    if (!userIdToUnblock.value) return;
+
+    isProcessing.value = true;
+
     try {
-        await friendStore.unblockUser(userId);
+        await friendStore.unblockUser(userIdToUnblock.value);
+        showToast('User unblocked successfully', 'success');
+        blockedUsers.value = blockedUsers.value.filter(user => user.id !== userIdToUnblock.value);
     } catch (err) {
-        // Error handling is managed via the store's reactive properties
-        console.error(`Error unblocking user with ID ${userId}:`, err);
+        console.error(`Error unblocking user with ID ${userIdToUnblock.value}:`, err);
+        showToast('Failed to unblock user', 'error');
+    } finally {
+        isProcessing.value = false;
+        confirmDialog.value = false;
+        userIdToUnblock.value = '';
+    }
+};
+
+const cancelUnblock = () => {
+    confirmDialog.value = false;
+    userIdToUnblock.value = '';
+};
+
+const loadMore = async () => {
+    try {
+        await friendStore.getListBlocks();
+        blockedUsers.value = friendStore.blockedUsers;
+    } catch (err) {
+        showToast('Failed to load more blocked users', 'error');
     }
 };
 </script>

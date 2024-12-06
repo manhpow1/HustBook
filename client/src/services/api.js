@@ -105,8 +105,8 @@ const apiService = {
     async getListBlocks(params = {}) {
         return axiosInstance.get(API_ENDPOINTS.GET_LIST_BLOCKS, { params });
     },
-    async unblockUser(userId) {
-        return axiosInstance.post(API_ENDPOINTS.UNBLOCK_USER, { user_id: userId });
+    async setBlock(userId, type) {
+        return axiosInstance.post(API_ENDPOINTS.SET_BLOCK, { user_id: userId, type });
     },
     // Notification APIs
     async getPushSettings() {

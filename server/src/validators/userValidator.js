@@ -140,16 +140,16 @@ const setBlockSchema = Joi.object({
     user_id: Joi.string().uuid().required().messages({
         'string.base': 'User ID must be a string.',
         'string.uuid': 'User ID must be a valid UUID.',
-        'any.required': 'User ID is required.',
+        'any.required': 'User ID is required.'
     }),
     type: Joi.number().integer().valid(0, 1).required().messages({
         'number.base': 'Type must be a number.',
         'number.integer': 'Type must be an integer.',
         'any.only': 'Type must be 0 (block) or 1 (unblock).',
-        'any.required': 'Type is required.',
-    }),
+        'any.required': 'Type is required.'
+    })
 }).required().messages({
-    'object.base': 'Invalid input format.',
+    'object.base': 'Invalid input format.'
 });
 
 /**

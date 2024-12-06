@@ -1,9 +1,9 @@
 const { v4: uuidv4 } = require('uuid');
-const { collections, createDocument, getDocument, updateDocument, queryDocuments, runTransaction, arrayUnion} = require('../config/database');
+const { collections, createDocument, getDocument, updateDocument, queryDocuments, runTransaction, arrayUnion } = require('../config/database');
 const { createError } = require('../utils/customError');
-const { generateDeviceToken, hashPassword, comparePassword, generateJWT, verifyJWT, generateRefreshToken } = require('../utils/authHelper');
+const { generateDeviceToken, hashPassword, comparePassword, generateJWT, verifyJWT, generateRefreshToken, generateRandomCode } = require('../utils/authHelper');
 const logger = require('../utils/logger');
-const UserModel = require('../models/User'); // Assuming UserModel is capitalized
+const User = require('../models/User');
 const AuditLogModel = require('../models/auditLogModel');
 
 const createUser = async (phoneNumber, password, uuid, verificationCode) => {
@@ -190,29 +190,33 @@ const updatePassword = async (userId, newPassword) => {
     }
 };
 
-const setBlock = async (currentUserId, targetUserId, type) => {
+async function setBlock(currentUserId, targetUserId, type) {
     try {
-        const user = new UserModel(currentUserId);
-        const targetUser = new UserModel(targetUserId);
+        // Fetch current user data
+        const currentUserData = await getDocument('users', currentUserId);
+        if (!currentUserData) {
+            throw createError('9995', 'Current user not found.');
+        }
 
+        const user = new User(currentUserData);
+
+        // Execute block or unblock
         if (type === 0) {
             // Block the user
             await user.blockUser(targetUserId);
             await AuditLogModel.logAction(currentUserId, targetUserId, 'block');
-            logger.info(`User ${currentUserId} blocked user ${targetUserId}.`);
-        } else if (type === 1) {
+            logger.info(`User ${currentUserId} blocked user ${targetUserId}`);
+        } else {
             // Unblock the user
             await user.unblockUser(targetUserId);
             await AuditLogModel.logAction(currentUserId, targetUserId, 'unblock');
-            logger.info(`User ${currentUserId} unblocked user ${targetUserId}.`);
-        } else {
-            throw createError('1004', 'Invalid type for blocking/unblocking.');
+            logger.info(`User ${currentUserId} unblocked user ${targetUserId}`);
         }
     } catch (error) {
-        logger.error('Error in setBlock service:', error);
+        logger.error(`Error in setBlock for user ${currentUserId} on user ${targetUserId}:`, error);
         throw error;
     }
-};
+}
 
 const uploadAvatar = async (avatarFile) => {
     try {
@@ -267,4 +271,5 @@ module.exports = {
     setBlock,
     uploadAvatar,
     verifyUserCode,
+    generateRandomCode,
 };

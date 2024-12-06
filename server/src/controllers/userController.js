@@ -328,10 +328,9 @@ const setBlock = async (req, res, next) => {
             throw createError('1010', 'Users cannot block themselves.');
         }
 
-        // Block or unblock the user via the service layer
+        // Call service layer to handle blocking/unblocking
         await userService.setBlock(currentUserId, user_id, type);
 
-        // Send a successful response
         const message = type === 0 ? 'User blocked successfully.' : 'User unblocked successfully.';
         sendResponse(res, '1000', { message });
     } catch (error) {
