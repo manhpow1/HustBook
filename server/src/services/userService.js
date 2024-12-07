@@ -50,11 +50,9 @@ class userService {
 
     async getUserById(userId) {
         try {
-            const userDoc = await db.collection(collections.users).doc(userId).get();
-            if (!userDoc.exists) {
-                return null;
-            }
-            return userDoc.data();
+            const userRef = db.collection(collections.users).doc(userId);
+            const userDoc = await userRef.get();
+            return userDoc.exists ? userDoc.data() : null;
         } catch (error) {
             logger.error('Error fetching user by ID:', error);
             throw createError('9999', 'Exception error');
@@ -185,10 +183,11 @@ class userService {
     async updateUserInfo(userId, updateData) {
         try {
             await updateDocument(collections.users, userId, updateData);
-            logger.info(`User ${userId} information updated.`);
+            const updatedUser = await this.getUserById(userId);
+            return updatedUser;
         } catch (error) {
-            logger.error('Error updating user information:', error);
-            throw createError('9999', 'Failed to update user information.');
+            logger.error(`Error updating user info for user ${userId}:`, error);
+            throw createError('9999', 'Exception error');
         }
     }
 

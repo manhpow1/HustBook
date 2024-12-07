@@ -189,42 +189,48 @@ class UserController {
 
     async changeInfoAfterSignup(req, res, next) {
         try {
-            const { error, value } = userValidator.validateChangeInfo(req.body);
+            const userId = req.user.uid; // From authenticateToken
+            const avatarFile = req.file; // handled by multer if provided
+            const { username } = req.body;
+
+            // Validate input
+            const { error } = userValidator.validateChangeInfoAfterSignup({ username });
             if (error) {
-                const errorMessage = error.details.map(detail => detail.message).join(', ');
-                throw createError('1002', errorMessage);
+                // Collect all validation errors into a single message
+                const messages = error.details.map(detail => detail.message).join(', ');
+                throw createError('1002', messages);
             }
 
-            const { username } = value;
-            const avatar = req.file;
-            const userId = req.user.uid;
-
-            if (username === req.user.phoneNumber) {
-                throw createError('1004', 'Username cannot be the same as phone number.');
+            let avatarUrl = '';
+            if (avatarFile) {
+                // Implement actual upload logic
+                // For demonstration, suppose we have a method in userService to handle avatar uploads:
+                avatarUrl = await userService.uploadAvatar(avatarFile);
             }
 
-            const updateData = { username };
-
-            if (avatar) {
-                const avatarUrl = await userService.uploadAvatar(avatar);
-                updateData.avatar = avatarUrl;
-            }
-
-            await userService.updateUserInfo(userId, updateData);
+            await userService.updateUserInfo(userId, {
+                username: username,
+                ...(avatarUrl && { avatar: avatarUrl })
+            });
 
             const updatedUser = await userService.getUserById(userId);
+            if (!updatedUser) {
+                throw createError('9995', 'User not found.');
+            }
 
-            sendResponse(res, '1000', {
-                id: userId,
+            const responseData = {
+                id: updatedUser.uid,
                 username: updatedUser.username,
-                phonenumber: updatedUser.phoneNumber,
-                created: updatedUser.createdAt,
-                avatar: updatedUser.avatar,
-                is_blocked: updatedUser.isBlocked || false,
-                online: updatedUser.online || false,
-            });
+                phonenumber: updatedUser.phoneNumber || '',
+                created: updatedUser.createdAt ? updatedUser.createdAt.toISOString() : '',
+                avatar: updatedUser.avatar || '',
+                is_blocked: updatedUser.isBlocked ? '1' : '0',
+                online: updatedUser.online ? '1' : '0'
+            };
+
+            sendResponse(res, '1000', responseData);
         } catch (error) {
-            logger.error('ChangeInfoAfterSignup Error:', error);
+            logger.error('Error in changeInfoAfterSignup controller:', error);
             next(error);
         }
     }
@@ -399,6 +405,62 @@ class UserController {
             sendResponse(res, '1000', responseData);
         } catch (error) {
             logger.error('Error in getUserInfo controller:', error);
+            next(error);
+        }
+    }
+
+    async setUserInfo(req, res, next) {
+        try {
+            const userId = req.user.uid;
+            const {
+                username,
+                description,
+                avatar,
+                address,
+                city,
+                country,
+                cover_image,
+                link
+            } = req.body;
+
+            const updateData = {};
+            if (username !== undefined) updateData.username = username;
+            if (description !== undefined) updateData.description = description;
+            if (avatar !== undefined) updateData.avatar = avatar;
+            if (address !== undefined) updateData.address = address;
+            if (city !== undefined) updateData.city = city;
+            if (country !== undefined) updateData.country = country;
+            if (cover_image !== undefined) updateData.coverImage = cover_image;
+            if (link !== undefined) updateData.link = link;
+
+            // If no fields to update, return current user info
+            if (Object.keys(updateData).length === 0) {
+                const currentUser = await userService.getUserById(userId);
+                if (!currentUser) throw createError('9995', 'User not found.');
+                return sendResponse(res, '1000', {
+                    avatar: currentUser.avatar || '',
+                    cover_image: currentUser.coverImage || '',
+                    link: currentUser.link || '',
+                    city: currentUser.city || '',
+                    country: currentUser.country || ''
+                });
+            }
+
+            await userService.updateUserInfo(userId, updateData);
+            const updatedUser = await userService.getUserById(userId);
+            if (!updatedUser) {
+                throw createError('9995', 'User not found.');
+            }
+
+            sendResponse(res, '1000', {
+                avatar: updatedUser.avatar || '',
+                cover_image: updatedUser.coverImage || '',
+                link: updatedUser.link || '',
+                city: updatedUser.city || '',
+                country: updatedUser.country || ''
+            });
+        } catch (error) {
+            logger.error('Error in setUserInfo controller:', error);
             next(error);
         }
     }

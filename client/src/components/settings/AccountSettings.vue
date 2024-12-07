@@ -3,6 +3,7 @@
         <h2 class="text-xl font-semibold mb-4">Account Settings</h2>
 
         <div class="space-y-6">
+            <!-- Personal Information Form -->
             <div>
                 <h3 class="text-lg font-medium mb-2">Personal Information</h3>
                 <form @submit.prevent="updatePersonalInfo" class="space-y-4">
@@ -29,7 +30,12 @@
                 <p class="mt-2 text-sm text-gray-500">Please note that changes to your name may take up to 24 hours to
                     reflect across the platform.</p>
             </div>
-
+            <!-- Edit Profile Form for set_user_info endpoint -->
+            <div>
+                <h3 class="text-lg font-medium mb-2">Edit Profile</h3>
+                <EditProfileForm />
+            </div>
+            <!-- Security (Change Password) Form -->
             <div>
                 <h3 class="text-lg font-medium mb-2">Security</h3>
                 <form @submit.prevent="updatePassword" class="space-y-4">
@@ -64,6 +70,7 @@
 import { ref } from 'vue';
 import { useSettingsStore } from '../../stores/settingsStore';
 import { useToast } from '../../composables/useToast';
+import EditProfileForm from '../user/EditProfileForm.vue';
 
 const settingsStore = useSettingsStore();
 const { showToast } = useToast();

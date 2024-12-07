@@ -93,27 +93,11 @@ const loginSchema = Joi.object({
  * - username
  * - avatar (optional)
  */
-const changeInfoSchema = Joi.object({
-    username: Joi.string().min(3).max(30).required().custom((value, helpers) => {
-        const sanitized = sanitizeHtml(value, {
-            allowedTags: [],
-            allowedAttributes: {},
-        });
-        if (sanitized !== value) {
-            return helpers.error('any.invalid');
-        }
-        return sanitized;
-    }).messages({
+const changeInfoAfterSignupSchema = Joi.object({
+    username: Joi.string().min(1).required().messages({
         'string.empty': 'Username cannot be empty.',
-        'string.min': 'Username must be at least 3 characters long.',
-        'string.max': 'Username must be at most 30 characters long.',
-        'any.required': 'Username is required.',
-        'any.invalid': 'Username contains invalid characters.',
-    }),
-    avatar: Joi.any() // Assuming avatar is handled by middleware (e.g., multer)
-        .optional(),
-}).required().messages({
-    'any.required': 'All parameters are required.',
+        'any.required': 'Username is required.'
+    })
 });
 
 /**
@@ -215,9 +199,9 @@ const validateLogin = (data) => {
     return loginSchema.validate(data, { abortEarly: false });
 };
 
-const validateChangeInfo = (data) => {
-    return changeInfoSchema.validate(data, { abortEarly: false });
-};
+function validateChangeInfoAfterSignup(data) {
+    return changeInfoAfterSignupSchema.validate(data, { abortEarly: false });
+}
 
 const validateChangePassword = (data) => {
     return changePasswordSchema.validate(data, { abortEarly: false });
@@ -242,7 +226,7 @@ const validateCheckVerifyCode = (data) => {
 module.exports = {
     validateSignup,
     validateLogin,
-    validateChangeInfo,
+    validateChangeInfoAfterSignup,
     validateChangePassword,
     validateSetBlock,
     validateRefreshToken,

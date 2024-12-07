@@ -12,6 +12,7 @@ export const API_ENDPOINTS = {
     AUTH_CHECK: `${API_BASE_URL}/auth/check`,
     CHANGE_PASSWORD: `${API_BASE_URL}/change_password`,
     GET_USER_INFO: (userId) => userId ? `${API_BASE_URL}/users/get_user_info/${userId}` : `${API_BASE_URL}/users/get_user_info`,
+    SET_USER_INFO: `${API_BASE_URL}/users/set_user_info`,
     // Post Endpoints
     ADD_POST: `${API_BASE_URL}/posts`,
     GET_POST: (postId) => `${API_BASE_URL}/posts/${postId}`,

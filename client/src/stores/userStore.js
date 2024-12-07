@@ -247,6 +247,35 @@ export const useUserStore = defineStore('user', () => {
         }
     }
 
+    async function updateUserInfo(profileData) {
+        isLoading.value = true;
+        error.value = null;
+        successMessage.value = '';
+
+        try {
+            const response = await apiService.setUserInfo(profileData);
+            const data = response.data;
+
+            if (data.code === '1000') {
+                // Fetch current user profile again to update the store state with the newest data
+                await fetchUserProfile();
+                successMessage.value = 'Profile updated successfully.';
+                return true;
+            } else {
+                error.value = data.message || 'Failed to update user info';
+                logger.warn('Failed to update user info', { message: data.message });
+                return false;
+            }
+        } catch (err) {
+            await handleError(err);
+            error.value = err.response?.data?.message || 'An error occurred while updating user info';
+            logger.error('UpdateUserInfo error', { error: err });
+            return false;
+        } finally {
+            isLoading.value = false;
+        }
+    }
+
     // Refresh Access Token
     async function refreshAccessToken() {
         const currentRefreshToken = Cookies.get('refreshToken');
@@ -301,6 +330,7 @@ export const useUserStore = defineStore('user', () => {
         refreshAccessToken,
         clearMessages,
         getUserProfile,
-        fetchUserProfile,        
+        fetchUserProfile,
+        updateUserInfo,
     };
 });

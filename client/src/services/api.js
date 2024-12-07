@@ -52,6 +52,9 @@ const apiService = {
         const url = API_ENDPOINTS.GET_USER_INFO(userId);
         return axiosInstance.get(url);
     },
+    async setUserInfo(data) {
+        return this.put(API_ENDPOINTS.SET_USER_INFO, data);
+    },
     // Post APIs
     async createPost(postData) {
         return axiosInstance.post(API_ENDPOINTS.ADD_POST, postData);
