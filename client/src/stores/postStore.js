@@ -2,9 +2,8 @@ import { defineStore } from 'pinia';
 import { ref, computed } from 'vue';
 import apiService from '../services/api';
 import { formatNumber } from '../utils/numberFormat';
-import { handleError } from '../utils/errorHandler';
+import { useErrorHandler } from '../composables/useErrorHandler';
 import inappropriateWords from '../words/inappropriateWords';
-import router from '../router';
 
 export const usePostStore = defineStore('post', () => {
     const posts = ref([]);
@@ -19,6 +18,7 @@ export const usePostStore = defineStore('post', () => {
     const hasMorePosts = ref(true);
     const lastVisible = ref(null);
     const lastKnownCoordinates = ref(null);
+    const { handleError }= useErrorHandler();
 
     const formattedLikes = computed(() => formatNumber(currentPost.value?.likes || 0));
     const formattedComments = computed(() => formatNumber(currentPost.value?.comments || 0));
@@ -56,7 +56,7 @@ export const usePostStore = defineStore('post', () => {
                 throw new Error(data.message || 'Failed to load posts');
             }
         } catch (err) {
-            await handleError(err, router);
+            await handleError(err);
             error.value = err.message || 'Failed to load posts';
         } finally {
             loading.value = false;
@@ -77,8 +77,37 @@ export const usePostStore = defineStore('post', () => {
                 throw new Error(data.message || 'Failed to load post');
             }
         } catch (err) {
-            await handleError(err, router);
+            await handleError(err);
             error.value = err.message || 'Failed to load post';
+        } finally {
+            loading.value = false;
+        }
+    }
+
+    async function getUserPosts(userId, { limit = 10 } = {}) {
+        loading.value = true;
+        error.value = null;
+
+        try {
+            const response = await apiService.getListPosts({ user_id: userId, limit, lastVisible: lastVisible.value });
+            const data = response.data;
+
+            if (data.code === '1000') {
+                const newPosts = data.data.posts
+                    .map(validateAndProcessPost)
+                    .filter((post) => post !== null);
+
+                posts.value.push(...newPosts);
+                lastVisible.value = data.data.lastVisible;
+                hasMorePosts.value = newPosts.length === limit;
+            } else if (data.code === '9994') {
+                hasMorePosts.value = false;
+            } else {
+                throw new Error(data.message || 'Failed to load user posts');
+            }
+        } catch (err) {
+            await handleError(err);
+            error.value = err.message || 'Failed to load user posts';
         } finally {
             loading.value = false;
         }
@@ -99,7 +128,7 @@ export const usePostStore = defineStore('post', () => {
                 throw new Error(data.message || 'Failed to create post');
             }
         } catch (err) {
-            await handleError(err, router);
+            await handleError(err);
             error.value = err.message || 'Failed to create post';
             throw err;
         } finally {
@@ -128,7 +157,7 @@ export const usePostStore = defineStore('post', () => {
                 throw new Error(data.message || 'Failed to update post');
             }
         } catch (err) {
-            await handleError(err, router);
+            await handleError(err);
             error.value = err.message || 'Failed to update post';
             throw err;
         } finally {
@@ -155,7 +184,7 @@ export const usePostStore = defineStore('post', () => {
             // Call the like API
             await apiService.likePost(postId);
         } catch (err) {
-            await handleError(err, router);
+            await handleError(err);
 
             // Revert the UI update on failure
             const post = posts.value.find(p => p.id === postId);
@@ -198,7 +227,7 @@ export const usePostStore = defineStore('post', () => {
             }
         } catch (error) {
             commentError.value = error.message;
-            await handleError(error, router);
+            await handleError(error);
         } finally {
             loadingComments.value = false;
         }
@@ -326,5 +355,6 @@ export const usePostStore = defineStore('post', () => {
         validateAndProcessPost,
         containsInappropriateContent,
         isValidCoordinate,
+        getUserPosts,
     };
 });

@@ -18,13 +18,11 @@ export const useVideoStore = defineStore('video', () => {
         error.value = null
 
         try {
-            const response = await apiService.get('/get_list_videos', {
-                params: {
-                    ...params,
-                    last_id: lastId.value,
-                    index: videos.value.length,
-                    count: 20
-                }
+            const response = await apiService.post('/video/get_list_videos', {
+                ...params,
+                last_id: lastId.value,
+                index: videos.value.length,
+                count: 20
             })
 
             if (response.data.code === '1000') {
@@ -50,34 +48,40 @@ export const useVideoStore = defineStore('video', () => {
         error.value = null
     }
 
-    const fetchVideos = async (params = {}) => {
-        // TODO: Implement API call to fetch videos
-        // This is a mock implementation
-        return [
-            {
-                id: 1,
-                url: 'https://example.com/video1.mp4',
-                title: 'Awesome Video 1',
-                uploader: { id: 101, username: 'user1' },
-            },
-            {
-                id: 2,
-                url: 'https://example.com/video2.mp4',
-                title: 'Cool Video 2',
-                uploader: { id: 102, username: 'user2' },
-            },
-            // Add more mock videos as needed
-        ];
+    async function getUserVideos(userId) {
+        // Assuming there's an endpoint to fetch user videos
+        // If not, implement in a similar way to getListVideos but filtered by userId
+        loading.value = true;
+        error.value = null;
+
+        try {
+            // Example: if there's an API for user videos
+            const response = await apiService.get('/video/get_user_videos', {
+                params: { user_id: userId, index: 0, count: 20 }
+            });
+
+            if (response.data.code === '1000') {
+                return response.data.data.posts; // Return directly to Profile.vue
+            } else {
+                throw new Error(response.data.message || 'Failed to load user videos');
+            }
+        } catch (err) {
+            error.value = 'Failed to load user videos';
+            await handleError(err, router);
+            return [];
+        } finally {
+            loading.value = false;
+        }
     }
 
-    const searchVideos = async (query) => {
-        // TODO: Implement API call to search videos
-        // This is a mock implementation
-        const allVideos = await this.fetchVideos();
-        return allVideos.filter(video =>
-            video.title.toLowerCase().includes(query.toLowerCase()) ||
-            video.uploader.username.toLowerCase().includes(query.toLowerCase())
-        );
+    async function fetchVideos(params = {}) {
+        // Implementation if needed
+        return [];
+    }
+
+    async function searchVideos(query) {
+        // Implementation if needed
+        return [];
     }
 
     return {
@@ -89,5 +93,6 @@ export const useVideoStore = defineStore('video', () => {
         resetVideos,
         fetchVideos,
         searchVideos,
+        getUserVideos,
     }
-})
+});

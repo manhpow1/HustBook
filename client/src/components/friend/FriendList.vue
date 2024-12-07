@@ -10,7 +10,7 @@
             </div>
 
             <!-- Sort Select -->
-            <select v-model="sortBy" class="border rounded-md px-2 py-2" aria-label="Sort friends">
+            <select v-model="sortByInternal" class="border rounded-md px-2 py-2" aria-label="Sort friends">
                 <option value="name">Sort by Name</option>
                 <option value="recent">Sort by Recent</option>
                 <option value="mutual">Sort by Mutual Friends</option>
@@ -19,7 +19,7 @@
 
         <!-- Loading State -->
         <div v-if="loading" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            <FriendSkeleton v-for="i in 6" :key="i" />
+            <FriendSkeleton v-for="i in limit" :key="i" />
         </div>
 
         <!-- Error State -->
@@ -28,13 +28,13 @@
         </div>
 
         <!-- Empty State -->
-        <div v-else-if="filteredFriends.length === 0" class="text-gray-500 py-4">
+        <div v-else-if="limitedFriends.length === 0" class="text-gray-500 py-4">
             No friends found.
         </div>
 
         <!-- Friends List -->
         <ul v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            <li v-for="friend in filteredFriends" :key="friend.id" class="bg-white shadow rounded-lg p-4">
+            <li v-for="friend in limitedFriends" :key="friend.id" class="bg-white shadow rounded-lg p-4">
                 <div class="flex items-center mb-4">
                     <img :src="friend.avatar || '../../assets/avatar-default.svg'" :alt="friend.username"
                         class="w-12 h-12 rounded-full mr-4" />
@@ -78,10 +78,25 @@ import { ref, computed, onMounted, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import { useFriendStore } from '../../stores/friendStore';
 import { useToast } from '../../composables/useToast';
-import { useDebounce } from '../../composables/useDebounce'; // Using the debouncing composable
+import { useDebounce } from '../../composables/useDebounce';
 import FriendSkeleton from './FriendSkeleton.vue';
 import ConfirmDialog from '../ui/ConfirmDialog.vue';
 import { SearchIcon, MoreVerticalIcon } from 'lucide-vue-next';
+
+const props = defineProps({
+    userId: {
+        type: String,
+        default: null
+    },
+    limit: {
+        type: Number,
+        default: 6
+    },
+    sortBy: {
+        type: String,
+        default: 'recent' // 'name', 'recent', or 'mutual'
+    }
+});
 
 const router = useRouter();
 const friendStore = useFriendStore();
@@ -91,7 +106,7 @@ const friends = ref([]);
 const loading = ref(true);
 const error = ref(null);
 const searchQuery = ref('');
-const sortBy = ref('name');
+const sortByInternal = ref(props.sortBy);
 const activeDropdown = ref(null);
 const confirmDialog = ref(false);
 const userToBlock = ref(null);
@@ -104,16 +119,14 @@ const doSearch = () => {
 };
 const debouncedSearchFn = useDebounce(doSearch, 300);
 
-// Watch searchQuery and run debounced function
 watch(searchQuery, () => {
     debouncedSearchFn();
 });
 
-// Fetch friends from the store
 const fetchFriends = async () => {
     try {
         loading.value = true;
-        await friendStore.getUserFriends();
+        await friendStore.getUserFriends({ userId: props.userId, count: 50 }); // get enough to sort and limit
         friends.value = friendStore.friends;
         loading.value = false;
     } catch (err) {
@@ -122,50 +135,47 @@ const fetchFriends = async () => {
     }
 };
 
-// Compute filtered and sorted friends
 const filteredFriends = computed(() => {
     let result = friends.value.filter(friend =>
         friend.username.toLowerCase().includes(debouncedSearch.value.toLowerCase())
     );
 
-    // Sort friends based on selected criteria
-    if (sortBy.value === 'name') {
+    if (sortByInternal.value === 'name') {
         result.sort((a, b) => a.username.localeCompare(b.username));
-    } else if (sortBy.value === 'recent') {
+    } else if (sortByInternal.value === 'recent') {
+        // Assuming friend.friendshipDate is a timestamp or date string
         result.sort((a, b) => new Date(b.friendshipDate) - new Date(a.friendshipDate));
-    } else if (sortBy.value === 'mutual') {
+    } else if (sortByInternal.value === 'mutual') {
         result.sort((a, b) => b.mutualFriends - a.mutualFriends);
     }
 
     return result;
 });
 
-// Navigate to user's profile
+const limitedFriends = computed(() => {
+    return filteredFriends.value.slice(0, props.limit);
+});
+
 const viewProfile = (userId) => {
     router.push({ name: 'Profile', params: { id: userId } });
 };
 
-// Toggle dropdown for friend actions
 const toggleDropdown = (friendId) => {
     activeDropdown.value = activeDropdown.value === friendId ? null : friendId;
 };
 
-// Confirm blocking a user
 const confirmBlock = (userId) => {
     userToBlock.value = userId;
     confirmDialog.value = true;
 };
 
-// Execute block action after confirmation
 const blockConfirmed = async () => {
     if (!userToBlock.value) return;
     isProcessing.value = true;
 
     try {
-        // Set block type to 0 for blocking
         await friendStore.setBlock(userToBlock.value, 0);
         showToast('User blocked successfully', 'success');
-        // Remove the blocked user from the current list
         friends.value = friends.value.filter(friend => friend.id !== userToBlock.value);
     } catch (err) {
         console.error(`Error blocking user with ID ${userToBlock.value}:`, err);
@@ -177,13 +187,11 @@ const blockConfirmed = async () => {
     }
 };
 
-// Cancel block action
 const cancelBlock = () => {
     confirmDialog.value = false;
     userToBlock.value = null;
 };
 
-// Load friends on component mount
 onMounted(() => {
     fetchFriends();
 });
