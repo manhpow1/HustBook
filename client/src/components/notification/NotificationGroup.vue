@@ -9,7 +9,6 @@
 </template>
 
 <script setup>
-import { defineProps } from 'vue';
 import NotificationItem from './NotificationItem.vue';
 
 const props = defineProps({

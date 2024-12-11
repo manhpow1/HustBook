@@ -4,7 +4,7 @@ import apiService from '../services/api';
 import { useErrorHandler } from '../composables/useErrorHandler';
 import logger from '../services/logging';
 import { useToast } from '../composables/useToast';
-import { useNotifications } from '../composables/useNotifications';
+import { useNotifications } from '../composables/useNotification';
 
 export const useNotificationStore = defineStore('notification', () => {
     // State

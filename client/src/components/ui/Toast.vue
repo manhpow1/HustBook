@@ -17,7 +17,7 @@
 
 <script setup>
 import { useToast } from '../../composables/useToast';
-import { CheckCircleIcon, XCircleIcon, InformationIcon } from 'lucide-vue-next';
+import { CheckCircleIcon, XCircleIcon, Info } from 'lucide-vue-next';
 
 const { toasts, removeToast } = useToast();
 
@@ -32,8 +32,8 @@ const toastClasses = {
 const toastIcons = {
     success: CheckCircleIcon,
     error: XCircleIcon,
-    info: InformationIcon,
-    default: InformationIcon,
+    info: Info,
+    default: Info,
 };
 </script>
 

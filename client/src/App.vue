@@ -18,7 +18,7 @@
         <template #fallback>
           <!-- Fallback Loading Indicator -->
           <div class="loading flex items-center justify-center h-screen" role="status" aria-live="polite">
-            <LoaderIcon class="animate-spin h-10 w-10 text-indigo-600" aria-hidden="true" />
+            <Loader class="animate-spin h-10 w-10 text-indigo-600" aria-hidden="true" />
             <p class="ml-2 text-lg font-medium text-gray-700">Loading...</p>
           </div>
         </template>
@@ -30,10 +30,10 @@
 </template>
 
 <script setup>
-import { ref } from 'vue';
+import { ref, onMounted } from 'vue';
 import Layout from './components/layout/Layout.vue';
 import ErrorBoundary from './components/shared/ErrorBoundary.vue';
-import { LoaderIcon } from 'lucide-vue-next';
+import { Loader } from 'lucide-vue-next';
 import { useUserStore } from './stores/userStore';
 import { useHead } from '@unhead/vue';
 import NewItemsNotification from './components/notification/NewItemsNotification.vue';
@@ -44,7 +44,7 @@ import Toast from './components/ui/Toast.vue';
 useGlobalErrorHandler();
 
 // Define components to cache with KeepAlive
-const cachedComponents = ref(['Home', 'Profile', 'Settings']); // Add component names as needed
+const cachedComponents = ref(['Home', 'Profile', 'Settings']);
 
 // Set up Head for SEO and Security
 useHead({
@@ -66,10 +66,9 @@ useHead({
 
 const userStore = useUserStore();
 
-onMounted(() => {
-  document.body.classList.add('bg-gray-100');
-  // Check user authentication status
-  userStore.checkAuth();
+onMounted(async () => {
+  // Attempt to fetch user profile if accessToken is available
+  await userStore.fetchUserProfile();
 });
 </script>
 

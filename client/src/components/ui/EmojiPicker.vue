@@ -15,7 +15,7 @@
 
 <script setup>
 import { ref, computed } from 'vue';
-import { useClickOutside } from '@vueuse/core'; // Using VueUse for detecting clicks outside
+import { onClickOutside } from '@vueuse/core'; // Using VueUse for detecting clicks outside
 
 // Props
 const props = defineProps({
@@ -37,7 +37,7 @@ const pickerRef = ref(null);
 const searchQuery = ref('');
 
 // Click Outside Handling
-useClickOutside(pickerRef, () => {
+onClickOutside(pickerRef, () => {
     emit('close');
 });
 

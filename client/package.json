@@ -12,6 +12,7 @@
   "dependencies": {
     "@headlessui/vue": "^1.7.23",
     "@pinia/testing": "^0.1.6",
+    "@redis/client": "^1.6.0",
     "@tailwindcss/forms": "^0.5.9",
     "@tailwindcss/typography": "^0.5.15",
     "@unhead/vue": "^1.11.10",
@@ -30,7 +31,7 @@
     "imask": "^7.6.1",
     "js-cookie": "^3.0.5",
     "lodash-es": "^4.17.21",
-    "lucide-vue-next": "^0.441.0",
+    "lucide-vue-next": "^0.468.0",
     "markdown-it": "^14.1.0",
     "pinia": "^2.2.2",
     "throttle": "^1.0.3",

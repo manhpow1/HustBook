@@ -3,7 +3,7 @@ const { collections, createDocument, getDocument, updateDocument, queryDocuments
 const { createError } = require('../utils/customError');
 const { generateDeviceToken, hashPassword } = require('../utils/authHelper');
 const logger = require('../utils/logger');
-const User = require('../models/User');
+const User = require('../models/userModel');
 const AuditLogModel = require('../models/auditLogModel');
 
 class userService {

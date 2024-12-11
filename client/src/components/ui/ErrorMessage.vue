@@ -42,7 +42,7 @@ const emit = defineEmits(['retry']);
 }
 
 .error-message .flex {
-    @apply flex items-center;
+    @apply items-center;
 }
 
 .error-message p {

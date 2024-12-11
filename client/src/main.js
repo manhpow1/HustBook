@@ -3,13 +3,15 @@ import { createApp } from 'vue';
 import { createHead } from '@unhead/vue';
 import App from './App.vue';
 import router from './router';
-import pinia from './pinia';
+import { createPinia } from 'pinia';
 import 'vue-virtual-scroller/dist/vue-virtual-scroller.css';
 import './styles/index.css';
 import logger from './services/logging'; // Ensure logger is properly set up
+import { useUserStore } from './stores/userStore';
 
 async function initApp() {
   try {
+    const pinia = createPinia();
     const app = createApp(App);
     const head = createHead();
 
@@ -19,14 +21,11 @@ async function initApp() {
     app.use(head);
 
     // Initialize user store and fetch user data if token exists
-    const userStore = pinia.state.value.userStore
-      ? pinia.state.value.userStore
-      : null;
+    const userStore = useUserStore();
 
-    if (userStore && userStore.token) {
-      await userStore.fetchUser().catch((error) => {
+    if (userStore.accessToken) { // accessToken is a ref in the store
+      await userStore.fetchUserProfile().catch((error) => {
         logger.error('Error fetching user on app initialization:', error);
-        // Optionally handle the error, e.g., logout user
         userStore.logout();
       });
     }

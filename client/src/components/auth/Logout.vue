@@ -72,11 +72,11 @@
 
 <script setup>
 import { ref } from 'vue';
-import { useUserStore } from '@/stores/userStore';
+import { useUserStore } from '../../stores/userStore';
 import { LogOutIcon, LoaderIcon, CheckCircleIcon, AlertCircleIcon } from 'lucide-vue-next';
 import { Dialog, DialogPanel, DialogTitle, TransitionChild, TransitionRoot } from '@headlessui/vue';
-import { useToast } from '@/composables/useToast';
-import { useErrorHandler } from '@/composables/useErrorHandler';
+import { useToast } from '../../composables/useToast';
+import { useErrorHandler } from '../../composables/useErrorHandler';
 
 const userStore = useUserStore();
 const { handleError } = useErrorHandler();

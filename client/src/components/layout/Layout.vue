@@ -164,6 +164,7 @@ import { navItems } from '../../config/navigation';
 import { useHead } from '@unhead/vue';
 import SearchPosts from '../search/SearchPosts.vue';
 import NotificationTab from '../notification/NotificationTab.vue';
+import { storeToRefs } from 'pinia';
 
 // Function to create async components with fallback
 const createAsyncComponent = (loader) =>

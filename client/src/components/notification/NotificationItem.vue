@@ -19,7 +19,7 @@
 </template>
 
 <script setup>
-import { defineProps, computed } from 'vue';
+import {computed } from 'vue';
 import { XIcon } from 'lucide-vue-next';
 import { useNotificationStore } from '../../stores/notificationStore';
 import { formatNotificationTime } from '../../utils/helpers';

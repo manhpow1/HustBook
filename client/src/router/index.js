@@ -114,18 +114,18 @@ const routes = [
         component: () => import('../components/search/SearchPosts.vue'),
         meta: { requiresAuth: true },
     },
-    {
-        path: '/videos',
-        name: 'VideoTab',
-        component: VideoTab,
-        meta: { requiresAuth: true },
-    },
-    {
-        path: '/videos/search',
-        name: 'VideoSearch',
-        component: VideoSearch,
-        meta: { requiresAuth: true },
-    },
+    // {
+    //     path: '/videos',
+    //     name: 'VideoTab',
+    //     component: VideoTab,
+    //     meta: { requiresAuth: true },
+    // },
+    // {
+    //     path: '/videos/search',
+    //     name: 'VideoSearch',
+    //     component: VideoSearch,
+    //     meta: { requiresAuth: true },
+    // },
 ]
 
 const router = createRouter({

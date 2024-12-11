@@ -4,7 +4,7 @@
         @click="handleNotificationClick" tabindex="0" aria-live="polite" role="alert"
         @keydown.enter="handleNotificationClick" @keydown.space.prevent="handleNotificationClick">
         <div class="flex items-center">
-            <NewItemsIcon class="w-6 h-6 mr-2" aria-hidden="true" />
+            <CirclePlus class="w-6 h-6 mr-2" aria-hidden="true" />
             <span>{{ newItemsCount }} new item{{ newItemsCount !== 1 ? 's' : '' }} available. Click to refresh.</span>
         </div>
     </div>
@@ -17,7 +17,8 @@ import { usePostStore } from '../../stores/postStore';
 import { storeToRefs } from 'pinia';
 import { useErrorHandler } from '../../composables/useErrorHandler';
 import { useToast } from '../../composables/useToast';
-import { NewItemsIcon } from 'lucide-vue-next';
+import { CirclePlus } from 'lucide-vue-next';
+import logger from '../../services/logging';
 
 const notificationStore = useNotificationStore();
 const postStore = usePostStore();

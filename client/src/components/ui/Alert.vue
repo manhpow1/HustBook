@@ -20,7 +20,7 @@
 
 <script setup>
 import { computed, defineProps } from 'vue';
-import { CheckCircleIcon, ExclamationTriangleIcon, InformationCircleIcon, XCircleIcon } from 'lucide-vue-next';
+import { CheckCircleIcon, TriangleAlert, Info, XCircleIcon } from 'lucide-vue-next';
 import Button from './Button.vue';
 
 const props = defineProps({
@@ -59,10 +59,10 @@ const iconComponent = computed(() => {
         case 'error':
             return XCircleIcon;
         case 'warning':
-            return ExclamationTriangleIcon;
+            return TriangleAlert;
         case 'info':
         default:
-            return InformationCircleIcon;
+            return Info;
     }
 });
 

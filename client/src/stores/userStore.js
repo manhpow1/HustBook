@@ -314,13 +314,11 @@ export const useUserStore = defineStore('user', () => {
 
     // Expose state and actions
     return {
-        // State
         user,
         isLoading,
         error,
         successMessage,
         isLoggedIn,
-        // Actions
         login,
         register,
         logout,
@@ -330,7 +328,6 @@ export const useUserStore = defineStore('user', () => {
         refreshAccessToken,
         clearMessages,
         getUserProfile,
-        fetchUserProfile,
         updateUserInfo,
     };
 });

@@ -3,7 +3,7 @@
     <div class="max-w-md w-full space-y-8">
       <!-- Header Section -->
       <div>
-        <img class="mx-auto h-12 w-auto" src="@/assets/logo.svg" alt="HUSTBOOK" />
+        <img class="mx-auto h-12 w-auto" src="../../assets/logo.svg" alt="HUSTBOOK" />
         <h2 class="mt-6 text-center text-3xl font-extrabold text-gray-900">
           Sign in to your account
         </h2>
@@ -88,11 +88,12 @@
 <script setup>
 import { ref, computed, watch } from 'vue';
 import { useRouter } from 'vue-router';
-import { useUserStore } from '@/stores/userStore';
+import { useUserStore } from '../../stores/userStore';
 import { LockIcon, LoaderIcon, CheckCircleIcon } from 'lucide-vue-next';
-import { useFormValidation } from '@/composables/useFormValidation';
-import { useToast } from '@/composables/useToast';
-import { useErrorHandler } from '@/composables/useErrorHandler';
+import { useFormValidation } from '../../composables/useFormValidation';
+import { useToast } from '../../composables/useToast';
+import { useErrorHandler } from '../../composables/useErrorHandler';
+import { storeToRefs } from 'pinia';
 
 const router = useRouter();
 const userStore = useUserStore();
@@ -102,7 +103,23 @@ const { showToast } = useToast();
 const phonenumber = ref('');
 const password = ref('');
 const rememberMe = ref(false);
-const { phoneError, passwordError, validatePhone, validatePassword } = useFormValidation();
+
+const { errors, validateField, validators } = useFormValidation();
+
+// Compute phoneError and passwordError from errors
+const phoneError = computed(() => errors.value['phonenumber']);
+const passwordError = computed(() => errors.value['password']);
+
+// Define validation methods
+function validatePhone() {
+  validateField('phonenumber', phonenumber.value, validators.phonenumber);
+}
+
+function validatePassword() {
+  validateField('password', password.value, validators.password);
+}
+
+const { isLoading, successMessage, error } = storeToRefs(userStore);
 
 // Computed property to determine if the form is valid
 const isFormValid = computed(() => {
@@ -110,9 +127,7 @@ const isFormValid = computed(() => {
 });
 
 // Computed property to check if login was successful
-const loginSuccess = computed(() => {
-  return userStore.successMessage !== '';
-});
+const loginSuccess = computed(() => successMessage.value !== '');
 
 // Handle form submission
 const handleSubmit = async () => {
