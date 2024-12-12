@@ -1,17 +1,14 @@
 const express = require('express');
 const router = express.Router();
-
-router.get('/get_conversation/:id', (req, res) => {
-  // Implementation for getting a conversation
-});
+const { authenticateToken } = require('../middleware/auth');
+const chatController = require('../controllers/chatController');
 
 router.delete('/delete_message/:id', (req, res) => {
   // Implementation for deleting a message
 });
 
-router.get('/get_list_conversation', (req, res) => {
-  // Implementation for getting list of conversations
-});
+router.get('/get_list_conversation', authenticateToken, chatController.getListConversation);
+router.get('/get_conversation', authenticateToken, chatController.getConversation);
 
 router.delete('/delete_conversation/:id', (req, res) => {
   // Implementation for deleting a conversation
