@@ -1,4 +1,4 @@
-const { db, collections } = require('../config/database');
+const { db, collections, arrayRemove } = require('../config/database');
 const { createError } = require('../utils/customError');
 const logger = require('../utils/logger');
 const Conversation = require('../models/Conversation');
@@ -210,6 +210,204 @@ class ChatService {
 
         } catch (error) {
             logger.error('Error in getConversation service:', error);
+            if (error.code) {
+                throw error;
+            }
+            throw createError('9999', 'Exception error');
+        }
+    }
+
+    async setReadMessage(userId, partnerId, conversationId) {
+        try {
+            let convRef;
+            let partnerIdFinal;
+
+            if (conversationId) {
+                // Fetch conversation by ID
+                const convDoc = await db.collection('conversations').doc(conversationId).get();
+                if (!convDoc.exists) {
+                    throw createError('9994', 'No data or end of list data');
+                }
+                convRef = convDoc.ref;
+                const data = convDoc.data();
+                if (!data.participants.includes(userId)) {
+                    throw createError('1009', 'Not authorized');
+                }
+                partnerIdFinal = data.participants.find(p => p !== userId);
+            } else if (partnerId) {
+                // Fetch conversation between userId and partnerId
+                partnerIdFinal = partnerId;
+                const participants = [userId, partnerId].sort(); // Ensure consistent order
+                const convSnapshot = await db.collection('conversations')
+                    .where('participants', '==', participants)
+                    .limit(1)
+                    .get();
+                if (convSnapshot.empty) {
+                    // No conversation found, return 0
+                    return 0;
+                }
+                convRef = convSnapshot.docs[0].ref;
+            } else {
+                throw createError('1002', 'Either "partner_id" or "conversation_id" must be provided');
+            }
+
+            // Fetch messages where unreadBy includes userId
+            const messagesSnapshot = await convRef.collection('messages')
+                .where('unreadBy', 'array-contains', userId)
+                .get();
+
+            if (messagesSnapshot.empty) {
+                return 0;
+            }
+
+            // Firestore limits batch operations to 500 writes
+            const batchSize = 500;
+            const totalMessages = messagesSnapshot.size;
+            let updatedCount = 0;
+
+            // Process in batches
+            for (let i = 0; i < totalMessages; i += batchSize) {
+                const batch = db.batch();
+                const batchMessages = messagesSnapshot.docs.slice(i, i + batchSize);
+
+                batchMessages.forEach(doc => {
+                    const msgRef = doc.ref;
+                    batch.update(msgRef, {
+                        unreadBy: arrayRemove(userId)
+                    });
+                    updatedCount += 1;
+                });
+
+                await batch.commit();
+            }
+
+            return updatedCount;
+
+        } catch (error) {
+            logger.error('Error in setReadMessage service:', error);
+            if (error.code) {
+                throw error;
+            }
+            throw createError('9999', 'Exception error');
+        }
+    }
+
+    async deleteMessage(userId, partnerId, conversationId, messageId) {
+        try {
+            let convRef;
+            let partnerIdFinal;
+
+            if (conversationId) {
+                // Fetch conversation by ID
+                const convDoc = await db.collection('conversations').doc(conversationId).get();
+                if (!convDoc.exists) {
+                    throw createError('9994', 'No data or end of list data');
+                }
+                convRef = convDoc.ref;
+                const data = convDoc.data();
+                if (!data.participants.includes(userId)) {
+                    throw createError('1009', 'Not authorized');
+                }
+                partnerIdFinal = data.participants.find(p => p !== userId);
+            } else if (partnerId) {
+                // Fetch conversation between userId and partnerId
+                partnerIdFinal = partnerId;
+                const participants = [userId, partnerId].sort(); // Ensure consistent order
+                const convSnapshot = await db.collection('conversations')
+                    .where('participants', '==', participants)
+                    .limit(1)
+                    .get();
+                if (convSnapshot.empty) {
+                    throw createError('9994', 'No data or end of list data');
+                }
+                convRef = convSnapshot.docs[0].ref;
+            } else {
+                throw createError('1002', 'Either "partner_id" or "conversation_id" must be provided');
+            }
+
+            // Fetch the message to be deleted
+            const msgRef = convRef.collection('messages').doc(messageId);
+            const msgDoc = await msgRef.get();
+
+            if (!msgDoc.exists) {
+                throw createError('9994', 'Message not found');
+            }
+
+            const messageData = msgDoc.data();
+
+            // Check if the user is authorized to delete the message
+            // Assuming only the sender can delete their own messages
+            if (messageData.senderId !== userId) {
+                throw createError('1009', 'Not authorized to delete this message');
+            }
+
+            // Delete the message
+            await msgRef.delete();
+
+            return true;
+        } catch (error) {
+            logger.error('Error in deleteMessage service:', error);
+            if (error.code) {
+                throw error;
+            }
+            throw createError('9999', 'Exception error');
+        }
+    }
+
+    async deleteConversation(userId, partnerId, conversationId) {
+        try {
+            let convRef;
+            let partnerIdFinal;
+
+            if (conversationId) {
+                // Fetch conversation by ID
+                const convDoc = await db.collection('conversations').doc(conversationId).get();
+                if (!convDoc.exists) {
+                    throw createError('9994', 'No data or end of list data');
+                }
+                convRef = convDoc.ref;
+                const data = convDoc.data();
+                if (!data.participants.includes(userId)) {
+                    throw createError('1009', 'Not authorized');
+                }
+                partnerIdFinal = data.participants.find(p => p !== userId);
+            } else if (partnerId) {
+                // Fetch conversation between userId and partnerId
+                partnerIdFinal = partnerId;
+                const participants = [userId, partnerId].sort(); // Ensure consistent order
+                const convSnapshot = await db.collection('conversations')
+                    .where('participants', '==', participants)
+                    .limit(1)
+                    .get();
+                if (convSnapshot.empty) {
+                    throw createError('9994', 'No data or end of list data');
+                }
+                convRef = convSnapshot.docs[0].ref;
+            } else {
+                throw createError('1002', 'Either "partner_id" or "conversation_id" must be provided');
+            }
+
+            // Delete the conversation for the user
+            // Assuming that "deleting" a conversation for a user means removing their ID from the participants array
+
+            await convRef.update({
+                participants: admin.firestore.FieldValue.arrayRemove(userId)
+            });
+
+            // Check if there are any participants left
+            const updatedConvDoc = await convRef.get();
+            const updatedData = updatedConvDoc.data();
+
+            if (!updatedData.participants || updatedData.participants.length === 0) {
+                // If no participants left, delete the conversation entirely
+                await convRef.delete();
+                return true;
+            }
+
+            return true;
+
+        } catch (error) {
+            logger.error('Error in deleteConversation service:', error);
             if (error.code) {
                 throw error;
             }

@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const notificationController = require('../controllers/notificationController.js');
+const notificationController = require('../controllers/notificationController');
 const { authenticateToken } = require('../middleware/auth');
 const { pushSettingsLimiter } = require('../middleware/rateLimiter');
 

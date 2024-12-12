@@ -243,7 +243,7 @@ class userService {
 
     async isUserBlocked(blockerId, blockedId) {
         try {
-            const blockedUserRef = db.collection('blockedUsers').doc(blockerId).collection('blocked').doc(blockedId);
+            const blockedUserRef = db.collection(collections.blockedUsers).doc(blockerId).collection('blocked').doc(blockedId);
             const doc = await blockedUserRef.get();
             return doc.exists;
         } catch (error) {
