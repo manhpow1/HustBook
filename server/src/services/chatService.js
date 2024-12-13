@@ -4,8 +4,115 @@ const logger = require('../utils/logger');
 const Conversation = require('../models/Conversation');
 const Message = require('../models/Message');
 const userService = require('./userService');
+const admin = require('firebase-admin');
 
 class ChatService {
+    async getConversationRoomName(userId, partnerId, conversationId) {
+        if (conversationId) {
+            return `conversation_${conversationId}`;
+        }
+        // If conversationId not provided, find or create it based on participant IDs
+        const participants = [userId, partnerId].sort();
+        const convSnapshot = await db.collection(collections.conversations)
+            .where('participants', '==', participants)
+            .limit(1)
+            .get();
+        if (convSnapshot.empty) {
+            // handle no conversation found scenario (could create one, or throw)
+            throw createError('9994', 'No data or end of list data');
+        }
+        const convId = convSnapshot.docs[0].id;
+        return `conversation_${convId}`;
+    }
+
+    async sendMessage(userId, partnerId, conversationId, text) {
+        try {
+            let convRef;
+            let convId = conversationId;
+            if (!convId) {
+                // Find convId if not provided
+                const participants = [userId, partnerId].sort();
+                const convSnapshot = await db.collection(collections.conversations)
+                    .where('participants', '==', participants)
+                    .limit(1)
+                    .get();
+                if (convSnapshot.empty) {
+                    // Create a new conversation if needed
+                    const newConvRef = await db.collection(collections.conversations).add({
+                        participants,
+                        updatedAt: new Date()
+                    });
+                    convId = newConvRef.id;
+                } else {
+                    convId = convSnapshot.docs[0].id;
+                }
+            }
+
+            convRef = db.collection(collections.conversations).doc(convId);
+
+            const msgRef = convRef.collection('messages').doc();
+            const msgData = {
+                text,
+                senderId: userId,
+                createdAt: new Date(),
+                unreadBy: [partnerId] // partner hasn't read yet
+            };
+
+            await db.runTransaction(async (transaction) => {
+                transaction.set(msgRef, msgData);
+                transaction.update(convRef, {
+                    lastMessage: {
+                        message: text,
+                        created: admin.firestore.FieldValue.serverTimestamp(),
+                        senderId: userId,
+                        unreadBy: [partnerId]
+                    },
+                    updatedAt: admin.firestore.FieldValue.serverTimestamp()
+                });
+            });
+
+            const createdMessage = {
+                message: text,
+                message_id: msgRef.id,
+                unread: '1',
+                created: new Date().toISOString(),
+                sender: { id: userId, username: '', avatar: '' } // fetch sender info if needed
+            };
+
+            // Emit real-time event to the conversation room
+            const io = getIO();
+            const roomName = await this.getConversationRoomName(userId, partnerId, convId);
+            io.to(roomName).emit('onmessage', { message: createdMessage });
+
+            return createdMessage;
+        } catch (error) {
+            logger.error('Error in sendMessage:', error);
+            throw createError('9999', 'Exception error');
+        }
+    }
+
+    async _fetchPartnerUsers(userIds) {
+        const mapping = new Map();
+        if (!userIds.length) return mapping;
+
+        // Firestore 'in' queries limited to 10 items, handle chunking if needed
+        const chunks = [];
+        for (let i = 0; i < userIds.length; i += 10) {
+            chunks.push(userIds.slice(i, i + 10));
+        }
+
+        for (const chunk of chunks) {
+            const usersSnap = await db.collection(collections.users)
+                .where('__name__', 'in', chunk)
+                .get();
+            for (const userDoc of usersSnap.docs) {
+                mapping.set(userDoc.id, userDoc.data());
+            }
+        }
+
+        return mapping;
+    }
+
     async getListConversation(userId, index, count) {
         try {
             // Query conversations where the user is a participant
@@ -22,6 +129,7 @@ class ChatService {
                 return { conversations: [], numNewMessage: 0 };
             }
 
+            // Collect partner IDs to fetch partner info
             const partnerIds = [];
             for (const doc of conversationDocs) {
                 const data = doc.data();
@@ -29,11 +137,12 @@ class ChatService {
                 if (partnerId) partnerIds.push(partnerId);
             }
 
-            // Firestore allows 'in' queries with up to 10 elements
+            // Fetch partner user data in bulk
             const uniquePartnerIds = [...new Set(partnerIds)];
             let partnerMapping = new Map();
             if (uniquePartnerIds.length > 0) {
                 const chunks = [];
+                // Firestore allows max 10 elements in 'in' queries, so split
                 for (let i = 0; i < uniquePartnerIds.length; i += 10) {
                     chunks.push(uniquePartnerIds.slice(i, i + 10));
                 }
@@ -42,7 +151,6 @@ class ChatService {
                     const usersSnap = await db.collection(collections.users)
                         .where('__name__', 'in', chunk)
                         .get();
-
                     for (const userDoc of usersSnap.docs) {
                         partnerMapping.set(userDoc.id, userDoc.data());
                     }
@@ -56,12 +164,8 @@ class ChatService {
                 const partnerId = data.participants.find(p => p !== userId);
                 const partnerData = partnerMapping.get(partnerId) || {};
 
-                let lastMessageData = {
-                    message: '',
-                    created: '',
-                    unread: false
-                };
-
+                // Extract last message info and determine if there's an unread message
+                let lastMessageData = { message: '', created: '', unread: false };
                 if (data.lastMessage) {
                     const { message, created, unreadBy = [] } = data.lastMessage;
                     lastMessageData.message = message || '';
@@ -70,6 +174,7 @@ class ChatService {
                     if (lastMessageData.unread) numNewMessage += 1;
                 }
 
+                // Create a Conversation model instance
                 const convo = new Conversation({
                     id: conversationId,
                     partnerId: partnerId,
@@ -96,8 +201,9 @@ class ChatService {
         try {
             let convRef;
             let partnerIdFinal;
+
+            // Identify conversation
             if (conversationId) {
-                // Fetch conversation by ID
                 const convDoc = await db.collection('conversations').doc(conversationId).get();
                 if (!convDoc.exists) {
                     throw createError('9994', 'No data or end of list data');
@@ -109,32 +215,28 @@ class ChatService {
                 }
                 partnerIdFinal = data.participants.find(p => p !== userId);
             } else if (partnerId) {
-                // Fetch conversation between userId and partnerId
-                partnerIdFinal = partnerId;
-                const participants = [userId, partnerId].sort(); // Ensure consistent order
-                const convSnapshot = await db.collection('conversations')
+                const participants = [userId, partnerId].sort();
+                const convSnapshot = await db.collection(collections.conversations)
                     .where('participants', '==', participants)
                     .limit(1)
                     .get();
                 if (convSnapshot.empty) {
-                    // No conversation found, return empty data
-                    return [];
+                    return []; // No conversation yet
                 }
                 convRef = convSnapshot.docs[0].ref;
+                partnerIdFinal = partnerId;
             } else {
                 throw createError('1002', 'Either "partner_id" or "conversation_id" must be provided');
             }
 
             // Check if partner is blocked
-            let isBlocked = '0';
             const isUserBlocked = await userService.isUserBlocked(userId, partnerIdFinal);
-            isBlocked = isUserBlocked ? '1' : '0';
+            const is_blocked = isUserBlocked ? '1' : '0';
 
-            // Fetch messages from convRef
+            // Fetch messages
             let messagesQuery = convRef.collection('messages')
                 .orderBy('createdAt', 'asc');
 
-            // For pagination, we need to use startAfter or offset
             if (index) {
                 messagesQuery = messagesQuery.offset(index);
             }
@@ -143,12 +245,11 @@ class ChatService {
             }
 
             const messagesSnapshot = await messagesQuery.get();
-
             if (messagesSnapshot.empty) {
                 return [];
             }
 
-            const messages = [];
+            // Collect sender IDs
             const senderIds = new Set();
             messagesSnapshot.docs.forEach(doc => {
                 const data = doc.data();
@@ -163,12 +264,10 @@ class ChatService {
                 for (let i = 0; i < senderIdList.length; i += 10) {
                     chunks.push(senderIdList.slice(i, i + 10));
                 }
-
                 for (const chunk of chunks) {
                     const usersSnap = await db.collection(collections.users)
                         .where('__name__', 'in', chunk)
                         .get();
-
                     for (const userDoc of usersSnap.docs) {
                         senderDataMap.set(userDoc.id, userDoc.data());
                     }
@@ -183,7 +282,7 @@ class ChatService {
                 const senderId = data.senderId;
                 const senderData = senderDataMap.get(senderId) || {};
 
-                const message = new Message({
+                const messageModel = new Message({
                     message: data.text || '',
                     message_id: doc.id,
                     unread: data.unreadBy && data.unreadBy.includes(userId) ? '1' : '0',
@@ -191,23 +290,20 @@ class ChatService {
                     sender: {
                         id: senderId,
                         username: senderData.username || '',
-                        avatar: senderData.avatar || '',
+                        avatar: senderData.avatar || ''
                     },
-                    is_blocked: isBlocked,
+                    is_blocked
                 });
 
-                if (message.unread === '1') {
-                    unreadMessages.push(message.toJSON());
+                if (messageModel.unread === '1') {
+                    unreadMessages.push(messageModel.toJSON());
                 } else {
-                    readMessages.push(message.toJSON());
+                    readMessages.push(messageModel.toJSON());
                 }
             }
 
-            // Concatenate read messages first, then unread messages
-            const allMessages = readMessages.concat(unreadMessages);
-
-            return allMessages;
-
+            // Return read messages first, then unread messages
+            return readMessages.concat(unreadMessages);
         } catch (error) {
             logger.error('Error in getConversation service:', error);
             if (error.code) {
@@ -220,30 +316,23 @@ class ChatService {
     async setReadMessage(userId, partnerId, conversationId) {
         try {
             let convRef;
-            let partnerIdFinal;
-
             if (conversationId) {
-                // Fetch conversation by ID
-                const convDoc = await db.collection('conversations').doc(conversationId).get();
+                const convDoc = await db.collection(collections.conversations).doc(conversationId).get();
                 if (!convDoc.exists) {
-                    throw createError('9994', 'No data or end of list data');
+                    return 0;
                 }
-                convRef = convDoc.ref;
                 const data = convDoc.data();
                 if (!data.participants.includes(userId)) {
                     throw createError('1009', 'Not authorized');
                 }
-                partnerIdFinal = data.participants.find(p => p !== userId);
+                convRef = convDoc.ref;
             } else if (partnerId) {
-                // Fetch conversation between userId and partnerId
-                partnerIdFinal = partnerId;
-                const participants = [userId, partnerId].sort(); // Ensure consistent order
-                const convSnapshot = await db.collection('conversations')
+                const participants = [userId, partnerId].sort();
+                const convSnapshot = await db.collection(collections.conversations)
                     .where('participants', '==', participants)
                     .limit(1)
                     .get();
                 if (convSnapshot.empty) {
-                    // No conversation found, return 0
                     return 0;
                 }
                 convRef = convSnapshot.docs[0].ref;
@@ -251,38 +340,35 @@ class ChatService {
                 throw createError('1002', 'Either "partner_id" or "conversation_id" must be provided');
             }
 
-            // Fetch messages where unreadBy includes userId
+            // Find all messages unread by userId
             const messagesSnapshot = await convRef.collection('messages')
                 .where('unreadBy', 'array-contains', userId)
                 .get();
 
             if (messagesSnapshot.empty) {
-                return 0;
+                return 0; // No unread messages
             }
 
-            // Firestore limits batch operations to 500 writes
             const batchSize = 500;
             const totalMessages = messagesSnapshot.size;
             let updatedCount = 0;
 
-            // Process in batches
             for (let i = 0; i < totalMessages; i += batchSize) {
                 const batch = db.batch();
                 const batchMessages = messagesSnapshot.docs.slice(i, i + batchSize);
 
-                batchMessages.forEach(doc => {
-                    const msgRef = doc.ref;
+                for (const msgDoc of batchMessages) {
+                    const msgRef = msgDoc.ref;
                     batch.update(msgRef, {
                         unreadBy: arrayRemove(userId)
                     });
                     updatedCount += 1;
-                });
+                }
 
                 await batch.commit();
             }
 
             return updatedCount;
-
         } catch (error) {
             logger.error('Error in setReadMessage service:', error);
             if (error.code) {
@@ -295,37 +381,21 @@ class ChatService {
     async deleteMessage(userId, partnerId, conversationId, messageId) {
         try {
             let convRef;
-            let partnerIdFinal;
-
-            if (conversationId) {
-                // Fetch conversation by ID
-                const convDoc = await db.collection('conversations').doc(conversationId).get();
-                if (!convDoc.exists) {
-                    throw createError('9994', 'No data or end of list data');
-                }
-                convRef = convDoc.ref;
-                const data = convDoc.data();
-                if (!data.participants.includes(userId)) {
-                    throw createError('1009', 'Not authorized');
-                }
-                partnerIdFinal = data.participants.find(p => p !== userId);
-            } else if (partnerId) {
-                // Fetch conversation between userId and partnerId
-                partnerIdFinal = partnerId;
-                const participants = [userId, partnerId].sort(); // Ensure consistent order
-                const convSnapshot = await db.collection('conversations')
+            let convId = conversationId;
+            if (!convId) {
+                const participants = [userId, partnerId].sort();
+                const convSnapshot = await db.collection(collections.conversations)
                     .where('participants', '==', participants)
                     .limit(1)
                     .get();
                 if (convSnapshot.empty) {
                     throw createError('9994', 'No data or end of list data');
                 }
-                convRef = convSnapshot.docs[0].ref;
-            } else {
-                throw createError('1002', 'Either "partner_id" or "conversation_id" must be provided');
+                convId = convSnapshot.docs[0].id;
             }
 
-            // Fetch the message to be deleted
+            convRef = db.collection(collections.conversations).doc(convId);
+
             const msgRef = convRef.collection('messages').doc(messageId);
             const msgDoc = await msgRef.get();
 
@@ -334,15 +404,16 @@ class ChatService {
             }
 
             const messageData = msgDoc.data();
-
-            // Check if the user is authorized to delete the message
-            // Assuming only the sender can delete their own messages
             if (messageData.senderId !== userId) {
                 throw createError('1009', 'Not authorized to delete this message');
             }
 
-            // Delete the message
             await msgRef.delete();
+
+            // Emit real-time event to notify clients
+            const io = getIO();
+            const roomName = await this.getConversationRoomName(userId, partnerId, convId);
+            io.to(roomName).emit('deletemessage', { message_id: messageId });
 
             return true;
         } catch (error) {
@@ -357,55 +428,46 @@ class ChatService {
     async deleteConversation(userId, partnerId, conversationId) {
         try {
             let convRef;
-            let partnerIdFinal;
-
-            if (conversationId) {
-                // Fetch conversation by ID
-                const convDoc = await db.collection('conversations').doc(conversationId).get();
-                if (!convDoc.exists) {
-                    throw createError('9994', 'No data or end of list data');
-                }
-                convRef = convDoc.ref;
-                const data = convDoc.data();
-                if (!data.participants.includes(userId)) {
-                    throw createError('1009', 'Not authorized');
-                }
-                partnerIdFinal = data.participants.find(p => p !== userId);
-            } else if (partnerId) {
-                // Fetch conversation between userId and partnerId
-                partnerIdFinal = partnerId;
-                const participants = [userId, partnerId].sort(); // Ensure consistent order
-                const convSnapshot = await db.collection('conversations')
+            let convId = conversationId;
+            if (!convId) {
+                const participants = [userId, partnerId].sort();
+                const convSnapshot = await db.collection(collections.conversations)
                     .where('participants', '==', participants)
                     .limit(1)
                     .get();
                 if (convSnapshot.empty) {
                     throw createError('9994', 'No data or end of list data');
                 }
-                convRef = convSnapshot.docs[0].ref;
-            } else {
-                throw createError('1002', 'Either "partner_id" or "conversation_id" must be provided');
+                convId = convSnapshot.docs[0].id;
             }
 
-            // Delete the conversation for the user
-            // Assuming that "deleting" a conversation for a user means removing their ID from the participants array
+            convRef = db.collection(collections.conversations).doc(convId);
+
+            const convDoc = await convRef.get();
+            if (!convDoc.exists) {
+                throw createError('9994', 'No data or end of list data');
+            }
+            const data = convDoc.data();
+            if (!data.participants.includes(userId)) {
+                throw createError('1009', 'Not authorized');
+            }
 
             await convRef.update({
                 participants: admin.firestore.FieldValue.arrayRemove(userId)
             });
 
-            // Check if there are any participants left
             const updatedConvDoc = await convRef.get();
             const updatedData = updatedConvDoc.data();
 
             if (!updatedData.participants || updatedData.participants.length === 0) {
-                // If no participants left, delete the conversation entirely
                 await convRef.delete();
-                return true;
             }
 
-            return true;
+            // No direct event to emit for deleting a conversation just for one user,
+            // but if you wanted to notify others, you could do so here.
+            // e.g., io.to(roomName).emit('conversationdeleted', { ... });
 
+            return true;
         } catch (error) {
             logger.error('Error in deleteConversation service:', error);
             if (error.code) {

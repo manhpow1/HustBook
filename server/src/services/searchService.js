@@ -1,7 +1,6 @@
-const { collections, queryDocuments, createDocument} = require('../config/database');
+const { collections, db, queryDocuments, createDocument} = require('../config/database');
 const { createError } = require('../utils/customError');
 const logger = require('../utils/logger');
-const { db } = require('../config/firebase');
 
 class searchService {
     async searchPosts(userId, keyword, index, count) {

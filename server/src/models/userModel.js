@@ -1,5 +1,4 @@
-const { db } = require('../config/firebase');
-const { collections, arrayUnion, arrayRemove } = require('../config/database');
+const { collections, db, arrayUnion, arrayRemove } = require('../config/database');
 const { createError } = require('../utils/customError');
 const logger = require('../utils/logger');
 

@@ -2,8 +2,7 @@ const postService = require('../services/postService');
 const postValidator = require('../validators/postValidator');
 const { sendResponse } = require('../utils/responseHandler');
 const { createError } = require('../utils/customError');
-const { db } = require('../config/firebase');
-const { collections } = require('../config/database');
+const { collections, db } = require('../config/database');
 
 class PostController {
     async createPost(req, res, next) {
