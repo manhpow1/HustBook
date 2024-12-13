@@ -130,6 +130,7 @@ import VerifyCode from './VerifyCode.vue';
 import { useFormValidation } from '../../composables/useFormValidation';
 import { useToast } from '../../composables/useToast';
 import { useErrorHandler } from '../../composables/useErrorHandler';
+import { storeToRefs } from 'pinia';
 
 const router = useRouter();
 const userStore = useUserStore();
@@ -140,9 +141,30 @@ const currentStep = ref('signup');
 const phonenumber = ref('');
 const password = ref('');
 const rememberMe = ref(false);
-const { phoneError, passwordError, validatePhone, validatePassword } = useFormValidation();
 
-// Computed property to determine if the form is valid
+// Use form validation composable
+const { errors, validateField, validators } = useFormValidation();
+
+// Computed properties for phoneError and passwordError
+const phoneError = computed(() => errors.value.phonenumber || null);
+const passwordError = computed(() => errors.value.password || null);
+
+// Validation functions
+const validatePhone = async () => {
+  await validateField('phonenumber', phonenumber.value, validators.phonenumber);
+};
+
+const validatePassword = async () => {
+  // validators.password rules also depend on phonenumber if needed
+  // but for now, just pass password
+  await validateField('password', password.value, validators.password);
+};
+
+// Watch phonenumber and password and validate on change
+watch(phonenumber, () => validatePhone());
+watch(password, () => validatePassword());
+
+// Check if form is valid
 const isFormValid = computed(() => {
   return !phoneError.value && !passwordError.value && phonenumber.value && password.value;
 });
@@ -185,9 +207,8 @@ const passwordStrengthClass = computed(() => {
   return 'bg-green-500';
 });
 
-// Get reactive references from the store
+// Extract isLoading and error from userStore
 const { isLoading, error } = storeToRefs(userStore);
-
 const errorMessage = computed(() => userStore.error || '');
 
 // Handle form submission
@@ -198,7 +219,7 @@ const handleSignup = async () => {
   }
 
   try {
-    const success = await userStore.register(phonenumber.value, password.value, 'device-uuid'); // Replace 'device-uuid' with actual device ID if available
+    const success = await userStore.register(phonenumber.value, password.value, 'device-uuid');
     if (success) {
       showToast('Registration successful. Please verify your account.', 'success');
       currentStep.value = 'verify';
@@ -224,7 +245,7 @@ const handleVerificationError = (errorMsg) => {
 
 // Proceed to complete profile
 const proceedToCompleteProfile = () => {
-  router.push('/complete-profile'); // Ensure this route exists
+  router.push('/complete-profile');
 };
 
 // Watch for errors to display toast notifications

@@ -14,6 +14,7 @@ export const useUserStore = defineStore('user', () => {
     const isLoading = ref(false);
     const error = ref(null);
     const successMessage = ref('');
+    const cooldownTime = ref(0);
 
     const { handleError } = useErrorHandler();
     // Getters
@@ -321,6 +322,7 @@ export const useUserStore = defineStore('user', () => {
         error,
         successMessage,
         isLoggedIn,
+        cooldownTime,
         login,
         register,
         logout,

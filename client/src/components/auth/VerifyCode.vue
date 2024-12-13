@@ -13,7 +13,7 @@
                         <PhoneIcon class="h-5 w-5 text-gray-400" aria-hidden="true" />
                     </div>
                     <input v-model="phonenumber" type="tel" id="phonenumber" name="phonenumber" required
-                        aria-describedby="phonenumber-error" @input="validatePhone"
+                        @input="validatePhone" :aria-describedby="phoneError ? 'phonenumber-error' : null"
                         class="block w-full pl-10 pr-12 sm:text-sm border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500"
                         :class="{ 'border-red-500': phoneError }" placeholder="0123456789" />
                 </div>
@@ -88,27 +88,44 @@ import { useFormValidation } from '../../composables/useFormValidation';
 import { useToast } from '../../composables/useToast';
 import { useErrorHandler } from '../../composables/useErrorHandler';
 
+// Access stores and composables
 const userStore = useUserStore();
 const { handleError } = useErrorHandler();
 const { showToast } = useToast();
 
 const phonenumber = ref('');
 const codeDigits = ref(['', '', '', '', '', '']);
-const codeError = ref('');
 const codeInputs = ref([]);
-const { phoneError, validatePhone } = useFormValidation();
 
-// Get reactive references from the store
+// Extract isLoading, error, successMessage, cooldownTime from the store
 const { isLoading, error, successMessage, cooldownTime } = storeToRefs(userStore);
-
 const errorMessage = computed(() => userStore.error || '');
 
-// Computed property to validate the form
+// Use form validation composable
+const { errors, validateField, validators } = useFormValidation();
+
+// Computed properties for phoneError and codeError
+const phoneError = computed(() => errors.value.phonenumber || null);
+const codeError = computed(() => errors.value.codeDigits || null);
+
+// Validate phone number
+const validatePhone = async () => {
+    await validateField('phonenumber', phonenumber.value, validators.phonenumber);
+};
+
+// Validate code digits
+const validateCode = async () => {
+    await validateField('codeDigits', codeDigits.value, validators.codeDigits);
+};
+
+// isFormValid checks if there are no errors and all fields are filled correctly
 const isFormValid = computed(() => {
-    return validatePhone(phonenumber.value) && validateCode();
+    // For the code to be valid, we must ensure codeDigits are all digits
+    const allDigits = codeDigits.value.every(digit => /^\d$/.test(digit));
+    return !phoneError.value && !codeError.value && phonenumber.value && allDigits;
 });
 
-// Computed property to format the cooldown time as mm:ss
+// Compute formatted cooldown time
 const formattedCooldownTime = computed(() => {
     const minutes = Math.floor(cooldownTime.value / 60);
     const seconds = cooldownTime.value % 60;
@@ -138,32 +155,24 @@ const handleSubmit = async () => {
     }
 };
 
-// Handle code input
+// Handle code input events
 const onCodeInput = (index) => {
-    if (codeDigits.value[index].length > 1) {
-        codeDigits.value[index] = codeDigits.value[index].slice(-1);
+    const val = codeDigits.value[index];
+    if (val.length > 1) {
+        codeDigits.value[index] = val.slice(-1);
     }
     if (index < 5 && codeDigits.value[index]) {
         codeInputs.value[index + 1]?.focus();
     }
+    validateCode();
 };
 
-// Handle keydown for backspacing
 const onCodeKeydown = (event, index) => {
     if (event.key === 'Backspace' && index > 0 && !codeDigits.value[index]) {
         codeDigits.value[index - 1] = '';
         codeInputs.value[index - 1]?.focus();
+        validateCode();
     }
-};
-
-// Validate the verification code
-const validateCode = () => {
-    if (codeDigits.value.some((digit) => !/^\d$/.test(digit))) {
-        codeError.value = 'Verification code must be 6 digits';
-        return false;
-    }
-    codeError.value = '';
-    return true;
 };
 
 // Resend verification code
@@ -183,21 +192,17 @@ const resendCode = async () => {
     }
 };
 
-// Continue without avatar (if applicable)
+// Continue without avatar
 const continueWithoutAvatar = () => {
-    // Implement logic to proceed without avatar if needed
     showToast('Continuing without avatar.', 'info');
-    // Example: Proceed to complete profile or next step
 };
 
-// Retry upload (if applicable)
+// Retry upload
 const retryUpload = () => {
-    // Implement logic to retry upload if needed
     showToast('Retrying upload...', 'info');
-    // Example: Re-initiate upload process
 };
 
-// Watch for changes in success and error messages to display toasts
+// Watch for success and error messages to display toasts
 watch([successMessage, error], ([newSuccess, newError]) => {
     if (newSuccess) {
         showToast(newSuccess, 'success');
@@ -209,10 +214,8 @@ watch([successMessage, error], ([newSuccess, newError]) => {
 </script>
 
 <style scoped>
-/* Ensure accessibility for focus states */
 button:focus {
     outline: none;
     box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.5);
-    /* Focus ring color */
 }
 </style>

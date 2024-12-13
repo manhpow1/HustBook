@@ -30,19 +30,16 @@
                 {{ buttonText }}
             </button>
         </form>
-
         <!-- Success Message -->
         <div v-if="successMessage" class="mt-4 p-4 bg-green-100 rounded-md flex items-start" role="alert">
             <CircleCheck class="h-5 w-5 text-green-400 mr-2 mt-0.5 flex-shrink-0" aria-hidden="true" />
             <p class="text-green-700">{{ successMessage }}</p>
         </div>
-
         <!-- Error Message -->
         <div v-if="errorMessage" class="mt-4 p-4 bg-red-100 rounded-md flex items-start" role="alert">
             <CircleX class="h-5 w-5 text-red-400 mr-2 mt-0.5 flex-shrink-0" aria-hidden="true" />
             <p class="text-red-700">{{ errorMessage }}</p>
         </div>
-
         <!-- Cooldown Timer -->
         <div v-if="cooldownTime > 0" class="mt-4 text-sm text-gray-500 flex items-center justify-center"
             aria-live="polite">
@@ -59,28 +56,49 @@ import { useUserStore } from '../../stores/userStore';
 import { useFormValidation } from '../../composables/useFormValidation';
 import { useToast } from '../../composables/useToast';
 import { useErrorHandler } from '../../composables/useErrorHandler';
+import { storeToRefs } from 'pinia';
 
 const userStore = useUserStore();
 const { handleError } = useErrorHandler();
 const { showToast } = useToast();
 
 const phonenumber = ref('');
-const { phoneError, validatePhone } = useFormValidation();
 
-// Get reactive references from the store
+// Destructure the validation composable
+const { errors, validateField, validators } = useFormValidation();
+
+// Define computed property for phoneError
+const phoneError = computed(() => errors.value.phonenumber || null);
+
+// Define a function to validate phone input
+const validatePhone = async () => {
+    await validateField('phonenumber', phonenumber.value, validators.phonenumber);
+};
+
+// Reactive references from the store
 const { isLoading, error, successMessage, cooldownTime } = storeToRefs(userStore);
 
 const errorMessage = computed(() => userStore.error || '');
-const isButtonDisabled = computed(() => isLoading.value || cooldownTime.value > 0 || !phonenumber.value || phoneError.value);
 
-// Computed property for the button text based on state
+// Check if form is valid
+const isFormValid = computed(() => {
+    // Form is valid if no phoneError and phonenumber is non-empty
+    return !phoneError.value && phonenumber.value;
+});
+
+// Compute button disabled state
+const isButtonDisabled = computed(() => {
+    return isLoading.value || cooldownTime.value > 0 || !phonenumber.value || phoneError.value;
+});
+
+// Dynamic button text
 const buttonText = computed(() => {
     if (isLoading.value) return 'Sending...';
     if (cooldownTime.value > 0) return `Resend in ${formattedCooldownTime.value}`;
     return 'Get Verification Code';
 });
 
-// Computed property to format the cooldown time as mm:ss
+// Format cooldown time as mm:ss
 const formattedCooldownTime = computed(() => {
     const minutes = Math.floor(cooldownTime.value / 60);
     const seconds = cooldownTime.value % 60;
@@ -89,6 +107,7 @@ const formattedCooldownTime = computed(() => {
 
 // Handle form submission
 const handleSubmit = async () => {
+    // Validate before submit
     if (!isFormValid.value) {
         showToast('Please fix the errors before submitting.', 'error');
         return;
@@ -107,27 +126,16 @@ const handleSubmit = async () => {
     }
 };
 
-// Computed property to validate the form
-const isFormValid = computed(() => {
-    return !phoneError.value && phonenumber.value;
-});
-
-// Watch for changes in success and error messages to display toasts
+// Watch for success and error messages to display toasts
 watch([successMessage, error], ([newSuccess, newError]) => {
-    if (newSuccess) {
-        showToast(newSuccess, 'success');
-    }
-    if (newError) {
-        showToast(newError, 'error');
-    }
+    if (newSuccess) showToast(newSuccess, 'success');
+    if (newError) showToast(newError, 'error');
 });
 </script>
 
 <style scoped>
-/* Ensure accessibility for focus states */
 button:focus {
     outline: none;
     box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.5);
-    /* Focus ring color */
 }
 </style>

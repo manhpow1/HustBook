@@ -10,13 +10,13 @@ const sanitizeHtml = require('sanitize-html');
  * - At least one digit
  */
 const passwordComplexity = Joi.string()
-    .min(8)
+    .min(6)
     .max(30)
     .pattern(new RegExp('^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)[a-zA-Z\\d]+$'))
     .required()
     .messages({
         'string.pattern.base': 'Password must include uppercase, lowercase letters, and numbers.',
-        'string.min': 'Password must be at least 8 characters long.',
+        'string.min': 'Password must be at least 6 characters long.',
         'string.max': 'Password must be at most 30 characters long.',
         'any.required': 'Password is required.',
     });
