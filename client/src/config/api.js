@@ -47,4 +47,10 @@ export const API_ENDPOINTS = {
     SET_BLOCK: `${API_BASE_URL}/friends/set_block`,
     // Video Endpoints
     GET_LIST_VIDEOS: `${API_BASE_URL}/video/get_list_videos`,
+    // Chat Endpoints (Updated RESTful)
+    GET_CONVERSATIONS: `${API_BASE_URL}/conversations`,
+    GET_CONVERSATION_MESSAGES: (conversationId) => `${API_BASE_URL}/conversations/${conversationId}/messages`,
+    SET_READ_MESSAGE: (conversationId) => `${API_BASE_URL}/conversations/${conversationId}/messages/read`,
+    DELETE_MESSAGE: (conversationId, messageId) => `${API_BASE_URL}/conversations/${conversationId}/messages/${messageId}`,
+    DELETE_CONVERSATION: (conversationId) => `${API_BASE_URL}/conversations/${conversationId}`,
 };

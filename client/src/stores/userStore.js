@@ -6,6 +6,7 @@ import Cookies from 'js-cookie';
 import router from '../router';
 import logger from '../services/logging';
 import { useErrorHandler } from '../composables/useErrorHandler';
+import { initSocket } from '../services/socket';
 
 export const useUserStore = defineStore('user', () => {
     // State
@@ -75,7 +76,8 @@ export const useUserStore = defineStore('user', () => {
                 const { token, refreshToken: newRefreshToken } = data.data;
                 setTokens(token, newRefreshToken);
                 await fetchUserProfile();
-                successMessage.value = 'Login successful.';
+                initSocket();
+                successMessage.value = 'Login successful.';                
                 return true;
             } else {
                 error.value = data.message || 'Login failed';

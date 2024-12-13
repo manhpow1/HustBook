@@ -141,6 +141,25 @@ const apiService = {
     async getListVideos(params = {}) {
         return axiosInstance.post(API_ENDPOINTS.GET_LIST_VIDEOS, params);
     },
+    async getConversations() {
+        return this.get(API_ENDPOINTS.GET_CONVERSATIONS);
+    },
+
+    async getConversationMessages(conversationId, params = {}) {
+        return this.get(API_ENDPOINTS.GET_CONVERSATION_MESSAGES(conversationId), { params });
+    },
+
+    async setReadMessage(conversationId) {
+        return this.patch(API_ENDPOINTS.SET_READ_MESSAGE(conversationId));
+    },
+
+    async deleteMessage(conversationId, messageId) {
+        return this.delete(API_ENDPOINTS.DELETE_MESSAGE(conversationId, messageId));
+    },
+
+    async deleteConversation(conversationId) {
+        return this.delete(API_ENDPOINTS.DELETE_CONVERSATION(conversationId));
+    },
     // File Upload
     async upload(url, formData, onUploadProgress) {
         return axiosInstance.post(url, formData, {
