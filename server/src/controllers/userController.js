@@ -1,6 +1,6 @@
 const userService = require('../services/userService');
 const userValidator = require('../validators/userValidator');
-const { comparePassword, generateJWT, verifyJWT, generateRefreshToken, generateRandomCode } = require('../utils/authHelper');
+const { comparePassword, generateJWT, verifyJWT, generateRefreshToken, generateRandomCode, verifyRefreshToken } = require('../utils/authHelper');
 const { formatPhoneNumber } = require('../utils/helpers');
 const { sendResponse } = require('../utils/responseHandler');
 const { createError } = require('../utils/customError');
@@ -281,7 +281,7 @@ class UserController {
 
             let decoded;
             try {
-                decoded = verifyJWT(refreshToken);
+                decoded = verifyRefreshToken(refreshToken);
             } catch (err) {
                 throw createError('9998', 'Invalid refresh token.');
             }

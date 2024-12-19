@@ -242,14 +242,11 @@ class userService {
     }
 
     async isUserBlocked(blockerId, blockedId) {
-        try {
-            const blockedUserRef = db.collection(collections.blockedUsers).doc(blockerId).collection('blocked').doc(blockedId);
-            const doc = await blockedUserRef.get();
-            return doc.exists;
-        } catch (error) {
-            logger.error(`Error checking if user ${blockedId} is blocked by ${blockerId}:`, error);
-            throw createError('9999', 'Exception error');
-        }
+        const blockerUser = await this.getUserById(blockerId);
+        if (!blockerUser) throw createError('9995', 'User not found.');
+    
+        const blockedUsers = blockerUser.blockedUsers || [];
+        return blockedUsers.includes(blockedId);
     }
 
     async uploadAvatar(avatarFile) {

@@ -15,7 +15,7 @@ class userStatusService {
         const userActive = user.isBlocked ? '0' : '1';
 
         // Get unread notifications count
-        const unreadNotifications = await notificationService.getUnreadNotificationsCount(userId) || 0;
+        const unreadNotifications = await notificationService.getUnreadNotificationsCount(userId);
 
         // Get unread messages count (implement this method in userService or another service)
         const unreadMessages = await this.getUnreadMessagesCount(userId);

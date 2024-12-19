@@ -60,7 +60,7 @@ class NotificationController {
 
     async getNotifications(req, res, next) {
         try {
-            const { error, value } = notificationValidator.validateGetNotifications(req.body);
+            const { error, value } = notificationValidator.validateGetNotifications(req.query);
             if (error) {
                 const messages = error.details.map(detail => detail.message).join(', ');
                 throw createError('1002', messages);

@@ -88,7 +88,7 @@
 
       <!-- Mobile Menu -->
       <transition name="mobile-menu">
-        <div v-if="showMobileMenu" class="sm:hidden">
+        <div v-if="showMobileMenu && isLoggedIn" class="sm:hidden">
           <div class="px-2 pt-2 pb-3 space-y-1">
             <router-link v-for="item in navItems" :key="item.path" :to="item.path"
               class="text-gray-700 hover:text-blue-600 block px-3 py-2 rounded-md text-base font-medium"

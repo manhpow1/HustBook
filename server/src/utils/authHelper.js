@@ -43,6 +43,14 @@ const verifyJWT = (token) => {
     }
 };
 
+const verifyRefreshToken = (token) => {
+    try {
+        return jwt.verify(token, REFRESH_TOKEN_SECRET);
+    } catch (error) {
+        throw new Error('Invalid refresh token.');
+    }
+};
+
 const generateRefreshToken = (user) => {
     return jwt.sign(
         {
@@ -61,5 +69,6 @@ module.exports = {
     comparePassword,
     generateJWT,
     verifyJWT,
+    verifyRefreshToken,
     generateRefreshToken,
 };

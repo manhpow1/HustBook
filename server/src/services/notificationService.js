@@ -86,6 +86,14 @@ class notificationService {
         }
     }
 
+    async getUnreadNotificationsCount(userId) {
+        const snapshot = await db.collection(collections.notifications)
+            .where('userId', '==', userId)
+            .where('read', '==', false)
+            .get();
+        return snapshot.size;
+    }
+
     async setReadNotification(userId, notificationId) {
         try {
             const notifRef = db.collection(collections.notifications).doc(notificationId);

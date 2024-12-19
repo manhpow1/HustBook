@@ -1,20 +1,20 @@
 const { sendResponse } = require('../utils/responseHandler');
-const { validateSearch, validateGetSavedSearch, validateDeleteSavedSearch } = require('../validators/searchValidator');
-const { searchPosts, getSavedSearches, deleteSavedSearch } = require('../services/searchService');
+const searchValidator = require('../validators/searchValidator');
+const searchService = require('../services/searchService');
 const { createError } = require('../utils/customError');
 
 class SearchController {
     async search(req, res, next) {
         try {
-            const { error } = validateSearch(req.body);
+            const { error } = searchValidator.validateSearch(req.query);
             if (error) {
                 throw createError('1002', error.details.map(detail => detail.message).join(', '));
             }
 
-            const { keyword, index = 0, count = 20 } = req.body;
+            const { keyword, index, count } = value;
             const userId = req.user.uid;
 
-            const matchingPosts = await searchPosts(userId, keyword, index, count);
+            const matchingPosts = await searchService.searchPosts(userId, keyword, index, count);
 
             if (matchingPosts.length === 0) {
                 throw createError('9994', 'No data or end of list data');
@@ -28,7 +28,7 @@ class SearchController {
 
     async getSavedSearch(req, res, next) {
         try {
-            const { error, value } = validateGetSavedSearch(req.query);
+            const { error, value } = searchValidator.validateGetSavedSearch(req.query);
             if (error) {
                 throw createError('1002', error.details.map(detail => detail.message).join(', '));
             }
@@ -36,7 +36,7 @@ class SearchController {
             const { index, count } = value;
             const userId = req.user.uid;
 
-            const savedSearches = await getSavedSearches(userId, index, count);
+            const savedSearches = await searchService.getSavedSearches(userId, index, count);
 
             if (savedSearches.length === 0) {
                 throw createError('9994', 'No data or end of list data');
@@ -56,7 +56,7 @@ class SearchController {
 
     async deleteSavedSearches(req, res, next) {
         try {
-            const { error } = validateDeleteSavedSearch(req.params, req.query);
+            const { error } = searchValidator.validateDeleteSavedSearch(req.params, req.query);
             if (error) {
                 throw createError('1002', error.details.map(detail => detail.message).join(', '));
             }
@@ -65,7 +65,7 @@ class SearchController {
             const { all } = req.query;
             const userId = req.user.uid;
 
-            await deleteSavedSearch(userId, search_id, all === '1');
+            await searchService.deleteSavedSearch(userId, search_id, all === '1');
 
             sendResponse(res, '1000');
         } catch (error) {
