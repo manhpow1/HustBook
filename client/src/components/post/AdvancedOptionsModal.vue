@@ -55,7 +55,7 @@
 
 <script setup>
 import { ref, onMounted, onUnmounted, nextTick, watch } from 'vue';
-import createFocusTrap from 'focus-trap';
+import { createFocusTrap } from 'focus-trap';
 
 const props = defineProps({
     isOwnPost: {
