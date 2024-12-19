@@ -8,9 +8,13 @@ let io = null;
 function initSocketIO(server) {
     io = new Server(server, {
         cors: {
-            origin: '*', // Adjust accordingly
-            methods: ['GET', 'POST']
-        }
+            origin: process.env.CLIENT_URL || 'http://localhost:5173',
+            methods: ['GET', 'POST'],
+            credentials: true,
+            allowedHeaders: ['Authorization']
+        },
+        pingTimeout: 10000,
+        pingInterval: 25000
     });
 
     // Middleware for socket authentication
@@ -18,6 +22,26 @@ function initSocketIO(server) {
 
     io.on('connection', (socket) => {
         logger.info(`Socket connected: ${socket.id}, user: ${socket.userId}`);
+
+        // Send initial connection success
+        socket.emit('connect_success', { 
+            message: 'Successfully connected to chat server'
+        });
+
+        // Handle room management
+        socket.on('subscribe', (rooms) => {
+            if (Array.isArray(rooms)) {
+                rooms.forEach(room => socket.join(room));
+                logger.info(`User ${socket.userId} subscribed to rooms:`, rooms);
+            }
+        });
+
+        socket.on('unsubscribe', (rooms) => {
+            if (Array.isArray(rooms)) {
+                rooms.forEach(room => socket.leave(room));
+                logger.info(`User ${socket.userId} unsubscribed from rooms:`, rooms);
+            }
+        });
 
         // Handle joinchat event:
         // client sends { partnerId, conversationId } in data
@@ -73,9 +97,19 @@ function initSocketIO(server) {
             // Handle presence logic if needed
         });
 
-        socket.on('disconnect', () => {
-            logger.info(`Socket disconnected: ${socket.id}, user: ${socket.userId}`);
-            // Handle presence logic if needed
+        socket.on('disconnect', (reason) => {
+            logger.info(`Socket disconnected: ${socket.id}, user: ${socket.userId}, reason: ${reason}`);
+            
+            // Notify relevant rooms about user disconnection
+            const rooms = Array.from(socket.rooms);
+            rooms.forEach(room => {
+                if (room !== socket.id) { // Skip default room
+                    io.to(room).emit('user_disconnected', {
+                        userId: socket.userId,
+                        timestamp: new Date()
+                    });
+                }
+            });
         });
     });
 }

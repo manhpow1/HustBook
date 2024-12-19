@@ -1,6 +1,6 @@
 const userService = require('../services/userService');
 const userValidator = require('../validators/userValidator');
-const { comparePassword, generateJWT, verifyJWT, generateRefreshToken, generateRandomCode, verifyRefreshToken } = require('../utils/authHelper');
+const { comparePassword, generateJWT, generateRefreshToken, generateRandomCode, verifyRefreshToken } = require('../utils/authHelper');
 const { formatphoneNumber } = require('../utils/helpers');
 const { sendResponse } = require('../utils/responseHandler');
 const { createError } = require('../utils/customError');
@@ -17,12 +17,11 @@ class UserController {
 
             const { phoneNumber, password, uuid } = value;
 
-            const existingUser = await userService.getUserByphoneNumber(phoneNumber);
+            const formattedphoneNumber = formatPhoneNumber(phoneNumber);            
+            const existingUser = await userService.getUserByphoneNumber(formattedphoneNumber);
             if (existingUser) {
                 throw createError('9996'); // User already exists
             }
-
-            const formattedphoneNumber = formatphoneNumber(phoneNumber);
             const verificationCode = generateRandomCode();
 
             const { userId, deviceToken } = await userService.createUser(
@@ -59,7 +58,8 @@ class UserController {
 
             const { phoneNumber, password, deviceId } = value;
 
-            const user = await userService.getUserByphoneNumber(phoneNumber);
+            const formattedphoneNumber = formatPhoneNumber(phoneNumber);
+            const user = await userService.getUserByphoneNumber(formattedphoneNumber);
             if (!user) {
                 throw createError('9995', 'User not found.');
             }
@@ -119,7 +119,8 @@ class UserController {
 
             const { phoneNumber } = value;
 
-            const user = await userService.getUserByphoneNumber(phoneNumber);
+            const formattedphoneNumber = formatPhoneNumber(phoneNumber);
+            const user = await userService.getUserByphoneNumber(formattedphoneNumber);
             if (!user) {
                 throw createError('9995', 'User not found.');
             }
@@ -147,7 +148,8 @@ class UserController {
 
             const { phoneNumber, code } = value;
 
-            const user = await userService.getUserByphoneNumber(phoneNumber);
+            const formattedphoneNumber = formatPhoneNumber(phoneNumber);
+            const user = await userService.getUserByphoneNumber(formattedphoneNumber);
             if (!user) {
                 throw createError('9995', 'User not found.');
             }

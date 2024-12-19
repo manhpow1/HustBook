@@ -3,23 +3,31 @@ const sanitizeHtml = require('sanitize-html');
 
 /**
  * Password complexity requirements:
- * - Minimum 8 characters
- * - Maximum 30 characters
+ * - Minimum 6 characters
+ * - Maximum 10 characters
  * - At least one uppercase letter
  * - At least one lowercase letter
  * - At least one digit
+ * - Must only contain letters and numbers
  */
 const passwordComplexity = Joi.string()
     .min(6)
-    .max(30)
+    .max(10)
     .pattern(new RegExp('^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)[a-zA-Z\\d]+$'))
     .required()
     .messages({
         'string.pattern.base': 'Password must include uppercase, lowercase letters, and numbers.',
         'string.min': 'Password must be at least 6 characters long.',
-        'string.max': 'Password must be at most 30 characters long.',
+        'string.max': 'Password must be at most 10 characters long.',
         'any.required': 'Password is required.',
     });
+
+/**
+ * Check if password matches phone number
+ */
+const validatePasswordNotPhone = (password, phoneNumber) => {
+    return password === phoneNumber ? 'Password cannot match the phone number.' : null;
+};
 
 /**
  * Phone number validation schema:
@@ -192,7 +200,15 @@ const sanitizeInput = (value) => {
  */
 
 const validateSignup = (data) => {
-    return signupSchema.validate(data, { abortEarly: false });
+    const validation = signupSchema.validate(data, { abortEarly: false });
+    if (!validation.error && validatePasswordNotPhone(data.password, data.phoneNumber)) {
+        return {
+            error: {
+                details: [{ message: validatePasswordNotPhone(data.password, data.phoneNumber) }]
+            }
+        };
+    }
+    return validation;
 };
 
 const validateLogin = (data) => {
@@ -203,8 +219,16 @@ function validateChangeInfoAfterSignup(data) {
     return changeInfoAfterSignupSchema.validate(data, { abortEarly: false });
 }
 
-const validateChangePassword = (data) => {
-    return changePasswordSchema.validate(data, { abortEarly: false });
+const validateChangePassword = (data, phoneNumber) => {
+    const validation = changePasswordSchema.validate(data, { abortEarly: false });
+    if (!validation.error && validatePasswordNotPhone(data.new_password, phoneNumber)) {
+        return {
+            error: {
+                details: [{ message: validatePasswordNotPhone(data.new_password, phoneNumber) }]
+            }
+        };
+    }
+    return validation;
 };
 
 const validateSetBlock = (data) => {

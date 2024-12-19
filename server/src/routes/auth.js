@@ -16,5 +16,6 @@ router.post('/check_verify_code', userController.checkVerifyCode);
 router.get('/check', authenticateToken, userController.checkAuth);
 router.post('/change_info_after_signup', authenticateToken, upload.single('avatar'), userController.changeInfoAfterSignup);
 router.post('/refresh-token', userController.refreshToken);
+router.post('/change_password', authenticateToken, userController.changePassword);
 
 module.exports = router;
