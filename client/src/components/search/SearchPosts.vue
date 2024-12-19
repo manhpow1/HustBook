@@ -80,7 +80,7 @@
                     :data-test="'card-' + post.id" class="overflow-hidden search-result"
                     @coverError="handleCoverError(post)">
                     <div class="p-4">
-                        <h2 class="text-xl font-semibold mb-2">{{ post.author.username }}</h2>
+                        <h2 class="text-xl font-semibold mb-2">{{ post.author.userName }}</h2>
                         <p class="text-gray-600 mb-2">{{ post.described }}</p>
                         <div class="flex items-center text-sm text-gray-500">
                             <CalendarIcon class="w-4 h-4 mr-1" aria-hidden="true" />
@@ -194,7 +194,7 @@ const handleSearch = async () => {
         const sanitizedUserId = sanitizeInput(userId.value);
         await searchStore.searchPosts({
             keyword: sanitizedKeyword,
-            user_id: sanitizedUserId,
+            userId: sanitizedUserId,
             index: 0,
             count: 20,
         });
@@ -209,7 +209,7 @@ const loadMore = async () => {
     try {
         await searchStore.searchPosts({
             keyword: keyword.value.trim(),
-            user_id: userId.value.trim(),
+            userId: userId.value.trim(),
             index: searchStore.index + searchStore.count,
             count: searchStore.count,
         });
@@ -244,7 +244,7 @@ const fetchSavedSearches = async () => {
 // Apply a saved search
 const applySavedSearch = (search) => {
     keyword.value = search.keyword;
-    userId.value = search.user_id || '';
+    userId.value = search.userId || '';
     handleSearch();
 };
 

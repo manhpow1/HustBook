@@ -1,32 +1,32 @@
 class Message {
     constructor({
         message,
-        message_id,
+        messageId,
         unread,
         created,
         sender,
-        is_blocked,
+        isBlocked,
     }) {
         this.message = message;
-        this.message_id = message_id;
+        this.messageId = messageId;
         this.unread = unread;
         this.created = created;
-        this.sender = sender; // { id, username, avatar }
-        if (is_blocked !== undefined) {
-            this.is_blocked = is_blocked;
+        this.sender = sender; // { id, userName, avatar }
+        if (isBlocked !== undefined) {
+            this.isBlocked = isBlocked;
         }
     }
 
     toJSON() {
         const obj = {
             message: this.message,
-            message_id: this.message_id,
+            messageId: this.messageId,
             unread: this.unread,
             created: this.created,
             sender: this.sender,
         };
-        if (this.is_blocked !== undefined) {
-            obj.is_blocked = this.is_blocked;
+        if (this.isBlocked !== undefined) {
+            obj.isBlocked = this.isBlocked;
         }
         return obj;
     }

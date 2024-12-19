@@ -6,12 +6,12 @@ const getRequestedFriendsSchema = Joi.object({
 });
 
 const setAcceptFriendSchema = Joi.object({
-    user_id: Joi.string().required(),
-    is_accept: Joi.string().valid('0', '1').required()
+    userId: Joi.string().required(),
+    isAccept: Joi.string().valid('0', '1').required()
 });
 
 const getUserFriendsSchema = Joi.object({
-    user_id: Joi.string().optional(),
+    userId: Joi.string().optional(),
     index: Joi.number().integer().min(0).required(),
     count: Joi.number().integer().min(1).max(100).required()
 });
@@ -22,7 +22,7 @@ const getListSuggestedFriendsSchema = Joi.object({
 });
 
 const setRequestFriendSchema = Joi.object({
-    user_id: Joi.string().required()
+    userId: Joi.string().required()
 });
 
 const getListBlocksSchema = Joi.object({

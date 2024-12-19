@@ -36,7 +36,7 @@ class userService {
         }
     }
 
-    async getUserByPhoneNumber(phoneNumber) {
+    async getUserByphoneNumber(phoneNumber) {
         try {
             const users = await queryDocuments(collections.users, (ref) =>
                 ref.where('phoneNumber', '==', phoneNumber).limit(1)

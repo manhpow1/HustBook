@@ -20,12 +20,12 @@
         <div class="rounded-md shadow-sm -space-y-px">
           <!-- Phone Number Field -->
           <div>
-            <label for="phonenumber" class="sr-only">Phone Number</label>
-            <input v-model="phonenumber" id="phonenumber" name="phonenumber" type="tel" autocomplete="tel" required
-              aria-describedby="phonenumber-error" @input="validatePhone"
+            <label for="phoneNumber" class="sr-only">Phone Number</label>
+            <input v-model="phoneNumber" id="phoneNumber" name="phoneNumber" type="tel" autocomplete="tel" required
+              aria-describedby="phoneNumber-error" @input="validatePhone"
               class="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-t-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
               :class="{ 'border-red-500': phoneError }" placeholder="Phone number" />
-            <p v-if="phoneError" id="phonenumber-error" class="mt-2 text-sm text-red-600">
+            <p v-if="phoneError" id="phoneNumber-error" class="mt-2 text-sm text-red-600">
               {{ phoneError }}
             </p>
           </div>
@@ -100,19 +100,19 @@ const userStore = useUserStore();
 const { handleError } = useErrorHandler();
 const { showToast } = useToast();
 
-const phonenumber = ref('');
+const phoneNumber = ref('');
 const password = ref('');
 const rememberMe = ref(false);
 
 const { errors, validateField, validators } = useFormValidation();
 
 // Compute phoneError and passwordError from errors
-const phoneError = computed(() => errors.value['phonenumber']);
+const phoneError = computed(() => errors.value['phoneNumber']);
 const passwordError = computed(() => errors.value['password']);
 
 // Define validation methods
 function validatePhone() {
-  validateField('phonenumber', phonenumber.value, validators.phonenumber);
+  validateField('phoneNumber', phoneNumber.value, validators.phoneNumber);
 }
 
 function validatePassword() {
@@ -123,7 +123,7 @@ const { isLoading, successMessage, error } = storeToRefs(userStore);
 
 // Computed property to determine if the form is valid
 const isFormValid = computed(() => {
-  return !phoneError.value && !passwordError.value && phonenumber.value && password.value;
+  return !phoneError.value && !passwordError.value && phoneNumber.value && password.value;
 });
 
 // Computed property to check if login was successful
@@ -136,7 +136,7 @@ const handleSubmit = async () => {
     return;
   }
   try {
-    const success = await userStore.login(phonenumber.value, password.value, rememberMe.value);
+    const success = await userStore.login(phoneNumber.value, password.value, rememberMe.value);
     if (success) {
       showToast('Login successful!', 'success');
     } else {

@@ -3,7 +3,6 @@ const cors = require('cors');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 const morgan = require('morgan');
-const config = require('config');
 
 const authRoutes = require('./routes/auth');
 const postRoutes = require('./routes/posts');
@@ -21,7 +20,7 @@ const logger = require('./utils/logger');
 const app = express();
 
 // Middleware
-app.use(cors({ origin: config.get('server.corsOrigin') }));
+app.use(cors({ origin: CORS_ORIGIN }));
 app.use(express.json());
 app.use(helmet());
 app.use(morgan('dev'));

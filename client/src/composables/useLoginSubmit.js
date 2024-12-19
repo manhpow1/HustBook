@@ -7,14 +7,14 @@ export function useLoginSubmit(login, router) {
     const loginSuccess = ref(false)
     const errorMessage = ref("")
 
-    const submitLogin = async (phonenumber, password, rememberMe) => {
+    const submitLogin = async (phoneNumber, password, rememberMe) => {
         isLoading.value = true
         loginSuccess.value = false
         errorMessage.value = ""
 
         try {
             const response = await axios.post(API_ENDPOINTS.LOGIN, {
-                phonenumber,
+                phoneNumber,
                 password,
                 deviceId: "device-uuid",
                 rememberMe

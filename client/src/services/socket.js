@@ -41,7 +41,7 @@ export function initSocket() {
         // Message deleted event
         const { useChatStore } = require('../stores/chatStore');
         const chatStore = useChatStore();
-        chatStore.removeMessage(data.message_id);
+        chatStore.removeMessage(data.messageId);
     });
 
     socket.on('disconnect', () => {

@@ -3,7 +3,7 @@ class Conversation {
         this.id = id;
         this.Partner = {
             id: partnerId,
-            username: partnerUsername,
+            userName: partnerUsername,
             avatar: partnerAvatar
         };
         this.LastMessage = {

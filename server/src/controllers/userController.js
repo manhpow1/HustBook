@@ -1,7 +1,7 @@
 const userService = require('../services/userService');
 const userValidator = require('../validators/userValidator');
 const { comparePassword, generateJWT, verifyJWT, generateRefreshToken, generateRandomCode, verifyRefreshToken } = require('../utils/authHelper');
-const { formatPhoneNumber } = require('../utils/helpers');
+const { formatphoneNumber } = require('../utils/helpers');
 const { sendResponse } = require('../utils/responseHandler');
 const { createError } = require('../utils/customError');
 const logger = require('../utils/logger');
@@ -17,16 +17,16 @@ class UserController {
 
             const { phoneNumber, password, uuid } = value;
 
-            const existingUser = await userService.getUserByPhoneNumber(phoneNumber);
+            const existingUser = await userService.getUserByphoneNumber(phoneNumber);
             if (existingUser) {
                 throw createError('9996'); // User already exists
             }
 
-            const formattedPhoneNumber = formatPhoneNumber(phoneNumber);
+            const formattedphoneNumber = formatphoneNumber(phoneNumber);
             const verificationCode = generateRandomCode();
 
             const { userId, deviceToken } = await userService.createUser(
-                formattedPhoneNumber,
+                formattedphoneNumber,
                 password,
                 uuid,
                 verificationCode
@@ -34,7 +34,7 @@ class UserController {
 
             const token = generateJWT({
                 uid: userId,
-                phone: formattedPhoneNumber,
+                phone: formattedphoneNumber,
             });
 
             sendResponse(res, '1000', {
@@ -59,7 +59,7 @@ class UserController {
 
             const { phoneNumber, password, deviceId } = value;
 
-            const user = await userService.getUserByPhoneNumber(phoneNumber);
+            const user = await userService.getUserByphoneNumber(phoneNumber);
             if (!user) {
                 throw createError('9995', 'User not found.');
             }
@@ -83,7 +83,7 @@ class UserController {
 
             sendResponse(res, '1000', {
                 id: user.uid,
-                username: user.username,
+                userName: user.userName,
                 phoneNumber: user.phoneNumber,
                 token: token,
                 refreshToken: refreshToken,
@@ -117,9 +117,9 @@ class UserController {
                 throw createError('1002', errorMessage);
             }
 
-            const { phonenumber } = value;
+            const { phoneNumber } = value;
 
-            const user = await userService.getUserByPhoneNumber(phonenumber);
+            const user = await userService.getUserByphoneNumber(phoneNumber);
             if (!user) {
                 throw createError('9995', 'User not found.');
             }
@@ -145,9 +145,9 @@ class UserController {
                 throw createError('1002', errorMessage);
             }
 
-            const { phonenumber, code } = value;
+            const { phoneNumber, code } = value;
 
-            const user = await userService.getUserByPhoneNumber(phonenumber);
+            const user = await userService.getUserByphoneNumber(phoneNumber);
             if (!user) {
                 throw createError('9995', 'User not found.');
             }
@@ -191,10 +191,10 @@ class UserController {
         try {
             const userId = req.user.uid; // From authenticateToken
             const avatarFile = req.file; // handled by multer if provided
-            const { username } = req.body;
+            const { userName } = req.body;
 
             // Validate input
-            const { error } = userValidator.validateChangeInfoAfterSignup({ username });
+            const { error } = userValidator.validateChangeInfoAfterSignup({ userName });
             if (error) {
                 // Collect all validation errors into a single message
                 const messages = error.details.map(detail => detail.message).join(', ');
@@ -209,7 +209,7 @@ class UserController {
             }
 
             await userService.updateUserInfo(userId, {
-                username: username,
+                userName: userName,
                 ...(avatarUrl && { avatar: avatarUrl })
             });
 
@@ -220,11 +220,11 @@ class UserController {
 
             const responseData = {
                 id: updatedUser.uid,
-                username: updatedUser.username,
-                phonenumber: updatedUser.phoneNumber || '',
+                userName: updatedUser.userName,
+                phoneNumber: updatedUser.phoneNumber || '',
                 created: updatedUser.createdAt ? updatedUser.createdAt.toISOString() : '',
                 avatar: updatedUser.avatar || '',
-                is_blocked: updatedUser.isBlocked ? '1' : '0',
+                isBlocked: updatedUser.isBlocked ? '1' : '0',
                 online: updatedUser.online ? '1' : '0'
             };
 
@@ -321,14 +321,14 @@ class UserController {
                 throw createError('1003', errorMessage);
             }
 
-            const { user_id, type } = value;
+            const { userId, type } = value;
             const currentUserId = req.user.uid;
 
-            if (currentUserId === user_id) {
+            if (currentUserId === userId) {
                 throw createError('1010', 'Users cannot block themselves.');
             }
 
-            await userService.setBlock(currentUserId, user_id, type);
+            await userService.setBlock(currentUserId, userId, type);
 
             const message = type === 0 ? 'User blocked successfully.' : 'User unblocked successfully.';
             sendResponse(res, '1000', { message });
@@ -345,7 +345,7 @@ class UserController {
 
             // If no targetUserId provided, use requestingUser
             if (!targetUserId && !requestingUser) {
-                // Neither token nor user_id provided
+                // Neither token nor userId provided
                 throw createError('1002', 'Parameter is not enough'); // or '9998' if token is invalid
             }
 
@@ -362,7 +362,7 @@ class UserController {
             // Extract and prepare response data
             const {
                 uid: id,
-                username = '',
+                userName = '',
                 createdAt: created,
                 description = '',
                 avatar = '',
@@ -376,11 +376,11 @@ class UserController {
 
             const listing = await userService.getFriendCount(id);
 
-            let is_friend = '0';
+            let isFriend = '0';
             if (requestingUser && requestingUser.uid !== id) {
                 // Check friendship
                 const friendStatus = await userService.areUsersFriends(requestingUser.uid, id);
-                is_friend = friendStatus ? '1' : '0';
+                isFriend = friendStatus ? '1' : '0';
             }
 
             // `online` expected as '1' or '0'
@@ -388,7 +388,7 @@ class UserController {
 
             const responseData = {
                 id,
-                username,
+                userName,
                 created: created ? created.toISOString() : '',
                 description,
                 avatar,
@@ -398,7 +398,7 @@ class UserController {
                 city,
                 country,
                 listing,
-                is_friend,
+                isFriend,
                 online: onlineStatus,
             };
 
@@ -413,7 +413,7 @@ class UserController {
         try {
             const userId = req.user.uid;
             const {
-                username,
+                userName,
                 description,
                 avatar,
                 address,
@@ -424,7 +424,7 @@ class UserController {
             } = req.body;
 
             const updateData = {};
-            if (username !== undefined) updateData.username = username;
+            if (userName !== undefined) updateData.userName = userName;
             if (description !== undefined) updateData.description = description;
             if (avatar !== undefined) updateData.avatar = avatar;
             if (address !== undefined) updateData.address = address;

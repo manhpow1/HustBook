@@ -24,7 +24,7 @@
                             <button @click="$emit('toggleComments')"
                                 class="w-full text-left py-2 px-4 hover:bg-gray-100 rounded focus:outline-none focus:ring-2 focus:ring-indigo-500"
                                 aria-label="Toggle Comments">
-                                {{ post.can_comment === '1' ? 'Turn Off Comments' : 'Turn On Comments' }}
+                                {{ post.canComment === '1' ? 'Turn Off Comments' : 'Turn On Comments' }}
                             </button>
                         </li>
                         <li v-if="!isOwnPost">

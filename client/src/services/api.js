@@ -102,19 +102,19 @@ const apiService = {
         return axiosInstance.post(API_ENDPOINTS.GET_USER_FRIENDS, params);
     },
     async setAcceptFriend(userId, isAccept) {
-        return axiosInstance.post(API_ENDPOINTS.SET_ACCEPT_FRIEND, { user_id: userId, is_accept: isAccept });
+        return axiosInstance.post(API_ENDPOINTS.SET_ACCEPT_FRIEND, { userId, isAccept });
     },
     async getListSuggestedFriends(index = 0, count = 20) {
         return axiosInstance.get(API_ENDPOINTS.GET_LIST_SUGGESTED_FRIENDS, { params: { index, count } });
     },
     async sendFriendRequest(userId) {
-        return axiosInstance.post(API_ENDPOINTS.SET_REQUEST_FRIEND, { user_id: userId });
+        return axiosInstance.post(API_ENDPOINTS.SET_REQUEST_FRIEND, { userId });
     },
     async getListBlocks(params = {}) {
         return axiosInstance.get(API_ENDPOINTS.GET_LIST_BLOCKS, { params });
     },
     async setBlock(userId, type) {
-        return axiosInstance.post(API_ENDPOINTS.SET_BLOCK, { user_id: userId, type });
+        return axiosInstance.post(API_ENDPOINTS.SET_BLOCK, { userId, type });
     },
     // Notification APIs
     async getPushSettings() {
@@ -124,7 +124,7 @@ const apiService = {
         return axiosInstance.put(API_ENDPOINTS.UPDATE_PUSH_SETTINGS, settings);
     },
     async checkNewItems(lastId, categoryId = '0') {
-        return axiosInstance.post(API_ENDPOINTS.CHECK_NEW_ITEM, { last_id: lastId, category_id: categoryId });
+        return axiosInstance.post(API_ENDPOINTS.CHECK_NEW_ITEM, { lastId, categoryId });
     },
     async getNotifications(index = 0, count = 20) {
         return axiosInstance.get(API_ENDPOINTS.GET_NOTIFICATIONS, {

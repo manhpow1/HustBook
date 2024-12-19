@@ -42,10 +42,10 @@ class chatController {
                 throw createError('1002', messages);
             }
 
-            const { partner_id, conversation_id, index, count } = value;
+            const { partnerId, conversationId, index, count } = value;
             const userId = req.user.uid; // from authenticateToken middleware
 
-            const messagesData = await chatService.getConversation(userId, partner_id, conversation_id, index, count);
+            const messagesData = await chatService.getConversation(userId, partnerId, conversationId, index, count);
 
             if (!messagesData || messagesData.length === 0) {
                 throw createError('9994', 'No data or end of list data');
@@ -68,10 +68,10 @@ class chatController {
                 throw createError('1002', messages);
             }
 
-            const { partner_id, conversation_id } = value;
+            const { partnerId, conversationId } = value;
             const userId = req.user.uid; // from authenticateToken middleware
 
-            const updatedCount = await chatService.setReadMessage(userId, partner_id, conversation_id);
+            const updatedCount = await chatService.setReadMessage(userId, partnerId, conversationId);
 
             sendResponse(res, '1000', { data: [{ updated_count: updatedCount }] });
         } catch (err) {
@@ -90,15 +90,15 @@ class chatController {
                 throw createError('1002', messages);
             }
 
-            const { partner_id, conversation_id } = value;
+            const { partnerId, conversationId } = value;
             const userId = req.user.uid; // from authenticateToken middleware
-            const { message_id } = req.params;
+            const { messageId } = req.params;
 
-            if (!message_id) {
-                throw createError('1002', '"message_id" is required in the URL path');
+            if (!messageId) {
+                throw createError('1002', '"messageId" is required in the URL path');
             }
 
-            const deletionResult = await chatService.deleteMessage(userId, partner_id, conversation_id, message_id);
+            const deletionResult = await chatService.deleteMessage(userId, partnerId, conversationId, messageId);
 
             sendResponse(res, '1000', { data: [{ deleted: deletionResult }] });
         } catch (err) {
@@ -117,10 +117,10 @@ class chatController {
                 throw createError('1002', messages);
             }
 
-            const { partner_id, conversation_id } = value;
+            const { partnerId, conversationId } = value;
             const userId = req.user.uid; // from authenticateToken middleware
 
-            const deletionResult = await chatService.deleteConversation(userId, partner_id, conversation_id);
+            const deletionResult = await chatService.deleteConversation(userId, partnerId, conversationId);
 
             sendResponse(res, '1000', { data: [{ deleted: deletionResult }] });
         } catch (err) {

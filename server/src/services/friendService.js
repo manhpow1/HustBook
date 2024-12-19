@@ -26,7 +26,7 @@ class friendService {
 
             const formattedRequests = friendRequests.map(request => ({
                 id: request.senderId,
-                username: userMap.get(request.senderId)?.username || '',
+                userName: userMap.get(request.senderId)?.userName || '',
                 avatar: userMap.get(request.senderId)?.avatar || '',
                 created: request.createdAt.toISOString(),
             }));
@@ -171,8 +171,8 @@ class friendService {
 
             for (const result of mutualFriendsResults) {
                 suggestedFriends.push({
-                    user_id: result.id,
-                    username: result.userData.username,
+                    userId: result.id,
+                    userName: result.userData.userName,
                     avatar: result.userData.avatar,
                     same_friends: result.mutualFriends.toString(),
                 });
@@ -274,7 +274,7 @@ class friendService {
                 .filter(user => user !== null)
                 .map(user => ({
                     id: user.id,
-                    name: user.username || '',
+                    name: user.userName || '',
                     avatar: user.avatar || '',
                 }));
 

@@ -98,7 +98,7 @@
 
         <!-- Media Viewer -->
         <MediaViewer v-if="showLightbox" :isOpen="showLightbox" :mediaList="mediaList" :initialIndex="currentMediaIndex"
-            :likes="post.like" :comments="post.comment" :isLiked="post.is_liked === '1'" @close="closeLightbox"
+            :likes="post.like" :comments="post.comment" :isLiked="post.isLiked === '1'" @close="closeLightbox"
             @like="handleLike" @comment="handleComment" data-testid="media-viewer" />
     </div>
 </template>

@@ -17,7 +17,7 @@
     <template v-else>
       <!-- Cover Section -->
       <div class="relative mb-6">
-        <img v-if="user.cover_image" :src="user.cover_image" :alt="`${user.username}'s cover image`"
+        <img v-if="user.cover_image" :src="user.cover_image" :alt="`${user.userName}'s cover image`"
           class="w-full h-48 object-cover rounded-lg shadow cursor-pointer" @click="viewFullScreen(user.cover_image)"
           loading="lazy" aria-label="View cover photo in full screen" />
         <div class="absolute top-4 right-4 flex space-x-2">
@@ -33,11 +33,11 @@
           <div class="bg-white shadow rounded-lg p-6 mb-6">
             <div class="flex flex-col items-center mb-4">
               <div class="relative">
-                <img :src="user.avatar || '../../assets/avatar-default.svg'" :alt="user.username"
+                <img :src="user.avatar || '../../assets/avatar-default.svg'" :alt="user.userName"
                   class="w-32 h-32 rounded-full object-cover shadow cursor-pointer" @click="selectNewProfilePicture"
                   aria-label="Select a new profile picture" />
               </div>
-              <h1 class="text-3xl font-bold text-center mt-4 text-gray-800">{{ user.username }}</h1>
+              <h1 class="text-3xl font-bold text-center mt-4 text-gray-800">{{ user.userName }}</h1>
               <p class="text-gray-600 text-center mt-2">
                 {{ truncatedDescription }}
               </p>
@@ -207,7 +207,7 @@ const filteredPosts = computed(() => {
     const query = postSearchQuery.value.toLowerCase();
     allPosts = allPosts.filter(p =>
       (p.content && p.content.toLowerCase().includes(query)) ||
-      (p.author && p.author.username.toLowerCase().includes(query))
+      (p.author && p.author.userName.toLowerCase().includes(query))
     );
   }
 
@@ -272,7 +272,7 @@ async function fetchPostsForUser() {
 
 function loadMorePosts() {
   if (!postStore.hasMorePosts) return;
-  postStore.fetchPosts({ user_id: userId.value }).catch((err) => {
+  postStore.fetchPosts({ userId }).catch((err) => {
     console.error('Error loading more posts:', err);
   });
 }

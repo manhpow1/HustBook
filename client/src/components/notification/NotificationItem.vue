@@ -41,7 +41,7 @@ const formattedTime = computed(() => formatNotificationTime(props.notification.c
 
 const handleRemove = async () => {
     try {
-        await notificationStore.removeNotification(props.notification.notification_id);
+        await notificationStore.removeNotification(props.notification.notificationId);
         showToast('Notification removed.', 'success');
     } catch (error) {
         await handleError(error);
@@ -52,7 +52,7 @@ const handleRemove = async () => {
 const handleMarkAsRead = async () => {
     if (props.notification.read === '0') {
         try {
-            await notificationStore.markNotificationAsRead(props.notification.notification_id);
+            await notificationStore.markNotificationAsRead(props.notification.notificationId);
         } catch (error) {
             await handleError(error);
         }

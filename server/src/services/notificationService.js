@@ -8,7 +8,7 @@ class notificationService {
         try {
             const querySnapshot = await db.collection('posts')
                 .where('id', '>', lastId)
-                .where('category_id', '==', categoryId)
+                .where('categoryId', '==', categoryId)
                 .orderBy('id', 'asc')
                 .get();
 
@@ -60,9 +60,9 @@ class notificationService {
 
                 return {
                     type: data.type || '',
-                    object_id: data.object_id || '',
+                    objectId: data.objectId || '',
                     title: data.title || '',
-                    notification_id: doc.id,
+                    notificationId: doc.id,
                     created: createdDate.toISOString(),
                     avatar: data.avatar || '',
                     group: data.group ? data.group.toString() : '0',

@@ -73,10 +73,10 @@ class ChatService {
 
             const createdMessage = {
                 message: text,
-                message_id: msgRef.id,
+                messageId: msgRef.id,
                 unread: '1',
                 created: new Date().toISOString(),
-                sender: { id: userId, username: '', avatar: '' } // fetch sender info if needed
+                sender: { id: userId, userName: '', avatar: '' } // fetch sender info if needed
             };
 
             // Emit real-time event to the conversation room
@@ -178,7 +178,7 @@ class ChatService {
                 const convo = new Conversation({
                     id: conversationId,
                     partnerId: partnerId,
-                    partnerUsername: partnerData.username || '',
+                    partneruserName: partnerData.userName || '',
                     partnerAvatar: partnerData.avatar || '',
                     lastMessage: {
                         message: lastMessageData.message,
@@ -226,12 +226,12 @@ class ChatService {
                 convRef = convSnapshot.docs[0].ref;
                 partnerIdFinal = partnerId;
             } else {
-                throw createError('1002', 'Either "partner_id" or "conversation_id" must be provided');
+                throw createError('1002', 'Either "partnerId" or "conversationId" must be provided');
             }
 
             // Check if partner is blocked
             const isUserBlocked = await userService.isUserBlocked(userId, partnerIdFinal);
-            const is_blocked = isUserBlocked ? '1' : '0';
+            const isBlocked = isUserBlocked ? '1' : '0';
 
             // Fetch messages
             let messagesQuery = convRef.collection('messages')
@@ -284,15 +284,15 @@ class ChatService {
 
                 const messageModel = new Message({
                     message: data.text || '',
-                    message_id: doc.id,
+                    messageId: doc.id,
                     unread: data.unreadBy && data.unreadBy.includes(userId) ? '1' : '0',
                     created: data.createdAt ? data.createdAt.toDate().toISOString() : '',
                     sender: {
                         id: senderId,
-                        username: senderData.username || '',
+                        userName: senderData.userName || '',
                         avatar: senderData.avatar || ''
                     },
-                    is_blocked
+                    isBlocked
                 });
 
                 if (messageModel.unread === '1') {
@@ -337,7 +337,7 @@ class ChatService {
                 }
                 convRef = convSnapshot.docs[0].ref;
             } else {
-                throw createError('1002', 'Either "partner_id" or "conversation_id" must be provided');
+                throw createError('1002', 'Either "partnerId" or "conversationId" must be provided');
             }
 
             // Find all messages unread by userId
@@ -413,7 +413,7 @@ class ChatService {
             // Emit real-time event to notify clients
             const io = getIO();
             const roomName = await this.getConversationRoomName(userId, partnerId, convId);
-            io.to(roomName).emit('deletemessage', { message_id: messageId });
+            io.to(roomName).emit('deletemessage', { messageId: messageId });
 
             return true;
         } catch (error) {

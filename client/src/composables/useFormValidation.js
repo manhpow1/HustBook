@@ -17,18 +17,18 @@ export function useFormValidation() {
 
     // Validation rules
     const validators = {
-        phonenumber: [
+        phoneNumber: [
             (value) => !value ? 'Phone number is required.' : null,
             (value) => !/^0\d{9}$/.test(value) ? 'Invalid phone number format.' : null,
         ],
         password: [
-            (value, phonenumber) => !value ? 'Password is required.' : null,
+            (value, phoneNumber) => !value ? 'Password is required.' : null,
             (value) => value.length < 6 || value.length > 10 ? 'Password must be 6-10 characters long.' : null,
             (value) => !/[a-z]/.test(value) ? 'Password must contain at least one lowercase letter.' : null,
             (value) => !/[A-Z]/.test(value) ? 'Password must contain at least one uppercase letter.' : null,
             (value) => !/\d/.test(value) ? 'Password must contain at least one number.' : null,
             (value) => /[^a-zA-Z0-9]/.test(value) ? 'Password must contain only letters and numbers.' : null,
-            (value, phonenumber) => value === phonenumber ? 'Password cannot match the phone number.' : null,
+            (value, phoneNumber) => value === phoneNumber ? 'Password cannot match the phone number.' : null,
         ],
         description: [
             (value) => !value.trim() ? 'Description cannot be empty.' : null,

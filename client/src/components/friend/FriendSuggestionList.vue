@@ -10,26 +10,26 @@
             No friend suggestions at the moment.
         </div>
         <ul v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            <li v-for="suggestion in friendSuggestions" :key="suggestion.user_id"
+            <li v-for="suggestion in friendSuggestions" :key="suggestion.userId"
                 class="bg-white shadow rounded-lg p-4">
                 <div class="flex items-center mb-4">
-                    <img :src="suggestion.avatar || '../../assets/avatar-default.svg'" :alt="suggestion.username"
+                    <img :src="suggestion.avatar || '../../assets/avatar-default.svg'" :alt="suggestion.userName"
                         class="w-12 h-12 rounded-full mr-4">
                     <div>
-                        <h3 class="font-semibold">{{ suggestion.username }}</h3>
+                        <h3 class="font-semibold">{{ suggestion.userName }}</h3>
                         <p class="text-sm text-gray-500">{{ suggestion.same_friends }} mutual friends</p>
                     </div>
                 </div>
                 <div class="flex justify-between">
-                    <button @click="sendFriendRequest(suggestion.user_id)"
+                    <button @click="sendFriendRequest(suggestion.userId)"
                         class="bg-primary-600 text-white px-4 py-2 rounded hover:bg-primary-700"
-                        :disabled="isProcessing(suggestion.user_id)" aria-label="Add Friend">
-                        {{ isProcessing(suggestion.user_id) ? 'Sending...' : 'Add Friend' }}
+                        :disabled="isProcessing(suggestion.userId)" aria-label="Add Friend">
+                        {{ isProcessing(suggestion.userId) ? 'Sending...' : 'Add Friend' }}
                     </button>
-                    <button @click="confirmBlock(suggestion.user_id)"
+                    <button @click="confirmBlock(suggestion.userId)"
                         class="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600 transition duration-300"
-                        :disabled="isProcessing(suggestion.user_id)" aria-label="Block User">
-                        {{ isProcessing(suggestion.user_id) ? 'Processing...' : 'Block' }}
+                        :disabled="isProcessing(suggestion.userId)" aria-label="Block User">
+                        {{ isProcessing(suggestion.userId) ? 'Processing...' : 'Block' }}
                     </button>
                 </div>
             </li>
@@ -69,7 +69,7 @@ const sendFriendRequest = async (userId) => {
         await friendStore.sendFriendRequest(userId);
         showToast('Friend request sent', 'success');
         // Optionally remove the user from suggestions after sending request
-        friendSuggestions.value = friendSuggestions.value.filter(user => user.user_id !== userId);
+        friendSuggestions.value = friendSuggestions.value.filter(user => user.userId !== userId);
     } catch (err) {
         console.error(`Error sending friend request to user ID ${userId}:`, err);
         showToast('Failed to send friend request', 'error');
@@ -91,7 +91,7 @@ const blockConfirmed = async () => {
         await friendStore.setBlock(userToBlock.value, 0); // type: 0 to block
         showToast('User blocked successfully', 'success');
         // Remove the blocked user from suggestions
-        friendSuggestions.value = friendSuggestions.value.filter(user => user.user_id !== userToBlock.value);
+        friendSuggestions.value = friendSuggestions.value.filter(user => user.userId !== userToBlock.value);
     } catch (err) {
         console.error(`Error blocking user with ID ${userToBlock.value}:`, err);
         showToast('Failed to block user', 'error');

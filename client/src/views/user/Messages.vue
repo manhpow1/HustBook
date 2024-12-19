@@ -18,7 +18,7 @@
           <div class="flex items-center space-x-3">
             <img :src="convo.Partner.avatar || '/default-avatar.png'" alt="Avatar" class="h-8 w-8 rounded-full" />
             <div class="flex-1">
-              <p class="font-medium text-gray-900">{{ convo.Partner.username || 'User' }}</p>
+              <p class="font-medium text-gray-900">{{ convo.Partner.userName || 'User' }}</p>
               <p class="text-sm text-gray-500 truncate">
                 {{ convo.LastMessage.message || 'No messages yet' }}
               </p>
@@ -54,7 +54,7 @@
             <div v-if="chatStore.messages.length === 0" class="text-center text-gray-500">
               No messages yet. Start the conversation!
             </div>
-            <div v-for="msg in chatStore.messages" :key="msg.message_id" :class="messageClasses(msg)">
+            <div v-for="msg in chatStore.messages" :key="msg.messageId" :class="messageClasses(msg)">
               <div class="inline-block px-3 py-2 rounded-lg max-w-xs break-words"
                 :class="msg.sender.id === userStore.uid ? 'bg-blue-100 text-blue-900' : 'bg-gray-100 text-gray-900'">
                 <span v-html="formatMessageContent(msg.message)"></span>
@@ -141,7 +141,7 @@ const scrollToBottom = () => {
 };
 
 // Determine if message is still pending (temp message)
-const isMessagePending = (msg) => msg.message_id.startsWith('temp_');
+const isMessagePending = (msg) => msg.messageId.startsWith('temp_');
 
 // Format message content: 
 // - Replace emoticons with images

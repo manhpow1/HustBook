@@ -1,8 +1,8 @@
 const Joi = require('joi');
 
 const checkNewItemSchema = Joi.object({
-    last_id: Joi.string().required().label('last_id'),
-    category_id: Joi.string().valid('0', '1', '2', '3').default('0').label('category_id'),
+    lastId: Joi.string().required().label('lastId'),
+    categoryId: Joi.string().valid('0', '1', '2', '3').default('0').label('categoryId'),
 });
 
 const setPushSettingsSchema = Joi.object({
@@ -28,7 +28,7 @@ const getNotificationsSchema = Joi.object({
 });
 
 const setReadNotificationSchema = Joi.object({
-    notification_id: Joi.string().required(),
+    notificationId: Joi.string().required(),
 });
 
 const validateCheckNewItem = (data) => {

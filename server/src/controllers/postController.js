@@ -213,9 +213,9 @@ class PostController {
             if (error) throw createError('1002', error.details.map(detail => detail.message).join(', '));
 
             const {
-                user_id,
+                userId,
                 in_campaign,
-                campaign_id,
+                campaignId,
                 latitude,
                 longitude,
                 lastVisible,
@@ -234,9 +234,9 @@ class PostController {
             }
 
             const { posts, lastVisible: newLastVisible } = await postService.getListPosts({
-                userId: user_id || req.user.uid,
+                userId: userId || req.user.uid,
                 inCampaign: in_campaign,
-                campaignId: campaign_id,
+                campaignId: campaignId,
                 latitude,
                 longitude,
                 lastVisible: startAfterDoc,

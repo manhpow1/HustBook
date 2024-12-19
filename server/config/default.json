@@ -1,20 +1,16 @@
 {
     "firebase": {
-        "projectId": "your-firebase-project-id",
-        "privateKey": "your-firebase-private-key",
-        "clientEmail": "your-firebase-client-email"
+        "projectId": "${FIREBASE_PROJECT_ID}",
+        "privateKey": "${FIREBASE_PRIVATE_KEY}",
+        "clientEmail": "${FIREBASE_CLIENT_EMAIL}"
     },
     "jwt": {
-        "secret": "your-jwt-secret",
-        "refreshSecret": "your-jwt-refresh-secret",
+        "secret": "${JWT_SECRET}",
+        "refreshSecret": "${JWT_REFRESH_SECRET}",
         "expiration": "1h",
         "refreshExpiration": "7d"
     },
     "auth": {
         "saltRounds": 10
-    },
-    "server": {
-        "port": 3000,
-        "corsOrigin": "http://localhost:5173"
     }
 }

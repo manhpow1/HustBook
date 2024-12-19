@@ -12,23 +12,23 @@ class VideoController {
             }
 
             const {
-                user_id,
+                userId,
                 in_campaign,
-                campaign_id,
+                campaignId,
                 latitude,
                 longitude,
-                last_id,
+                lastId,
                 index,
                 count,
             } = value;
 
             const result = await videoService.getListVideos({
-                userId: user_id || req.user.uid,
+                userId: userId || req.user.uid,
                 inCampaign: in_campaign,
-                campaignId: campaign_id,
+                campaignId: campaignId,
                 latitude: latitude ? parseFloat(latitude) : undefined,
                 longitude: longitude ? parseFloat(longitude) : undefined,
-                lastId: last_id,
+                lastId: lastId,
                 index: parseInt(index || '0'),
                 count: parseInt(count || '20'),
             });
@@ -36,9 +36,9 @@ class VideoController {
             sendResponse(res, '1000', {
                 posts: result.posts,
                 new_items: result.newItems.toString(),
-                last_id: result.lastId,
+                lastId: result.lastId,
                 in_campaign: in_campaign || '0',
-                campaign_id: campaign_id || '',
+                campaignId: campaignId || '',
             });
         } catch (error) {
             next(error);

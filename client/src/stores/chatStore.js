@@ -51,7 +51,7 @@ export const useChatStore = defineStore('chat', {
 
         addMessage(message) {
             // Add or update a message in the message list
-            const exists = this.messages.find(m => m.message_id === message.message_id);
+            const exists = this.messages.find(m => m.messageId === message.messageId);
             if (!exists) {
                 this.messages.push(message);
             } else {
@@ -60,7 +60,7 @@ export const useChatStore = defineStore('chat', {
         },
 
         removeMessage(messageId) {
-            this.messages = this.messages.filter(m => m.message_id !== messageId);
+            this.messages = this.messages.filter(m => m.messageId !== messageId);
         },
 
         async sendMessage(content) {
@@ -72,16 +72,16 @@ export const useChatStore = defineStore('chat', {
             const userStore = useUserStore();
             const pendingMessage = {
                 message: content,
-                message_id: tempId,
+                messageId: tempId,
                 unread: '0',
                 created: new Date().toISOString(),
-                sender: { id: userStore.uid, username: userStore.username, avatar: userStore.avatar },
-                is_blocked: '0'
+                sender: { id: userStore.uid, userName: userStore.userName, avatar: userStore.avatar },
+                isBlocked: '0'
             };
             this.messages.push(pendingMessage);
 
             // The actual sending via socket is handled in the component using getSocket().
-            // Once 'onmessage' event returns from server, we get the real message_id.
+            // Once 'onmessage' event returns from server, we get the real messageId.
             // On 'onmessage', we can remove this temp message if needed or just accept the new one.
         },
 

@@ -7,17 +7,17 @@
         <form @submit.prevent="handleSubmit" class="space-y-4" novalidate>
             <!-- Phone Number Field -->
             <div>
-                <label for="phonenumber" class="block text-sm font-medium text-gray-700">Phone Number</label>
+                <label for="phoneNumber" class="block text-sm font-medium text-gray-700">Phone Number</label>
                 <div class="mt-1 relative rounded-md shadow-sm">
                     <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                         <PhoneIcon class="h-5 w-5 text-gray-400" aria-hidden="true" />
                     </div>
-                    <input v-model="phonenumber" type="tel" id="phonenumber" name="phonenumber" required
-                        @input="validatePhone" :aria-describedby="phoneError ? 'phonenumber-error' : null"
+                    <input v-model="phoneNumber" type="tel" id="phoneNumber" name="phoneNumber" required
+                        @input="validatePhone" :aria-describedby="phoneError ? 'phoneNumber-error' : null"
                         class="block w-full pl-10 pr-12 sm:text-sm border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500"
                         :class="{ 'border-red-500': phoneError }" placeholder="0123456789" />
                 </div>
-                <p v-if="phoneError" id="phonenumber-error" class="mt-2 text-sm text-red-600">
+                <p v-if="phoneError" id="phoneNumber-error" class="mt-2 text-sm text-red-600">
                     {{ phoneError }}
                 </p>
             </div>
@@ -93,7 +93,7 @@ const userStore = useUserStore();
 const { handleError } = useErrorHandler();
 const { showToast } = useToast();
 
-const phonenumber = ref('');
+const phoneNumber = ref('');
 const codeDigits = ref(['', '', '', '', '', '']);
 const codeInputs = ref([]);
 
@@ -105,12 +105,12 @@ const errorMessage = computed(() => userStore.error || '');
 const { errors, validateField, validators } = useFormValidation();
 
 // Computed properties for phoneError and codeError
-const phoneError = computed(() => errors.value.phonenumber || null);
+const phoneError = computed(() => errors.value.phoneNumber || null);
 const codeError = computed(() => errors.value.codeDigits || null);
 
 // Validate phone number
 const validatePhone = async () => {
-    await validateField('phonenumber', phonenumber.value, validators.phonenumber);
+    await validateField('phoneNumber', phoneNumber.value, validators.phoneNumber);
 };
 
 // Validate code digits
@@ -122,7 +122,7 @@ const validateCode = async () => {
 const isFormValid = computed(() => {
     // For the code to be valid, we must ensure codeDigits are all digits
     const allDigits = codeDigits.value.every(digit => /^\d$/.test(digit));
-    return !phoneError.value && !codeError.value && phonenumber.value && allDigits;
+    return !phoneError.value && !codeError.value && phoneNumber.value && allDigits;
 });
 
 // Compute formatted cooldown time
@@ -140,7 +140,7 @@ const handleSubmit = async () => {
     }
 
     try {
-        const success = await userStore.verifyCode(phonenumber.value, codeDigits.value.join(''));
+        const success = await userStore.verifyCode(phoneNumber.value, codeDigits.value.join(''));
         if (success) {
             showToast('Verification successful!', 'success');
             emit('verification-success');
@@ -180,7 +180,7 @@ const resendCode = async () => {
     if (cooldownTime.value > 0) return;
 
     try {
-        const success = await userStore.getVerifyCode(phonenumber.value);
+        const success = await userStore.getVerifyCode(phoneNumber.value);
         if (success) {
             showToast('Verification code resent successfully!', 'success');
         } else {

@@ -21,17 +21,17 @@
           <div class="rounded-md shadow-sm -space-y-px">
             <!-- Phone Number Field -->
             <div>
-              <label for="phonenumber" class="sr-only">Phone Number</label>
+              <label for="phoneNumber" class="sr-only">Phone Number</label>
               <div class="relative">
                 <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                   <PhoneIcon class="h-5 w-5 text-gray-400" aria-hidden="true" />
                 </div>
-                <input v-model="phonenumber" id="phonenumber" name="phonenumber" type="tel" autocomplete="tel" required
-                  aria-describedby="phonenumber-error" @input="validatePhone"
+                <input v-model="phoneNumber" id="phoneNumber" name="phoneNumber" type="tel" autocomplete="tel" required
+                  aria-describedby="phoneNumber-error" @input="validatePhone"
                   class="appearance-none rounded-none relative block w-full px-3 py-2 pl-10 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-t-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
                   :class="{ 'border-red-500': phoneError }" placeholder="Phone number" />
               </div>
-              <p v-if="phoneError" id="phonenumber-error" class="text-sm text-red-600 mt-1">
+              <p v-if="phoneError" id="phoneNumber-error" class="text-sm text-red-600 mt-1">
                 {{ phoneError }}
               </p>
             </div>
@@ -90,7 +90,7 @@
 
       <!-- Verify Code Component -->
       <div v-if="currentStep === 'verify'">
-        <VerifyCode :initialPhoneNumber="phonenumber" @verification-success="handleVerificationSuccess"
+        <VerifyCode :initialphoneNumber="phoneNumber" @verification-success="handleVerificationSuccess"
           @verification-error="handleVerificationError" />
       </div>
 
@@ -138,7 +138,7 @@ const { handleError } = useErrorHandler();
 const { showToast } = useToast();
 
 const currentStep = ref('signup');
-const phonenumber = ref('');
+const phoneNumber = ref('');
 const password = ref('');
 const rememberMe = ref(false);
 
@@ -146,27 +146,27 @@ const rememberMe = ref(false);
 const { errors, validateField, validators } = useFormValidation();
 
 // Computed properties for phoneError and passwordError
-const phoneError = computed(() => errors.value.phonenumber || null);
+const phoneError = computed(() => errors.value.phoneNumber || null);
 const passwordError = computed(() => errors.value.password || null);
 
 // Validation functions
 const validatePhone = async () => {
-  await validateField('phonenumber', phonenumber.value, validators.phonenumber);
+  await validateField('phoneNumber', phoneNumber.value, validators.phoneNumber);
 };
 
 const validatePassword = async () => {
-  // validators.password rules also depend on phonenumber if needed
+  // validators.password rules also depend on phoneNumber if needed
   // but for now, just pass password
   await validateField('password', password.value, validators.password);
 };
 
-// Watch phonenumber and password and validate on change
-watch(phonenumber, () => validatePhone());
+// Watch phoneNumber and password and validate on change
+watch(phoneNumber, () => validatePhone());
 watch(password, () => validatePassword());
 
 // Check if form is valid
 const isFormValid = computed(() => {
-  return !phoneError.value && !passwordError.value && phonenumber.value && password.value;
+  return !phoneError.value && !passwordError.value && phoneNumber.value && password.value;
 });
 
 // Password strength calculations
@@ -219,7 +219,7 @@ const handleSignup = async () => {
   }
 
   try {
-    const success = await userStore.register(phonenumber.value, password.value, 'device-uuid');
+    const success = await userStore.register(phoneNumber.value, password.value, 'device-uuid');
     if (success) {
       showToast('Registration successful. Please verify your account.', 'success');
       currentStep.value = 'verify';

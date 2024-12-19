@@ -36,10 +36,10 @@
         <ul v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             <li v-for="friend in limitedFriends" :key="friend.id" class="bg-white shadow rounded-lg p-4">
                 <div class="flex items-center mb-4">
-                    <img :src="friend.avatar || '../../assets/avatar-default.svg'" :alt="friend.username"
+                    <img :src="friend.avatar || '../../assets/avatar-default.svg'" :alt="friend.userName"
                         class="w-12 h-12 rounded-full mr-4" />
                     <div>
-                        <h3 class="font-semibold">{{ friend.username }}</h3>
+                        <h3 class="font-semibold">{{ friend.userName }}</h3>
                         <p class="text-sm text-gray-500">{{ friend.mutualFriends }} mutual friends</p>
                     </div>
                 </div>
@@ -51,7 +51,7 @@
                         <button @click="toggleDropdown(friend.id)" class="text-gray-500 hover:text-gray-700"
                             aria-haspopup="true" :aria-expanded="activeDropdown === friend.id">
                             <MoreVerticalIcon class="w-5 h-5" aria-hidden="true" />
-                            <span class="sr-only">More options for {{ friend.username }}</span>
+                            <span class="sr-only">More options for {{ friend.userName }}</span>
                         </button>
                         <div v-if="activeDropdown === friend.id"
                             class="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg z-10">
@@ -137,11 +137,11 @@ const fetchFriends = async () => {
 
 const filteredFriends = computed(() => {
     let result = friends.value.filter(friend =>
-        friend.username.toLowerCase().includes(debouncedSearch.value.toLowerCase())
+        friend.userName.toLowerCase().includes(debouncedSearch.value.toLowerCase())
     );
 
     if (sortByInternal.value === 'name') {
-        result.sort((a, b) => a.username.localeCompare(b.username));
+        result.sort((a, b) => a.userName.localeCompare(b.userName));
     } else if (sortByInternal.value === 'recent') {
         // Assuming friend.friendshipDate is a timestamp or date string
         result.sort((a, b) => new Date(b.friendshipDate) - new Date(a.friendshipDate));

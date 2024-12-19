@@ -89,7 +89,7 @@ export const usePostStore = defineStore('post', () => {
         error.value = null;
 
         try {
-            const response = await apiService.getListPosts({ user_id: userId, limit, lastVisible: lastVisible.value });
+            const response = await apiService.getListPosts({ userId, limit, lastVisible: lastVisible.value });
             const data = response.data;
 
             if (data.code === '1000') {

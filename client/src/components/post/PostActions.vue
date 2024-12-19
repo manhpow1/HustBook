@@ -2,11 +2,11 @@
     <div class="flex items-center justify-between mb-4">
         <!-- Like Button -->
         <button @click="debouncedHandleLike" class="flex items-center transition-colors duration-200" :class="[
-            post.is_liked === '1' ? 'text-blue-500' : 'text-gray-500 hover:text-blue-500',
+            post.isLiked === '1' ? 'text-blue-500' : 'text-gray-500 hover:text-blue-500',
             { 'opacity-50 cursor-not-allowed': isLiking }
         ]" :disabled="isLiking" aria-label="Like" role="button" data-testid="like-button">
             <div class="relative w-5 h-5 mr-1">
-                <ThumbsUpIcon :class="{ 'fill-current': post.is_liked === '1' }" class="w-5 h-5"
+                <ThumbsUpIcon :class="{ 'fill-current': post.isLiked === '1' }" class="w-5 h-5"
                     :style="{ opacity: isLiking ? '0.5' : '1' }" aria-hidden="true" />
                 <SpinnerIcon v-if="isLiking" class="absolute top-0 left-0 w-5 h-5 animate-spin" aria-hidden="true" />
             </div>

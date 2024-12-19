@@ -5,22 +5,22 @@
             Complete Your Profile
         </h2>
         <form @submit.prevent="handleSubmit" class="space-y-6" novalidate>
-            <!-- Username Field -->
+            <!-- userName Field -->
             <div>
-                <label for="username" class="block text-sm font-medium text-gray-700">Username</label>
+                <label for="userName" class="block text-sm font-medium text-gray-700">userName</label>
                 <div class="mt-1 relative rounded-md shadow-sm">
-                    <input v-model="username" type="text" id="username" name="username" required
-                        aria-describedby="username-error" @input="validateUsernameField"
+                    <input v-model="userName" type="text" id="userName" name="userName" required
+                        aria-describedby="userName-error" @input="validateuserNameField"
                         class="block w-full pr-10 border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-                        :class="{ 'border-red-300': usernameError }" placeholder="Enter your username" />
+                        :class="{ 'border-red-300': userNameError }" placeholder="Enter your userName" />
                     <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
-                        <CheckCircleIcon v-if="!usernameError && username" class="h-5 w-5 text-green-500"
+                        <CheckCircleIcon v-if="!userNameError && userName" class="h-5 w-5 text-green-500"
                             aria-hidden="true" />
-                        <XCircleIcon v-if="usernameError" class="h-5 w-5 text-red-500" aria-hidden="true" />
+                        <XCircleIcon v-if="userNameError" class="h-5 w-5 text-red-500" aria-hidden="true" />
                     </div>
                 </div>
-                <p v-if="usernameError" id="username-error" class="text-sm text-red-600 mt-1" role="alert">
-                    {{ usernameError }}
+                <p v-if="userNameError" id="userName-error" class="text-sm text-red-600 mt-1" role="alert">
+                    {{ userNameError }}
                 </p>
             </div>
 
@@ -50,9 +50,9 @@
 
             <!-- Submit Button -->
             <div>
-                <button type="submit" :disabled="isLoading || !!usernameError"
+                <button type="submit" :disabled="isLoading || !!userNameError"
                     class="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
-                    :aria-disabled="isLoading || !!usernameError">
+                    :aria-disabled="isLoading || !!userNameError">
                     <LoaderIcon v-if="isLoading" class="animate-spin -ml-1 mr-2 h-5 w-5 text-white"
                         aria-hidden="true" />
                     {{ isLoading ? "Updating..." : "Update Profile" }}
@@ -106,18 +106,18 @@ const { user, isLoading, errorMessage, successMessage } = storeToRefs(userStore)
 const { showToast } = useToast();
 
 // Local component state
-const username = ref('');
-const usernameError = ref('');
+const userName = ref('');
+const userNameError = ref('');
 const avatar = ref(null);
 const avatarPreview = ref('');
 const avatarError = ref('');
 
 // Initialize form validation
-const { validateUsername } = useFormValidation();
+const { validateuserName } = useFormValidation();
 
-// Validate the username field in real-time
-const validateUsernameField = () => {
-    usernameError.value = validateUsername(username.value);
+// Validate the userName field in real-time
+const validateuserNameField = () => {
+    userNameError.value = validateuserName(userName.value);
 };
 
 // Handle file input change for avatar upload
@@ -150,15 +150,15 @@ const removeAvatar = () => {
 
 // Handle form submission
 const handleSubmit = async () => {
-    if (usernameError.value) return;
+    if (userNameError.value) return;
 
     try {
         // Sanitize inputs
-        const sanitizedUsername = sanitizeInput(username.value);
+        const sanitizeduserName = sanitizeInput(userName.value);
 
-        await userStore.updateProfile(sanitizedUsername, avatar.value);
+        await userStore.updateProfile(sanitizeduserName, avatar.value);
 
-        if (userStore.user.value?.is_blocked) {
+        if (userStore.user.value?.isBlocked) {
             showToast('Your account has been blocked.', 'error');
             router.push({ name: 'Login' });
         } else {
@@ -193,7 +193,7 @@ onMounted(() => {
     } else {
         // Initialize form with existing user data if available
         if (user.value) {
-            username.value = user.value.username || '';
+            userName.value = user.value.userName || '';
             if (user.value.avatar_url) {
                 avatarPreview.value = user.value.avatar_url;
             }

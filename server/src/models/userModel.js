@@ -5,7 +5,7 @@ const logger = require('../utils/logger');
 class User {
     constructor(data) {
         this.id = data.uid;
-        this.username = data.username;
+        this.userName = data.userName;
         this.phoneNumber = data.phoneNumber;
         this.avatar = data.avatar || null;
         this.createdAt = data.createdAt || new Date().toISOString();
@@ -18,7 +18,7 @@ class User {
     toJSON() {
         return {
             id: this.id,
-            username: this.username,
+            userName: this.userName,
             phoneNumber: this.phoneNumber,
             avatar: this.avatar,
             createdAt: this.createdAt,

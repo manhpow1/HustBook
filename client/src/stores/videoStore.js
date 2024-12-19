@@ -20,7 +20,7 @@ export const useVideoStore = defineStore('video', () => {
         try {
             const response = await apiService.post('/video/get_list_videos', {
                 ...params,
-                last_id: lastId.value,
+                lastId: lastId.value,
                 index: videos.value.length,
                 count: 20
             })
@@ -28,7 +28,7 @@ export const useVideoStore = defineStore('video', () => {
             if (response.data.code === '1000') {
                 const newVideos = response.data.data.posts
                 videos.value.push(...newVideos)
-                lastId.value = response.data.data.last_id
+                lastId.value = response.data.data.lastId
                 hasMore.value = newVideos.length === 20
             } else {
                 throw new Error(response.data.message || 'Failed to load videos')
@@ -57,7 +57,7 @@ export const useVideoStore = defineStore('video', () => {
         try {
             // Example: if there's an API for user videos
             const response = await apiService.get('/video/get_user_videos', {
-                params: { user_id: userId, index: 0, count: 20 }
+                params: { userId, index: 0, count: 20 }
             });
 
             if (response.data.code === '1000') {

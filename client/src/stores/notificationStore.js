@@ -55,7 +55,7 @@ export const useNotificationStore = defineStore('notification', () => {
             const response = await apiService.setReadNotification(notificationId);
             if (response.data.code === '1000') {
                 // Update the local state
-                const idx = notifications.value.findIndex((n) => n.notification_id === notificationId);
+                const idx = notifications.value.findIndex((n) => n.notificationId === notificationId);
                 if (idx !== -1) {
                     notifications.value[idx].read = '1';
                 }

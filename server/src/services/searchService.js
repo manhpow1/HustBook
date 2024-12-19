@@ -32,10 +32,10 @@ class searchService {
                 video: post.video || '',
                 like: post.likes?.toString() || '0',
                 comment: post.comments?.toString() || '0',
-                is_liked: post.isLiked ? '1' : '0',
+                isLiked: post.isLiked ? '1' : '0',
                 author: {
                     id: post.userId,
-                    username: post.username || '',
+                    userName: post.userName || '',
                     avatar: post.avatar || '',
                 },
                 described: post.content || '',

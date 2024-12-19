@@ -61,11 +61,11 @@ class SearchController {
                 throw createError('1002', error.details.map(detail => detail.message).join(', '));
             }
 
-            const { search_id } = req.params;
+            const { searchId } = req.params;
             const { all } = req.query;
             const userId = req.user.uid;
 
-            await searchService.deleteSavedSearch(userId, search_id, all === '1');
+            await searchService.deleteSavedSearch(userId, searchId, all === '1');
 
             sendResponse(res, '1000');
         } catch (error) {

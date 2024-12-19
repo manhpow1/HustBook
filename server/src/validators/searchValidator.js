@@ -12,7 +12,7 @@ const getSavedSearchSchema = Joi.object({
 });
 
 const deleteSavedSearchSchema = Joi.object({
-    search_id: Joi.string().required(),
+    searchId: Joi.string().required(),
     all: Joi.string().valid('0', '1').default('0')
 });
 

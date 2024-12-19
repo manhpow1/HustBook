@@ -8,6 +8,6 @@ router.get('/get_push_settings', authenticateToken, notificationController.getPu
 router.put('/set_push_settings', authenticateToken, pushSettingsLimiter, notificationController.setPushSettings);
 router.post('/check_new_item', authenticateToken, notificationController.checkNewItem);
 router.get('/get_notification', authenticateToken, notificationController.getNotifications);
-router.patch('/:notification_id/read', authenticateToken, notificationController.setReadNotification);
+router.patch('/:notificationId/read', authenticateToken, notificationController.setReadNotification);
 
 module.exports = router;

@@ -24,7 +24,7 @@ export const useFriendStore = defineStore('friend', () => {
     const sortedFriends = computed(() => {
         return [...friends.value].sort((a, b) => {
             if (sortBy.value === 'name') {
-                return a.username.localeCompare(b.username);
+                return a.userName.localeCompare(b.userName);
             } else if (sortBy.value === 'recent') {
                 return new Date(b.created) - new Date(a.created);
             } else if (sortBy.value === 'mutual') {
@@ -63,7 +63,7 @@ export const useFriendStore = defineStore('friend', () => {
         error.value = null;
         try {
             const response = await apiService.getUserFriends({
-                user_id: params.userId,
+                userId: params.userId,
                 index: params.index || 0,
                 count: params.count || 20
             });

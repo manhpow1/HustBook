@@ -15,7 +15,7 @@
                     <p v-if="commentError" class="text-red-500 text-sm mt-1">{{ commentError }}</p>
                 </div>
                 <div class="comment-actions">
-                    <Button @click="toggleLike" :variant="comment.is_liked ? 'primary' : 'outline'"
+                    <Button @click="toggleLike" :variant="comment.isLiked ? 'primary' : 'outline'"
                         class="action-button" :disabled="isLikeLoading" aria-label="Like" data-testid="like-button">
                         <ThumbsUpIcon class="action-icon" />
                         <span>{{ comment.like }} {{ comment.like === 1 ? 'Like' : 'Likes' }}</span>
@@ -149,8 +149,8 @@ const debouncedToggleLike = debounce(async () => {
     try {
         await emit('update', {
             id: props.comment.id,
-            is_liked: !props.comment.is_liked,
-            like: props.comment.like + (props.comment.is_liked ? -1 : 1),
+            isLiked: !props.comment.isLiked,
+            like: props.comment.like + (props.comment.isLiked ? -1 : 1),
         });
         logger.info('Comment like toggled', { commentId: props.comment.id });
     } catch (error) {

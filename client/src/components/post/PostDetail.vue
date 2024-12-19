@@ -43,7 +43,7 @@
                     <!-- Comments Section -->
                     <Suspense>
                         <template #default>
-                            <CommentSection v-if="post.can_comment === '1'" :postId="post.id" :comments="comments"
+                            <CommentSection v-if="post.canComment === '1'" :postId="post.id" :comments="comments"
                                 @addComment="handleComment" @updateComment="handleCommentUpdate"
                                 @deleteComment="handleCommentDelete" @loadMore="loadMoreComments"
                                 :loading="loadingMoreComments" :error="commentError" @retry="retryLoadComments" />
@@ -67,7 +67,7 @@
             <!-- Media Viewer -->
             <MediaViewer v-if="showMediaViewer" :isOpen="showMediaViewer" :mediaList="mediaList"
                 :initialIndex="currentMediaIndex" :likes="post.like" :comments="post.comment"
-                :isLiked="post.is_liked === '1'" @close="closeMediaViewer" @like="handleLike" @comment="handleComment"
+                :isLiked="post.isLiked === '1'" @close="closeMediaViewer" @like="handleLike" @comment="handleComment"
                 data-testid="media-viewer" />
 
             <!-- Advanced Options Modal -->

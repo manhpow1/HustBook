@@ -3,7 +3,7 @@
     <div class="bg-white shadow rounded-lg p-6">
         <h2 class="text-xl font-semibold mb-4">Edit Profile</h2>
         <form @submit.prevent="submitForm" class="space-y-4">
-            <Input v-model="form.username" label="Username" placeholder="Enter your username" />
+            <Input v-model="form.userName" label="userName" placeholder="Enter your userName" />
             <Input v-model="form.description" label="Description" placeholder="Short bio or description" />
             <Input v-model="form.address" label="Address" placeholder="Your address" />
             <Input v-model="form.city" label="City" placeholder="Your city" />
@@ -28,7 +28,7 @@ import { Input, Button } from '../ui';
 const userStore = useUserStore();
 
 const form = ref({
-    username: '',
+    userName: '',
     description: '',
     address: '',
     city: '',

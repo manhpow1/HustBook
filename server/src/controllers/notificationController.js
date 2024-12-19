@@ -13,9 +13,9 @@ class NotificationController {
                 throw createError('1002', messages);
             }
 
-            const { last_id, category_id } = value;
+            const { lastId, categoryId } = value;
 
-            const newItemsCount = await notificationService.checkNewItems(last_id, category_id);
+            const newItemsCount = await notificationService.checkNewItems(lastId, categoryId);
 
             sendResponse(res, '1000', {
                 new_items: newItemsCount.toString(),
@@ -91,10 +91,10 @@ class NotificationController {
                 throw createError('1002', messages);
             }
 
-            const { notification_id } = value;
+            const { notificationId } = value;
             const userId = req.user.uid; // From authenticateToken
 
-            const { badge, last_update } = await notificationService.setReadNotification(userId, notification_id);
+            const { badge, last_update } = await notificationService.setReadNotification(userId, notificationId);
 
             sendResponse(res, '1000', { Version: { badge, last_update } });
         } catch (err) {

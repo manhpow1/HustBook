@@ -17,7 +17,7 @@
             <div v-for="video in searchResults" :key="video.id" class="video-card">
                 <img :src="video.thumbnail" :alt="video.title" class="w-full h-40 object-cover rounded-lg" />
                 <h3 class="mt-2 font-semibold">{{ video.title }}</h3>
-                <p class="text-sm text-gray-500">{{ video.uploader.username }}</p>
+                <p class="text-sm text-gray-500">{{ video.uploader.userName }}</p>
             </div>
         </div>
     </div>

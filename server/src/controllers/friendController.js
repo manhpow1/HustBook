@@ -36,8 +36,7 @@ class FriendController {
                 throw createError('1002', error.details.map(detail => detail.message).join(', '));
             }
 
-            const { user_id, index, count } = value;
-            const userId = user_id || req.user.uid;
+            const { userId, index, count } = value;
 
             const result = await friendService.getUserFriends(
                 userId,
@@ -61,13 +60,12 @@ class FriendController {
                 throw createError('1002', error.details.map(detail => detail.message).join(', '));
             }
 
-            const { user_id, is_accept } = req.body;
-            const userId = req.user.uid;
+            const { userId, isAccept } = req.body;
 
-            await friendService.setAcceptFriend(userId, user_id, is_accept);
+            await friendService.setAcceptFriend(userId, userId, isAccept);
 
             sendResponse(res, '1000', {
-                message: is_accept === '1' ? 'Friend request accepted' : 'Friend request rejected',
+                message: isAccept === '1' ? 'Friend request accepted' : 'Friend request rejected',
             });
         } catch (error) {
             next(error);
@@ -105,14 +103,14 @@ class FriendController {
                 throw createError('1002', error.details.map(detail => detail.message).join(', '));
             }
 
-            const { user_id } = req.body;
+            const { userId } = req.body;
             const senderId = req.user.uid;
 
-            if (senderId === user_id) {
+            if (senderId === userId) {
                 throw createError('1004', 'Cannot send friend request to yourself');
             }
 
-            const result = await friendService.setRequestFriend(senderId, user_id);
+            const result = await friendService.setRequestFriend(senderId, userId);
 
             sendResponse(res, '1000', result);
         } catch (error) {

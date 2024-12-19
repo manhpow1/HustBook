@@ -7,17 +7,17 @@
         <form @submit.prevent="handleSubmit" class="space-y-4" novalidate>
             <!-- Phone Number Field -->
             <div>
-                <label for="phonenumber" class="block text-sm font-medium text-gray-700">Phone Number</label>
+                <label for="phoneNumber" class="block text-sm font-medium text-gray-700">Phone Number</label>
                 <div class="mt-1 relative rounded-md shadow-sm">
                     <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                         <Phone class="h-5 w-5 text-gray-400" aria-hidden="true" />
                     </div>
-                    <input v-model="phonenumber" type="tel" id="phonenumber" name="phonenumber" required
-                        aria-describedby="phonenumber-error" @input="validatePhone"
+                    <input v-model="phoneNumber" type="tel" id="phoneNumber" name="phoneNumber" required
+                        aria-describedby="phoneNumber-error" @input="validatePhone"
                         class="block w-full pl-10 pr-12 sm:text-sm border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500"
                         :class="{ 'border-red-500': phoneError }" placeholder="0123456789" />
                 </div>
-                <p v-if="phoneError" id="phonenumber-error" class="mt-2 text-sm text-red-600">
+                <p v-if="phoneError" id="phoneNumber-error" class="mt-2 text-sm text-red-600">
                     {{ phoneError }}
                 </p>
             </div>
@@ -62,17 +62,17 @@ const userStore = useUserStore();
 const { handleError } = useErrorHandler();
 const { showToast } = useToast();
 
-const phonenumber = ref('');
+const phoneNumber = ref('');
 
 // Destructure the validation composable
 const { errors, validateField, validators } = useFormValidation();
 
 // Define computed property for phoneError
-const phoneError = computed(() => errors.value.phonenumber || null);
+const phoneError = computed(() => errors.value.phoneNumber || null);
 
 // Define a function to validate phone input
 const validatePhone = async () => {
-    await validateField('phonenumber', phonenumber.value, validators.phonenumber);
+    await validateField('phoneNumber', phoneNumber.value, validators.phoneNumber);
 };
 
 // Reactive references from the store
@@ -82,13 +82,13 @@ const errorMessage = computed(() => userStore.error || '');
 
 // Check if form is valid
 const isFormValid = computed(() => {
-    // Form is valid if no phoneError and phonenumber is non-empty
-    return !phoneError.value && phonenumber.value;
+    // Form is valid if no phoneError and phoneNumber is non-empty
+    return !phoneError.value && phoneNumber.value;
 });
 
 // Compute button disabled state
 const isButtonDisabled = computed(() => {
-    return isLoading.value || cooldownTime.value > 0 || !phonenumber.value || phoneError.value;
+    return isLoading.value || cooldownTime.value > 0 || !phoneNumber.value || phoneError.value;
 });
 
 // Dynamic button text
@@ -114,7 +114,7 @@ const handleSubmit = async () => {
     }
 
     try {
-        const success = await userStore.getVerifyCode(phonenumber.value);
+        const success = await userStore.getVerifyCode(phoneNumber.value);
         if (success) {
             showToast('Verification code sent successfully!', 'success');
         } else {

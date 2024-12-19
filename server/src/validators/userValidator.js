@@ -90,13 +90,13 @@ const loginSchema = Joi.object({
 
 /**
  * Change user info schema:
- * - username
+ * - userName
  * - avatar (optional)
  */
 const changeInfoAfterSignupSchema = Joi.object({
-    username: Joi.string().min(1).required().messages({
-        'string.empty': 'Username cannot be empty.',
-        'any.required': 'Username is required.'
+    userName: Joi.string().min(1).required().messages({
+        'string.empty': 'userName cannot be empty.',
+        'any.required': 'userName is required.'
     })
 });
 
@@ -117,11 +117,11 @@ const changePasswordSchema = Joi.object({
 
 /**
  * Set block schema:
- * - user_id
+ * - userId
  * - type (0: block, 1: unblock)
  */
 const setBlockSchema = Joi.object({
-    user_id: Joi.string().uuid().required().messages({
+    userId: Joi.string().uuid().required().messages({
         'string.base': 'User ID must be a string.',
         'string.uuid': 'User ID must be a valid UUID.',
         'any.required': 'User ID is required.'

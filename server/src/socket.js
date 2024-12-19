@@ -20,11 +20,11 @@ function initSocketIO(server) {
         logger.info(`Socket connected: ${socket.id}, user: ${socket.userId}`);
 
         // Handle joinchat event:
-        // client sends { partner_id, conversation_id } in data
+        // client sends { partnerId, conversationId } in data
         socket.on('joinchat', async (data) => {
             try {
-                const { partner_id, conversation_id } = data;
-                let roomName = await chatService.getConversationRoomName(socket.userId, partner_id, conversation_id);
+                const { partnerId, conversationId } = data;
+                let roomName = await chatService.getConversationRoomName(socket.userId, partnerId, conversationId);
                 socket.join(roomName);
                 logger.info(`User ${socket.userId} joined room ${roomName}`);
             } catch (error) {
@@ -33,15 +33,15 @@ function initSocketIO(server) {
             }
         });
 
-        // Handle send event: { message, conversation_id/partner_id }
+        // Handle send event: { message, conversationId/partnerId }
         socket.on('send', async (data) => {
             try {
-                const { partner_id, conversation_id, message } = data;
+                const { partnerId, conversationId, message } = data;
                 // Save message to DB via chatService
-                const savedMessage = await chatService.sendMessage(socket.userId, partner_id, conversation_id, message);
+                const savedMessage = await chatService.sendMessage(socket.userId, partnerId, conversationId, message);
 
                 // Emit 'onmessage' to room or directly to partner
-                let roomName = await chatService.getConversationRoomName(socket.userId, partner_id, conversation_id);
+                let roomName = await chatService.getConversationRoomName(socket.userId, partnerId, conversationId);
                 io.to(roomName).emit('onmessage', { message: savedMessage });
 
             } catch (error) {
@@ -50,15 +50,15 @@ function initSocketIO(server) {
             }
         });
 
-        // Handle deletemessage event: { message_id, conversation_id/partner_id }
+        // Handle deletemessage event: { messageId, conversationId/partnerId }
         socket.on('deletemessage', async (data) => {
             try {
-                const { message_id, partner_id, conversation_id } = data;
-                const deleted = await chatService.deleteMessage(socket.userId, partner_id, conversation_id, message_id);
+                const { messageId, partnerId, conversationId } = data;
+                const deleted = await chatService.deleteMessage(socket.userId, partnerId, conversationId, messageId);
 
                 if (deleted) {
-                    let roomName = await chatService.getConversationRoomName(socket.userId, partner_id, conversation_id);
-                    io.to(roomName).emit('deletemessage', { message_id });
+                    let roomName = await chatService.getConversationRoomName(socket.userId, partnerId, conversationId);
+                    io.to(roomName).emit('deletemessage', { messageId });
                 } else {
                     socket.emit('connection_error', { message: 'Message not deleted' });
                 }
