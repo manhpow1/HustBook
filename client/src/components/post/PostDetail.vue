@@ -94,7 +94,7 @@ import { usePostStore } from '../../stores/postStore';
 import { useUserStore } from '../../stores/userStore';
 import { AlertCircleIcon } from 'lucide-vue-next';
 import { formatNumber } from '../../utils/numberFormat';
-import { useConfirm } from '@vueuse/core';
+import { useConfirmDialog } from '@vueuse/core';
 import { useErrorHandler } from '../../composables/useErrorHandler';
 
 // Asynchronously load components to reduce initial bundle size
@@ -116,7 +116,7 @@ const route = useRoute();
 const router = useRouter();
 const postStore = usePostStore();
 const userStore = useUserStore();
-const { confirm: confirmAction } = useConfirm();
+const { confirm: confirmAction } = useConfirmDialog();
 const { handleError } = useErrorHandler();
 
 // Reactive state

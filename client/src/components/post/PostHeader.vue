@@ -47,7 +47,7 @@
 <script setup>
 import { ref } from 'vue';
 import { MoreVerticalIcon } from 'lucide-vue-next';
-import { useConfirm } from '@vueuse/core';
+import { useConfirmDialog } from '@vueuse/core';
 import { useToast } from '../../composables/useToast';
 import { usePostStore } from '../../stores/postStore';
 import { formatDate } from '../../utils/helpers';
@@ -68,7 +68,7 @@ const props = defineProps({
 const emit = defineEmits(['editPost', 'deletePost', 'reportPost', 'sharePost']);
 
 // Composables
-const { confirm: confirmAction } = useConfirm();
+const { confirm: confirmAction } = useConfirmDialog();
 const { showToast } = useToast();
 const postStore = usePostStore();
 

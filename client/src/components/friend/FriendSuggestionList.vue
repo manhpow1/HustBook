@@ -10,10 +10,9 @@
             No friend suggestions at the moment.
         </div>
         <ul v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            <li v-for="suggestion in friendSuggestions" :key="suggestion.userId"
-                class="bg-white shadow rounded-lg p-4">
+            <li v-for="suggestion in friendSuggestions" :key="suggestion.userId" class="bg-white shadow rounded-lg p-4">
                 <div class="flex items-center mb-4">
-                    <img :src="suggestion.avatar || '../../assets/avatar-default.svg'" :alt="suggestion.userName"
+                    <img :src="suggestion.avatar || defaultAvatar" :alt="suggestion.userName"
                         class="w-12 h-12 rounded-full mr-4">
                     <div>
                         <h3 class="font-semibold">{{ suggestion.userName }}</h3>
@@ -37,8 +36,8 @@
 
         <!-- Confirm Dialog for Blocking -->
         <ConfirmDialog v-model="confirmDialog" :title="'Block User'"
-            :message="'Are you sure you want to block this user? You won't receive any messages or friend requests from them.'"
-            confirmText="Block" cancelText="Cancel" :isLoading="isLoading" loadingText="Blocking..."
+            :message="'Are you sure you want to block this user? You won\'t receive any messages or friend requests from them.'"
+            :confirmText="'Block'" :cancelText="'Cancel'" :isLoading="isLoading" :loadingText="'Blocking...'"
             @confirm="blockConfirmed" @cancel="cancelBlock" />
     </div>
 </template>
@@ -48,7 +47,8 @@ import { ref, onMounted } from 'vue';
 import { useFriendStore } from '../../stores/friendStore';
 import { useToast } from '../../composables/useToast';
 import FriendSuggestionSkeleton from './FriendSuggestionSkeleton.vue';
-import ConfirmDialog from '../shared/ConfirmDialog.vue';
+import ConfirmDialog from '../ui/ConfirmDialog.vue';
+import defaultAvatar from '../../assets/avatar-default.svg';
 
 const friendStore = useFriendStore();
 const { showToast } = useToast();

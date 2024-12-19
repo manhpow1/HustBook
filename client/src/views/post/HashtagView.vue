@@ -40,8 +40,7 @@ import { usePostStore } from '../../stores/postStore'
 import { LoaderIcon } from 'lucide-vue-next'
 import { useInfiniteScroll } from '@vueuse/core'
 import { storeToRefs } from 'pinia'
-
-const PostSkeleton = defineAsyncComponent(() => import('../components/shared/PostSkeleton.vue'))
+import PostSkeleton from '../../components/shared/PostSkeleton.vue'
 
 const route = useRoute()
 const postStore = usePostStore()

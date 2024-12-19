@@ -54,8 +54,8 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted, nextTick } from 'vue';
-import { useFocusTrap } from '@vueuse/core';
+import { ref, onMounted, onUnmounted, nextTick, watch } from 'vue';
+import createFocusTrap from 'focus-trap';
 
 const props = defineProps({
     isOwnPost: {
@@ -75,9 +75,7 @@ const props = defineProps({
 const emit = defineEmits(['close', 'edit', 'delete', 'toggleComments', 'report', 'hide']);
 
 const modalRef = ref(null);
-
-// Utilize VueUse's useFocusTrap to trap focus within the modal when it's open
-useFocusTrap(modalRef, props.isVisible);
+let focusTrap = null;
 
 // Handle closing the modal
 const handleClose = () => {
@@ -92,21 +90,37 @@ const handleKeyDown = (event) => {
 };
 
 onMounted(() => {
-    // Focus the modal when it becomes visible
-    if (props.isVisible && modalRef.value) {
-        nextTick(() => {
-            modalRef.value.focus();
-        });
-    }
+    watch(
+        () => props.isVisible,
+        (newVal) => {
+            if (newVal) {
+                nextTick(() => {
+                    if (modalRef.value) {
+                        focusTrap = createFocusTrap(modalRef.value, {
+                            onDeactivate: handleClose,
+                            escapeDeactivates: true,
+                            clickOutsideDeactivates: true
+                        });
+                        focusTrap.activate();
+                    }
+                });
 
-    // Add keydown listener only if the modal is visible
-    if (props.isVisible) {
-        document.addEventListener('keydown', handleKeyDown);
-    }
+                document.addEventListener('keydown', handleKeyDown);
+            } else {
+                if (focusTrap) {
+                    focusTrap.deactivate();
+                }
+                document.removeEventListener('keydown', handleKeyDown);
+            }
+        },
+        { immediate: true }
+    );
 });
 
 onUnmounted(() => {
-    // Remove keydown listener when the component is unmounted
+    if (focusTrap) {
+        focusTrap.deactivate();
+    }
     document.removeEventListener('keydown', handleKeyDown);
 });
 </script>
