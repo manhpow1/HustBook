@@ -2,7 +2,7 @@ const redis = require('redis');
 const { promisify } = require('util');
 
 const client = redis.createClient({
-    url: process.env.REDIS_URL || 'redis://localhost:5173',
+    url: process.env.REDIS_URL || 'redis://localhost:6379',
 });
 client.connect().catch(console.error);
 
@@ -23,4 +23,9 @@ const cache = {
     }
 };
 
-module.exports = cache;
+module.exports = {
+    client,
+    get: cache.get,
+    set: cache.set,
+    del: cache.del
+};

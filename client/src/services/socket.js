@@ -15,7 +15,7 @@ export function initSocket() {
         return;
     }
 
-    const socketUrl = import.meta.env.VITE_APP_SOCKET_URL || 'http://localhost:3000';
+    const socketUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000';
     const socketOrigin = new URL(socketUrl).origin;
 
     // Enhanced socket configuration with security measures

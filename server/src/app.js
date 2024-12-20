@@ -3,6 +3,8 @@ const cors = require('cors');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 const morgan = require('morgan');
+const swaggerUi = require('swagger-ui-express');
+const swaggerSpecs = require('./config/swagger.js');
 
 const authRoutes = require('./routes/auth');
 const postRoutes = require('./routes/posts');
@@ -10,6 +12,7 @@ const userRoutes = require('./routes/users');
 const friendRoutes = require('./routes/friends');
 const searchRoutes = require('./routes/search');
 const chatRoutes = require('./routes/chat');
+const videoRoutes = require('./routes/video');
 const notificationRoutes = require('./routes/notifications');
 const authLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 5 }); // Auth routes
 const apiLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 200 }); // General routes
@@ -20,11 +23,10 @@ const logger = require('./utils/logger');
 const app = express();
 
 // Middleware
-app.use(cors({ origin: CORS_ORIGIN }));
+app.use(cors({ origin: process.env.CORS_ORIGIN }));
 app.use(express.json());
 app.use(helmet());
 app.use(morgan('dev'));
-
 app.use(apiLimiter);
 
 // Routes
@@ -35,6 +37,8 @@ app.use('/api/friends', friendRoutes);
 app.use('/api/search', searchRoutes);
 app.use('/api/chat', chatRoutes);
 app.use('/api/notifications', notificationRoutes);
+app.use('/api/video', videoRoutes);
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpecs));
 
 // Error handling middleware
 app.use(handleError);

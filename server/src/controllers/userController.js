@@ -1,7 +1,7 @@
 const userService = require('../services/userService');
 const userValidator = require('../validators/userValidator');
 const { comparePassword, generateJWT, generateRefreshToken, generateRandomCode, verifyRefreshToken } = require('../utils/authHelper');
-const { formatphoneNumber } = require('../utils/helpers');
+const { formatPhoneNumber } = require('../utils/helpers');
 const { sendResponse } = require('../utils/responseHandler');
 const { createError } = require('../utils/customError');
 const logger = require('../utils/logger');

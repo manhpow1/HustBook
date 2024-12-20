@@ -5,9 +5,10 @@ const cache = require('../utils/redis');
 const { createError } = require('../utils/customError');
 const logger = require('../utils/logger');
 const { RateLimiterRedis } = require('rate-limiter-flexible');
+const client = require('../utils/redis');
 
 const rateLimiter = new RateLimiterRedis({
-    storeClient: cache.client,
+    storeClient: client,
     keyPrefix: 'socket_limit',
     points: 100, // Number of connections allowed
     duration: 60, // Per 60 seconds

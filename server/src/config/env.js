@@ -19,5 +19,4 @@ module.exports = {
         port: config.get('server.port'),
         corsOrigin: config.get('server.corsOrigin'),
     },
-    nodeEnv: config.get('server.env'),
 };

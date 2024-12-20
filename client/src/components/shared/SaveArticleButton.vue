@@ -29,7 +29,7 @@ const isSaved = ref(props.initialSavedState)
 const toggleSave = async () => {
     try {
         const response = await axios.post(
-            'http://localhost:3000/api/posts/save_post',
+            'https://hustbook.onrender.com/api/posts/save_post',
             { id: props.postId },
             { headers: { Authorization: `Bearer ${token.value}` } }
         )

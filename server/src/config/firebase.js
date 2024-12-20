@@ -1,16 +1,12 @@
 const admin = require('firebase-admin');
-const env = require('./env');
 const logger = require('../utils/logger');
+const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
 
 const initializeFirebase = () => {
   if (!admin.apps.length) {
     try {
       admin.initializeApp({
-        credential: admin.credential.cert({
-          projectId: env.firebase.projectId,
-          privateKey: env.firebase.privateKey,
-          clientEmail: env.firebase.clientEmail,
-        }),
+        credential: admin.credential.cert(serviceAccount)
       });
       logger.info('Firebase initialized successfully.');
     } catch (error) {

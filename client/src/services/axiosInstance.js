@@ -4,7 +4,7 @@ import { useUserStore } from '../stores/userStore';
 import Cookies from 'js-cookie';
 
 const axiosInstance = axios.create({
-    baseURL: import.meta.env.VITE_APP_API_BASE_URL || 'http://localhost:3000/api',
+    baseURL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000',
 });
 
 // Request interceptor to set Authorization header
@@ -80,7 +80,7 @@ axiosInstance.interceptors.response.use(
         }
 
         try {
-            const response = await axios.post(`${axiosInstance.defaults.baseURL}/auth/refresh-token`, {
+            const response = await axios.post(`${axiosInstance.defaults.baseURL}/api/auth/refresh-token`, {
                 refreshToken: currentRefreshToken,
             });
 
