@@ -1,337 +1,293 @@
 import { defineStore } from 'pinia';
 import { ref, computed } from 'vue';
 import apiService from '../services/api';
-import { setAuthHeaders } from '../services/api';
 import Cookies from 'js-cookie';
-import router from '../router';
+import { useRouter } from 'vue-router';
 import logger from '../services/logging';
-import { useErrorHandler } from '../composables/useErrorHandler';
-import { initSocket } from '../services/socket';
 
 export const useUserStore = defineStore('user', () => {
+    const router = useRouter();
+    
     // State
     const user = ref(null);
-    const isLoading = ref(false);
     const error = ref(null);
     const successMessage = ref('');
+    const isLoading = ref(false);
     const cooldownTime = ref(0);
+    const cooldownInterval = ref(null);
 
-    const { handleError } = useErrorHandler();
-    // Getters
-    const isLoggedIn = computed(() => !!user.value);
-
-    // Initialize tokens from cookies
-    const accessToken = ref(Cookies.get('accessToken') || null);
-    const refreshToken = ref(Cookies.get('refreshToken') || null);
-
-    // Set default axios headers
-    if (accessToken.value) {
-        setAuthHeaders(accessToken.value);
-    }
+    // Computed
+    const isLoggedIn = computed(() => !!Cookies.get('accessToken'));
+    const userInfo = computed(() => user.value);
 
     // Actions
+    const startCooldown = (duration = 60) => {
+        cooldownTime.value = duration;
+        if (cooldownInterval.value) clearInterval(cooldownInterval.value);
+        
+        cooldownInterval.value = setInterval(() => {
+            if (cooldownTime.value > 0) {
+                cooldownTime.value--;
+            } else {
+                clearInterval(cooldownInterval.value);
+            }
+        }, 1000);
+    };
 
-    // Set tokens in cookies and axios headers
-    function setTokens(newAccessToken, newRefreshToken) {
-        accessToken.value = newAccessToken;
-        refreshToken.value = newRefreshToken;
-
-        Cookies.set('accessToken', newAccessToken);
-        Cookies.set('refreshToken', newRefreshToken);
-
-        setAuthHeaders(newAccessToken);
-    }
-
-    // Clear tokens from cookies and axios headers
-    function clearTokens() {
-        accessToken.value = null;
-        refreshToken.value = null;
-
+    const clearAuthState = () => {
         Cookies.remove('accessToken');
         Cookies.remove('refreshToken');
-
-        setAuthHeaders(null);
-    }
-
-    // Set user data
-    function setUserData(userData) {
-        user.value = userData;
-    }
-
-    // Clear user data
-    function clearUserData() {
         user.value = null;
-    }
-
-    // Login
-    async function login(phoneNumber, password, rememberMe) {
-        isLoading.value = true;
         error.value = null;
         successMessage.value = '';
-
-        try {
-            const response = await apiService.login({ phoneNumber, password, deviceId: 'device-uuid', rememberMe });
-            const data = response.data;
-
-            if (data.code === '1000') {
-                const { token, refreshToken: newRefreshToken } = data.data;
-                setTokens(token, newRefreshToken);
-                await fetchUserProfile();
-                initSocket();
-                successMessage.value = 'Login successful.';                
-                return true;
-            } else {
-                error.value = data.message || 'Login failed';
-                logger.warn('Login failed', { message: data.message });
-                return false;
-            }
-        } catch (err) {
-            handleError(err);
-            error.value = err.response?.data?.message || 'An error occurred during login';
-            logger.error('Login error', { error: err });
-            return false;
-        } finally {
-            isLoading.value = false;
+        if (cooldownInterval.value) {
+            clearInterval(cooldownInterval.value);
         }
-    }
+    };
 
-    // Register
-    async function register(phoneNumber, password, uuid) {
-        isLoading.value = true;
-        error.value = null;
-        successMessage.value = '';
+    const handleAuthError = (err) => {
+        logger.error('Authentication error:', err);
+        error.value = err.response?.data?.message || 'An unexpected error occurred';
+        isLoading.value = false;
+    };
 
+    const setAuthCookies = (token, refreshToken, rememberMe = false) => {
+        const tokenExpiry = rememberMe ? 7 : 1/96; // 7 days or 15 minutes
+        Cookies.set('accessToken', token, {
+            secure: true,
+            sameSite: 'strict',
+            expires: tokenExpiry
+        });
+        
+        if (refreshToken) {
+            Cookies.set('refreshToken', refreshToken, {
+                secure: true,
+                sameSite: 'strict',
+                expires: rememberMe ? 30 : 7 // 30 days if remember me, otherwise 7 days
+            });
+        }
+    };
+
+    const register = async (phoneNumber, password, uuid) => {
         try {
+            isLoading.value = true;
+            error.value = null;
+            
             const response = await apiService.register({ phoneNumber, password, uuid });
-            const data = response.data;
-
-            if (data.code === '1000') {
-                successMessage.value = 'Registration successful. Please verify your account.';
-                logger.info('Registration successful', { phoneNumber });
+            
+            if (response.data.code === '1000') {
+                const { token, deviceToken } = response.data.data;
+                setAuthCookies(token);
+                successMessage.value = 'Registration successful! Please verify your account.';
                 return true;
-            } else {
-                error.value = data.message || 'Registration failed';
-                logger.warn('Registration failed', { message: data.message });
-                return false;
             }
+            return false;
         } catch (err) {
-            handleError(err);
-            error.value = err.response?.data?.message || 'An error occurred during registration';
-            logger.error('Registration error', { error: err });
+            handleAuthError(err);
             return false;
         } finally {
             isLoading.value = false;
         }
-    }
+    };
 
-    // Logout
-    async function logout() {
-        isLoading.value = true;
-        error.value = null;
-        successMessage.value = '';
-
+    const login = async (phoneNumber, password, rememberMe = false) => {
         try {
-            await apiService.logout();
-            clearTokens();
-            clearUserData();
-            successMessage.value = 'Logout successful';
-            logger.info('User logged out');
+            isLoading.value = true;
+            error.value = null;
+            
+            const deviceId = localStorage.getItem('deviceId') || crypto.randomUUID();
+            localStorage.setItem('deviceId', deviceId);
+            
+            const response = await apiService.login({ phoneNumber, password, deviceId });
+            
+            if (response.data.code === '1000') {
+                const { token, refreshToken, id, userName } = response.data.data;
+                setAuthCookies(token, refreshToken, rememberMe);
+                user.value = { id, userName, phoneNumber };
+                successMessage.value = 'Login successful!';
+                return true;
+            }
+            return false;
+        } catch (err) {
+            handleAuthError(err);
+            return false;
+        } finally {
+            isLoading.value = false;
+        }
+    };
+
+    const logout = async () => {
+        try {
+            isLoading.value = true;
+            if (isLoggedIn.value) {
+                await apiService.logout();
+            }
+            clearAuthState();
             router.push('/login');
             return true;
         } catch (err) {
-            handleError(err);
-            error.value = 'An error occurred during logout';
-            logger.error('Logout error', { error: err });
+            handleAuthError(err);
             return false;
         } finally {
             isLoading.value = false;
         }
-    }
+    };
 
-    // Get Verification Code
-    async function getVerifyCode(phoneNumber) {
-        isLoading.value = true;
-        error.value = null;
-        successMessage.value = '';
-
+    const refreshToken = async () => {
         try {
-            const response = await apiService.getVerifyCode({ phoneNumber });
-            const data = response.data;
-
-            if (data.code === '1000') {
-                successMessage.value = 'Verification code sent successfully';
-                logger.info('Verification code sent', { phoneNumber });
-                return true;
-            } else {
-                error.value = data.message || 'Failed to send verification code';
-                logger.warn('Failed to send verification code', { message: data.message });
-                return false;
+            const currentRefreshToken = Cookies.get('refreshToken');
+            if (!currentRefreshToken) {
+                throw new Error('No refresh token available');
             }
-        } catch (err) {
-            handleError(err);
-            error.value = err.response?.data?.message || 'An error occurred while sending verification code';
-            logger.error('GetVerifyCode error', { error: err });
-            return false;
-        } finally {
-            isLoading.value = false;
-        }
-    }
 
-    // Verify Code
-    async function verifyCode(phoneNumber, code) {
-        isLoading.value = true;
-        error.value = null;
-        successMessage.value = '';
-
-        try {
-            const response = await apiService.verifyCode({ phoneNumber, code_verify: code });
-            const data = response.data;
-
-            if (data.code === '1000') {
-                const { token, refreshToken: newRefreshToken } = data.data;
-                setTokens(token, newRefreshToken);
-                await fetchUserProfile();
-                successMessage.value = 'Verification successful';
-                logger.info('Verification successful', { phoneNumber });
-                return true;
-            } else {
-                error.value = data.message || 'Verification failed';
-                logger.warn('Verification failed', { message: data.message });
-                return false;
-            }
-        } catch (err) {
-            handleError(err);
-            error.value = err.response?.data?.message || 'An error occurred during verification';
-            logger.error('VerifyCode error', { error: err });
-            return false;
-        } finally {
-            isLoading.value = false;
-        }
-    }
-
-    async function getUserProfile(userId = null) {
-        isLoading.value = true;
-        error.value = null;
-
-        try {
-            const response = await apiService.getUserInfo(userId);
-            const data = response.data;
-
-            if (data.code === '1000') {
-                // If fetching current user's profile (no userId), store it in user store
-                if (!userId) {
-                    setUserData(data.data);
-                }
-                return data.data; // Return the user info data
-            } else {
-                error.value = data.message || 'Failed to fetch user info';
-                return null;
-            }
-        } catch (err) {
-            await handleError(err);
-            error.value = err.response?.data?.message || 'An error occurred while fetching user info';
-            return null;
-        } finally {
-            isLoading.value = false;
-        }
-    }
-
-    // Fetch User Profile
-    async function fetchUserProfile() {
-        if (!accessToken.value) {
-            clearUserData();
-            return;
-        }
-
-        const profileData = await getUserProfile(); // no userId means current user
-        if (!profileData) {
-            clearTokens();
-            clearUserData();
-        }
-    }
-
-    async function updateUserInfo(profileData) {
-        isLoading.value = true;
-        error.value = null;
-        successMessage.value = '';
-
-        try {
-            const response = await apiService.setUserInfo(profileData);
-            const data = response.data;
-
-            if (data.code === '1000') {
-                // Fetch current user profile again to update the store state with the newest data
-                await fetchUserProfile();
-                successMessage.value = 'Profile updated successfully.';
-                return true;
-            } else {
-                error.value = data.message || 'Failed to update user info';
-                logger.warn('Failed to update user info', { message: data.message });
-                return false;
-            }
-        } catch (err) {
-            await handleError(err);
-            error.value = err.response?.data?.message || 'An error occurred while updating user info';
-            logger.error('UpdateUserInfo error', { error: err });
-            return false;
-        } finally {
-            isLoading.value = false;
-        }
-    }
-
-    // Refresh Access Token
-    async function refreshAccessToken() {
-        const currentRefreshToken = Cookies.get('refreshToken');
-        if (!currentRefreshToken) {
-            await logout();
-            return null;
-        }
-
-        try {
             const response = await apiService.refreshToken(currentRefreshToken);
-            const data = response.data;
-
-            if (data.code === '1000') {
-                const { token: newAccessToken, refreshToken: newRefreshToken } = data.data;
-                setTokens(newAccessToken, newRefreshToken);
-                logger.info('Access token refreshed');
-                return newAccessToken;
-            } else {
-                await logout();
-                logger.warn('Failed to refresh access token', { message: data.message });
-                return null;
+            
+            if (response.data.code === '1000') {
+                const { token, refreshToken } = response.data.data;
+                setAuthCookies(token, refreshToken);
+                return true;
             }
-        } catch (error) {
-            handleError(error);
+            return false;
+        } catch (err) {
+            handleAuthError(err);
             await logout();
-            logger.error('Failed to refresh access token', { error });
-            return null;
+            return false;
         }
-    }
+    };
 
-    // Clear Messages
-    function clearMessages() {
-        error.value = null;
-        successMessage.value = '';
-    }
+    const checkAuth = async () => {
+        try {
+            if (!isLoggedIn.value) return false;
+            
+            const response = await apiService.get('/api/auth/check');
+            return response.data.code === '1000';
+        } catch (err) {
+            if (err.response?.status === 401) {
+                // Try to refresh token
+                const refreshSuccess = await refreshToken();
+                if (refreshSuccess) {
+                    // Retry auth check
+                    const retryResponse = await apiService.get('/api/auth/check');
+                    return retryResponse.data.code === '1000';
+                }
+            }
+            handleAuthError(err);
+            return false;
+        }
+    };
 
-    // Expose state and actions
+    const getVerifyCode = async (phoneNumber) => {
+        try {
+            isLoading.value = true;
+            error.value = null;
+            
+            const response = await apiService.getVerifyCode({ phoneNumber });
+            
+            if (response.data.code === '1000') {
+                successMessage.value = 'Verification code sent successfully!';
+                startCooldown();
+                return true;
+            }
+            return false;
+        } catch (err) {
+            handleAuthError(err);
+            return false;
+        } finally {
+            isLoading.value = false;
+        }
+    };
+
+    const verifyCode = async (phoneNumber, code) => {
+        try {
+            isLoading.value = true;
+            error.value = null;
+            
+            const response = await apiService.verifyCode({ phoneNumber, code });
+            
+            if (response.data.code === '1000') {
+                const { token } = response.data.data;
+                setAuthCookies(token);
+                successMessage.value = 'Verification successful!';
+                return true;
+            }
+            return false;
+        } catch (err) {
+            handleAuthError(err);
+            return false;
+        } finally {
+            isLoading.value = false;
+        }
+    };
+
+    const updateProfile = async (userName, avatar = null) => {
+        try {
+            isLoading.value = true;
+            error.value = null;
+
+            const formData = new FormData();
+            formData.append('userName', userName);
+            if (avatar) {
+                formData.append('avatar', avatar);
+            }
+
+            const response = await apiService.post('/api/auth/change_info_after_signup', formData, {
+                headers: { 'Content-Type': 'multipart/form-data' }
+            });
+
+            if (response.data.code === '1000') {
+                user.value = { ...user.value, ...response.data.data };
+                successMessage.value = 'Profile updated successfully!';
+                return true;
+            }
+            return false;
+        } catch (err) {
+            handleAuthError(err);
+            return false;
+        } finally {
+            isLoading.value = false;
+        }
+    };
+
+    // Initialize auth state from cookies on page load
+    const initializeAuth = async () => {
+        const token = Cookies.get('accessToken');
+        if (token) {
+            try {
+                const response = await apiService.getUserInfo();
+                if (response.data.code === '1000') {
+                    user.value = response.data.data;
+                }
+            } catch (err) {
+                logger.error('Error initializing auth:', err);
+                clearAuthState();
+            }
+        }
+    };
+
+    // Call initializeAuth when the store is created
+    initializeAuth();
+
     return {
+        // State
         user,
-        isLoading,
         error,
         successMessage,
-        isLoggedIn,
+        isLoading,
         cooldownTime,
-        login,
+        
+        // Computed
+        isLoggedIn,
+        userInfo,
+        
+        // Actions
         register,
+        login,
         logout,
+        refreshToken,
+        checkAuth,
         getVerifyCode,
         verifyCode,
-        fetchUserProfile,
-        refreshAccessToken,
-        clearMessages,
-        getUserProfile,
-        updateUserInfo,
+        updateProfile,
+        clearAuthState
     };
 });

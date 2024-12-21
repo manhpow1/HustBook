@@ -126,27 +126,109 @@ class userService {
         }
     }
 
-    async updateUserRefreshToken(userId, refreshToken) {
+    async updateTokenInfo(userId, tokenInfo) {
         try {
-            await updateDocument(collections.users, userId, { refreshToken });
-            logger.info(`User ${userId} refresh token updated.`);
+            await runTransaction(async (transaction) => {
+                const userRef = db.collection(collections.users).doc(userId);
+                const userDoc = await transaction.get(userRef);
+
+                if (!userDoc.exists) {
+                    throw createError('9995', 'User not found.');
+                }
+
+                // Update token information atomically
+                transaction.update(userRef, {
+                    ...tokenInfo,
+                    tokenUpdatedAt: new Date().toISOString()
+                });
+
+                // Update cache if exists
+                const cachedUser = await cache.get(`user:${userId}`);
+                if (cachedUser) {
+                    await cache.set(`user:${userId}`, {
+                        ...cachedUser,
+                        ...tokenInfo,
+                        tokenUpdatedAt: new Date().toISOString()
+                    }, 3600);
+                }
+
+                logger.info(`Token info updated for user ${userId}`);
+            });
         } catch (error) {
-            logger.error('Error updating refresh token:', error);
-            throw createError('9999', 'Failed to update refresh token.');
+            logger.error('Error updating token info:', error);
+            throw createError('9999', 'Failed to update token information.');
+        }
+    }
+
+    async invalidateAllTokens(userId) {
+        try {
+            await runTransaction(async (transaction) => {
+                const userRef = db.collection(collections.users).doc(userId);
+                const userDoc = await transaction.get(userRef);
+
+                if (!userDoc.exists) {
+                    throw createError('9995', 'User not found.');
+                }
+
+                // Increment token version and generate new family
+                const newTokenVersion = (userDoc.data().tokenVersion || 0) + 1;
+                const newTokenFamily = uuidv4();
+
+                // Update user document
+                transaction.update(userRef, {
+                    tokenVersion: newTokenVersion,
+                    tokenFamily: newTokenFamily,
+                    refreshToken: null,
+                    deviceToken: null,
+                    deviceTokens: [],
+                    tokenUpdatedAt: new Date().toISOString(),
+                    lastInvalidation: new Date().toISOString()
+                });
+
+                // Clear user from cache
+                await cache.del(`user:${userId}`);
+
+                // Log invalidation event
+                logger.info(`All tokens invalidated for user ${userId}`);
+
+                // Create audit log entry
+                await AuditLogModel.logAction(userId, null, 'token_invalidation', {
+                    reason: 'security_measure',
+                    tokenVersion: newTokenVersion
+                });
+            });
+        } catch (error) {
+            logger.error('Error invalidating tokens:', error);
+            throw createError('9999', 'Failed to invalidate tokens.');
         }
     }
 
     async clearUserDeviceToken(userId) {
         try {
-            await updateDocument(collections.users, userId, { deviceToken: null });
-            logger.info(`User ${userId} device token cleared.`);
+            await runTransaction(async (transaction) => {
+                const userRef = db.collection(collections.users).doc(userId);
+                
+                transaction.update(userRef, { 
+                    deviceToken: null,
+                    deviceTokens: [],
+                    lastTokenClear: new Date().toISOString()
+                });
+
+                // Clear relevant cache entries
+                await Promise.all([
+                    cache.del(`user:${userId}`),
+                    cache.del(`auth:${userId}:requests`)
+                ]);
+
+                logger.info(`User ${userId} device tokens cleared.`);
+            });
         } catch (error) {
             logger.error('Error clearing device token:', error);
             throw createError('9999', 'Failed to clear device token.');
         }
     }
 
-    async storeVerificationCode(userId, verificationCode) {
+async storeVerificationCode(userId, verificationCode) {
         try {
             await runTransaction(async (transaction) => {
                 const userRef = db.collection(collections.users).doc(userId);
@@ -165,9 +247,17 @@ class userService {
                     throw createError('1013', 'Please wait before requesting a new verification code.');
                 }
 
+                // Hash verification code before storing
+                const hashedCode = await hashPassword(verificationCode);
+                
+                // Store hashed code with expiration
+                const codeExpiration = currentTime + (5 * 60 * 1000); // 5 minutes expiration
+                
                 transaction.update(userRef, {
-                    verificationCode,
+                    verificationCode: hashedCode,
                     verificationCodeTimestamp: currentTime,
+                    verificationCodeExpiration: codeExpiration,
+                    verificationAttempts: 0 // Reset attempts counter
                 });
                 logger.info(`Verification code for user ${userId} stored.`);
             });
@@ -260,18 +350,41 @@ class userService {
         }
     }
 
-    async verifyUserCode(userId, code) {
+async verifyUserCode(userId, code) {
         try {
             const user = await this.getUserById(userId);
             const currentTime = Date.now();
-            const codeExpirationTime = 5 * 60 * 1000;
+            const maxAttempts = 5;
 
-            if (
-                user.verificationCode !== code ||
-                currentTime - user.verificationCodeTimestamp > codeExpirationTime
-            ) {
-                return false;
+            // Check if code has expired
+            if (currentTime > user.verificationCodeExpiration) {
+                throw createError('9993', 'Verification code has expired.');
             }
+
+            // Check attempts limit
+            if (user.verificationAttempts >= maxAttempts) {
+                throw createError('9993', 'Maximum verification attempts exceeded. Please request a new code.');
+            }
+
+            // Increment attempts counter
+            await updateDocument(collections.users, userId, {
+                verificationAttempts: (user.verificationAttempts || 0) + 1
+            });
+
+            // Verify hashed code
+            const isValid = await comparePassword(code, user.verificationCode);
+            
+            if (!isValid) {
+                throw createError('9993', 'Invalid verification code.');
+            }
+
+            // Clear verification data after successful verification
+            await updateDocument(collections.users, userId, {
+                verificationCode: null,
+                verificationCodeTimestamp: null,
+                verificationCodeExpiration: null,
+                verificationAttempts: null
+            });
 
             return true;
         } catch (error) {

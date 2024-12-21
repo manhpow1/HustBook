@@ -281,34 +281,87 @@ class UserController {
 
             const { refreshToken } = value;
 
+            // Check if token is in deny list
+            const isDenied = await cache.get(`denied_token:${refreshToken}`);
+            if (isDenied) {
+                throw createError('9998', 'Token has been revoked.');
+            }
+
             let decoded;
             try {
                 decoded = verifyRefreshToken(refreshToken);
             } catch (err) {
+                // Add failed token to deny list
+                await cache.set(`denied_token:${refreshToken}`, true, 86400); // 24 hour TTL
                 throw createError('9998', 'Invalid refresh token.');
             }
 
-            const { userId, tokenVersion } = decoded;
+            const { userId, tokenVersion, family } = decoded;
 
             const user = await userService.getUserById(userId);
-
-            if (user.tokenVersion !== tokenVersion) {
-                throw createError('9998', 'Invalid refresh token.');
+            if (!user) {
+                throw createError('9995', 'User not found.');
             }
 
+            // Verify token version and family
+            if (user.tokenVersion !== tokenVersion || user.tokenFamily !== family) {
+                // Possible refresh token reuse! Invalidate all tokens
+                await userService.invalidateAllTokens(userId);
+                throw createError('9998', 'Token has been invalidated.');
+            }
+
+            // Implement refresh token rotation
+            const tokenFamily = user.tokenFamily || generateTokenFamily();
+            const newTokenVersion = user.tokenVersion + 1;
+
+            // Generate new tokens with updated versions
             const newAccessToken = generateJWT({
                 uid: user.uid,
                 phone: user.phoneNumber,
-                tokenVersion: user.tokenVersion,
+                tokenVersion: newTokenVersion,
+                exp: Math.floor(Date.now() / 1000) + (15 * 60) // 15 minutes
             });
-            const newRefreshToken = generateRefreshToken(user);
 
-            await userService.updateUserRefreshToken(user.uid, newRefreshToken);
+            const newRefreshToken = generateRefreshToken({
+                ...user,
+                tokenVersion: newTokenVersion,
+                tokenFamily: tokenFamily
+            });
+
+            // Add old token to deny list
+            await cache.set(`denied_token:${refreshToken}`, true, 86400);
+
+            // Update user's token information
+            await userService.updateTokenInfo(user.uid, {
+                tokenVersion: newTokenVersion,
+                tokenFamily: tokenFamily,
+                refreshToken: newRefreshToken,
+                lastTokenRefresh: new Date().toISOString()
+            });
+
+            // Set cookies with tokens
+            res.cookie('accessToken', newAccessToken, {
+                httpOnly: true,
+                secure: process.env.NODE_ENV === 'production',
+                sameSite: 'strict',
+                maxAge: 15 * 60 * 1000 // 15 minutes
+            });
+
+            res.cookie('refreshToken', newRefreshToken, {
+                httpOnly: true,
+                secure: process.env.NODE_ENV === 'production',
+                sameSite: 'strict',
+                maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
+            });
 
             sendResponse(res, '1000', {
                 token: newAccessToken,
                 refreshToken: newRefreshToken,
+                expiresIn: 900 // 15 minutes in seconds
             });
+
+            // Log token refresh
+            logger.info(`Token refreshed for user ${userId}`);
         } catch (error) {
             logger.error('RefreshToken Error:', error);
             next(error);

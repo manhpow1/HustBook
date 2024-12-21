@@ -1,4 +1,37 @@
 const rateLimit = require('express-rate-limit');
+const RedisStore = require('rate-limit-redis');
+const cache = require('../utils/redis');
+
+// Rate limiter for auth endpoints
+const authLimiter = rateLimit({
+    store: new RedisStore({
+        sendCommand: (...args) => cache.sendCommand(args),
+    }),
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    max: 5, // Limit each IP to 5 failed attempts per windowMs
+    message: {
+        code: '9999',
+        message: 'Too many login attempts, please try again later.',
+    },
+    standardHeaders: true,
+    legacyHeaders: false,
+    skipSuccessfulRequests: true, // Only count failed attempts
+});
+
+// Rate limiter for verify code requests
+const verifyCodeLimiter = rateLimit({
+    store: new RedisStore({
+        sendCommand: (...args) => cache.sendCommand(args),
+    }),
+    windowMs: 60 * 60 * 1000, // 1 hour
+    max: 3, // Limit each IP to 3 requests per hour
+    message: {
+        code: '9999',
+        message: 'Too many verification code requests, please try again later.',
+    },
+    standardHeaders: true,
+    legacyHeaders: false,
+});
 
 // Define rate limiter for push settings
 const pushSettingsLimiter = rateLimit({
@@ -24,4 +57,9 @@ const setBlockLimiter = rateLimit({
     },
 });
 
-module.exports = { pushSettingsLimiter, setBlockLimiter };
+module.exports = { 
+    pushSettingsLimiter, 
+    setBlockLimiter,
+    authLimiter,
+    verifyCodeLimiter 
+};
