@@ -285,8 +285,62 @@ class UserController {
         }
     }
 
-    // ... Implement other methods with similar improvements
-    // logout, getVerifyCode, checkVerifyCode, etc.
+    async changeInfoAfterSignup(req, res, next) {
+        try {
+            // Validate request body
+            const { error, value } = userValidator.validateChangeInfoAfterSignup(req.body);
+            if (error) {
+                const errorMessage = error.details.map(detail => detail.message).join(', ');
+                throw createError('1002', errorMessage);
+            }
+
+            const { userName } = value;
+            const userId = req.user.uid;
+
+            // Get current user to check existing avatar
+            const currentUser = await userService.getUserById(userId);
+            if (!currentUser) {
+                throw createError('9995', 'User not found');
+            }
+
+            // Handle avatar upload if present
+            let avatarUrl = null;
+            if (req.file) {
+                avatarUrl = await handleAvatarUpload(req.file, currentUser.avatar_url);
+            }
+
+            // Update user info with optimistic locking
+            await userService.changeInfoAfterSignup(userId, userName, avatarUrl);
+
+            // Invalidate Redis cache
+            await Promise.all([
+                redis.deleteKey(`user:${userId}`),
+                redis.deleteKey(`user:${userId}:profile`),
+                AuditLogModel.logAction(userId, null, 'profile_update', {
+                    deviceId: req.get('Device-ID'),
+                    ip: req.ip,
+                    timestamp: new Date().toISOString()
+                })
+            ]);
+
+            // Get updated user data
+            const updatedUser = await userService.getUserById(userId);
+
+            sendResponse(res, '1000', {
+                message: 'Profile updated successfully',
+                id: updatedUser.uid,
+                userName: updatedUser.userName,
+                avatar_url: updatedUser.avatar_url,
+                phoneNumber: updatedUser.phoneNumber,
+                created: updatedUser.createdAt,
+                isBlocked: updatedUser.isBlocked,
+                online: updatedUser.online
+            });
+        } catch (error) {
+            logger.error('Change Info Error:', error);
+            next(error);
+        }
+    }
 
     async logout(req, res, next) {
         try {

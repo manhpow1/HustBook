@@ -11,8 +11,6 @@ import { passwordStrength } from '../utils/validation';
 import { useSocket } from '../services/socket';
 
 // Constants
-const SESSION_DURATION = 15 * 60 * 1000; // 15 minutes
-const REFRESH_TOKEN_DURATION = 7 * 24 * 60 * 60 * 1000; // 7 days
 const INACTIVITY_THRESHOLD = 30 * 60 * 1000; // 30 minutes
 const TOKEN_REFRESH_MARGIN = 60 * 1000; // 1 minute before expiry
 const VERIFICATION_CODE_COOLDOWN = 60 * 1000; // 1 minute

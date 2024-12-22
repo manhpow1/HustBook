@@ -335,6 +335,76 @@ class UserService {
     // Include other existing methods...
     // getUserByphoneNumber, getUserById, getFriendCount, etc.
     
+    async getUserById(userId) {
+        try {
+            // Try to get from cache first
+            const cached = await redis.getKey(`user:${userId}`);
+            if (cached) {
+                return JSON.parse(cached);
+            }
+
+            const userDoc = await getDocument(collections.users, userId);
+            if (!userDoc) {
+                throw createError('9995', 'User not found');
+            }
+
+            // Cache the result
+            await redis.setKey(`user:${userId}`, JSON.stringify(userDoc), 3600); // 1 hour cache
+            return userDoc;
+        } catch (error) {
+            logger.error('Error getting user by ID:', error);
+            throw error;
+        }
+    }
+
+    async changeInfoAfterSignup(userId, userName, avatarUrl = null) {
+        try {
+            return await runTransaction(async (transaction) => {
+                const userRef = db.collection(collections.users).doc(userId);
+                const userDoc = await transaction.get(userRef);
+                
+                if (!userDoc.exists) {
+                    throw createError('9995', 'User not found');
+                }
+
+                const updateData = {
+                    userName,
+                    updatedAt: new Date().toISOString(),
+                    lastModifiedAt: Date.now(), // For optimistic locking
+                    version: (userDoc.data().version || 0) + 1
+                };
+
+                if (avatarUrl !== null) {
+                    updateData.avatar_url = avatarUrl;
+                }
+
+                // Optimistic locking check
+                const currentVersion = userDoc.data().version || 0;
+                const lastModifiedAt = userDoc.data().lastModifiedAt || 0;
+                
+                if (Date.now() - lastModifiedAt < 1000) { // Prevent rapid updates
+                    throw createError('1003', 'Please wait a moment before updating again');
+                }
+
+                if (currentVersion !== updateData.version - 1) {
+                    throw createError('9999', 'Data was modified by another request');
+                }
+
+                transaction.update(userRef, updateData);
+                
+                logger.info(`Updated user info after signup for user ${userId}`);
+
+                return {
+                    ...userDoc.data(),
+                    ...updateData
+                };
+            });
+        } catch (error) {
+            logger.error('Error updating user info after signup:', error);
+            throw error;
+        }
+    }
+
     async cleanupInactiveDevices(userId) {
         try {
             const thirtyDaysAgo = new Date();

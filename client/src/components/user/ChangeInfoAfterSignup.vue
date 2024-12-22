@@ -93,6 +93,7 @@ import { useRouter } from 'vue-router';
 import { useUserStore } from '../../stores/userStore';
 import { UserPlusIcon, CheckCircleIcon, XCircleIcon, LoaderIcon } from 'lucide-vue-next';
 import { useFormValidation } from '../../composables/useFormValidation';
+import { useImageProcessing } from '../../composables/useImageProcessing';
 import { sanitizeInput } from '../../utils/sanitize';
 import { useToast } from '../../composables/useToast';
 
@@ -104,6 +105,8 @@ const { user, isLoading, errorMessage, successMessage } = storeToRefs(userStore)
 
 // Initialize composables
 const { showToast } = useToast();
+const { validateuserName } = useFormValidation();
+const { compressImage, validateImage, isProcessing: isCompressing } = useImageProcessing();
 
 // Local component state
 const userName = ref('');
@@ -112,30 +115,45 @@ const avatar = ref(null);
 const avatarPreview = ref('');
 const avatarError = ref('');
 
-// Initialize form validation
-const { validateuserName } = useFormValidation();
-
 // Validate the userName field in real-time
 const validateuserNameField = () => {
     userNameError.value = validateuserName(userName.value);
 };
 
-// Handle file input change for avatar upload
-const handleFileChange = (event) => {
+const handleFileChange = async (event) => {
     const file = event.target.files[0];
-    if (file) {
-        if (file.size > 4 * 1024 * 1024) { // 4MB limit
-            avatarError.value = 'Avatar file size is too large. Maximum size is 4MB.';
+    if (!file) return;
+
+    try {
+        // Validate file first
+        if (!validateImage(file)) {
             event.target.value = '';
-        } else {
-            avatar.value = file;
-            avatarError.value = '';
-            const reader = new FileReader();
-            reader.onload = (e) => {
-                avatarPreview.value = e.target.result;
-            };
-            reader.readAsDataURL(file);
+            return;
         }
+
+        // Show preview immediately for better UX
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            avatarPreview.value = e.target.result;
+        };
+        reader.readAsDataURL(file);
+
+        // Compress image
+        const compressedFile = await compressImage(file);
+        if (compressedFile) {
+            avatar.value = compressedFile;
+            avatarError.value = '';
+        } else {
+            avatar.value = null;
+            avatarPreview.value = '';
+            event.target.value = '';
+        }
+    } catch (error) {
+        console.error('File handling error:', error);
+        showToast('Error processing image', 'error');
+        avatar.value = null;
+        avatarPreview.value = '';
+        event.target.value = '';
     }
 };
 
@@ -150,6 +168,10 @@ const removeAvatar = () => {
 
 // Handle form submission
 const handleSubmit = async () => {
+    if (isCompressing.value) {
+        showToast('Please wait while the image is being processed', 'info');
+        return;
+    }
     if (userNameError.value) return;
 
     try {

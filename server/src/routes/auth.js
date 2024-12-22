@@ -10,9 +10,41 @@ const router = express.Router();
 const multer = require('multer');
 const userController = require('../controllers/userController');
 const { authenticateToken } = require('../middleware/auth');
+const storage = multer.diskStorage({
+    destination: (req, file, cb) => {
+        cb(null, 'uploads/avatars/');
+    },
+    filename: (req, file, cb) => {
+        // Generate unique filename with original extension
+        const uniqueSuffix = `${Date.now()}-${Math.round(Math.random() * 1E9)}`;
+        const ext = file.originalname.split('.').pop();
+        cb(null, `avatar-${uniqueSuffix}.${ext}`);
+    }
+});
+
+const fileFilter = (req, file, cb) => {
+    // Accept only image files
+    if (!file.mimetype.startsWith('image/')) {
+        return cb(new Error('Only image files are allowed'), false);
+    }
+
+    // List of allowed extensions
+    const allowedExtensions = ['jpg', 'jpeg', 'png', 'gif'];
+    const ext = file.originalname.split('.').pop().toLowerCase();
+    
+    if (!allowedExtensions.includes(ext)) {
+        return cb(new Error('Invalid file type. Only jpg, jpeg, png, and gif are allowed'), false);
+    }
+
+    cb(null, true);
+};
+
 const upload = multer({
-    dest: 'uploads/',
-    limits: { fileSize: 2 * 1024 * 1024 },
+    storage,
+    limits: { 
+        fileSize: 4 * 1024 * 1024 // 4MB limit
+    },
+    fileFilter
 });
 
 /**
@@ -315,7 +347,19 @@ router.get('/check', authenticateToken, userController.checkAuth);
  *                     online:
  *                       type: string
  */
-router.post('/change_info_after_signup', authenticateToken, upload.single('avatar'), userController.changeInfoAfterSignup);
+const profileUpdateLimiter = rateLimit.createRateLimiter({
+    windowMs: 5 * 60 * 1000, // 5 minutes
+    max: 3, // 3 updates per window
+    message: 'Too many profile updates, please try again later',
+    keyGenerator: (req) => `${req.user.uid}:profile_update`
+});
+
+router.post('/change_info_after_signup', 
+    authenticateToken, 
+    profileUpdateLimiter,
+    upload.single('avatar'), 
+    userController.changeInfoAfterSignup
+);
 
 /**
  * @swagger
