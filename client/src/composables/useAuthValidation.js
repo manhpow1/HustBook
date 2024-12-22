@@ -1,33 +1,51 @@
-import { ref, computed } from 'vue';
+import { ref, computed, watch } from 'vue';
 import { useFormValidation } from './useFormValidation';
+import { useDebouncedRef } from './useDebounce';
+import { useUserStore } from '../stores/userStore';
 
-export function useAuthValidation() {
+export function useAuthValidation(type = 'login') {
+    const userStore = useUserStore();
     const { validateField: baseValidateField } = useFormValidation();
+
+    // Use debounced fields for better performance
     const fields = ref({
-        phoneNumber: '',
-        password: '',
+        phoneNumber: useDebouncedRef('', 300),
+        password: useDebouncedRef('', 300),
         code: ['', '', '', '', '', ''],
-        userName: '',
+        userName: useDebouncedRef('', 300),
+        confirmPassword: useDebouncedRef('', 300),
     });
-    
+
+    // Validation state
     const errors = ref({});
     const touchedFields = ref(new Set());
+    const visitedFields = ref(new Set());
+    const isValidating = ref(false);
 
-    // Validation rules
-    const rules = {
+    // Form validation state computed properties
+    const hasErrors = computed(() => Object.keys(errors.value).length > 0);
+    const isDirty = computed(() => touchedFields.value.size > 0);
+    const isValid = computed(() => !hasErrors.value && isDirty.value);
+    const isPristine = computed(() => touchedFields.value.size === 0);
+
+    // Enhanced validation rules matching server-side rules
+    const validationRules = {
         phoneNumber: [
             value => !value?.trim() && 'Phone number is required',
             value => !/^0\d{9}$/.test(value) && 'Phone number must be 10 digits and start with 0',
         ],
         password: [
             value => !value?.trim() && 'Password is required',
-            value => value?.length < 6 && 'Password must be at least 6 characters',
-            value => value?.length > 10 && 'Password must be at most 10 characters',
+            value => value?.length < 8 && 'Password must be at least 8 characters',
+            value => value?.length > 30 && 'Password must be at most 30 characters',
             value => !/[A-Z]/.test(value) && 'Password must contain at least one uppercase letter',
             value => !/[a-z]/.test(value) && 'Password must contain at least one lowercase letter',
             value => !/\d/.test(value) && 'Password must contain at least one number',
-            value => /[^a-zA-Z0-9]/.test(value) && 'Password must only contain letters and numbers',
+            value => !/[!@#$%^&*]/.test(value) && 'Password must contain at least one special character (!@#$%^&*)',
             (value, { phoneNumber }) => value === phoneNumber && 'Password cannot match phone number',
+        ],
+        confirmPassword: [
+            (value, { password }) => value !== password && 'Passwords must match',
         ],
         verificationCode: [
             value => !value.every(digit => /^\d$/.test(digit)) && 'Verification code must be 6 digits',
@@ -43,7 +61,7 @@ export function useAuthValidation() {
     // Validate a specific field
     const validateFormField = async (fieldName, value = fields.value[fieldName]) => {
         touchedFields.value.add(fieldName);
-        const fieldRules = rules[fieldName] || [];
+        const fieldRules = validationRules[fieldName] || [];
         
         for (const rule of fieldRules) {
             const error = rule(value, fields.value);
@@ -57,37 +75,79 @@ export function useAuthValidation() {
         return true;
     };
 
-    // Password strength indicator
+    // Password strength analysis
     const passwordStrength = computed(() => {
         const password = fields.value.password;
         if (!password) return 0;
 
         let strength = 0;
-        if (password.length >= 6) strength += 20;
-        if (/[A-Z]/.test(password)) strength += 20;
-        if (/[a-z]/.test(password)) strength += 20;
-        if (/\d/.test(password)) strength += 20;
-        if (password.length >= 8) strength += 20;
+        const checks = {
+            length: password.length >= 12, // Prefer longer passwords
+            uppercase: /[A-Z]/.test(password),
+            lowercase: /[a-z]/.test(password),
+            numbers: /\d/.test(password),
+            special: /[!@#$%^&*]/.test(password),
+            noRepeating: !/(.)\1{2,}/.test(password), // No character repeated more than twice
+            mixedChars: /(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*])/.test(password)
+        };
+
+        // Base score
+        if (password.length >= 8) strength += 10;
+        if (password.length >= 12) strength += 10;
+        if (password.length >= 16) strength += 10;
+
+        // Character variety
+        if (checks.uppercase) strength += 10;
+        if (checks.lowercase) strength += 10;
+        if (checks.numbers) strength += 10;
+        if (checks.special) strength += 10;
+
+        // Advanced patterns
+        if (checks.noRepeating) strength += 10;
+        if (checks.mixedChars) strength += 20;
+
+        // Additional checks
+        if (!/^[a-zA-Z]/.test(password)) strength += 5; // Not starting with letter
+        if (!/[a-zA-Z]$/.test(password)) strength += 5; // Not ending with letter
 
         return strength;
     });
 
     const passwordStrengthText = computed(() => {
         const strength = passwordStrength.value;
-        if (strength <= 20) return 'Very Weak';
-        if (strength <= 40) return 'Weak';
-        if (strength <= 60) return 'Medium';
-        if (strength <= 80) return 'Strong';
-        return 'Very Strong';
+        if (strength < 30) return { text: 'Very Weak', color: 'text-red-600' };
+        if (strength < 50) return { text: 'Weak', color: 'text-orange-600' };
+        if (strength < 70) return { text: 'Medium', color: 'text-yellow-600' };
+        if (strength < 90) return { text: 'Strong', color: 'text-blue-600' };
+        return { text: 'Very Strong', color: 'text-green-600' };
     });
 
-    const passwordStrengthColor = computed(() => {
-        const strength = passwordStrength.value;
-        if (strength <= 20) return 'bg-red-500';
-        if (strength <= 40) return 'bg-orange-500';
-        if (strength <= 60) return 'bg-yellow-500';
-        if (strength <= 80) return 'bg-blue-500';
-        return 'bg-green-500';
+    const passwordSuggestions = computed(() => {
+        const suggestions = [];
+        const password = fields.value.password;
+        
+        if (!password) return suggestions;
+        
+        if (password.length < 12) {
+            suggestions.push('Consider using a longer password (12+ characters)');
+        }
+        if (!/[A-Z]/.test(password)) {
+            suggestions.push('Add uppercase letters');
+        }
+        if (!/[a-z]/.test(password)) {
+            suggestions.push('Add lowercase letters');
+        }
+        if (!/\d/.test(password)) {
+            suggestions.push('Add numbers');
+        }
+        if (!/[!@#$%^&*]/.test(password)) {
+            suggestions.push('Add special characters (!@#$%^&*)');
+        }
+        if (/(.)\1{2,}/.test(password)) {
+            suggestions.push('Avoid repeating characters');
+        }
+        
+        return suggestions;
     });
 
     // Verification code handling
@@ -113,7 +173,7 @@ export function useAuthValidation() {
     // Form validation
     const validateForm = async () => {
         const validations = await Promise.all(
-            Object.keys(rules).map(fieldName => validateFormField(fieldName))
+            Object.keys(validationRules).map(fieldName => validateFormField(fieldName))
         );
         return validations.every(Boolean);
     };
@@ -121,6 +181,7 @@ export function useAuthValidation() {
     const resetValidation = () => {
         errors.value = {};
         touchedFields.value.clear();
+        visitedFields.value.clear();
     };
 
     const clearFields = () => {
@@ -138,35 +199,64 @@ export function useAuthValidation() {
     const getFieldStatus = (fieldName) => ({
         error: errors.value[fieldName],
         touched: touchedFields.value.has(fieldName),
+        visited: visitedFields.value.has(fieldName),
         dirty: fields.value[fieldName] !== '',
     });
 
+    // Mark field as visited
+    const markFieldVisited = (fieldName) => {
+        visitedFields.value.add(fieldName);
+    };
+
+    // Form validation watchers
+    watch(() => fields.value.password, async (newValue) => {
+        if (visitedFields.value.has('password')) {
+            await validateFormField('password', newValue);
+        }
+        if (fields.value.confirmPassword && visitedFields.value.has('confirmPassword')) {
+            await validateFormField('confirmPassword', fields.value.confirmPassword);
+        }
+    });
+
+    watch(() => fields.value.confirmPassword, async (newValue) => {
+        if (visitedFields.value.has('confirmPassword')) {
+            await validateFormField('confirmPassword', newValue);
+        }
+    });
+
     return {
-        // State
+        // Form state
         fields,
         errors,
         touchedFields,
+        visitedFields,
+        isValidating,
 
-        // Validation
+        // Validation methods
         validateField: validateFormField,
         validateForm,
         resetValidation,
         clearFields,
+        markFieldVisited,
         getFieldStatus,
 
-        // Password strength
+        // Validation state
+        hasErrors,
+        isDirty,
+        isValid,
+        isPristine,
+
+        // Password validation
         passwordStrength,
         passwordStrengthText,
-        passwordStrengthColor,
+        passwordSuggestions,
 
-        // Verification code
+        // Code validation
         formatVerificationCode,
         handleCodeInput,
         handleCodeKeydown,
 
-        // Computed
-        hasErrors: computed(() => Object.keys(errors.value).length > 0),
-        isDirty: computed(() => touchedFields.value.size > 0),
-        isValid: computed(() => !Object.keys(errors.value).length && touchedFields.value.size > 0),
+        // Form type
+        formType: type,
     };
 }

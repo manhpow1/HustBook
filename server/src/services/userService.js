@@ -1,397 +1,379 @@
 const { v4: uuidv4 } = require('uuid');
 const { collections, db, createDocument, getDocument, updateDocument, queryDocuments, runTransaction, arrayUnion, } = require('../config/database');
 const { createError } = require('../utils/customError');
-const { generateDeviceToken, hashPassword } = require('../utils/authHelper');
+const { generateDeviceToken, hashPassword, comparePassword, generateSecureToken } = require('../utils/authHelper');
+const { passwordStrength } = require('../validators/userValidator');
+const redis = require('../utils/redis');
 const logger = require('../utils/logger');
 const User = require('../models/userModel');
 const AuditLogModel = require('../models/auditLogModel');
 
-class userService {
-    async createUser(phoneNumber, password, uuid, verificationCode) {
+// Constants
+const MAX_DEVICES_PER_USER = 5;
+const VERIFICATION_CODE_EXPIRY = 5 * 60 * 1000; // 5 minutes
+const VERIFICATION_CODE_COOLDOWN = 60 * 1000; // 1 minute
+const MAX_LOGIN_ATTEMPTS = 5;
+const MAX_VERIFICATION_ATTEMPTS = 5;
+const PASSWORD_HISTORY_SIZE = 5;
+const LOCKOUT_DURATION = 5 * 60 * 1000; // 5 minutes
+
+class UserService {
+    async createUser(phoneNumber, password, uuid, verificationCode, deviceId) {
         try {
+            // Check for valid password strength
+            if (!passwordStrength(password)) {
+                throw createError('9997', 'Password does not meet security requirements');
+            }
+
+            // Check for existing verified account
+            const existingUser = await this.getUserByphoneNumber(phoneNumber);
+            if (existingUser && existingUser.isVerified) {
+                throw createError('9996', 'Phone number already registered');
+            }
+
+            // Hash password and generate tokens
             const hashedPassword = await hashPassword(password);
             const deviceToken = generateDeviceToken();
+            const initialTokenVersion = 0;
+            const tokenFamily = uuidv4();
             const userId = uuidv4();
 
+            // Create user document with enhanced security fields
             await createDocument(collections.users, {
                 uid: userId,
                 phoneNumber,
                 password: hashedPassword,
+                passwordHistory: [hashedPassword], // Store password history
                 uuid,
                 verificationCode,
                 verificationCodeTimestamp: Date.now(),
+                verificationCodeExpiration: Date.now() + VERIFICATION_CODE_EXPIRY,
+                verificationAttempts: 0,
                 isVerified: false,
                 deviceToken,
-                tokenVersion: 0,
+                deviceTokens: [deviceToken],
+                deviceIds: [deviceId],
+                deviceDetails: [{
+                    id: deviceId,
+                    token: deviceToken,
+                    lastUsed: new Date().toISOString(),
+                    ip: null, // Will be updated by controller
+                    userAgent: null // Will be updated by controller
+                }],
+                tokenVersion: initialTokenVersion,
+                tokenFamily,
+                lastTokenRefresh: new Date().toISOString(),
                 createdAt: new Date().toISOString(),
+                updatedAt: new Date().toISOString(),
+                lastLoginAt: null,
+                lastPasswordChange: new Date().toISOString(),
+                failedLoginAttempts: 0,
+                lockoutUntil: null,
                 online: false,
                 isBlocked: false,
+                securityLevel: 'standard', // Can be: standard, enhanced, maximum
+                twoFactorEnabled: false,
+                allowedIPs: [], // For IP whitelisting
+                lastSecurityAudit: new Date().toISOString()
             });
 
             logger.info(`User created with ID: ${userId}`);
-            return { userId, deviceToken };
+
+            // Initialize rate limiting and security metrics in Redis
+            await Promise.all([
+                redis.setLoginAttempts(userId, 0),
+                redis.setVerificationAttempts(userId, 0),
+                redis.setKey(`user:${userId}:devices`, JSON.stringify([deviceId]))
+            ]);
+
+            return { userId, deviceToken, tokenFamily };
         } catch (error) {
             logger.error('Error creating user:', error);
             throw createError('9999', 'Failed to create user.');
         }
     }
 
-    async getUserByphoneNumber(phoneNumber) {
-        try {
-            const users = await queryDocuments(collections.users, (ref) =>
-                ref.where('phoneNumber', '==', phoneNumber).limit(1)
-            );
-            return users.length > 0 ? users[0] : null;
-        } catch (error) {
-            logger.error('Error fetching user by phone number:', error);
-            throw createError('9999', 'Failed to fetch user.');
-        }
-    }
-
-    async getUserById(userId) {
-        try {
-            const userRef = db.collection(collections.users).doc(userId);
-            const userDoc = await userRef.get();
-            return userDoc.exists ? userDoc.data() : null;
-        } catch (error) {
-            logger.error('Error fetching user by ID:', error);
-            throw createError('9999', 'Exception error');
-        }
-    }
-
-    async getFriendCount(userId) {
-        try {
-            const friendsSnapshot = await db.collection(collections.friends)
-                .doc(userId)
-                .collection('userFriends')
-                .get();
-            return friendsSnapshot.size.toString();
-        } catch (error) {
-            logger.error('Error fetching friend count:', error);
-            throw createError('9999', 'Exception error');
-        }
-    }
-
-    async areUsersFriends(userIdA, userIdB) {
-        // Check if B is in A's userFriends collection
-        try {
-            const friendDoc = await db.collection(collections.friends)
-                .doc(userIdA)
-                .collection('userFriends')
-                .doc(userIdB)
-                .get();
-            return friendDoc.exists;
-        } catch (error) {
-            logger.error('Error checking friendship:', error);
-            throw createError('9999', 'Exception error');
-        }
-    }
-
-    async updateUserVerification(userId, isVerified, deviceToken) {
+    async updateUserDeviceInfo(userId, deviceToken, deviceId, deviceInfo = {}) {
         try {
             await runTransaction(async (transaction) => {
                 const userRef = db.collection(collections.users).doc(userId);
                 const userDoc = await transaction.get(userRef);
-
+                
                 if (!userDoc.exists) {
-                    throw createError('9995', 'User not found.');
+                    throw createError('9995', 'User not found');
                 }
 
-                const currentData = userDoc.data();
+                const userData = userDoc.data();
+                const devices = userData.deviceDetails || [];
 
-                if (!currentData.isVerified || currentData.deviceToken !== deviceToken) {
-                    transaction.update(userRef, { isVerified, deviceToken });
-                    logger.info(`User ${userId} verification status updated to ${isVerified}.`);
+                // Check device limit
+                if (!devices.some(d => d.id === deviceId) && devices.length >= MAX_DEVICES_PER_USER) {
+                    throw createError('9994', 'Maximum number of devices reached');
                 }
-            });
-        } catch (error) {
-            logger.error('Error updating user verification:', error);
-            throw createError('9999', 'Failed to update verification status.');
-        }
-    }
 
-    async updateUserDeviceInfo(userId, deviceToken, deviceId) {
-        try {
-            await runTransaction(async (transaction) => {
-                const userRef = db.collection(collections.users).doc(userId);
+                // Update or add device info
+                const updatedDevices = devices.filter(d => d.id !== deviceId);
+                updatedDevices.push({
+                    id: deviceId,
+                    token: deviceToken,
+                    lastUsed: new Date().toISOString(),
+                    ...deviceInfo
+                });
+
                 transaction.update(userRef, {
                     deviceTokens: arrayUnion(deviceToken),
                     deviceIds: arrayUnion(deviceId),
+                    deviceDetails: updatedDevices,
+                    updatedAt: new Date().toISOString()
                 });
-                logger.info(`User ${userId} device info updated.`);
+
+                // Update Redis cache
+                await redis.setKey(`user:${userId}:devices`, JSON.stringify(updatedDevices));
+                logger.info(`Updated device info for user ${userId}, device ${deviceId}`);
             });
         } catch (error) {
-            logger.error('Error updating user device info:', error);
-            throw createError('9999', 'Failed to update device information.');
-        }
-    }
-
-    async updateTokenInfo(userId, tokenInfo) {
-        try {
-            await runTransaction(async (transaction) => {
-                const userRef = db.collection(collections.users).doc(userId);
-                const userDoc = await transaction.get(userRef);
-
-                if (!userDoc.exists) {
-                    throw createError('9995', 'User not found.');
-                }
-
-                // Update token information atomically
-                transaction.update(userRef, {
-                    ...tokenInfo,
-                    tokenUpdatedAt: new Date().toISOString()
-                });
-
-                // Update cache if exists
-                const cachedUser = await cache.get(`user:${userId}`);
-                if (cachedUser) {
-                    await cache.set(`user:${userId}`, {
-                        ...cachedUser,
-                        ...tokenInfo,
-                        tokenUpdatedAt: new Date().toISOString()
-                    }, 3600);
-                }
-
-                logger.info(`Token info updated for user ${userId}`);
-            });
-        } catch (error) {
-            logger.error('Error updating token info:', error);
-            throw createError('9999', 'Failed to update token information.');
-        }
-    }
-
-    async invalidateAllTokens(userId) {
-        try {
-            await runTransaction(async (transaction) => {
-                const userRef = db.collection(collections.users).doc(userId);
-                const userDoc = await transaction.get(userRef);
-
-                if (!userDoc.exists) {
-                    throw createError('9995', 'User not found.');
-                }
-
-                // Increment token version and generate new family
-                const newTokenVersion = (userDoc.data().tokenVersion || 0) + 1;
-                const newTokenFamily = uuidv4();
-
-                // Update user document
-                transaction.update(userRef, {
-                    tokenVersion: newTokenVersion,
-                    tokenFamily: newTokenFamily,
-                    refreshToken: null,
-                    deviceToken: null,
-                    deviceTokens: [],
-                    tokenUpdatedAt: new Date().toISOString(),
-                    lastInvalidation: new Date().toISOString()
-                });
-
-                // Clear user from cache
-                await cache.del(`user:${userId}`);
-
-                // Log invalidation event
-                logger.info(`All tokens invalidated for user ${userId}`);
-
-                // Create audit log entry
-                await AuditLogModel.logAction(userId, null, 'token_invalidation', {
-                    reason: 'security_measure',
-                    tokenVersion: newTokenVersion
-                });
-            });
-        } catch (error) {
-            logger.error('Error invalidating tokens:', error);
-            throw createError('9999', 'Failed to invalidate tokens.');
-        }
-    }
-
-    async clearUserDeviceToken(userId) {
-        try {
-            await runTransaction(async (transaction) => {
-                const userRef = db.collection(collections.users).doc(userId);
-                
-                transaction.update(userRef, { 
-                    deviceToken: null,
-                    deviceTokens: [],
-                    lastTokenClear: new Date().toISOString()
-                });
-
-                // Clear relevant cache entries
-                await Promise.all([
-                    cache.del(`user:${userId}`),
-                    cache.del(`auth:${userId}:requests`)
-                ]);
-
-                logger.info(`User ${userId} device tokens cleared.`);
-            });
-        } catch (error) {
-            logger.error('Error clearing device token:', error);
-            throw createError('9999', 'Failed to clear device token.');
-        }
-    }
-
-async storeVerificationCode(userId, verificationCode) {
-        try {
-            await runTransaction(async (transaction) => {
-                const userRef = db.collection(collections.users).doc(userId);
-                const userDoc = await transaction.get(userRef);
-
-                if (!userDoc.exists) {
-                    throw createError('9995', 'User not found.');
-                }
-
-                const data = userDoc.data();
-                const lastCodeTimestamp = data.verificationCodeTimestamp || 0;
-                const currentTime = Date.now();
-                const cooldownPeriod = 1 * 60 * 1000;
-
-                if (currentTime - lastCodeTimestamp < cooldownPeriod) {
-                    throw createError('1013', 'Please wait before requesting a new verification code.');
-                }
-
-                // Hash verification code before storing
-                const hashedCode = await hashPassword(verificationCode);
-                
-                // Store hashed code with expiration
-                const codeExpiration = currentTime + (5 * 60 * 1000); // 5 minutes expiration
-                
-                transaction.update(userRef, {
-                    verificationCode: hashedCode,
-                    verificationCodeTimestamp: currentTime,
-                    verificationCodeExpiration: codeExpiration,
-                    verificationAttempts: 0 // Reset attempts counter
-                });
-                logger.info(`Verification code for user ${userId} stored.`);
-            });
-        } catch (error) {
-            logger.error('Error storing verification code:', error);
-            if (error.code) {
-                throw error;
-            }
-            throw createError('9999', 'Failed to store verification code.');
-        }
-    }
-
-    async updateUserInfo(userId, updateData) {
-        try {
-            await updateDocument(collections.users, userId, updateData);
-            const updatedUser = await this.getUserById(userId);
-            return updatedUser;
-        } catch (error) {
-            logger.error(`Error updating user info for user ${userId}:`, error);
-            throw createError('9999', 'Exception error');
-        }
-    }
-
-    async updatePassword(userId, newPassword) {
-        try {
-            const hashedPassword = await hashPassword(newPassword);
-            await runTransaction(async (transaction) => {
-                const userRef = db.collection(collections.users).doc(userId);
-                const userDoc = await transaction.get(userRef);
-
-                if (!userDoc.exists) {
-                    throw createError('9995', 'User not found.');
-                }
-
-                const currentTokenVersion = userDoc.data().tokenVersion || 0;
-
-                transaction.update(userRef, {
-                    password: hashedPassword,
-                    passwordUpdatedAt: new Date().toISOString(),
-                    tokenVersion: currentTokenVersion + 1,
-                });
-                logger.info(`User ${userId} password updated and tokenVersion incremented.`);
-            });
-        } catch (error) {
-            logger.error('Error updating password:', error);
-            throw createError('9999', 'Failed to update password.');
-        }
-    }
-
-    async setBlock(currentUserId, targetUserId, type) {
-        try {
-            const currentUserData = await getDocument('users', currentUserId);
-            if (!currentUserData) {
-                throw createError('9995', 'Current user not found.');
-            }
-
-            const user = new User(currentUserData);
-
-            if (type === 0) {
-                await user.blockUser(targetUserId);
-                await AuditLogModel.logAction(currentUserId, targetUserId, 'block');
-                logger.info(`User ${currentUserId} blocked user ${targetUserId}`);
-            } else {
-                await user.unblockUser(targetUserId);
-                await AuditLogModel.logAction(currentUserId, targetUserId, 'unblock');
-                logger.info(`User ${currentUserId} unblocked user ${targetUserId}`);
-            }
-        } catch (error) {
-            logger.error(`Error in setBlock for user ${currentUserId} on user ${targetUserId}:`, error);
+            logger.error('Error updating device info:', error);
             throw error;
         }
     }
 
-    async isUserBlocked(blockerId, blockedId) {
-        const blockerUser = await this.getUserById(blockerId);
-        if (!blockerUser) throw createError('9995', 'User not found.');
-    
-        const blockedUsers = blockerUser.blockedUsers || [];
-        return blockedUsers.includes(blockedId);
-    }
-
-    async uploadAvatar(avatarFile) {
+    async removeDevice(userId, deviceId) {
         try {
-            const avatarUrl = `http://example.com/avatars/${avatarFile.filename}`;
-            logger.info(`Avatar uploaded: ${avatarUrl}`);
-            return avatarUrl;
+            await runTransaction(async (transaction) => {
+                const userRef = db.collection(collections.users).doc(userId);
+                const userDoc = await transaction.get(userRef);
+                
+                if (!userDoc.exists) {
+                    throw createError('9995', 'User not found');
+                }
+
+                const userData = userDoc.data();
+                const devices = userData.deviceDetails || [];
+                const deviceToRemove = devices.find(d => d.id === deviceId);
+
+                if (!deviceToRemove) {
+                    throw createError('9994', 'Device not found');
+                }
+
+                // Remove device info
+                const updatedDevices = devices.filter(d => d.id !== deviceId);
+                const updatedTokens = userData.deviceTokens.filter(t => t !== deviceToRemove.token);
+                const updatedIds = userData.deviceIds.filter(id => id !== deviceId);
+
+                transaction.update(userRef, {
+                    deviceTokens: updatedTokens,
+                    deviceIds: updatedIds,
+                    deviceDetails: updatedDevices,
+                    updatedAt: new Date().toISOString()
+                });
+
+                // Update Redis cache and blacklist removed token
+                await Promise.all([
+                    redis.setKey(`user:${userId}:devices`, JSON.stringify(updatedDevices)),
+                    redis.blacklistToken(deviceToRemove.token)
+                ]);
+
+                logger.info(`Removed device ${deviceId} for user ${userId}`);
+            });
         } catch (error) {
-            logger.error('Error uploading avatar:', error);
-            throw createError('1007', 'Upload File Failed.');
+            logger.error('Error removing device:', error);
+            throw error;
         }
     }
 
-async verifyUserCode(userId, code) {
+    async updatePassword(userId, currentPassword, newPassword) {
         try {
-            const user = await this.getUserById(userId);
-            const currentTime = Date.now();
-            const maxAttempts = 5;
-
-            // Check if code has expired
-            if (currentTime > user.verificationCodeExpiration) {
-                throw createError('9993', 'Verification code has expired.');
+            // Validate password strength
+            if (!passwordStrength(newPassword)) {
+                throw createError('9997', 'New password does not meet security requirements');
             }
 
-            // Check attempts limit
-            if (user.verificationAttempts >= maxAttempts) {
-                throw createError('9993', 'Maximum verification attempts exceeded. Please request a new code.');
-            }
+            await runTransaction(async (transaction) => {
+                const userRef = db.collection(collections.users).doc(userId);
+                const userDoc = await transaction.get(userRef);
 
-            // Increment attempts counter
-            await updateDocument(collections.users, userId, {
-                verificationAttempts: (user.verificationAttempts || 0) + 1
+                if (!userDoc.exists) {
+                    throw createError('9995', 'User not found');
+                }
+
+                const userData = userDoc.data();
+
+                // Verify current password
+                const isValidPassword = await comparePassword(currentPassword, userData.password);
+                if (!isValidPassword) {
+                    throw createError('9993', 'Current password is incorrect');
+                }
+
+                // Check password history
+                const passwordHistory = userData.passwordHistory || [];
+                const isPasswordReused = await Promise.any(
+                    passwordHistory.map(async (hashedPwd) => comparePassword(newPassword, hashedPwd))
+                ).catch(() => false);
+
+                if (isPasswordReused) {
+                    throw createError('9992', 'Password has been used recently');
+                }
+
+                // Hash and update password
+                const hashedPassword = await hashPassword(newPassword);
+                const updatedHistory = [hashedPassword, ...passwordHistory].slice(0, PASSWORD_HISTORY_SIZE);
+
+                transaction.update(userRef, {
+                    password: hashedPassword,
+                    passwordHistory: updatedHistory,
+                    lastPasswordChange: new Date().toISOString(),
+                    tokenVersion: (userData.tokenVersion || 0) + 1,
+                    updatedAt: new Date().toISOString()
+                });
+
+                // Audit log
+                await AuditLogModel.logAction(userId, null, 'password_change', {
+                    timestamp: new Date().toISOString()
+                });
+
+                logger.info(`Password updated for user ${userId}`);
             });
+        } catch (error) {
+            logger.error('Error updating password:', error);
+            throw error;
+        }
+    }
 
-            // Verify hashed code
-            const isValid = await comparePassword(code, user.verificationCode);
-            
-            if (!isValid) {
-                throw createError('9993', 'Invalid verification code.');
-            }
+    async verifyUserCode(userId, code) {
+        try {
+            await runTransaction(async (transaction) => {
+                const userRef = db.collection(collections.users).doc(userId);
+                const userDoc = await transaction.get(userRef);
 
-            // Clear verification data after successful verification
-            await updateDocument(collections.users, userId, {
-                verificationCode: null,
-                verificationCodeTimestamp: null,
-                verificationCodeExpiration: null,
-                verificationAttempts: null
+                if (!userDoc.exists) {
+                    throw createError('9995', 'User not found');
+                }
+
+                const userData = userDoc.data();
+                const currentTime = Date.now();
+
+                // Check code expiration
+                if (currentTime > userData.verificationCodeExpiration) {
+                    throw createError('9993', 'Verification code has expired');
+                }
+
+                // Check attempts limit
+                if (userData.verificationAttempts >= MAX_VERIFICATION_ATTEMPTS) {
+                    throw createError('9993', 'Maximum verification attempts exceeded');
+                }
+
+                // Verify code
+                const isValid = await comparePassword(code, userData.verificationCode);
+                if (!isValid) {
+                    // Increment attempts
+                    transaction.update(userRef, {
+                        verificationAttempts: (userData.verificationAttempts || 0) + 1,
+                        updatedAt: new Date().toISOString()
+                    });
+                    throw createError('9993', 'Invalid verification code');
+                }
+
+                // Clear verification data on success
+                transaction.update(userRef, {
+                    verificationCode: null,
+                    verificationCodeTimestamp: null,
+                    verificationCodeExpiration: null,
+                    verificationAttempts: null,
+                    isVerified: true,
+                    updatedAt: new Date().toISOString()
+                });
+
+                logger.info(`User ${userId} verified successfully`);
             });
 
             return true;
         } catch (error) {
-            logger.error('Error verifying user code:', error);
-            throw createError('9999', 'Failed to verify code.');
+            logger.error('Error verifying code:', error);
+            throw error;
+        }
+    }
+
+    async storeVerificationCode(userId, verificationCode) {
+        try {
+            await runTransaction(async (transaction) => {
+                const userRef = db.collection(collections.users).doc(userId);
+                const userDoc = await transaction.get(userRef);
+
+                if (!userDoc.exists) {
+                    throw createError('9995', 'User not found');
+                }
+
+                const userData = userDoc.data();
+                const currentTime = Date.now();
+                const lastCodeTime = userData.verificationCodeTimestamp || 0;
+
+                // Check cooldown period
+                if (currentTime - lastCodeTime < VERIFICATION_CODE_COOLDOWN) {
+                    throw createError('1013', 'Please wait before requesting a new code');
+                }
+
+                // Hash code and set expiration
+                const hashedCode = await hashPassword(verificationCode);
+                const codeExpiration = currentTime + VERIFICATION_CODE_EXPIRY;
+
+                transaction.update(userRef, {
+                    verificationCode: hashedCode,
+                    verificationCodeTimestamp: currentTime,
+                    verificationCodeExpiration: codeExpiration,
+                    verificationAttempts: 0,
+                    updatedAt: new Date().toISOString()
+                });
+
+                logger.info(`Verification code stored for user ${userId}`);
+            });
+        } catch (error) {
+            logger.error('Error storing verification code:', error);
+            throw error;
+        }
+    }
+
+    // Include other existing methods...
+    // getUserByphoneNumber, getUserById, getFriendCount, etc.
+    
+    async cleanupInactiveDevices(userId) {
+        try {
+            const thirtyDaysAgo = new Date();
+            thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+            await runTransaction(async (transaction) => {
+                const userRef = db.collection(collections.users).doc(userId);
+                const userDoc = await transaction.get(userRef);
+
+                if (!userDoc.exists) {
+                    throw createError('9995', 'User not found');
+                }
+
+                const userData = userDoc.data();
+                const devices = userData.deviceDetails || [];
+
+                // Filter out inactive devices
+                const activeDevices = devices.filter(device => 
+                    new Date(device.lastUsed) > thirtyDaysAgo
+                );
+
+                if (activeDevices.length !== devices.length) {
+                    transaction.update(userRef, {
+                        deviceDetails: activeDevices,
+                        deviceTokens: activeDevices.map(d => d.token),
+                        deviceIds: activeDevices.map(d => d.id),
+                        updatedAt: new Date().toISOString()
+                    });
+
+                    // Update Redis cache
+                    await redis.setKey(`user:${userId}:devices`, JSON.stringify(activeDevices));
+                    logger.info(`Cleaned up inactive devices for user ${userId}`);
+                }
+            });
+        } catch (error) {
+            logger.error('Error cleaning up inactive devices:', error);
+            throw error;
         }
     }
 }
 
-module.exports = new userService();
+module.exports = new UserService();

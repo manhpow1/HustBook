@@ -1,13 +1,31 @@
 import { defineStore } from 'pinia';
-import { ref, computed } from 'vue';
+import { ref, computed, watch } from 'vue';
 import apiService from '../services/api';
 import Cookies from 'js-cookie';
 import { useRouter } from 'vue-router';
 import logger from '../services/logging';
+import { useErrorHandler } from '../composables/useErrorHandler';
+import { useToast } from '../composables/useToast';
+import { useAuthValidation } from '../composables/useAuthValidation';
+import { passwordStrength } from '../utils/validation';
+import { useSocket } from '../services/socket';
+
+// Constants
+const SESSION_DURATION = 15 * 60 * 1000; // 15 minutes
+const REFRESH_TOKEN_DURATION = 7 * 24 * 60 * 60 * 1000; // 7 days
+const INACTIVITY_THRESHOLD = 30 * 60 * 1000; // 30 minutes
+const TOKEN_REFRESH_MARGIN = 60 * 1000; // 1 minute before expiry
+const VERIFICATION_CODE_COOLDOWN = 60 * 1000; // 1 minute
+const LOCKOUT_DURATION = 5 * 60 * 1000; // 5 minutes
+const DEVICE_CLEANUP_INTERVAL = 24 * 60 * 60 * 1000; // 24 hours
 
 export const useUserStore = defineStore('user', () => {
     const router = useRouter();
-    
+    const socket = useSocket();
+    const { handleError } = useErrorHandler();
+    const { showToast } = useToast();
+    const validation = useAuthValidation();
+
     // State
     const user = ref(null);
     const error = ref(null);
@@ -15,70 +33,244 @@ export const useUserStore = defineStore('user', () => {
     const isLoading = ref(false);
     const cooldownTime = ref(0);
     const cooldownInterval = ref(null);
+    const sessionTimeout = ref(null);
+    const inactivityTimer = ref(null);
+    const deviceCleanupInterval = ref(null);
+    const deviceId = ref(localStorage.getItem('deviceId') || crypto.randomUUID());
+    const isLocked = ref(false);
+    const failedAttempts = ref(0);
+    const securityLevel = ref('standard');
+    const lastActivity = ref(Date.now());
+    const pendingRefresh = ref(false);
+    const verificationAttempts = ref(0);
+    const lastVerificationRequest = ref(0);
 
     // Computed
     const isLoggedIn = computed(() => !!Cookies.get('accessToken'));
     const userInfo = computed(() => user.value);
+    const hasVerifiedPhone = computed(() => user.value?.isVerified);
+    const isSessionExpired = computed(() => !Cookies.get('accessToken') && !Cookies.get('refreshToken'));
+    const deviceCount = computed(() => user.value?.deviceIds?.length || 0);
+    const canAddDevice = computed(() => deviceCount.value < 5);
+    const formattedLastActivity = computed(() => new Date(lastActivity.value).toLocaleString());
+    const isVerified = computed(() => user.value?.isVerified || false);
+    const cooldownRemaining = computed(() => cooldownTime.value);
+    const lastLoginTime = computed(() => user.value?.lastLoginAt);
+    const deviceInfo = computed(() => ({
+        id: deviceId.value,
+        count: deviceCount.value,
+        canAdd: canAddDevice.value
+    }));
 
-    // Actions
-    const startCooldown = (duration = 60) => {
-        cooldownTime.value = duration;
-        if (cooldownInterval.value) clearInterval(cooldownInterval.value);
-        
-        cooldownInterval.value = setInterval(() => {
-            if (cooldownTime.value > 0) {
-                cooldownTime.value--;
-            } else {
-                clearInterval(cooldownInterval.value);
+    // Watchers
+    watch(isLoggedIn, (newValue) => {
+        if (newValue) {
+            setupInactivityTimer();
+            setupSessionTimeout();
+            setupDeviceCleanup();
+            socket.connect();
+        } else {
+            clearTimers();
+            socket.disconnect();
+        }
+    });
+
+    watch(failedAttempts, (count) => {
+        if (count >= 5) {
+            isLocked.value = true;
+            setTimeout(() => {
+                isLocked.value = false;
+                failedAttempts.value = 0;
+            }, 5 * 60 * 1000); // 5 minute lockout
+        }
+    });
+
+    // Session Management Methods
+    const updateLastActivity = () => {
+        lastActivity.value = Date.now();
+        localStorage.setItem('lastActivity', lastActivity.value.toString());
+    };
+
+    const setupInactivityTimer = () => {
+        clearInterval(inactivityTimer.value);
+        inactivityTimer.value = setInterval(() => {
+            const inactiveTime = Date.now() - lastActivity.value;
+            if (inactiveTime > INACTIVITY_THRESHOLD) {
+                handleInactivityTimeout();
             }
-        }, 1000);
+        }, 60000);
+    };
+
+    const handleInactivityTimeout = async () => {
+        await logout(true);
+        showToast('warning', 'Session expired due to inactivity');
+        router.push({
+            path: '/login',
+            query: { redirect: router.currentRoute.value.fullPath }
+        });
+    };
+
+    const setupDeviceCleanup = () => {
+        clearInterval(deviceCleanupInterval.value);
+        deviceCleanupInterval.value = setInterval(async () => {
+            try {
+                if (isLoggedIn.value) {
+                    await apiService.cleanupDevices({ deviceId: deviceId.value });
+                }
+            } catch (err) {
+                logger.error('Device cleanup error:', err);
+            }
+        }, DEVICE_CLEANUP_INTERVAL);
+    };
+
+    const clearTimers = () => {
+        clearInterval(inactivityTimer.value);
+        clearInterval(deviceCleanupInterval.value);
+        clearTimeout(sessionTimeout.value);
+        clearInterval(cooldownInterval.value);
     };
 
     const clearAuthState = () => {
+        user.value = null;
         Cookies.remove('accessToken');
         Cookies.remove('refreshToken');
-        user.value = null;
         error.value = null;
         successMessage.value = '';
-        if (cooldownInterval.value) {
-            clearInterval(cooldownInterval.value);
+        failedAttempts.value = 0;
+        isLocked.value = false;
+        verificationAttempts.value = 0;
+        lastVerificationRequest.value = 0;
+        clearTimers();
+    };
+
+    const setupSessionTimeout = () => {
+        const token = Cookies.get('accessToken');
+        if (token) {
+            try {
+                const tokenData = JSON.parse(atob(token.split('.')[1]));
+                const expiryTime = tokenData.exp * 1000;
+                const timeUntilExpiry = expiryTime - Date.now();
+                
+                if (timeUntilExpiry > 0) {
+                    sessionTimeout.value = setTimeout(async () => {
+                        if (!pendingRefresh.value) {
+                            await refreshSession();
+                        }
+                    }, timeUntilExpiry - TOKEN_REFRESH_MARGIN);
+                }
+            } catch (error) {
+                logger.error('Error parsing token:', error);
+                clearAuthState();
+            }
         }
     };
 
-    const handleAuthError = (err) => {
-        logger.error('Authentication error:', err);
-        error.value = err.response?.data?.message || 'An unexpected error occurred';
-        isLoading.value = false;
+    const refreshSession = async () => {
+        pendingRefresh.value = true;
+        try {
+            const success = await refreshToken();
+            if (!success) {
+                await handleSessionExpired();
+            }
+        } finally {
+            pendingRefresh.value = false;
+        }
     };
 
+    const handleSessionExpired = async () => {
+        await logout(true);
+        error.value = 'Session expired. Please login again.';
+        showToast('error', error.value);
+        router.push({
+            path: '/login',
+            query: { redirect: router.currentRoute.value.fullPath }
+        });
+    };
+
+    // Token Management Methods
     const setAuthCookies = (token, refreshToken, rememberMe = false) => {
-        const tokenExpiry = rememberMe ? 7 : 1/96; // 7 days or 15 minutes
-        Cookies.set('accessToken', token, {
-            secure: true,
+        const secure = window.location.protocol === 'https:';
+        const cookieOptions = {
+            secure,
             sameSite: 'strict',
-            expires: tokenExpiry
+            path: '/'
+        };
+
+        Cookies.set('accessToken', token, {
+            ...cookieOptions,
+            expires: 1/96 // 15 minutes
         });
         
         if (refreshToken) {
             Cookies.set('refreshToken', refreshToken, {
-                secure: true,
-                sameSite: 'strict',
-                expires: rememberMe ? 30 : 7 // 30 days if remember me, otherwise 7 days
+                ...cookieOptions,
+                expires: rememberMe ? 30 : 7
             });
         }
     };
 
-    const register = async (phoneNumber, password, uuid) => {
+    const refreshToken = async () => {
+        try {
+            const currentRefreshToken = Cookies.get('refreshToken');
+            if (!currentRefreshToken) return false;
+
+            const response = await apiService.refreshToken({
+                refreshToken: currentRefreshToken,
+                deviceId: deviceId.value
+            });
+            
+            if (response.data.code === '1000') {
+                const { token, refreshToken } = response.data.data;
+                setAuthCookies(token, refreshToken);
+                setupSessionTimeout();
+                return true;
+            }
+            return false;
+        } catch (err) {
+            logger.error('Token refresh error:', err);
+            return false;
+        }
+    };
+
+    // Auth Methods
+    const register = async (phoneNumber, password) => {
+        if (isLocked.value) {
+            showToast('error', 'Account is temporarily locked. Please try again later.');
+            return false;
+        }
+
         try {
             isLoading.value = true;
             error.value = null;
+
+            if (!passwordStrength(password)) {
+                error.value = 'Password does not meet security requirements';
+                showToast('error', error.value);
+                return false;
+            }
             
-            const response = await apiService.register({ phoneNumber, password, uuid });
+            const uuid = crypto.randomUUID();
+            localStorage.setItem('deviceId', deviceId.value);
             
-            if (response.data.code === '1000') {
+            const response = await apiService.register({ 
+                phoneNumber, 
+                password, 
+                uuid,
+                deviceId: deviceId.value,
+                deviceInfo: {
+                    platform: navigator.platform,
+                    userAgent: navigator.userAgent,
+                    language: navigator.language,
+                    timezone: Intl.DateTimeFormat().resolvedOptions().timeZone
+                }
+            });
+            
+            if (response.data?.code === '1000') {
                 const { token, deviceToken } = response.data.data;
                 setAuthCookies(token);
+                updateLastActivity();
                 successMessage.value = 'Registration successful! Please verify your account.';
+                showToast('success', successMessage.value);
                 return true;
             }
             return false;
@@ -91,24 +283,45 @@ export const useUserStore = defineStore('user', () => {
     };
 
     const login = async (phoneNumber, password, rememberMe = false) => {
+        if (isLocked.value) {
+            showToast('error', 'Account is temporarily locked. Please try again later.');
+            return false;
+        }
+
         try {
             isLoading.value = true;
             error.value = null;
             
-            const deviceId = localStorage.getItem('deviceId') || crypto.randomUUID();
-            localStorage.setItem('deviceId', deviceId);
+            const loginData = { 
+                phoneNumber, 
+                password, 
+                deviceId: deviceId.value,
+                deviceInfo: {
+                    platform: navigator.platform,
+                    userAgent: navigator.userAgent,
+                    language: navigator.language,
+                    timezone: Intl.DateTimeFormat().resolvedOptions().timeZone
+                }
+            };
             
-            const response = await apiService.login({ phoneNumber, password, deviceId });
+            const response = await apiService.login(loginData);
             
-            if (response.data.code === '1000') {
-                const { token, refreshToken, id, userName } = response.data.data;
+            if (response.data?.code === '1000') {
+                failedAttempts.value = 0;
+                const { token, refreshToken, id, userName, securityLevel: userSecurityLevel } = response.data.data;
                 setAuthCookies(token, refreshToken, rememberMe);
                 user.value = { id, userName, phoneNumber };
+                securityLevel.value = userSecurityLevel || 'standard';
                 successMessage.value = 'Login successful!';
+                updateLastActivity();
+                showToast('success', successMessage.value);
+                setupInactivityTimer();
+                setupSessionTimeout();
                 return true;
             }
             return false;
         } catch (err) {
+            failedAttempts.value++;
             handleAuthError(err);
             return false;
         } finally {
@@ -116,14 +329,24 @@ export const useUserStore = defineStore('user', () => {
         }
     };
 
-    const logout = async () => {
+    const logout = async (suppressRedirect = false) => {
         try {
             isLoading.value = true;
+            
             if (isLoggedIn.value) {
-                await apiService.logout();
+                try {
+                    await apiService.logout({ deviceId: deviceId.value });
+                } catch (err) {
+                    logger.error('Logout error:', err);
+                }
             }
+
             clearAuthState();
-            router.push('/login');
+            socket.disconnect();
+
+            if (!suppressRedirect) {
+                router.push('/login');
+            }
             return true;
         } catch (err) {
             handleAuthError(err);
@@ -133,50 +356,54 @@ export const useUserStore = defineStore('user', () => {
         }
     };
 
-    const refreshToken = async () => {
-        try {
-            const currentRefreshToken = Cookies.get('refreshToken');
-            if (!currentRefreshToken) {
-                throw new Error('No refresh token available');
-            }
+    const handleAuthError = async (err) => {
+        logger.error('Authentication error:', err);
+        
+        const errorCode = err.response?.data?.code;
+        const errorMessage = err.response?.data?.message || 'An unexpected error occurred';
 
-            const response = await apiService.refreshToken(currentRefreshToken);
-            
-            if (response.data.code === '1000') {
-                const { token, refreshToken } = response.data.data;
-                setAuthCookies(token, refreshToken);
-                return true;
-            }
-            return false;
-        } catch (err) {
-            handleAuthError(err);
-            await logout();
-            return false;
-        }
-    };
-
-    const checkAuth = async () => {
-        try {
-            if (!isLoggedIn.value) return false;
-            
-            const response = await apiService.get('/api/auth/check');
-            return response.data.code === '1000';
-        } catch (err) {
-            if (err.response?.status === 401) {
-                // Try to refresh token
+        if (errorCode === '9998' && isLoggedIn.value) {
+            if (!pendingRefresh.value) {
                 const refreshSuccess = await refreshToken();
-                if (refreshSuccess) {
-                    // Retry auth check
-                    const retryResponse = await apiService.get('/api/auth/check');
-                    return retryResponse.data.code === '1000';
+                if (!refreshSuccess) {
+                    await handleSessionExpired();
                 }
             }
-            handleAuthError(err);
-            return false;
+            return;
         }
+
+        error.value = errorMessage;
+        handleError(err);
+        showToast('error', errorMessage);
+    };
+
+    // Verification Methods
+    const startCooldown = () => {
+        cooldownTime.value = VERIFICATION_CODE_COOLDOWN / 1000;
+        clearInterval(cooldownInterval.value);
+        cooldownInterval.value = setInterval(() => {
+            if (cooldownTime.value > 0) {
+                cooldownTime.value--;
+            } else {
+                clearInterval(cooldownInterval.value);
+            }
+        }, 1000);
     };
 
     const getVerifyCode = async (phoneNumber) => {
+        if (isLocked.value) {
+            showToast('error', 'Account is temporarily locked. Please try again later.');
+            return false;
+        }
+
+        // Check cooldown
+        const now = Date.now();
+        if (now - lastVerificationRequest.value < VERIFICATION_CODE_COOLDOWN) {
+            const remainingTime = Math.ceil((VERIFICATION_CODE_COOLDOWN - (now - lastVerificationRequest.value)) / 1000);
+            showToast('error', `Please wait ${remainingTime} seconds before requesting another code`);
+            return false;
+        }
+
         try {
             isLoading.value = true;
             error.value = null;
@@ -184,7 +411,9 @@ export const useUserStore = defineStore('user', () => {
             const response = await apiService.getVerifyCode({ phoneNumber });
             
             if (response.data.code === '1000') {
+                lastVerificationRequest.value = now;
                 successMessage.value = 'Verification code sent successfully!';
+                showToast('success', successMessage.value);
                 startCooldown();
                 return true;
             }
@@ -198,18 +427,41 @@ export const useUserStore = defineStore('user', () => {
     };
 
     const verifyCode = async (phoneNumber, code) => {
+        if (isLocked.value) {
+            showToast('error', 'Account is temporarily locked. Please try again later.');
+            return false;
+        }
+
+        if (verificationAttempts.value >= 5) {
+            isLocked.value = true;
+            setTimeout(() => {
+                isLocked.value = false;
+                verificationAttempts.value = 0;
+            }, LOCKOUT_DURATION);
+            showToast('error', 'Too many verification attempts. Please try again later.');
+            return false;
+        }
+
         try {
             isLoading.value = true;
             error.value = null;
             
-            const response = await apiService.verifyCode({ phoneNumber, code });
+            const response = await apiService.verifyCode({ 
+                phoneNumber, 
+                code,
+                deviceId: deviceId.value
+            });
             
             if (response.data.code === '1000') {
-                const { token } = response.data.data;
+                const { token, isVerified } = response.data.data;
                 setAuthCookies(token);
+                user.value = { ...user.value, isVerified };
                 successMessage.value = 'Verification successful!';
+                showToast('success', successMessage.value);
+                verificationAttempts.value = 0;
                 return true;
             }
+            verificationAttempts.value++;
             return false;
         } catch (err) {
             handleAuthError(err);
@@ -219,6 +471,7 @@ export const useUserStore = defineStore('user', () => {
         }
     };
 
+    // Profile Management Methods
     const updateProfile = async (userName, avatar = null) => {
         try {
             isLoading.value = true;
@@ -231,12 +484,16 @@ export const useUserStore = defineStore('user', () => {
             }
 
             const response = await apiService.post('/api/auth/change_info_after_signup', formData, {
-                headers: { 'Content-Type': 'multipart/form-data' }
+                headers: { 
+                    'Content-Type': 'multipart/form-data',
+                    'Device-ID': deviceId.value
+                }
             });
 
             if (response.data.code === '1000') {
                 user.value = { ...user.value, ...response.data.data };
                 successMessage.value = 'Profile updated successfully!';
+                showToast('success', successMessage.value);
                 return true;
             }
             return false;
@@ -248,24 +505,55 @@ export const useUserStore = defineStore('user', () => {
         }
     };
 
-    // Initialize auth state from cookies on page load
-    const initializeAuth = async () => {
-        const token = Cookies.get('accessToken');
-        if (token) {
-            try {
-                const response = await apiService.getUserInfo();
-                if (response.data.code === '1000') {
-                    user.value = response.data.data;
-                }
-            } catch (err) {
-                logger.error('Error initializing auth:', err);
-                clearAuthState();
+    const changePassword = async (currentPassword, newPassword) => {
+        if (isLocked.value) {
+            showToast('error', 'Account is temporarily locked. Please try again later.');
+            return false;
+        }
+
+        try {
+            isLoading.value = true;
+            error.value = null;
+
+            if (!passwordStrength(newPassword)) {
+                error.value = 'New password does not meet security requirements';
+                showToast('error', error.value);
+                return false;
             }
+
+            if (currentPassword === newPassword) {
+                error.value = 'New password must be different from current password';
+                showToast('error', error.value);
+                return false;
+            }
+
+            const response = await apiService.post('/api/auth/change_password', {
+                password: currentPassword,
+                new_password: newPassword,
+                deviceId: deviceId.value
+            });
+
+            if (response.data.code === '1000') {
+                successMessage.value = 'Password changed successfully!';
+                showToast('success', successMessage.value);
+                await logout(true);
+                router.push('/login');
+                return true;
+            }
+
+            if (response.data.code === '9992') {
+                error.value = 'Password has been used recently. Please choose a different password.';
+                showToast('error', error.value);
+            }
+
+            return false;
+        } catch (err) {
+            handleAuthError(err);
+            return false;
+        } finally {
+            isLoading.value = false;
         }
     };
-
-    // Call initializeAuth when the store is created
-    initializeAuth();
 
     return {
         // State
@@ -273,21 +561,38 @@ export const useUserStore = defineStore('user', () => {
         error,
         successMessage,
         isLoading,
+        isLocked,
+        failedAttempts,
+        securityLevel,
+        verificationAttempts,
+        lastVerificationRequest,
         cooldownTime,
-        
+        deviceId,
+
         // Computed
         isLoggedIn,
         userInfo,
-        
-        // Actions
-        register,
+        hasVerifiedPhone,
+        isSessionExpired,
+        deviceCount,
+        canAddDevice,
+        formattedLastActivity,
+        isVerified,
+        cooldownRemaining,
+        lastLoginTime,
+        deviceInfo,
+
+        // Methods
         login,
         logout,
-        refreshToken,
-        checkAuth,
+        register,
         getVerifyCode,
         verifyCode,
         updateProfile,
-        clearAuthState
+        changePassword,
+        updateLastActivity,
+        clearAuthState,
+        refreshSession,
+        startCooldown
     };
 });

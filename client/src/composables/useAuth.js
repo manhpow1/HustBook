@@ -1,4 +1,5 @@
-import { computed } from 'vue';
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
+import Cookies from 'js-cookie';
 import { useUserStore } from '../stores/userStore';
 import { useRouter } from 'vue-router';
 import { useToast } from './useToast';
@@ -37,17 +38,106 @@ export function useAuth() {
     const authLoading = computed(() => userStore.isLoading);
     const authError = computed(() => userStore.error);
 
+    // Session management
+    const sessionExpiryTimer = ref(null);
+    const sessionWarningTimer = ref(null);
+    const sessionWarningShown = ref(false);
+    const deviceId = ref(localStorage.getItem('deviceId') || crypto.randomUUID());
+
+    // Rate limiting
+    const attemptsRemaining = ref(5);
+    const lockoutEndTime = ref(null);
+    const isLockedOut = computed(() => {
+        if (!lockoutEndTime.value) return false;
+        return Date.now() < lockoutEndTime.value;
+    });
+
     // Auth operations
-    const login = async (phoneNumber, password, rememberMe = false) => {
+    // Session monitoring
+    const setupSessionMonitoring = () => {
+        const token = Cookies.get('accessToken');
+        if (token) {
+            const payload = JSON.parse(atob(token.split('.')[1]));
+            const expiryTime = payload.exp * 1000;
+            const warningTime = expiryTime - (5 * 60 * 1000); // 5 minutes before expiry
+            const now = Date.now();
+
+            if (warningTime > now) {
+                sessionWarningTimer.value = setTimeout(() => {
+                    showToast('Your session will expire soon. Please re-login.', 'warning');
+                    sessionWarningShown.value = true;
+                }, warningTime - now);
+            }
+
+            if (expiryTime > now) {
+                sessionExpiryTimer.value = setTimeout(async () => {
+                    const refreshed = await refreshToken();
+                    if (!refreshed) {
+                        await logout(true);
+                        showToast('Session expired. Please login again.', 'error');
+                    }
+                }, expiryTime - now - 60000); // Refresh 1 minute before expiry
+            }
+        }
+    };
+
+    const clearSessionTimers = () => {
+        if (sessionWarningTimer.value) clearTimeout(sessionWarningTimer.value);
+        if (sessionExpiryTimer.value) clearTimeout(sessionExpiryTimer.value);
+        sessionWarningShown.value = false;
+    };
+
+    // Rate limiting
+    const handleFailedAttempt = () => {
+        attemptsRemaining.value--;
+        if (attemptsRemaining.value <= 0) {
+            lockoutEndTime.value = Date.now() + (5 * 60 * 1000); // 5 minutes lockout
+            showToast('Too many attempts. Please try again later.', 'error');
+            setTimeout(() => {
+                attemptsRemaining.value = 5;
+                lockoutEndTime.value = null;
+            }, 5 * 60 * 1000);
+        }
+    };
+
+    const login = async (phoneNumber, password, rememberMe = false, useBiometric = false) => {
         try {
             await validatePhoneNumber(phoneNumber);
             await validatePassword(password);
 
-            const success = await userStore.login(phoneNumber, password, rememberMe);
+            if (isLockedOut.value) {
+                const remainingTime = Math.ceil((lockoutEndTime.value - Date.now()) / 1000);
+                showToast(`Please wait ${remainingTime} seconds before trying again`, 'error');
+                return false;
+            }
+
+            let credentials;
+            if (useBiometric && isBiometricAvailable.value) {
+                try {
+                    credentials = await getBiometricCredentials(phoneNumber);
+                } catch (error) {
+                    showToast('Biometric authentication failed', 'error');
+                    return false;
+                }
+            }
+
+            localStorage.setItem('deviceId', deviceId.value);
+            const success = await userStore.login(
+                phoneNumber, 
+                credentials?.signature || password, 
+                rememberMe,
+                deviceId.value,
+                credentials?.type === 'biometric'
+            );
+
             if (success) {
+                attemptsRemaining.value = 5;
+                setupSessionMonitoring();
                 showToast('Login successful!', 'success');
                 return router.push({ name: 'Home' });
             }
+
+            handleFailedAttempt();
             showToast(userStore.error || 'Login failed', 'error');
         } catch (error) {
             handleError(error);
@@ -93,11 +183,14 @@ export function useAuth() {
         }
     };
 
-    const logout = async () => {
+    const logout = async (suppressRedirect = false) => {
         try {
-            await userStore.logout();
+            clearSessionTimers();
+            await userStore.logout(deviceId.value);
             showToast('Logged out successfully', 'success');
-            router.push({ name: 'Login' });
+            if (!suppressRedirect) {
+                router.push({ name: 'Login' });
+            }
         } catch (error) {
             handleError(error);
         }
@@ -136,12 +229,39 @@ export function useAuth() {
     };
 
     // Auth guards
+    // Token refresh
+    const refreshToken = async () => {
+        try {
+            const refreshToken = Cookies.get('refreshToken');
+            if (!refreshToken) return false;
+
+            const success = await userStore.refreshToken(refreshToken, deviceId.value);
+            if (success) {
+                setupSessionMonitoring();
+                return true;
+            }
+            return false;
+        } catch (error) {
+            handleError(error);
+            return false;
+        }
+    };
+
+    // Auth guards with network connectivity check
     const requireAuth = async () => {
+        if (!navigator.onLine) {
+            showToast('No internet connection. Please check your network.', 'error');
+            return;
+        }
+
         if (!isAuthenticated.value) {
             showToast('Please login to continue', 'error');
             router.push({ 
                 name: 'Login',
-                query: { redirect: router.currentRoute.value.fullPath }
+                query: { 
+                    redirect: router.currentRoute.value.fullPath,
+                    deviceId: deviceId.value
+                }
             });
         }
     };
@@ -152,7 +272,36 @@ export function useAuth() {
         }
     };
 
+    // Lifecycle hooks
+    onMounted(() => {
+        setupSessionMonitoring();
+        
+        // Network status monitoring
+        window.addEventListener('online', () => {
+            if (sessionWarningShown.value) {
+                refreshToken();
+            }
+        });
+    });
+
+    onUnmounted(() => {
+        clearSessionTimers();
+    });
+
+    // Watch for token changes
+    watch(() => userStore.isLoggedIn, (newValue) => {
+        if (newValue) {
+            setupSessionMonitoring();
+        } else {
+            clearSessionTimers();
+        }
+    });
+
     return {
+        // State
+        deviceId,
+        attemptsRemaining,
+        isLockedOut,
         // State
         isAuthenticated,
         currentUser,
