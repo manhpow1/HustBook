@@ -1,5 +1,6 @@
-const app = require('./src/app');
+require('dotenv').config();
 const logger = require('./src/utils/logger');
+const app = require('./src/app');
 const http = require('http');
 const { initSocketIO, closeSocketServer } = require('./src/socket');
 
