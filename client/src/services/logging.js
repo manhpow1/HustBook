@@ -25,15 +25,8 @@ class Logger {
             ...meta
         };
 
-        // Log to console in development and test modes
-        if (process.env.NODE_ENV === 'development' || process.env.NODE_ENV === 'test') {
-            this.logToConsole(level, logEntry);
-        }
-
-        // Send to logging service only in production
-        if (process.env.NODE_ENV === 'production') {
-            await this.sendToLoggingService(logEntry);
-        }
+        // Log to console in all environments
+        this.logToConsole(level, logEntry);
     }
 
     logToConsole(level, logEntry) {
@@ -49,14 +42,6 @@ class Logger {
             debug: '\x1b[35m'  // Magenta
         };
         return `${colors[level]}${level.toUpperCase()}\x1b[0m`;
-    }
-
-    async sendToLoggingService(logEntry) {
-        try {
-            await axios.post('/api/logs', logEntry);
-        } catch (error) {
-            console.error('Failed to send log to logging service:', error);
-        }
     }
 
     error(message, meta = {}) {

@@ -25,20 +25,7 @@ const app = express();
 // Middleware
 app.use(cors({ origin: process.env.CORS_ORIGIN }));
 app.use(express.json());
-app.use(
-    helmet({
-        permissionsPolicy: {
-            features: {
-                'attribution-reporting': [],
-                'run-ad-auction': [],
-                'private-state-token-redemption': [],
-                'private-state-token-issuance': [],
-                'join-ad-interest-group': [],
-                'browsing-topics': []
-            }
-        }
-    })
-);
+app.use(helmet());
 app.use(morgan('dev'));
 app.use(apiLimiter);
 
