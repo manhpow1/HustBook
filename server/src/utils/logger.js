@@ -23,6 +23,7 @@ const maskSensitiveData = winston.format((info) => {
     return info;
 });
 
+// Create a logger instance
 const logger = winston.createLogger({
     level: process.env.LOG_LEVEL || 'info',
     format: combine(
@@ -33,28 +34,32 @@ const logger = winston.createLogger({
         logFormat
     ),
     transports: [
-        // Log errors to separate files
-        new winston.transports.DailyRotateFile({
-            filename: 'logs/error-%DATE%.log',
-            datePattern: 'YYYY-MM-DD',
-            zippedArchive: true,
-            maxSize: '20m',
-            maxFiles: '14d',
-            level: 'error',
-        }),
-        // Log all levels to combined files
-        new winston.transports.DailyRotateFile({
-            filename: 'logs/combined-%DATE%.log',
-            datePattern: 'YYYY-MM-DD',
-            zippedArchive: true,
-            maxSize: '20m',
-            maxFiles: '14d',
+        // Log to console
+        new winston.transports.Console({
+            format: combine(
+                maskSensitiveData(),
+                colorize(),
+                timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
+                logFormat
+            ),
         }),
     ],
 });
 
 // In non-production environments, log to console with simple format
 if (process.env.NODE_ENV !== 'production') {
+    logger.add(new winston.transports.Console({
+        format: combine(
+            maskSensitiveData(),
+            colorize(),
+            timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
+            logFormat
+        ),
+    }));
+}
+
+// In production, use console transport as well
+if (process.env.NODE_ENV === 'production') {
     logger.add(new winston.transports.Console({
         format: combine(
             maskSensitiveData(),
