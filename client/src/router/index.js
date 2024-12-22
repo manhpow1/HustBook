@@ -166,10 +166,7 @@ router.beforeResolve((to, from, next) => {
     }
 })
 
-router.afterEach((to) => {
-    if (to.meta.analytics) {
-        trackPageView(to.meta.analytics);
-    }
-});
+// Analytics tracking can be implemented here if needed
+router.afterEach(() => {});
 
 export default router

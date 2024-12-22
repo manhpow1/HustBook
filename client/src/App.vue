@@ -53,7 +53,7 @@ useHead({
     {
       'http-equiv': 'Content-Security-Policy',
       content:
-        "default-src 'self'; connect-src 'self' https://hustbook.onrender.com; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data:;",
+        "default-src * 'unsafe-inline' 'unsafe-eval'; connect-src * 'unsafe-inline'; script-src * 'unsafe-inline' 'unsafe-eval'; style-src * 'unsafe-inline';",
     },
   ],
   link: [

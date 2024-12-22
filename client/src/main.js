@@ -23,7 +23,7 @@ async function initApp() {
     // Initialize user store and fetch user data if token exists
     const userStore = useUserStore();
 
-    if (userStore.accessToken) { // accessToken is a ref in the store
+    if (userStore.isLoggedIn) {
       await userStore.fetchUserProfile().catch((error) => {
         logger.error('Error fetching user on app initialization:', error);
         userStore.logout();
