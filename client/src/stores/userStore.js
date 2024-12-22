@@ -147,7 +147,7 @@ export const useUserStore = defineStore('user', () => {
                 const tokenData = JSON.parse(atob(token.split('.')[1]));
                 const expiryTime = tokenData.exp * 1000;
                 const timeUntilExpiry = expiryTime - Date.now();
-                
+
                 if (timeUntilExpiry > 0) {
                     sessionTimeout.value = setTimeout(async () => {
                         if (!pendingRefresh.value) {
@@ -195,9 +195,9 @@ export const useUserStore = defineStore('user', () => {
 
         Cookies.set('accessToken', token, {
             ...cookieOptions,
-            expires: 1/96 // 15 minutes
+            expires: 1 / 96 // 15 minutes
         });
-        
+
         if (refreshToken) {
             Cookies.set('refreshToken', refreshToken, {
                 ...cookieOptions,
@@ -215,7 +215,7 @@ export const useUserStore = defineStore('user', () => {
                 refreshToken: currentRefreshToken,
                 deviceId: deviceId.value
             });
-            
+
             if (response.data.code === '1000') {
                 const { token, refreshToken } = response.data.data;
                 setAuthCookies(token, refreshToken);
@@ -245,13 +245,13 @@ export const useUserStore = defineStore('user', () => {
                 showToast('error', error.value);
                 return false;
             }
-            
+
             const uuid = crypto.randomUUID();
             localStorage.setItem('deviceId', deviceId.value);
-            
-            const response = await apiService.register({ 
-                phoneNumber, 
-                password, 
+
+            const response = await apiService.register({
+                phoneNumber,
+                password,
                 uuid,
                 deviceId: deviceId.value,
                 deviceInfo: {
@@ -261,7 +261,7 @@ export const useUserStore = defineStore('user', () => {
                     timezone: Intl.DateTimeFormat().resolvedOptions().timeZone
                 }
             });
-            
+
             if (response.data?.code === '1000') {
                 const { token, deviceToken } = response.data.data;
                 setAuthCookies(token);
@@ -288,10 +288,10 @@ export const useUserStore = defineStore('user', () => {
         try {
             isLoading.value = true;
             error.value = null;
-            
-            const loginData = { 
-                phoneNumber, 
-                password, 
+
+            const loginData = {
+                phoneNumber,
+                password,
                 deviceId: deviceId.value,
                 deviceInfo: {
                     platform: navigator.platform,
@@ -300,9 +300,9 @@ export const useUserStore = defineStore('user', () => {
                     timezone: Intl.DateTimeFormat().resolvedOptions().timeZone
                 }
             };
-            
+
             const response = await apiService.login(loginData);
-            
+
             if (response.data?.code === '1000') {
                 failedAttempts.value = 0;
                 const { token, refreshToken, id, userName, securityLevel: userSecurityLevel } = response.data.data;
@@ -329,7 +329,7 @@ export const useUserStore = defineStore('user', () => {
     const logout = async (suppressRedirect = false) => {
         try {
             isLoading.value = true;
-            
+
             if (isLoggedIn.value) {
                 try {
                     await apiService.logout({ deviceId: deviceId.value });
@@ -355,7 +355,7 @@ export const useUserStore = defineStore('user', () => {
 
     const handleAuthError = async (err) => {
         logger.error('Authentication error:', err);
-        
+
         const errorCode = err.response?.data?.code;
         const errorMessage = err.response?.data?.message || 'An unexpected error occurred';
 
@@ -404,9 +404,9 @@ export const useUserStore = defineStore('user', () => {
         try {
             isLoading.value = true;
             error.value = null;
-            
+
             const response = await apiService.getVerifyCode({ phoneNumber });
-            
+
             if (response.data.code === '1000') {
                 lastVerificationRequest.value = now;
                 successMessage.value = 'Verification code sent successfully!';
@@ -442,13 +442,13 @@ export const useUserStore = defineStore('user', () => {
         try {
             isLoading.value = true;
             error.value = null;
-            
-            const response = await apiService.verifyCode({ 
-                phoneNumber, 
+
+            const response = await apiService.verifyCode({
+                phoneNumber,
                 code,
                 deviceId: deviceId.value
             });
-            
+
             if (response.data.code === '1000') {
                 const { token, isVerified } = response.data.data;
                 setAuthCookies(token);
@@ -481,7 +481,7 @@ export const useUserStore = defineStore('user', () => {
             }
 
             const response = await apiService.post('/api/auth/change_info_after_signup', formData, {
-                headers: { 
+                headers: {
                     'Content-Type': 'multipart/form-data',
                     'Device-ID': deviceId.value
                 }
@@ -552,6 +552,20 @@ export const useUserStore = defineStore('user', () => {
         }
     };
 
+    const fetchUserProfile = async () => {
+        try {
+            const response = await apiService.getUserInfo();
+            if (response.data?.code === '1000') {
+                user.value = response.data.data;
+                return true;
+            }
+            return false;
+        } catch (error) {
+            logger.error('Error fetching user profile:', error);
+            return false;
+        }
+    }
+
     return {
         // State
         user,
@@ -590,6 +604,7 @@ export const useUserStore = defineStore('user', () => {
         updateLastActivity,
         clearAuthState,
         refreshSession,
-        startCooldown
+        startCooldown,
+        fetchUserProfile,
     };
 });

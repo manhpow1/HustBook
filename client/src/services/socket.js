@@ -12,16 +12,22 @@ export function initSocket() {
     const { showToast } = useToast();
 
     if (!userStore.isLoggedIn) {
-        return;
+        return null;
     }
 
     const socketUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000';
     const socketOrigin = new URL(socketUrl).origin;
+    const token = document.cookie.split('; ').find(row => row.startsWith('accessToken='))?.split('=')[1];
+    
+    if (!token) {
+        logger.error('Socket initialization failed: No access token found');
+        return null;
+    }
 
     // Enhanced socket configuration with security measures
     socket = io(socketUrl, {
         auth: {
-            token: userStore.accessToken,
+            token
         },
         transports: ['websocket'],
         reconnection: true,

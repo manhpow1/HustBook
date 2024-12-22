@@ -52,9 +52,26 @@ useHead({
     { name: 'viewport', content: 'width=device-width, initial-scale=1' },
     {
       'http-equiv': 'Content-Security-Policy',
-      content:
-        "default-src * 'unsafe-inline' 'unsafe-eval'; connect-src * 'unsafe-inline'; script-src * 'unsafe-inline' 'unsafe-eval'; style-src * 'unsafe-inline';",
+      content: [
+        "default-src * 'unsafe-inline' 'unsafe-eval'",
+        "connect-src * 'unsafe-inline'",
+        "script-src * 'unsafe-inline' 'unsafe-eval'",
+        "style-src * 'unsafe-inline'",
+        "img-src * data: blob:",
+        "media-src * data: blob:"
+      ].join('; ')
     },
+    {
+      'http-equiv': 'Permissions-Policy',
+      content: [
+        'attribution-reporting=()',
+        'run-ad-auction=()',
+        'join-ad-interest-group=()',
+        'browsing-topics=()',
+        'private-state-token-redemption=()',
+        'private-state-token-issuance=()'
+      ].join(', ')
+    }
   ],
   link: [
     {
@@ -66,9 +83,18 @@ useHead({
 
 const userStore = useUserStore();
 
+// Initialize auth state
 onMounted(async () => {
-  // Attempt to fetch user profile if accessToken is available
-  await userStore.fetchUserProfile();
+  try {
+    if (userStore.isLoggedIn) {
+      await userStore.fetchUserProfile().catch((error) => {
+        console.error('Error fetching user profile:', error);
+        userStore.clearAuthState();
+      });
+    }
+  } catch (error) {
+    console.error('Error during app initialization:', error);
+  }
 });
 </script>
 

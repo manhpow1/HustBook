@@ -6,35 +6,26 @@ import router from './router';
 import { createPinia } from 'pinia';
 import 'vue-virtual-scroller/dist/vue-virtual-scroller.css';
 import './styles/index.css';
-import logger from './services/logging'; // Ensure logger is properly set up
-import { useUserStore } from './stores/userStore';
+import logger from './services/logging';
 
-async function initApp() {
-  try {
-    const pinia = createPinia();
-    const app = createApp(App);
-    const head = createHead();
+// Create core app instance and plugins
+const pinia = createPinia();
+const app = createApp(App);
+const head = createHead();
 
-    // Use plugins in the correct order
-    app.use(pinia); // Initialize Pinia before using stores
-    app.use(router);
-    app.use(head);
+// Use plugins
+app.use(pinia);
+app.use(router);
+app.use(head);
 
-    // Initialize user store and fetch user data if token exists
-    const userStore = useUserStore();
+// Mount app immediately to avoid initialization issues
+app.mount('#app');
 
-    if (userStore.isLoggedIn) {
-      await userStore.fetchUserProfile().catch((error) => {
-        logger.error('Error fetching user on app initialization:', error);
-        userStore.logout();
-      });
-    }
+// Log any unhandled errors
+window.addEventListener('unhandledrejection', (event) => {
+  logger.error('Unhandled promise rejection:', event.reason);
+});
 
-    // Mount the app with error handling
-    app.mount('#app');
-  } catch (error) {
-    logger.error('Error during app initialization:', error);
-  }
-}
-
-initApp();
+window.addEventListener('error', (event) => {
+  logger.error('Uncaught error:', event.error);
+});
