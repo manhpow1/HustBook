@@ -377,12 +377,83 @@ const validateGetVerifyCode = (data) => {
     return getVerifyCodeSchema.validate(sanitizedData, { abortEarly: false });
 };
 
+/**
+ * Set user info schema
+ */
+const setUserInfoSchema = Joi.object({
+    fullName: Joi.string()
+        .min(2)
+        .max(50)
+        .pattern(/^[a-zA-Z\s]*$/)
+        .optional()
+        .messages({
+            'string.min': 'Full name must be at least 2 characters.',
+            'string.max': 'Full name cannot exceed 50 characters.',
+            'string.pattern.base': 'Full name can only contain letters and spaces.'
+        }),
+    bio: Joi.string()
+        .max(200)
+        .optional()
+        .allow('')
+        .messages({
+            'string.max': 'Bio cannot exceed 200 characters.'
+        }),
+    avatar: Joi.string()
+        .uri()
+        .optional()
+        .allow('')
+        .messages({
+            'string.uri': 'Avatar must be a valid URL.'
+        }),
+    coverPhoto: Joi.string()
+        .uri()
+        .optional()
+        .allow('')
+        .messages({
+            'string.uri': 'Cover photo must be a valid URL.'
+        }),
+    location: Joi.string()
+        .max(100)
+        .optional()
+        .allow('')
+        .messages({
+            'string.max': 'Location cannot exceed 100 characters.'
+        })
+}).min(1).required();
+
+/**
+ * Get user info schema
+ */
+const getUserInfoSchema = Joi.object({
+    id: Joi.string()
+        .uuid()
+        .optional()
+        .messages({
+            'string.uuid': 'Invalid user ID format.'
+        })
+}).required();
+
 const validateCheckVerifyCode = (data) => {
     const sanitizedData = {
         phonenumber: sanitizeInput(data.phonenumber),
         code: data.code
     };
     return checkVerifyCodeSchema.validate(sanitizedData, { abortEarly: false });
+};
+
+const validateSetUserInfo = (data) => {
+    const sanitizedData = {
+        fullName: sanitizeInput(data.fullName),
+        bio: sanitizeInput(data.bio),
+        location: sanitizeInput(data.location),
+        avatar: data.avatar,
+        coverPhoto: data.coverPhoto
+    };
+    return setUserInfoSchema.validate(sanitizedData, { abortEarly: false });
+};
+
+const validateGetUserInfo = (data) => {
+    return getUserInfoSchema.validate(data, { abortEarly: false });
 };
 
 module.exports = {
@@ -394,6 +465,8 @@ module.exports = {
     validateRefreshToken,
     validateGetVerifyCode,
     validateCheckVerifyCode,
+    validateSetUserInfo,
+    validateGetUserInfo,
     sanitizeInput,
     passwordStrength // Export for testing
 };

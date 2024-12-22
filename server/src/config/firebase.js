@@ -20,4 +20,6 @@ const initializeFirebase = () => {
   };
 };
 
-module.exports = initializeFirebase();
+const { db, auth } = initializeFirebase();
+
+module.exports = { db, auth, initializeFirebase };

@@ -5,6 +5,7 @@ const Conversation = require('../models/Conversation');
 const Message = require('../models/Message');
 const userService = require('./userService');
 const admin = require('firebase-admin');
+const { getIO } = require('../socket');
 
 class ChatService {
     async getConversationRoomName(userId, partnerId, conversationId) {

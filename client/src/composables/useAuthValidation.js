@@ -1,19 +1,14 @@
 import { ref, computed, watch } from 'vue';
-import { useFormValidation } from './useFormValidation';
-import { useDebouncedRef } from './useDebounce';
-import { useUserStore } from '../stores/userStore';
+import { useDebounce } from './useDebounce';
 
 export function useAuthValidation(type = 'login') {
-    const userStore = useUserStore();
-    const { validateField: baseValidateField } = useFormValidation();
-
     // Use debounced fields for better performance
     const fields = ref({
-        phoneNumber: useDebouncedRef('', 300),
-        password: useDebouncedRef('', 300),
+        phoneNumber: useDebounce('', 300),
+        password: useDebounce('', 300),
         code: ['', '', '', '', '', ''],
-        userName: useDebouncedRef('', 300),
-        confirmPassword: useDebouncedRef('', 300),
+        userName: useDebounce('', 300),
+        confirmPassword: useDebounce('', 300),
     });
 
     // Validation state

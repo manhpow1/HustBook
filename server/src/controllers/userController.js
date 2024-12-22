@@ -23,6 +23,195 @@ class UserController {
     constructor() {
         this.sessionDuration = 15 * 60; // 15 minutes in seconds
         this.refreshTokenDuration = 7 * 24 * 60 * 60; // 7 days in seconds
+        this.verifyCodeDuration = 5 * 60; // 5 minutes in seconds
+    }
+
+    async checkAuth(req, res, next) {
+        try {
+            // Since this endpoint uses authenticateToken middleware,
+            // if we reach here, the token is valid
+            const user = await userService.getUserById(req.user.uid);
+            if (!user) {
+                throw createError('9995', 'User not found');
+            }
+
+            sendResponse(res, '1000', {
+                isAuthenticated: true,
+                user: {
+                    id: user.uid,
+                    userName: user.userName,
+                    phoneNumber: user.phoneNumber,
+                    avatar_url: user.avatar_url
+                }
+            });
+        } catch (error) {
+            logger.error('Check Auth Error:', error);
+            next(error);
+        }
+    }
+
+    async changePassword(req, res, next) {
+        try {
+            // Validate request body
+            const { error, value } = userValidator.validateChangePassword(req.body);
+            if (error) {
+                const errorMessage = error.details.map(detail => detail.message).join(', ');
+                throw createError('1002', errorMessage);
+            }
+
+            const { password, new_password } = value;
+            const userId = req.user.uid;
+
+            // Update password
+            await userService.updatePassword(userId, password, new_password);
+
+            // Clear user sessions except current one
+            const currentDeviceId = req.get('X-Device-ID');
+            await redis.clearUserSessionsExcept(userId, currentDeviceId);
+
+            // Log action
+            await AuditLogModel.logAction(userId, null, 'password_change', {
+                deviceId: currentDeviceId,
+                ip: req.ip,
+                timestamp: new Date().toISOString()
+            });
+
+            sendResponse(res, '1000', {
+                message: 'Password changed successfully.'
+            });
+        } catch (error) {
+            logger.error('Change Password Error:', error);
+            next(error);
+        }
+    }
+
+    async refreshToken(req, res, next) {
+        try {
+            // Validate request body
+            const { error, value } = userValidator.validateRefreshToken(req.body);
+            if (error) {
+                const errorMessage = error.details.map(detail => detail.message).join(', ');
+                throw createError('1002', errorMessage);
+            }
+
+            const { refreshToken } = value;
+            
+            // Verify refresh token
+            const decoded = await verifyRefreshToken(refreshToken);
+            if (!decoded) {
+                throw createError('1006', 'Invalid refresh token');
+            }
+
+            // Check if token is blacklisted
+            const isBlacklisted = await redis.isTokenBlacklisted(refreshToken);
+            if (isBlacklisted) {
+                throw createError('1006', 'Token has been revoked');
+            }
+
+            // Get user
+            const user = await userService.getUserById(decoded.uid);
+            if (!user) {
+                throw createError('9995', 'User not found');
+            }
+
+            // Verify token family to prevent refresh token rotation attacks
+            if (decoded.tokenFamily !== user.tokenFamily) {
+                // Potential reuse! Revoke all tokens
+                await Promise.all([
+                    redis.blacklistUserTokens(user.uid),
+                    userService.updateTokenVersion(user.uid)
+                ]);
+                throw createError('1006', 'Invalid token family');
+            }
+
+            // Generate new token pair
+            const tokenPayload = {
+                uid: user.uid,
+                phone: user.phoneNumber,
+                tokenVersion: user.tokenVersion,
+                tokenFamily: user.tokenFamily,
+                deviceId: decoded.deviceId
+            };
+
+            const [newToken, newRefreshToken] = await Promise.all([
+                generateJWT(tokenPayload),
+                generateRefreshToken({ ...user, deviceId: decoded.deviceId })
+            ]);
+
+            // Blacklist old refresh token
+            await redis.blacklistToken(refreshToken);
+
+            // Update user session
+            await redis.updateUserSession(user.uid, decoded.deviceId, {
+                lastActivity: Date.now()
+            });
+
+            // Set secure cookies in production
+            if (process.env.NODE_ENV === 'production') {
+                res.cookie('auth_token', newToken, {
+                    httpOnly: true,
+                    secure: true,
+                    sameSite: 'strict',
+                    maxAge: this.sessionDuration * 1000
+                });
+
+                res.cookie('refresh_token', newRefreshToken, {
+                    httpOnly: true,
+                    secure: true,
+                    sameSite: 'strict',
+                    maxAge: this.refreshTokenDuration * 1000
+                });
+            }
+
+            sendResponse(res, '1000', {
+                token: newToken,
+                refreshToken: newRefreshToken,
+                expiresIn: this.sessionDuration
+            });
+        } catch (error) {
+            logger.error('Refresh Token Error:', error);
+            next(error);
+        }
+    }
+
+    async getVerifyCode(req, res, next) {
+        try {
+            // Check rate limits
+            const rateLimitResult = await rateLimit.checkVerifyCodeLimit(req.ip);
+            if (rateLimitResult.limited) {
+                throw createError('1003', `Too many verification code requests. Please try again in ${rateLimitResult.timeLeft} seconds.`);
+            }
+
+            // Validate request body
+            const { error, value } = userValidator.validateGetVerifyCode(req.body);
+            if (error) {
+                const errorMessage = error.details.map(detail => detail.message).join(', ');
+                throw createError('1002', errorMessage);
+            }
+
+            const { phonenumber } = value;
+            const formattedPhoneNumber = formatPhoneNumber(phonenumber);
+
+            // Generate new verification code
+            const verificationCode = generateRandomCode();
+
+            // Store verification code in Redis with expiration
+            await redis.setVerificationCode(formattedPhoneNumber, verificationCode, this.verifyCodeDuration);
+
+            // Increment verify code attempts
+            await rateLimit.incrementVerifyCodeAttempts(req.ip);
+
+            // In production, would integrate with SMS service here
+            // For development, return the code in response
+            sendResponse(res, '1000', {
+                message: 'Verification code sent successfully',
+                ...(process.env.NODE_ENV !== 'production' && { verifyCode: verificationCode })
+            });
+
+        } catch (error) {
+            logger.error('Get Verify Code Error:', error);
+            next(error);
+        }
     }
 
     async signup(req, res, next) {
@@ -367,6 +556,179 @@ class UserController {
             sendResponse(res, '1000', { message: 'Logout successful.' });
         } catch (error) {
             logger.error('Logout Error:', error);
+            next(error);
+        }
+    }
+
+    async checkVerifyCode(req, res, next) {
+        try {
+            // Validate request body
+            const { error, value } = userValidator.validateCheckVerifyCode(req.body);
+            if (error) {
+                const errorMessage = error.details.map(detail => detail.message).join(', ');
+                throw createError('1002', errorMessage);
+            }
+
+            const { phonenumber, code } = value;
+            const formattedPhoneNumber = formatPhoneNumber(phonenumber);
+
+            // Get saved verification code
+            const savedCode = await redis.getVerificationCode(formattedPhoneNumber);
+            if (!savedCode) {
+                throw createError('1004', 'Verification code has expired or does not exist');
+            }
+
+            // Check if code matches
+            if (code !== savedCode) {
+                // Increment failed attempts
+                const attempts = await redis.incrementVerifyAttempts(formattedPhoneNumber);
+                
+                // If too many failed attempts, clear the code
+                if (attempts >= 3) {
+                    await Promise.all([
+                        redis.del(`verify:${formattedPhoneNumber}`),
+                        redis.clearVerifyAttempts(formattedPhoneNumber)
+                    ]);
+                    throw createError('1003', 'Too many failed attempts. Please request a new code.');
+                }
+                
+                throw createError('1004', 'Invalid verification code');
+            }
+
+            // Clear verification code and attempts after successful verification
+            await Promise.all([
+                redis.del(`verify:${formattedPhoneNumber}`),
+                redis.clearVerifyAttempts(formattedPhoneNumber)
+            ]);
+
+            // Get user from database if exists
+            const user = await userService.getUserByphoneNumber(formattedPhoneNumber);
+            if (!user) {
+                // For new users, return success but indicate user needs to sign up
+                sendResponse(res, '1000', {
+                    verified: true,
+                    exists: false,
+                    message: 'Phone number verified. Please proceed with signup.'
+                });
+                return;
+            }
+
+            // For existing users, update verification status and return user info
+            await userService.updateVerificationStatus(user.uid, true);
+            
+            // Generate device token
+            const deviceToken = generateDeviceToken();
+            const tokenFamily = generateTokenFamily();
+
+            // Generate tokens
+            const token = generateJWT({
+                uid: user.uid,
+                phone: formattedPhoneNumber,
+                tokenVersion: user.tokenVersion || 0,
+                tokenFamily,
+                deviceId: req.get('Device-ID') || crypto.randomUUID()
+            });
+
+            sendResponse(res, '1000', {
+                verified: true,
+                exists: true,
+                id: user.uid,
+                token,
+                deviceToken,
+                active: user.active ? "1" : "0"
+            });
+
+        } catch (error) {
+            logger.error('Check Verify Code Error:', error);
+            next(error);
+        }
+    }
+    async setBlock(req, res, next) {
+        try {
+            // Validate request body
+            const { error, value } = userValidator.validateSetBlock(req.body);
+            if (error) {
+                const errorMessage = error.details.map(detail => detail.message).join(', ');
+                throw createError('1002', errorMessage);
+            }
+
+            const { userId: targetUserId, type } = value;
+            const userId = req.user.uid;
+
+            // Can't block yourself
+            if (userId === targetUserId) {
+                throw createError('1002', 'Cannot block yourself');
+            }
+
+            await userService.setBlock(userId, targetUserId, type);
+
+            sendResponse(res, '1000', {
+                message: type === 0 ? 'User blocked successfully' : 'User unblocked successfully'
+            });
+        } catch (error) {
+            logger.error('Set Block Error:', error);
+            next(error);
+        }
+    }
+
+    async setUserInfo(req, res, next) {
+        try {
+            // Validate request body
+            const { error, value } = userValidator.validateSetUserInfo(req.body);
+            if (error) {
+                const errorMessage = error.details.map(detail => detail.message).join(', ');
+                throw createError('1002', errorMessage);
+            }
+
+            const userId = req.user.uid;
+
+            // Handle file uploads if present
+            let updateData = { ...value };
+            if (req.files) {
+                if (req.files.avatar) {
+                    updateData.avatar = await handleAvatarUpload(req.files.avatar[0]);
+                }
+                if (req.files.coverPhoto) {
+                    updateData.coverPhoto = await handleCoverPhotoUpload(req.files.coverPhoto[0]);
+                }
+            }
+
+            const updatedUser = await userService.setUserInfo(userId, updateData);
+
+            sendResponse(res, '1000', {
+                message: 'Profile updated successfully',
+                user: {
+                    uid: updatedUser.uid,
+                    userName: updatedUser.userName,
+                    fullName: updatedUser.fullName,
+                    avatar_url: updatedUser.avatar_url,
+                    coverPhoto: updatedUser.coverPhoto,
+                    bio: updatedUser.bio,
+                    location: updatedUser.location
+                }
+            });
+        } catch (error) {
+            logger.error('Set User Info Error:', error);
+            next(error);
+        }
+    }
+
+    async getUserInfo(req, res, next) {
+        try {
+            // Validate params
+            const { error, value } = userValidator.validateGetUserInfo({ id: req.params.id });
+            if (error) {
+                const errorMessage = error.details.map(detail => detail.message).join(', ');
+                throw createError('1002', errorMessage);
+            }
+
+            const targetUserId = value.id || req.user.uid; // If no ID provided, get current user's info
+
+            const userInfo = await userService.getUserInfo(targetUserId);
+
+            sendResponse(res, '1000', { user: userInfo });
+        } catch (error) {
+            logger.error('Get User Info Error:', error);
             next(error);
         }
     }

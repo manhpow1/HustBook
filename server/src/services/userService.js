@@ -444,6 +444,248 @@ class UserService {
             throw error;
         }
     }
+
+    async clearUserDeviceToken(userId, deviceId) {
+        try {
+            await runTransaction(async (transaction) => {
+                const userRef = db.collection(collections.users).doc(userId);
+                const userDoc = await transaction.get(userRef);
+
+                if (!userDoc.exists) {
+                    throw createError('9995', 'User not found');
+                }
+
+                const userData = userDoc.data();
+                const devices = userData.deviceDetails || [];
+                const deviceIndex = devices.findIndex(d => d.id === deviceId);
+
+                if (deviceIndex === -1) {
+                    // If device not found, just return without error
+                    return;
+                }
+
+                // Clear device token
+                devices[deviceIndex] = {
+                    ...devices[deviceIndex],
+                    token: null,
+                    refreshToken: null,
+                    lastUsed: new Date().toISOString()
+                };
+
+                transaction.update(userRef, {
+                    deviceDetails: devices,
+                    deviceTokens: devices.map(d => d.token).filter(Boolean),
+                    updatedAt: new Date().toISOString()
+                });
+
+                logger.info(`Cleared device token for user ${userId}, device ${deviceId}`);
+            });
+        } catch (error) {
+            logger.error('Error clearing device token:', error);
+            throw error;
+        }
+    }
+
+    async updateVerificationStatus(userId, isVerified) {
+        try {
+            await runTransaction(async (transaction) => {
+                const userRef = db.collection(collections.users).doc(userId);
+                const userDoc = await transaction.get(userRef);
+
+                if (!userDoc.exists) {
+                    throw createError('9995', 'User not found');
+                }
+
+                transaction.update(userRef, {
+                    isVerified,
+                    updatedAt: new Date().toISOString(),
+                    ...(isVerified && {
+                        verificationCode: null,
+                        verificationCodeTimestamp: null,
+                        verificationCodeExpiration: null,
+                        verificationAttempts: null
+                    })
+                });
+
+                logger.info(`Updated verification status for user ${userId} to ${isVerified}`);
+            });
+        } catch (error) {
+            logger.error('Error updating verification status:', error);
+            throw error;
+        }
+    }
+
+    async deleteUser(userId) {
+        try {
+            await runTransaction(async (transaction) => {
+                const userRef = db.collection(collections.users).doc(userId);
+                const userDoc = await transaction.get(userRef);
+
+                if (!userDoc.exists) {
+                    throw createError('9995', 'User not found');
+                }
+
+                // Delete user document
+                transaction.delete(userRef);
+
+                // Clear Redis keys
+                await Promise.all([
+                    redis.deleteKey(`user:${userId}`),
+                    redis.deleteKey(`user:${userId}:profile`),
+                    redis.deleteKey(`user:${userId}:devices`),
+                    redis.deleteKey(`user:${userId}:sessions`),
+                    redis.deleteKey(`login_attempts:${userId}`),
+                    redis.deleteKey(`lockout:${userId}`)
+                ]);
+
+                logger.info(`Deleted user ${userId}`);
+            });
+        } catch (error) {
+            logger.error('Error deleting user:', error);
+            throw error;
+        }
+    }
+
+    async getUserByphoneNumber(phoneNumber) {
+        try {
+            // Query by phone number
+            const querySnapshot = await queryDocuments(collections.users, 'phoneNumber', '==', phoneNumber);
+            if (querySnapshot.length === 0) return null;
+
+            return querySnapshot[0];
+        } catch (error) {
+            logger.error('Error getting user by phone:', error);
+            throw error;
+        }
+    }
+
+    async setBlock(userId, targetUserId, type) {
+        try {
+            await runTransaction(async (transaction) => {
+                // Get both users
+                const userRef = db.collection(collections.users).doc(userId);
+                const targetRef = db.collection(collections.users).doc(targetUserId);
+                
+                const [userDoc, targetDoc] = await Promise.all([
+                    transaction.get(userRef),
+                    transaction.get(targetRef)
+                ]);
+
+                if (!userDoc.exists || !targetDoc.exists) {
+                    throw createError('9995', 'User not found');
+                }
+
+                const userData = userDoc.data();
+                const blockedUsers = userData.blockedUsers || [];
+
+                if (type === 0) { // Block
+                    if (!blockedUsers.includes(targetUserId)) {
+                        transaction.update(userRef, {
+                            blockedUsers: arrayUnion(targetUserId),
+                            updatedAt: new Date().toISOString()
+                        });
+                        
+                        // Log block action
+                        await AuditLogModel.logAction(userId, targetUserId, 'block_user', {
+                            timestamp: new Date().toISOString()
+                        });
+                    }
+                } else { // Unblock
+                    if (blockedUsers.includes(targetUserId)) {
+                        transaction.update(userRef, {
+                            blockedUsers: blockedUsers.filter(id => id !== targetUserId),
+                            updatedAt: new Date().toISOString()
+                        });
+                        
+                        // Log unblock action
+                        await AuditLogModel.logAction(userId, targetUserId, 'unblock_user', {
+                            timestamp: new Date().toISOString()
+                        });
+                    }
+                }
+
+                // Clear cache
+                await redis.deleteKey(`user:${userId}`);
+                logger.info(`User ${userId} ${type === 0 ? 'blocked' : 'unblocked'} user ${targetUserId}`);
+            });
+        } catch (error) {
+            logger.error('Error setting block status:', error);
+            throw error;
+        }
+    }
+
+    async setUserInfo(userId, updateData) {
+        try {
+            return await runTransaction(async (transaction) => {
+                const userRef = db.collection(collections.users).doc(userId);
+                const userDoc = await transaction.get(userRef);
+
+                if (!userDoc.exists) {
+                    throw createError('9995', 'User not found');
+                }
+
+                const userData = userDoc.data();
+                const updatedInfo = {
+                    ...updateData,
+                    updatedAt: new Date().toISOString(),
+                    lastModifiedAt: Date.now(),
+                    version: (userData.version || 0) + 1
+                };
+
+                // Optimistic locking check
+                const currentVersion = userData.version || 0;
+                const lastModifiedAt = userData.lastModifiedAt || 0;
+                
+                if (Date.now() - lastModifiedAt < 1000) {
+                    throw createError('1003', 'Please wait a moment before updating again');
+                }
+
+                if (currentVersion !== updatedInfo.version - 1) {
+                    throw createError('9999', 'Data was modified by another request');
+                }
+
+                transaction.update(userRef, updatedInfo);
+                
+                // Clear cache
+                await redis.deleteKey(`user:${userId}`);
+                logger.info(`Updated user info for user ${userId}`);
+
+                return {
+                    ...userData,
+                    ...updatedInfo
+                };
+            });
+        } catch (error) {
+            logger.error('Error updating user info:', error);
+            throw error;
+        }
+    }
+
+    async getUserInfo(userId) {
+        try {
+            const user = await this.getUserById(userId);
+            if (!user) {
+                throw createError('9995', 'User not found');
+            }
+
+            // Return only necessary fields
+            return {
+                uid: user.uid,
+                userName: user.userName,
+                fullName: user.fullName,
+                avatar_url: user.avatar_url,
+                coverPhoto: user.coverPhoto,
+                bio: user.bio,
+                location: user.location,
+                createdAt: user.createdAt,
+                isVerified: user.isVerified,
+                online: user.online
+            };
+        } catch (error) {
+            logger.error('Error getting user info:', error);
+            throw error;
+        }
+    }
 }
 
 module.exports = new UserService();

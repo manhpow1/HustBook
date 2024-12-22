@@ -159,7 +159,7 @@
 import { defineAsyncComponent, computed } from 'vue';
 import { useUserStore } from '../../stores/userStore';
 import { useMenuState } from '../../composables/useMenuState';
-import LogoutButton from '../auth/Logout.vue';
+import LogoutButton from '../user/Logout.vue';
 import { navItems } from '../../config/navigation';
 import { useHead } from '@unhead/vue';
 import SearchPosts from '../search/SearchPosts.vue';

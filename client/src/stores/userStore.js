@@ -7,8 +7,7 @@ import logger from '../services/logging';
 import { useErrorHandler } from '../composables/useErrorHandler';
 import { useToast } from '../composables/useToast';
 import { useAuthValidation } from '../composables/useAuthValidation';
-import { passwordStrength } from '../utils/validation';
-import { useSocket } from '../services/socket';
+import { initSocket } from '../services/socket';
 
 // Constants
 const INACTIVITY_THRESHOLD = 30 * 60 * 1000; // 30 minutes
@@ -19,7 +18,7 @@ const DEVICE_CLEANUP_INTERVAL = 24 * 60 * 60 * 1000; // 24 hours
 
 export const useUserStore = defineStore('user', () => {
     const router = useRouter();
-    const socket = useSocket();
+    const socket = initSocket();
     const { handleError } = useErrorHandler();
     const { showToast } = useToast();
     const validation = useAuthValidation();
@@ -241,7 +240,7 @@ export const useUserStore = defineStore('user', () => {
             isLoading.value = true;
             error.value = null;
 
-            if (!passwordStrength(password)) {
+            if (!validation.passwordStrength(password)) {
                 error.value = 'Password does not meet security requirements';
                 showToast('error', error.value);
                 return false;
@@ -513,7 +512,7 @@ export const useUserStore = defineStore('user', () => {
             isLoading.value = true;
             error.value = null;
 
-            if (!passwordStrength(newPassword)) {
+            if (!validation.passwordStrength(newPassword)) {
                 error.value = 'New password does not meet security requirements';
                 showToast('error', error.value);
                 return false;

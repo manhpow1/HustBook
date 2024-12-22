@@ -34,22 +34,22 @@ const routes = [
     {
         path: '/signup',
         name: 'SignUp',
-        component: () => import('../components/auth/SignUp.vue')
+        component: () => import('../components/user/SignUp.vue')
     },
     {
         path: '/login',
         name: 'Login',
-        component: () => import('../components/auth/Login.vue')
+        component: () => import('../components/user/Login.vue')
     },
     {
         path: '/get-verify-code',
         name: 'GetVerifyCode',
-        component: () => import('../components/auth/GetVerifyCode.vue')
+        component: () => import('../components/user/GetVerifyCode.vue')
     },
     {
         path: '/verify-code/:verificationCode',
         name: 'VerifyCode',
-        component: () => import('../components/auth/VerifyCode.vue'),
+        component: () => import('../components/user/VerifyCode.vue'),
         props: true
     },
     {

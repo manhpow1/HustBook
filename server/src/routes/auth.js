@@ -10,6 +10,8 @@ const router = express.Router();
 const multer = require('multer');
 const userController = require('../controllers/userController');
 const { authenticateToken } = require('../middleware/auth');
+const { verifyCodeLimiter, checkVerifyCodeLimiter } = require('../middleware/rateLimiter');
+const rateLimit = require('express-rate-limit');
 const storage = multer.diskStorage({
     destination: (req, file, cb) => {
         cb(null, 'uploads/avatars/');
@@ -31,7 +33,7 @@ const fileFilter = (req, file, cb) => {
     // List of allowed extensions
     const allowedExtensions = ['jpg', 'jpeg', 'png', 'gif'];
     const ext = file.originalname.split('.').pop().toLowerCase();
-    
+
     if (!allowedExtensions.includes(ext)) {
         return cb(new Error('Invalid file type. Only jpg, jpeg, png, and gif are allowed'), false);
     }
@@ -39,9 +41,16 @@ const fileFilter = (req, file, cb) => {
     cb(null, true);
 };
 
+const profileUpdateLimiter = rateLimit({
+    windowMs: 5 * 60 * 1000, // 5 minutes
+    max: 3, // 3 updates per window
+    message: 'Too many profile updates, please try again later',
+    keyGenerator: (req) => `${req.user.uid}:profile_update`
+});
+
 const upload = multer({
     storage,
-    limits: { 
+    limits: {
         fileSize: 4 * 1024 * 1024 // 4MB limit
     },
     fileFilter
@@ -216,7 +225,7 @@ router.post('/logout', authenticateToken, userController.logout);
  *       '400':
  *         description: Invalid phone number or request
  */
-router.post('/get_verify_code', userController.getVerifyCode);
+router.post('/get_verify_code', verifyCodeLimiter, userController.getVerifyCode);
 
 /**
  * @swagger
@@ -266,7 +275,7 @@ router.post('/get_verify_code', userController.getVerifyCode);
  *       '400':
  *         description: Invalid verification code
  */
-router.post('/check_verify_code', userController.checkVerifyCode);
+router.post('/check_verify_code', checkVerifyCodeLimiter, userController.checkVerifyCode);
 
 /**
  * @swagger
@@ -347,19 +356,7 @@ router.get('/check', authenticateToken, userController.checkAuth);
  *                     online:
  *                       type: string
  */
-const profileUpdateLimiter = rateLimit.createRateLimiter({
-    windowMs: 5 * 60 * 1000, // 5 minutes
-    max: 3, // 3 updates per window
-    message: 'Too many profile updates, please try again later',
-    keyGenerator: (req) => `${req.user.uid}:profile_update`
-});
-
-router.post('/change_info_after_signup', 
-    authenticateToken, 
-    profileUpdateLimiter,
-    upload.single('avatar'), 
-    userController.changeInfoAfterSignup
-);
+router.post('/change_info_after_signup', authenticateToken, profileUpdateLimiter, upload.single('avatar'), userController.changeInfoAfterSignup);
 
 /**
  * @swagger

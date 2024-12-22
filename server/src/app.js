@@ -43,10 +43,25 @@ app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpecs));
 // Error handling middleware
 app.use(handleError);
 
-// Unhandled promise rejections
+// Global error handlers
 process.on('unhandledRejection', (reason, promise) => {
-    logger.error('Unhandled Rejection at:', promise, 'reason:', reason);
-    process.exit(1);
+    logger.error('Unhandled Rejection at:', {
+        promise,
+        reason: reason instanceof Error ? reason.stack : reason
+    });
+});
+
+process.on('uncaughtException', (error) => {
+    logger.error('Uncaught Exception:', error);
+});
+
+// Graceful shutdown
+process.on('SIGTERM', () => {
+    logger.info('SIGTERM received. Starting graceful shutdown...');
+    // Give time for existing requests to complete
+    setTimeout(() => {
+        process.exit(0);
+    }, 30000); // 30 second grace period
 });
 
 module.exports = app;

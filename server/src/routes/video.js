@@ -13,7 +13,8 @@ const videoController = require('../controllers/videoController');
  * /video/get_list_videos:
  *   post:
  *     summary: Get a list of videos with optional filtering by campaign and location
- *     tags: [Videos]
+ *     tags: 
+ *       - Videos
  *     security:
  *       - bearerAuth: []
  *     requestBody:
@@ -30,10 +31,10 @@ const videoController = require('../controllers/videoController');
  *               in_campaign:
  *                 type: string
  *                 enum: ["0", "1"]
- *                 description: "1" if filtering by campaign, "0" otherwise
+ *                 description: Indicates if filtering by campaign ("1" for yes, "0" for no)
  *               campaignId:
  *                 type: string
- *                 description: Campaign ID if in_campaign=1
+ *                 description: Campaign ID if in_campaign is "1"
  *               latitude:
  *                 type: number
  *                 format: float
