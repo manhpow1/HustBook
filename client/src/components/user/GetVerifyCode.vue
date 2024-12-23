@@ -140,7 +140,7 @@ const phoneNumber = computed({
 const { isLoading, error, successMessage } = storeToRefs(userStore);
 
 const errorMessage = computed(() => error.value || '');
-const isFormDisabled = computed(() => isLoading.value || !isFormValid.value);
+const isFormDisabled = computed(() => !isLoading.value || isFormValid.value);
 const attemptsRemaining = computed(() => state.attemptsRemaining);
 const cooldownTime = computed(() => state.cooldownTime);
 
