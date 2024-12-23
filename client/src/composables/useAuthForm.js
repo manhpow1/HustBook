@@ -1,4 +1,4 @@
-import { ref, computed, watch } from 'vue';
+import { ref, computed, watch, onBeforeUnmount } from 'vue';
 import { useAuth } from './useAuth';
 import { useAuthValidation } from './useAuthValidation';
 import { useErrorHandler } from './useErrorHandler';
@@ -8,37 +8,11 @@ import { useDebounce } from './useDebounce';
 
 export function useAuthForm(formType = 'login', options = {}) {
     const auth = useAuth();
-    const validation = useAuthValidation(formType);
+    const validation = useAuthValidation(); // initialize the validation fields
     const { handleError } = useErrorHandler();
     const router = useRouter();
     const { showToast } = useToast();
-    const { debounce } = useDebounce();
-
-    // Form configuration
-    const config = {
-        redirectOnSuccess: true,
-        clearOnSuccess: true,
-        showToasts: true,
-        validateOnChange: true,
-        ...options
-    };
-
-    // Enhanced form state
-    const state = ref({
-        isSubmitting: false,
-        isValidating: false,
-        rememberMe: false,
-        currentStep: formType,
-        cooldownTime: 0,
-        attemptsRemaining: 5,
-        lockoutEndTime: null,
-        lastError: null,
-        submitCount: 0,
-        hasUnsavedChanges: false
-    });
-
-    // Debounced validation to prevent excessive API calls
-    const debouncedValidate = debounce(async () => {
+    const debouncedValidate = useDebounce(async () => {
         if (config.validateOnChange) {
             state.value.isValidating = true;
             try {
@@ -49,57 +23,66 @@ export function useAuthForm(formType = 'login', options = {}) {
         }
     }, 300);
 
-    // Track form changes
-    const initialValues = ref(null);
-    const saveInitialValues = () => {
-        initialValues.value = JSON.stringify(validation.fields.value);
+    // -------------------------------------------------------------------------
+    // Config & initial form state
+    // -------------------------------------------------------------------------
+    const config = {
+        redirectOnSuccess: true,
+        clearOnSuccess: true,
+        showToasts: true,
+        validateOnChange: true,
+        ...options,
     };
 
-    // Computed form state
-    const isLocked = computed(() => {
-        if (!state.value.lockoutEndTime) return false;
-        return Date.now() < state.value.lockoutEndTime;
+    // This composable expects multi-step (login -> verify -> complete-profile).
+    // The "fields" come from `validation.fields.value`.
+    const state = ref({
+        currentStep: formType,
+        isSubmitting: false,
+        isValidating: false,
+        rememberMe: false,
+
+        cooldownTime: 0,
+        attemptsRemaining: 5,
+        lockoutEndTime: null,
+
+        lastError: null,
+        submitCount: 0,
+        hasUnsavedChanges: false,
     });
 
-    const isFormBusy = computed(() =>
-        state.value.isSubmitting ||
-        state.value.isValidating ||
-        isLocked.value
-    );
 
-    const isFormValid = computed(() => {
-        const fields = validation.fields.value;
-        switch (state.value.currentStep) {
-            case 'login':
-                return !validation.hasErrors.value &&
-                    fields.phoneNumber?.trim() &&
-                    fields.password?.trim();
-            case 'verify':
-                return !validation.hasErrors.value &&
-                    fields.code.every(digit => /^\d$/.test(digit));
-            case 'signup':
-                return !validation.hasErrors.value &&
-                    fields.phoneNumber?.trim() &&
-                    fields.password?.trim() &&
-                    fields.confirmPassword?.trim();
-            case 'complete-profile':
-                return !validation.hasErrors.value &&
-                    fields.userName?.trim();
-            default:
-                return false;
-        }
-    });
+    // -------------------------------------------------------------------------
+    // Tracking initial & unsaved changes
+    // -------------------------------------------------------------------------
+    const initialValues = ref('');
+    function saveInitialValues() {
+        initialValues.value = JSON.stringify(validation.fields.value);
+    }
 
     const hasUnsavedChanges = computed(() => {
         if (!initialValues.value) return false;
         return initialValues.value !== JSON.stringify(validation.fields.value);
     });
 
-    // Format display values
+    // -------------------------------------------------------------------------
+    // Lockout logic
+    // -------------------------------------------------------------------------
+    const isLocked = computed(() => {
+        if (!state.value.lockoutEndTime) return false;
+        return Date.now() < state.value.lockoutEndTime;
+    });
+
+    // Are we busy?
+    const isFormBusy = computed(() =>
+        state.value.isSubmitting || state.value.isValidating || isLocked.value
+    );
+
+    // Format times for UI
     const formattedCooldownTime = computed(() => {
-        const time = state.value.cooldownTime;
-        const minutes = Math.floor(time / 60);
-        const seconds = time % 60;
+        const t = state.value.cooldownTime;
+        const minutes = Math.floor(t / 60);
+        const seconds = t % 60;
         return `${minutes}:${seconds.toString().padStart(2, '0')}`;
     });
 
@@ -111,34 +94,20 @@ export function useAuthForm(formType = 'login', options = {}) {
         return `${minutes}:${seconds.toString().padStart(2, '0')}`;
     });
 
-    // Rate limiting and lockout
-    const handleFailedAttempt = () => {
-        state.value.attemptsRemaining--;
-        state.value.submitCount++;
-
-        if (state.value.attemptsRemaining <= 0) {
-            state.value.lockoutEndTime = Date.now() + (5 * 60 * 1000); // 5 minutes
-            if (config.showToasts) {
-                showToast('Too many attempts. Please try again later.', 'error');
-            }
-            startTimer('lockout', 5 * 60 * 1000);
-        }
-    };
-
-    // Enhanced timer handling
+    // Timers
     const timers = ref({
         cooldown: null,
-        lockout: null
+        lockout: null,
     });
 
-    const startTimer = (type, duration) => {
+    function startTimer(type, duration) {
         if (timers.value[type]) {
             clearInterval(timers.value[type]);
         }
-
         const startTime = Date.now();
         const endTime = startTime + duration;
 
+        // If cooldown, set initial
         if (type === 'cooldown') {
             state.value.cooldownTime = Math.ceil(duration / 1000);
         }
@@ -161,10 +130,57 @@ export function useAuthForm(formType = 'login', options = {}) {
                 state.value.cooldownTime = Math.ceil(remaining / 1000);
             }
         }, 1000);
-    };
+    }
 
-    // Form Submission Handler with Error Recovery
-    const handleSubmit = async () => {
+    // -------------------------------------------------------------------------
+    // Step-based form validity
+    // -------------------------------------------------------------------------
+    const isFormValid = computed(() => {
+        // Quick reference to all fields
+        const { phoneNumber, password, code, confirmPassword, userName } =
+            validation.fields.value;
+
+        if (validation.hasErrors.value) return false;
+
+        switch (state.value.currentStep) {
+            case 'login':
+                return phoneNumber?.trim() && password?.trim();
+
+            case 'verify':
+                return Array.isArray(code) && code.every((digit) => /^\d$/.test(digit));
+
+            case 'signup':
+                return phoneNumber?.trim() && password?.trim() && confirmPassword?.trim();
+
+            case 'complete-profile':
+                return userName?.trim();
+
+            default:
+                return false;
+        }
+    });
+
+    // -------------------------------------------------------------------------
+    // Handle a failed attempt -> reduce attempts, possibly lock
+    // -------------------------------------------------------------------------
+    function handleFailedAttempt() {
+        state.value.attemptsRemaining -= 1;
+        state.value.submitCount += 1;
+
+        if (state.value.attemptsRemaining <= 0) {
+            state.value.lockoutEndTime = Date.now() + 5 * 60 * 1000; // 5 minutes
+            if (config.showToasts) {
+                showToast('Too many attempts. Please try again later.', 'error');
+            }
+            // Start a lockout timer
+            startTimer('lockout', 5 * 60 * 1000);
+        }
+    }
+
+    // -------------------------------------------------------------------------
+    // handleSubmit logic for each step
+    // -------------------------------------------------------------------------
+    async function handleSubmit() {
         if (!isFormValid.value || state.value.isSubmitting || isLocked.value) {
             return false;
         }
@@ -174,54 +190,58 @@ export function useAuthForm(formType = 'login', options = {}) {
 
         try {
             let success = false;
-            const fields = validation.fields.value;
+            const {
+                phoneNumber,
+                password,
+                code,
+                confirmPassword,
+                userName,
+            } = validation.fields.value;
 
             switch (state.value.currentStep) {
                 case 'login':
-                    success = await auth.login(
-                        fields.phoneNumber,
-                        fields.password,
-                        state.value.rememberMe
-                    );
+                    success = await auth.login(phoneNumber, password, state.value.rememberMe);
                     break;
 
                 case 'signup':
-                    success = await auth.register(
-                        fields.phoneNumber,
-                        fields.password
-                    );
+                    success = await auth.register(phoneNumber, password);
+                    // if success, move to verify step
                     if (success) {
                         state.value.currentStep = 'verify';
-                        startTimer('cooldown', 60 * 1000); // 1 minute cooldown
+                        // e.g. a short cooldown before re-sending code
+                        startTimer('cooldown', 60 * 1000);
                     }
                     break;
 
                 case 'verify':
-                    if (state.value.cooldownTime > 0) {
-                        if (config.showToasts) {
-                            showToast(`Please wait ${formattedCooldownTime.value} before retrying`, 'warning');
-                        }
+                    // If user tries again too soon, show message
+                    if (state.value.cooldownTime > 0 && config.showToasts) {
+                        showToast(
+                            `Please wait ${formattedCooldownTime.value} before retrying`,
+                            'warning'
+                        );
                         return false;
                     }
-                    success = await auth.verifyCode(
-                        fields.phoneNumber,
-                        validation.formatVerificationCode(fields.code)
-                    );
+                    // verification code is an array of digits
+                    const verificationCode = code.join('');
+                    success = await auth.verifyCode(phoneNumber, verificationCode);
+                    // if success, move to complete-profile
                     if (success) {
                         state.value.currentStep = 'complete-profile';
                     }
                     break;
 
                 case 'complete-profile':
-                    success = await auth.updateProfile({ userName: fields.userName });
+                    success = await auth.updateProfile({ userName });
                     break;
             }
 
             if (success) {
+                // On success, optionally clear + redirect
                 if (config.clearOnSuccess) {
                     validation.clearFields();
                 }
-                if (config.redirectOnSuccess) {
+                if (config.redirectOnSuccess && state.value.currentStep === 'login') {
                     router.push({ name: 'Home' });
                 }
                 saveInitialValues();
@@ -230,27 +250,31 @@ export function useAuthForm(formType = 'login', options = {}) {
                 handleFailedAttempt();
                 return false;
             }
-
-        } catch (error) {
-            state.value.lastError = error;
-            handleError(error);
+        } catch (err) {
+            state.value.lastError = err;
+            handleError(err);
             handleFailedAttempt();
             return false;
-
         } finally {
             state.value.isSubmitting = false;
         }
-    };
-
-    // Form validation watchers
-    if (config.validateOnChange) {
-        watch(() => validation.fields.value, () => {
-            debouncedValidate();
-            state.value.hasUnsavedChanges = hasUnsavedChanges.value;
-        }, { deep: true });
     }
 
-    // Handle browser navigation/refresh warnings
+    // -------------------------------------------------------------------------
+    // Watch for changes in `validation.fields.value`
+    // -------------------------------------------------------------------------
+    if (config.validateOnChange) {
+        watch(
+            () => validation.fields.value,
+            () => {
+                debouncedValidate();
+                state.value.hasUnsavedChanges = hasUnsavedChanges.value;
+            },
+            { deep: true }
+        );
+    }
+
+    // If user tries to close the browser tab with unsaved changes
     if (typeof window !== 'undefined') {
         window.addEventListener('beforeunload', (e) => {
             if (hasUnsavedChanges.value) {
@@ -260,38 +284,45 @@ export function useAuthForm(formType = 'login', options = {}) {
         });
     }
 
-    // Cleanup function
-    const cleanup = () => {
-        Object.values(timers.value).forEach(timer => {
+    // -------------------------------------------------------------------------
+    // Cleanup
+    // -------------------------------------------------------------------------
+    function cleanup() {
+        Object.values(timers.value).forEach((timer) => {
             if (timer) clearInterval(timer);
         });
-    };
+    }
 
-    // Initialize form
+    onBeforeUnmount(() => {
+        cleanup();
+    });
+
+    // -------------------------------------------------------------------------
+    // Initialize
+    // -------------------------------------------------------------------------
     saveInitialValues();
 
+    // -------------------------------------------------------------------------
+    // Return everything needed by components
+    // -------------------------------------------------------------------------
     return {
-        // Form state
+        // State
         state,
-        validation,
+        validation, // includes validation.fields, errors, etc.
+
+        // Computed
         isFormBusy,
         isFormValid,
-        hasUnsavedChanges,
         isLocked,
+        hasUnsavedChanges,
+        formattedCooldownTime,
+        formattedLockoutTime,
 
         // Methods
         handleSubmit,
-        cleanup,
-
-        // Timer methods
-        startTimer,
-
-        // Helpers
         handleFailedAttempt,
+        startTimer,
+        cleanup,
         saveInitialValues,
-
-        // Computed values
-        formattedCooldownTime,
-        formattedLockoutTime
     };
 }

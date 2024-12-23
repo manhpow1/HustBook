@@ -10,7 +10,7 @@ export default defineConfig({
   server: {
     port: 5173,
     headers: {
-      'Permissions-Policy': 'attribution-reporting=(), run-ad-auction=(), join-ad-interest-group=(), browsing-topics=(), private-state-token-redemption=(), private-state-token-issuance=()',
+      'Permissions-Policy': '',
       'Cross-Origin-Opener-Policy': 'same-origin',
       'Cross-Origin-Embedder-Policy': 'require-corp'
     }

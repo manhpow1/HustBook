@@ -20,9 +20,7 @@
         <div class="flex">
           <AlertCircleIcon class="h-5 w-5 text-yellow-400" />
           <div class="ml-3">
-            <h3 class="text-sm font-medium text-yellow-800">
-              Session Expiring Soon
-            </h3>
+            <h3 class="text-sm font-medium text-yellow-800">Session Expiring Soon</h3>
             <div class="mt-2 text-sm text-yellow-700">
               <p>Your session will expire soon. Please save your work and re-login.</p>
             </div>
@@ -37,7 +35,7 @@
           <div class="relative">
             <label for="phoneNumber" class="sr-only">Phone Number</label>
             <input v-model="phoneNumber" id="phoneNumber" name="phoneNumber" type="tel" autocomplete="tel" required
-              :disabled="isFormDisabled" @input="validatePhoneNumber"
+              :disabled="isFormDisabled"
               class="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-t-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
               :class="{ 'border-red-500': formErrors.phone }" placeholder="Phone number" />
             <transition name="fade">
@@ -52,7 +50,7 @@
             <label for="password" class="sr-only">Password</label>
             <div class="flex relative">
               <input v-model="password" :type="showPassword ? 'text' : 'password'" id="password" name="password"
-                autocomplete="current-password" required :disabled="isFormDisabled" @input="validatePassword"
+                autocomplete="current-password" required :disabled="isFormDisabled"
                 class="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-b-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm pr-10"
                 :class="{ 'border-red-500': formErrors.password }" placeholder="Password" />
               <button type="button" @click="togglePasswordVisibility"
@@ -119,140 +117,116 @@
 <script setup>
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue';
 import { useRouter } from 'vue-router';
-import { useUserStore } from '../../stores/userStore';
-import { LockIcon, LoaderIcon, CheckCircleIcon, AlertCircleIcon, EyeIcon, EyeOffIcon } from 'lucide-vue-next';
-import { useFormValidation } from '../../composables/useFormValidation';
-import { useToast } from '../../composables/useToast';
-import { useErrorHandler } from '../../composables/useErrorHandler';
 import { storeToRefs } from 'pinia';
-import { useAuthForm } from '../../composables/useAuthForm';
-import { useAuthValidation } from '../../composables/useAuthValidation';
 import Cookies from 'js-cookie';
+
+import {
+  LockIcon,
+  LoaderIcon,
+  CheckCircleIcon,
+  AlertCircleIcon,
+  EyeIcon,
+  EyeOffIcon
+} from 'lucide-vue-next';
+
+import { useUserStore } from '../../stores/userStore';
+import { useErrorHandler } from '../../composables/useErrorHandler';
+import { useToast } from '../../composables/useToast';
+import { useAuthForm } from '../../composables/useAuthForm';
 
 const router = useRouter();
 const userStore = useUserStore();
 const { handleError } = useErrorHandler();
 const { showToast } = useToast();
 
-// Form state management
 const {
-  phoneNumber,
-  password,
-  rememberMe,
-  showPassword,
-  remainingAttempts,
-  togglePasswordVisibility,
-  clearForm
-} = useAuthForm();
+  state,
+  validation,
+  isFormBusy,
+  isFormValid,
+  handleSubmit: authSubmit
+} = useAuthForm('login');
 
-// Form validation
-const {
-  validatePhoneNumber,
-  validatePassword,
-  isValidForm,
-  validationErrors
-} = useAuthValidation(phoneNumber, password);
-
-// Rate limiting state
-const loginAttempts = ref(0);
-const lockoutEndTime = ref(null);
-const isLockedOut = computed(() => {
-  if (!lockoutEndTime.value) return false;
-  return Date.now() < lockoutEndTime.value;
-});
-const lockoutTimeRemaining = computed(() => {
-  if (!isLockedOut.value) return 0;
-  return Math.ceil((lockoutEndTime.value - Date.now()) / 1000);
+// Computed fields with two-way binding
+const phoneNumber = computed({
+  get: () => validation.fields.value.phoneNumber,
+  set: (value) => validation.fields.value.phoneNumber = value
 });
 
-// Session management
+const password = computed({
+  get: () => validation.fields.value.password,
+  set: (value) => validation.fields.value.password = value
+});
+
+const rememberMe = computed({
+  get: () => state.value.rememberMe,
+  set: (value) => state.value.rememberMe = value
+});
+
+// UI State
+const showPassword = ref(false);
+const togglePasswordVisibility = () => showPassword.value = !showPassword.value;
+
+// Session timeout handling
 const sessionTimeout = ref(null);
 const showSessionWarning = ref(false);
 
-// Store references
+// Store refs
 const { isLoading, successMessage, error, isSessionExpired } = storeToRefs(userStore);
 
-// Reset rate limiting
-const resetRateLimiting = () => {
-  loginAttempts.value = 0;
-  lockoutEndTime.value = null;
-};
-
-// Handle login attempt rate limiting
-const handleLoginAttempt = () => {
-  loginAttempts.value++;
-  if (loginAttempts.value >= 5) {
-    lockoutEndTime.value = Date.now() + (5 * 60 * 1000); // 5 minutes lockout
-    showToast('Too many login attempts. Please try again later.', 'error');
-  }
-};
-
-// Session timeout warning
-const showSessionTimeoutWarning = () => {
-  showSessionWarning.value = true;
-  showToast('Your session will expire soon. Please re-login.', 'warning');
-};
-
-// Generate captcha token if needed
-const generateCaptchaToken = async () => {
-  // Implement captcha token generation logic here
-  return 'captcha-token';
-};
-
 // Computed properties
+const remainingAttempts = computed(() => state.value.attemptsRemaining);
+
 const loginButtonText = computed(() => {
   if (isLoading.value) return 'Signing in...';
-  if (isLockedOut.value) return `Try again in ${lockoutTimeRemaining.value}s`;
+  if (state.value.lockoutEndTime) {
+    const remaining = Math.ceil((state.value.lockoutEndTime - Date.now()) / 1000);
+    return `Try again in ${remaining}s`;
+  }
   return 'Sign in';
 });
 
-const isFormDisabled = computed(() => {
-  return isLoading.value || isLockedOut.value || !isValidForm.value;
-});
+const isFormDisabled = computed(() => 
+  isFormBusy.value || !isFormValid.value || isLoading.value
+);
 
 const loginSuccess = computed(() => successMessage.value !== '');
 
 const formErrors = computed(() => ({
-  phone: validationErrors.value.phone || error.value,
-  password: validationErrors.value.password,
-  session: isSessionExpired.value ? 'Your session has expired. Please login again.' : null
+  phone: validation.errors.value?.phone || error.value,
+  password: validation.errors.value?.password
 }));
 
-// Form submission handler
-const handleSubmit = async () => {
-  if (!isValidForm.value || isLockedOut.value) return;
-
+// Handle form submission
+async function handleSubmit() {
   try {
-    const success = await userStore.login(
-      phoneNumber.value,
-      password.value,
-      rememberMe.value,
-      remainingAttempts.value <= 2 ? await generateCaptchaToken() : null
-    );
-
+    const success = await authSubmit();
     if (success) {
-      resetRateLimiting();
-      clearForm();
       showToast('Login successful!', 'success');
-    } else {
-      handleLoginAttempt();
-      showToast(error.value || 'Login failed. Please try again.', 'error');
+      router.push({ name: 'Home' });
     }
   } catch (err) {
-    handleLoginAttempt();
     handleError(err);
     showToast('An unexpected error occurred. Please try again.', 'error');
   }
-};
+}
 
-// Watch for successful login to redirect
-watch(loginSuccess, (newVal) => {
-  if (newVal) {
-    setTimeout(() => {
-      router.push({ name: 'Home' });
-    }, 1500);
+function showSessionTimeoutWarning() {
+  showSessionWarning.value = true;
+  showToast('Your session will expire soon. Please re-login.', 'warning');
+}
+
+// Watch for successful login
+watch(
+  () => successMessage.value,
+  (val) => {
+    if (val) {
+      setTimeout(() => {
+        router.push({ name: 'Home' });
+      }, 1500);
+    }
   }
-});
+);
 
 // Lifecycle hooks
 onMounted(() => {
@@ -260,12 +234,12 @@ onMounted(() => {
     showToast('Your previous session has expired. Please login again.', 'warning');
   }
 
-  // Set up session timeout warning
+  // Check token expiration
   const token = Cookies.get('accessToken');
   if (token) {
-    const payload = JSON.parse(atob(token.split('.')[1]));
-    const expiryTime = payload.exp * 1000;
-    const warningTime = expiryTime - (5 * 60 * 1000); // 5 minutes before expiry
+    const payload = JSON.parse(atob(token.split('.')[1] || ''));
+    const expiryTime = payload.exp ? payload.exp * 1000 : 0;
+    const warningTime = expiryTime - 5 * 60 * 1000; // 5 min before expiry
 
     if (warningTime > Date.now()) {
       sessionTimeout.value = setTimeout(showSessionTimeoutWarning, warningTime - Date.now());
@@ -289,7 +263,6 @@ onUnmounted(() => {
   opacity: 0;
 }
 
-/* Ensure accessibility for focus states */
 button:focus {
   outline: none;
   box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.5);

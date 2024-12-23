@@ -3,20 +3,14 @@
     <main class="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <h1 class="text-3xl font-bold mb-6 text-gray-800">Welcome to HustBook</h1>
       <div v-if="userStore.isLoggedIn">
-        <!-- Lazy Loaded AddPost Component with Suspense -->
-        <Suspense>
-          <template #default>
-            <AddPost @post-created="handlePostCreated" />
-          </template>
-          <template #fallback>
-            <div class="animate-pulse">
-              <PostSkeleton />
-            </div>
-          </template>
-        </Suspense>
+        <!-- Directly render AddPost (no Suspense) -->
+        <AddPost @post-created="handlePostCreated" />
+
         <!-- Recent Posts Section -->
         <section class="mt-12" aria-labelledby="recent-posts-heading">
-          <h2 id="recent-posts-heading" class="text-2xl font-semibold mb-4 text-gray-800">Recent Posts</h2>
+          <h2 id="recent-posts-heading" class="text-2xl font-semibold mb-4 text-gray-800">
+            Recent Posts
+          </h2>
           <div v-if="postStore.loading && postStore.posts.length === 0" class="space-y-6">
             <PostSkeleton v-for="i in 3" :key="i" />
           </div>
@@ -36,9 +30,12 @@
                         :alt="`${sanitizeText(post.userName)}'s avatar`" class="w-10 h-10 rounded-full mr-4"
                         loading="lazy" />
                       <div>
-                        <h3 class="font-semibold text-gray-800">{{ sanitizeText(post.userName) }}</h3>
-                        <time :datetime="post.created" class="text-sm text-gray-500">{{ formatDate(post.created)
-                          }}</time>
+                        <h3 class="font-semibold text-gray-800">
+                          {{ sanitizeText(post.userName) }}
+                        </h3>
+                        <time :datetime="post.created" class="text-sm text-gray-500">
+                          {{ formatDate(post.created) }}
+                        </time>
                       </div>
                     </div>
                   </template>
@@ -48,8 +45,10 @@
                   <div v-if="post.media && post.media.length > 0" class="mb-4 grid gap-2"
                     :class="mediaGridClass(post.media.length)">
                     <div v-for="(media, index) in post.media" :key="index" class="relative">
+                      <!-- Image -->
                       <img v-if="isImage(media)" :src="sanitizeUrl(media)" :alt="`Post image ${index + 1}`"
                         class="w-full h-48 object-cover rounded-lg" loading="lazy" />
+                      <!-- Video -->
                       <div v-else @click="goToWatchPage(post.id, index)"
                         class="relative w-full h-48 bg-black rounded-lg overflow-hidden cursor-pointer">
                         <video :src="sanitizeUrl(media)" class="w-full h-full object-cover" preload="metadata">
@@ -84,7 +83,9 @@
               </li>
             </TransitionGroup>
           </ul>
-          <p v-else class="text-gray-500">No posts to display yet. Be the first to create a post!</p>
+          <p v-else class="text-gray-500">
+            No posts to display yet. Be the first to create a post!
+          </p>
         </section>
         <!-- Load More Button -->
         <div v-if="postStore.hasMorePosts && !postStore.loading" class="mt-4 text-center">

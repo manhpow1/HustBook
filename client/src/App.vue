@@ -2,8 +2,6 @@
   <div id="app" class="font-sans min-h-screen flex flex-col">
     <!-- Global Error Boundary -->
     <ErrorBoundary component-name="App">
-      <!-- Suspense for Asynchronous Loading -->
-      <Suspense>
         <template #default>
           <Layout>
             <NewItemsNotification />
@@ -22,7 +20,6 @@
             <p class="ml-2 text-lg font-medium text-gray-700">Loading...</p>
           </div>
         </template>
-      </Suspense>
     </ErrorBoundary>
     <!-- Global Toast Notifications -->
     <Toast />
