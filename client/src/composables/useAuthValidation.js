@@ -71,8 +71,7 @@ export function useAuthValidation() {
     // Validate a single field
     // -------------------------------------------------------------------------
     const validateFormField = async (fieldName, value = fields.value[fieldName]) => {
-        if (!touchedFields.value.has(fieldName)) return true;
-
+        touchedFields.value.add(fieldName);
         const fieldRules = validationRules[fieldName] || [];
         for (const rule of fieldRules) {
             const errorMessage = rule(value, fields.value);
@@ -167,26 +166,18 @@ export function useAuthValidation() {
     // -------------------------------------------------------------------------
     watch(
         () => fields.value.phoneNumber,
-        (newVal, oldVal) => {
+        (newVal) => {
             if (visitedFields.value.has('phoneNumber')) {
                 debouncedValidateField('phoneNumber', newVal);
-                // Re-check dependent fields if needed
-                if (newVal !== oldVal && fields.value.password && visitedFields.value.has('password')) {
-                    debouncedValidateField('password', fields.value.password);
-                }
             }
         }
     );
 
     watch(
         () => fields.value.password,
-        (newVal, oldVal) => {
+        (newVal) => {
             if (visitedFields.value.has('password')) {
                 debouncedValidateField('password', newVal);
-                // If confirmPassword exists, validate it as well
-                if (newVal !== oldVal && fields.value.confirmPassword && visitedFields.value.has('confirmPassword')) {
-                    debouncedValidateField('confirmPassword', fields.value.confirmPassword);
-                }
             }
         }
     );

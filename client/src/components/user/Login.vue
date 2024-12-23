@@ -190,7 +190,12 @@ const loginButtonText = computed(() => {
 });
 
 const isFormDisabled = computed(() => {
-  return isLoading.value || Object.keys(errors.value).length > 0;
+  // Only disable if:
+  // 1. Form is busy/loading OR
+  // 2. Fields are touched AND validation fails
+  return isFormBusy.value ||
+    isLoading.value ||
+    (validation.isDirty.value && !isFormValid.value);
 });
 
 const loginSuccess = computed(() => successMessage.value !== '');
