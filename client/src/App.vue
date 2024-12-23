@@ -33,6 +33,7 @@
 import { ref, onMounted } from 'vue';
 import Layout from './components/layout/Layout.vue';
 import ErrorBoundary from './components/shared/ErrorBoundary.vue';
+import logger from './services/logging';
 import { Loader } from 'lucide-vue-next';
 import { useUserStore } from './stores/userStore';
 import { useHead } from '@unhead/vue';
@@ -41,12 +42,14 @@ import { useGlobalErrorHandler } from './composables/useGlobalErrorHandler';
 import Toast from './components/ui/Toast.vue';
 
 // Initialize Global Error Handling
+logger.debug('Initializing global error handling...');
 useGlobalErrorHandler();
 
 // Define components to cache with KeepAlive
 const cachedComponents = ref(['Home', 'Profile', 'Settings']);
 
 // Set up Head for SEO and Security
+logger.debug('Setting up meta tags...');
 useHead({
   meta: [
     { name: 'viewport', content: 'width=device-width, initial-scale=1' },
@@ -85,15 +88,19 @@ const userStore = useUserStore();
 
 // Initialize auth state
 onMounted(async () => {
+  logger.debug('App mounted. Initializing user state...');
   try {
     if (userStore.isLoggedIn) {
+      logger.debug('Fetching user profile...');
       await userStore.fetchUserProfile().catch((error) => {
-        console.error('Error fetching user profile:', error);
+        logger.error('Error fetching user profile:', error);
         userStore.clearAuthState();
       });
+    } else {
+      logger.debug('User not logged in.');
     }
   } catch (error) {
-    console.error('Error during app initialization:', error);
+    logger.error('Error during app initialization:', error);
   }
 });
 </script>

@@ -1,6 +1,7 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import { useUserStore } from '../stores/userStore';
 import { useCommentStore } from '../stores/commentStore';
+import logger from '../services/logging';
 
 const routes = [
     {
@@ -135,16 +136,20 @@ const router = createRouter({
 
 // Global navigation guard
 router.beforeEach(async (to, from, next) => {
+    logger.debug(`Navigating to: ${to.name}`);
     const requiresAuth = to.matched.some((record) => record.meta.requiresAuth);
     const userStore = useUserStore();
 
     if (requiresAuth) {
         if (!userStore.isLoggedIn) {
+            logger.debug('User not logged in, checking authentication...');
             await userStore.checkAuth();
         }
         if (userStore.isLoggedIn) {
+            logger.debug('User authenticated, proceeding to route...');
             next();
         } else {
+            logger.warn('User not authenticated, redirecting to login...');
             next({ name: 'Login', query: { redirect: to.fullPath } });
         }
     } else {
@@ -154,19 +159,12 @@ router.beforeEach(async (to, from, next) => {
 
 // Navigation guard for AddPost component
 router.beforeResolve((to, from, next) => {
-    if (from.name === 'AddPost' && to.name !== 'AddPost') {
-        const addPostComponent = from.matched[0].instances.default
-        if (addPostComponent && addPostComponent.handleRouteChange) {
-            addPostComponent.handleRouteChange(to, from, next)
-        } else {
-            next()
-        }
-    } else {
-        next()
-    }
-})
+    logger.debug(`Resolving navigation from ${from.name} to ${to.name}`);
+    next();
+});
 
-// Analytics tracking can be implemented here if needed
-router.afterEach(() => {});
+router.afterEach((to, from) => {
+    logger.debug(`Navigation completed to: ${to.name}`);
+});
 
 export default router
