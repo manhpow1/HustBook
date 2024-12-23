@@ -60,11 +60,6 @@ useHead({
         "img-src * data: blob:",
         "media-src * data: blob:"
       ].join('; ')
-    },
-    {
-      'http-equiv': 'Permissions-Policy',
-      content: [
-      ].join(', ')
     }
   ],
   link: [
