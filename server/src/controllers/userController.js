@@ -1,14 +1,14 @@
 const crypto = require('crypto');
 const userService = require('../services/userService');
 const userValidator = require('../validators/userValidator');
-const { 
-    comparePassword, 
-    generateJWT, 
-    generateRefreshToken, 
-    generateRandomCode, 
-    verifyRefreshToken, 
-    generateDeviceToken, 
-    generateTokenFamily 
+const {
+    comparePassword,
+    generateJWT,
+    generateRefreshToken,
+    generateRandomCode,
+    verifyRefreshToken,
+    generateDeviceToken,
+    generateTokenFamily
 } = require('../utils/authHelper');
 const redis = require('../utils/redis');
 const rateLimit = require('../middleware/rateLimiter');
@@ -95,7 +95,7 @@ class UserController {
             }
 
             const { refreshToken } = value;
-            
+
             // Verify refresh token
             const decoded = await verifyRefreshToken(refreshToken);
             if (!decoded) {
@@ -582,7 +582,7 @@ class UserController {
             if (code !== savedCode) {
                 // Increment failed attempts
                 const attempts = await redis.incrementVerifyAttempts(formattedPhoneNumber);
-                
+
                 // If too many failed attempts, clear the code
                 if (attempts >= 3) {
                     await Promise.all([
@@ -591,7 +591,7 @@ class UserController {
                     ]);
                     throw createError('1003', 'Too many failed attempts. Please request a new code.');
                 }
-                
+
                 throw createError('1004', 'Invalid verification code');
             }
 
@@ -615,7 +615,7 @@ class UserController {
 
             // For existing users, update verification status and return user info
             await userService.updateVerificationStatus(user.uid, true);
-            
+
             // Generate device token
             const deviceToken = generateDeviceToken();
             const tokenFamily = generateTokenFamily();
@@ -729,6 +729,51 @@ class UserController {
             sendResponse(res, '1000', { user: userInfo });
         } catch (error) {
             logger.error('Get User Info Error:', error);
+            next(error);
+        }
+    }
+
+    async forgotPassword(req, res, next) {
+        try {
+            // 1) Validate request body
+            const { error, value } = userValidator.validateForgotPassword(req.body);
+            if (error) {
+                const errorMessage = error.details.map(detail => detail.message).join(', ');
+                throw createError('1002', errorMessage);
+            }
+
+            const { phoneNumber, code, newPassword } = value;
+
+            // 2) Check if user exists
+            const user = await userService.getUserByphoneNumber(phoneNumber);
+            if (!user) {
+                throw createError('9995', 'User not found');
+            }
+
+            // 3) If no code/newPassword => generate code
+            if (!code || !newPassword) {
+                // Generate verification code
+                const verificationCode = generateRandomCode();
+
+                // Store verification code in your preferred storage
+                // e.g., Firestore in user doc, or Redis with an expiration, etc.
+                // await userService.storeVerificationCode(user.uid, verificationCode);
+
+                // Return the code in dev or send via SMS in production
+                sendResponse(res, '1000', {
+                    message: 'Verification code generated. Please check your SMS or console.',
+                    ...(process.env.NODE_ENV !== 'production' && { verificationCode })
+                });
+                return;
+            }
+
+            // 4) If code + newPassword => finalize password reset
+            await userService.resetPassword(phoneNumber, code, newPassword);
+
+            // 5) Send success response
+            sendResponse(res, '1000', { message: 'Password has been reset successfully.' });
+        } catch (error) {
+            logger.error('Forgot Password Error:', error);
             next(error);
         }
     }

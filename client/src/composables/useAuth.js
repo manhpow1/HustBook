@@ -144,6 +144,32 @@ export function useAuth() {
         }
     };
 
+    const forgotPassword = async (phoneNumber, code = null, newPassword = null) => {
+        try {
+            await validatePhoneNumber(phoneNumber);
+            
+            if (newPassword) {
+                await validatePassword(newPassword, phoneNumber);
+                await validateVerificationCode(code);
+            }
+
+            const success = await userStore.forgotPassword(phoneNumber, code, newPassword);
+            if (success) {
+                const message = newPassword 
+                    ? 'Password reset successfully!'
+                    : 'Verification code sent successfully!';
+                showToast(message, 'success');
+                return true;
+            }
+            
+            showToast(userStore.error || 'Operation failed', 'error');
+            return false;
+        } catch (error) {
+            handleError(error);
+            return false;
+        }
+    };
+
     const register = async (phoneNumber, password) => {
         try {
             await validatePhoneNumber(phoneNumber);
@@ -320,6 +346,7 @@ export function useAuth() {
         verifyCode,
         requestVerificationCode,
         updateProfile,
+        forgotPassword,
 
         // Guards
         requireAuth,

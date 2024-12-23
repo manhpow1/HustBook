@@ -12,6 +12,15 @@ export function useAuthForm(formType = 'login', options = {}) {
     const { handleError } = useErrorHandler();
     const router = useRouter();
     const { showToast } = useToast();
+
+    // Set initial validation fields
+    validation.fields.value = {
+        phoneNumber: '',
+        password: '',
+        confirmPassword: '',
+        userName: '',
+        code: Array(6).fill(''),
+    };
     const debouncedValidate = useDebounce(async () => {
         if (config.validateOnChange) {
             state.value.isValidating = true;
@@ -37,6 +46,7 @@ export function useAuthForm(formType = 'login', options = {}) {
     // This composable expects multi-step (login -> verify -> complete-profile).
     // The "fields" come from `validation.fields.value`.
     const state = ref({
+        fields: validation.fields.value,  // Reference validation fields directly
         currentStep: formType,
         isSubmitting: false,
         isValidating: false,
@@ -136,24 +146,22 @@ export function useAuthForm(formType = 'login', options = {}) {
     // Step-based form validity
     // -------------------------------------------------------------------------
     const isFormValid = computed(() => {
-        // Quick reference to all fields
-        const { phoneNumber, password, code, confirmPassword, userName } =
-            validation.fields.value;
+        if (!validation.fields.value || validation.hasErrors.value) return false;
 
-        if (validation.hasErrors.value) return false;
-
+        const fields = validation.fields.value;
+        
         switch (state.value.currentStep) {
             case 'login':
-                return phoneNumber?.trim() && password?.trim();
+                return Boolean(fields.phoneNumber?.trim() && fields.password?.trim());
 
             case 'verify':
-                return Array.isArray(code) && code.every((digit) => /^\d$/.test(digit));
+                return Array.isArray(fields.code) && fields.code.every((digit) => /^\d$/.test(digit));
 
             case 'signup':
-                return phoneNumber?.trim() && password?.trim() && confirmPassword?.trim();
+                return Boolean(fields.phoneNumber?.trim() && fields.password?.trim() && fields.confirmPassword?.trim());
 
             case 'complete-profile':
-                return userName?.trim();
+                return Boolean(fields.userName?.trim());
 
             default:
                 return false;

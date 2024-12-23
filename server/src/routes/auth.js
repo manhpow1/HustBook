@@ -165,6 +165,63 @@ router.post('/signup', userController.signup);
 
 /**
  * @swagger
+ * /forgot-password:
+ *   post:
+ *     tags:
+ *       - Authentication
+ *     summary: Request or finalize a password reset
+ *     description: 
+ *       1. To request a password reset code, provide only the phoneNumber in the body.  
+ *       2. To finalize the password reset, provide phoneNumber, code, and newPassword.
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               phoneNumber:
+ *                 type: string
+ *                 example: "+1234567890"
+ *               code:
+ *                 type: string
+ *                 description: "6-digit verification code sent to the user"
+ *                 example: "123456"
+ *               newPassword:
+ *                 type: string
+ *                 description: "New password meeting complexity requirements"
+ *                 example: "Str0ngP@ssw0rd"
+ *     responses:
+ *       '200':
+ *         description: Password reset code sent or successfully updated password
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 code:
+ *                   type: string
+ *                   example: "1000"
+ *                 message:
+ *                   type: string
+ *                   example: "Password has been reset successfully."
+ *                 verificationCode:
+ *                   type: string
+ *                   description: "Returned for demonstration purposes in non-production environments"
+ *                   example: "123456"
+ *       '400':
+ *         description: Bad request or validation error
+ *       '404':
+ *         description: User not found
+ *       '429':
+ *         description: Too many attempts, rate limited
+ *       '500':
+ *         description: Internal server error
+ */
+router.post('/forgot-password', userController.forgotPassword);
+
+/**
+ * @swagger
  * /auth/logout:
  *   post:
  *     summary: Logout the authenticated user

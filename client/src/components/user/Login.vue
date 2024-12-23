@@ -1,5 +1,5 @@
 <template>
-  <div class="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+  <div class="flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
     <div class="max-w-md w-full space-y-8">
       <!-- Header Section -->
       <div>
@@ -35,6 +35,7 @@
           <div class="relative">
             <label for="phoneNumber" class="sr-only">Phone Number</label>
             <input v-model="phoneNumber" id="phoneNumber" name="phoneNumber" type="tel" autocomplete="tel" required
+              @blur="validation.markFieldVisited('phoneNumber'); validation.validatePhoneNumber(phoneNumber)"
               :disabled="isFormDisabled"
               class="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-t-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
               :class="{ 'border-red-500': formErrors.phone }" placeholder="Phone number" />
@@ -50,6 +51,7 @@
             <label for="password" class="sr-only">Password</label>
             <div class="flex relative">
               <input v-model="password" :type="showPassword ? 'text' : 'password'" id="password" name="password"
+                @blur="validation.markFieldVisited('password'); validation.validatePassword(password)"
                 autocomplete="current-password" required :disabled="isFormDisabled"
                 class="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-b-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm pr-10"
                 :class="{ 'border-red-500': formErrors.password }" placeholder="Password" />
@@ -148,6 +150,7 @@ const {
 } = useAuthForm('login');
 
 // Computed fields with two-way binding
+// Form fields with two-way binding
 const phoneNumber = computed({
   get: () => validation.fields.value.phoneNumber,
   set: (value) => validation.fields.value.phoneNumber = value
@@ -159,8 +162,8 @@ const password = computed({
 });
 
 const rememberMe = computed({
-  get: () => state.value.rememberMe,
-  set: (value) => state.value.rememberMe = value
+  get: () => state.rememberMe,
+  set: (value) => state.rememberMe = value
 });
 
 // UI State
@@ -175,20 +178,25 @@ const showSessionWarning = ref(false);
 const { isLoading, successMessage, error, isSessionExpired } = storeToRefs(userStore);
 
 // Computed properties
-const remainingAttempts = computed(() => state.value.attemptsRemaining);
+const remainingAttempts = computed(() => state.attemptsRemaining);
 
 const loginButtonText = computed(() => {
   if (isLoading.value) return 'Signing in...';
-  if (state.value.lockoutEndTime) {
-    const remaining = Math.ceil((state.value.lockoutEndTime - Date.now()) / 1000);
+  if (state.lockoutEndTime) {
+    const remaining = Math.ceil((state.lockoutEndTime - Date.now()) / 1000);
     return `Try again in ${remaining}s`;
   }
   return 'Sign in';
 });
 
-const isFormDisabled = computed(() => 
-  isFormBusy.value || !isFormValid.value || isLoading.value
-);
+const isFormDisabled = computed(() => {
+  // Only disable if:
+  // 1. Form is busy/loading OR
+  // 2. Fields are touched AND validation fails
+  return isFormBusy.value ||
+    isLoading.value ||
+    (validation.isDirty.value && !isFormValid.value);
+});
 
 const loginSuccess = computed(() => successMessage.value !== '');
 

@@ -661,6 +661,71 @@ class UserService {
         }
     }
 
+    async resetPassword(phoneNumber, code, newPassword) {
+        try {
+            // Get user by phone number
+            const user = await this.getUserByphoneNumber(phoneNumber);
+            if (!user) {
+                throw createError('9995', 'User not found');
+            }
+
+            // Validate password strength
+            if (!passwordStrength(newPassword)) {
+                throw createError('9997', 'New password does not meet security requirements');
+            }
+
+            // Verify the code
+            await this.verifyUserCode(user.uid, code);
+
+            // Hash and update password
+            const hashedPassword = await hashPassword(newPassword);
+            
+            await runTransaction(async (transaction) => {
+                const userRef = db.collection(collections.users).doc(user.uid);
+                const userDoc = await transaction.get(userRef);
+                const userData = userDoc.data();
+                const passwordHistory = userData.passwordHistory || [];
+
+                // Check password history
+                const isPasswordReused = await Promise.any(
+                    passwordHistory.map(async (hashedPwd) => comparePassword(newPassword, hashedPwd))
+                ).catch(() => false);
+
+                if (isPasswordReused) {
+                    throw createError('9992', 'Password has been used recently');
+                }
+
+                const updatedHistory = [hashedPassword, ...passwordHistory].slice(0, PASSWORD_HISTORY_SIZE);
+
+                transaction.update(userRef, {
+                    password: hashedPassword,
+                    passwordHistory: updatedHistory,
+                    lastPasswordChange: new Date().toISOString(),
+                    tokenVersion: (userData.tokenVersion || 0) + 1,
+                    updatedAt: new Date().toISOString(),
+                    // Clear verification data
+                    verificationCode: null,
+                    verificationCodeTimestamp: null,
+                    verificationCodeExpiration: null,
+                    verificationAttempts: null
+                });
+
+                // Log password reset
+                await AuditLogModel.logAction(user.uid, null, 'password_reset', {
+                    timestamp: new Date().toISOString()
+                });
+            });
+
+            // Invalidate all sessions
+            await redis.blacklistUserTokens(user.uid);
+            
+            return true;
+        } catch (error) {
+            logger.error('Error resetting password:', error);
+            throw error;
+        }
+    }
+
     async getUserInfo(userId) {
         try {
             const user = await this.getUserById(userId);

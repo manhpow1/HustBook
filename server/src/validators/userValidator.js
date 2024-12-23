@@ -258,6 +258,19 @@ const checkVerifyCodeSchema = Joi.object({
         }),
 }).required();
 
+const forgotPasswordSchema = Joi.object({
+    phoneNumber: phoneNumberSchema,
+    code: Joi.string()
+        .length(6)
+        .pattern(/^\d+$/)
+        .optional()
+        .messages({
+            'string.length': 'Verification code must be 6 digits.',
+            'string.pattern.base': 'Verification code must only contain numbers.'
+        }),
+    newPassword: passwordComplexity.optional()
+}).required();
+
 /**
  * Enhanced input sanitization with additional security measures
  */
@@ -304,7 +317,7 @@ const validateSignup = (data) => {
     };
 
     // Validate schema
-    const validation = signupSchema.validate(sanitizedData, { 
+    const validation = signupSchema.validate(sanitizedData, {
         abortEarly: false,
         stripUnknown: true
     });
@@ -456,6 +469,16 @@ const validateGetUserInfo = (data) => {
     return getUserInfoSchema.validate(data, { abortEarly: false });
 };
 
+const validateForgotPassword = (data) => {
+    const sanitizedData = {
+        ...data,
+        phoneNumber: sanitizeInput(data.phoneNumber),
+        code: data.code,
+        newPassword: data.newPassword // Don't sanitize password
+    };
+    return forgotPasswordSchema.validate(sanitizedData, { abortEarly: false });
+};
+
 module.exports = {
     validateSignup,
     validateLogin,
@@ -464,6 +487,7 @@ module.exports = {
     validateSetBlock,
     validateRefreshToken,
     validateGetVerifyCode,
+    validateForgotPassword,
     validateCheckVerifyCode,
     validateSetUserInfo,
     validateGetUserInfo,

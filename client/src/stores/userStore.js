@@ -255,7 +255,6 @@ export const useUserStore = defineStore('user', () => {
                 uuid,
                 deviceId: deviceId.value,
                 deviceInfo: {
-                    platform: navigator.platform,
                     userAgent: navigator.userAgent,
                     language: navigator.language,
                     timezone: Intl.DateTimeFormat().resolvedOptions().timeZone
@@ -294,7 +293,6 @@ export const useUserStore = defineStore('user', () => {
                 password,
                 deviceId: deviceId.value,
                 deviceInfo: {
-                    platform: navigator.platform,
                     userAgent: navigator.userAgent,
                     language: navigator.language,
                     timezone: Intl.DateTimeFormat().resolvedOptions().timeZone
@@ -480,7 +478,7 @@ export const useUserStore = defineStore('user', () => {
                 formData.append('avatar', avatar);
             }
 
-            const response = await apiService.post('/api/auth/change_info_after_signup', formData, {
+            const response = await apiService.updateProfile(formData, {
                 headers: {
                     'Content-Type': 'multipart/form-data',
                     'Device-ID': deviceId.value
@@ -524,9 +522,9 @@ export const useUserStore = defineStore('user', () => {
                 return false;
             }
 
-            const response = await apiService.post('/api/auth/change_password', {
-                password: currentPassword,
-                new_password: newPassword,
+            const response = await apiService.changePassword({
+                currentPassword,
+                newPassword,
                 deviceId: deviceId.value
             });
 
@@ -565,6 +563,33 @@ export const useUserStore = defineStore('user', () => {
             return false;
         }
     }
+
+    const forgotPassword = async (phoneNumber, code = null, newPassword = null) => {
+        try {
+            isLoading.value = true;
+            error.value = null;
+
+            const response = await apiService.forgotPassword({
+                phoneNumber,
+                code,
+                newPassword
+            });
+
+            if (response.data?.code === '1000') {
+                successMessage.value = newPassword
+                    ? 'Password reset successfully!'
+                    : 'Verification code sent successfully!';
+                showToast('success', successMessage.value);
+                return true;
+            }
+            return false;
+        } catch (err) {
+            handleAuthError(err);
+            return false;
+        } finally {
+            isLoading.value = false;
+        }
+    };
 
     return {
         // State
@@ -606,5 +631,6 @@ export const useUserStore = defineStore('user', () => {
         refreshSession,
         startCooldown,
         fetchUserProfile,
+        forgotPassword,
     };
 });

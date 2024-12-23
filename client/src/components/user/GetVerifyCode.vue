@@ -1,5 +1,5 @@
 <template>
-    <div class="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+    <div class="flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
         <div class="max-w-md w-full space-y-8">
             <!-- Header -->
             <div>
@@ -40,7 +40,7 @@
                                 <Phone class="h-5 w-5 text-gray-400" aria-hidden="true" />
                             </div>
                             <input v-model="phoneNumber" type="tel" id="phoneNumber" name="phoneNumber" required
-                                :disabled="isFormDisabled" @input="validatePhoneNumber"
+                                :disabled="isFormDisabled"
                                 class="appearance-none rounded-md relative block w-full pl-10 pr-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
                                 :class="{ 'border-red-500': formErrors.phone }" placeholder="0123456789" />
                         </div>
@@ -102,46 +102,47 @@
 </template>
 
 <script setup>
-import { ref, computed, watch } from 'vue';
+import { computed, watch } from 'vue';
 import { ShieldCheck, Phone, Loader, CheckCircleIcon, AlertCircleIcon, Clock } from 'lucide-vue-next';
 import { useUserStore } from '../../stores/userStore';
-import { useFormValidation } from '../../composables/useFormValidation';
 import { useToast } from '../../composables/useToast';
 import { useErrorHandler } from '../../composables/useErrorHandler';
 import { useAuthForm } from '../../composables/useAuthForm';
-import { useAuthValidation } from '../../composables/useAuthValidation';
 import { storeToRefs } from 'pinia';
 
 const userStore = useUserStore();
 const { handleError } = useErrorHandler();
 const { showToast } = useToast();
 
-// Form state management
+// Form state and validation
 const {
-    phoneNumber,
-    clearForm,
-    attemptsRemaining,
-    resetAttempts,
-} = useAuthForm();
+    state,
+    validation,
+    isFormValid,
+    formattedCooldownTime,
+    handleSubmit: authSubmit
+} = useAuthForm('verify');
 
-// Form validation
-const {
-    validatePhoneNumber,
-    isValidForm,
-    validationErrors,
-} = useAuthValidation(phoneNumber);
+// Ensure validation fields are initialized
+if (!validation.fields.value) {
+    validation.fields.value = { phoneNumber: '' };
+}
 
-// Store state
-const { isLoading, error, successMessage, cooldownTime } = storeToRefs(userStore);
-
-// Computed properties
-const errorMessage = computed(() => error.value || '');
-
-const isFormDisabled = computed(() => {
-    return isLoading.value ||
-        cooldownTime.value > 0 ||
-        !isValidForm.value;
+const phoneNumber = computed({
+    get: () => validation.fields.value.phoneNumber || '',
+    set: (value) => {
+        validation.fields.value.phoneNumber = value;
+        validation.validatePhoneNumber(value);
+    }
 });
+
+// Store refs and computed
+const { isLoading, error, successMessage } = storeToRefs(userStore);
+
+const errorMessage = computed(() => error.value || '');
+const isFormDisabled = computed(() => isLoading.value || !isFormValid.value);
+const attemptsRemaining = computed(() => state.attemptsRemaining);
+const cooldownTime = computed(() => state.cooldownTime);
 
 const buttonText = computed(() => {
     if (isLoading.value) return 'Sending...';
@@ -149,27 +150,19 @@ const buttonText = computed(() => {
     return 'Get Verification Code';
 });
 
-const formattedCooldownTime = computed(() => {
-    const minutes = Math.floor(cooldownTime.value / 60);
-    const seconds = cooldownTime.value % 60;
-    return `${minutes}:${seconds.toString().padStart(2, '0')}`;
-});
-
 const formErrors = computed(() => ({
-    phone: validationErrors.value.phone || error.value
+    phone: validation.errors.value?.phone || error.value
 }));
 
 // Form submission
 const handleSubmit = async () => {
-    if (!isValidForm.value || cooldownTime.value > 0) {
+    if (!isFormValid.value || cooldownTime.value > 0) {
         return;
     }
 
     try {
-        const success = await userStore.getVerifyCode(phoneNumber.value);
+        const success = await authSubmit();
         if (success) {
-            resetAttempts();
-            clearForm();
             showToast('Verification code sent successfully!', 'success');
         } else {
             showToast(error.value || 'Failed to send verification code.', 'error');

@@ -43,6 +43,11 @@ const routes = [
         component: () => import('../components/user/Login.vue')
     },
     {
+        path: '/forgot-password',
+        name: 'ForgotPassword',
+        component: () => import('../components/user/ForgotPassword.vue')
+    },
+    {
         path: '/get-verify-code',
         name: 'GetVerifyCode',
         component: () => import('../components/user/GetVerifyCode.vue')
