@@ -2,24 +2,24 @@
   <div id="app" class="font-sans min-h-screen flex flex-col">
     <!-- Global Error Boundary -->
     <ErrorBoundary component-name="App">
-        <template #default>
-          <Layout>
-            <NewItemsNotification />
-            <!-- Router View with Keep-Alive for Specific Components -->
-            <router-view v-slot="{ Component }">
-              <KeepAlive :include="cachedComponents">
-                <component :is="Component" />
-              </KeepAlive>
-            </router-view>
-          </Layout>
-        </template>
-        <template #fallback>
-          <!-- Fallback Loading Indicator -->
-          <div class="loading flex items-center justify-center h-screen" role="status" aria-live="polite">
-            <Loader class="animate-spin h-10 w-10 text-indigo-600" aria-hidden="true" />
-            <p class="ml-2 text-lg font-medium text-gray-700">Loading...</p>
-          </div>
-        </template>
+      <template #default>
+        <Layout>
+          <NewItemsNotification />
+          <!-- Router View with Keep-Alive for Specific Components -->
+          <router-view v-slot="{ Component }">
+            <KeepAlive :include="cachedComponents">
+              <component :is="Component" />
+            </KeepAlive>
+          </router-view>
+        </Layout>
+      </template>
+      <template #fallback>
+        <!-- Fallback Loading Indicator -->
+        <div class="loading flex items-center justify-center h-screen" role="status" aria-live="polite">
+          <Loader class="animate-spin h-10 w-10 text-indigo-600" aria-hidden="true" />
+          <p class="ml-2 text-lg font-medium text-gray-700">Loading...</p>
+        </div>
+      </template>
     </ErrorBoundary>
     <!-- Global Toast Notifications -->
     <Toast />
@@ -64,12 +64,6 @@ useHead({
     {
       'http-equiv': 'Permissions-Policy',
       content: [
-        'attribution-reporting=()',
-        'run-ad-auction=()',
-        'join-ad-interest-group=()',
-        'browsing-topics=()',
-        'private-state-token-redemption=()',
-        'private-state-token-issuance=()'
       ].join(', ')
     }
   ],
