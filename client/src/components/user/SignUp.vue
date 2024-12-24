@@ -21,7 +21,7 @@
               <label for="phoneNumber" class="sr-only">Phone Number</label>
               <div class="relative">
                 <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <PhoneIcon class="h-5 w-5 text-gray-400" aria-hidden="true" />
+                  <Phone class="h-5 w-5 text-gray-400" aria-hidden="true" />
                 </div>
                 <input v-model="phoneNumber" id="phoneNumber" name="phoneNumber" type="tel" required
                   @input="validateFields" :disabled="isLoading"
@@ -35,7 +35,7 @@
               <label for="password" class="sr-only">Password</label>
               <div class="relative">
                 <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <LockIcon class="h-5 w-5 text-gray-400" aria-hidden="true" />
+                  <Lock class="h-5 w-5 text-gray-400" aria-hidden="true" />
                 </div>
                 <input v-model="password" id="password" name="password" type="password" required @input="validateFields"
                   :disabled="isLoading"
@@ -55,7 +55,7 @@
           <button type="submit" :disabled="isLoading || !isValid"
             class="group relative w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed">
             <span class="absolute left-0 inset-y-0 flex items-center pl-3">
-              <LockIcon class="h-5 w-5 text-indigo-500 group-hover:text-indigo-400" aria-hidden="true" />
+              <Lock class="h-5 w-5 text-indigo-500 group-hover:text-indigo-400" aria-hidden="true" />
             </span>
             <LoaderIcon v-if="isLoading" class="animate-spin -ml-1 mr-2 h-5 w-5 text-white" aria-hidden="true" />
             {{ isLoading ? 'Signing up...' : 'Sign Up' }}
@@ -99,7 +99,7 @@ import { useUserStore } from '../../stores/userStore';
 import { useToast } from '../../composables/useToast';
 import { useFormValidation } from '../../composables/useFormValidation';
 import { storeToRefs } from 'pinia';
-import { CheckCircleIcon, LockIcon, LoaderIcon, PhoneIcon } from 'lucide-vue-next';
+import { CheckCircleIcon, Lock, LoaderIcon, Phone } from 'lucide-vue-next';
 import VerifyCode from './VerifyCode.vue';
 
 const router = useRouter();
@@ -113,27 +113,36 @@ const currentStep = ref('signup');
 const phoneNumber = ref('');
 const password = ref('');
 const rememberMe = ref(false);
-const errors = ref({});
+const errors = ref({
+  phoneNumber: null,
+  password: null,
+});
 
 const validateFields = async () => {
-  errors.value = {
-    phoneNumber: await validateField('phoneNumber', phoneNumber.value, [
-      value => !value && 'Phone number is required',
-      value => !/^0\d{9}$/.test(value) && 'Phone number must be 10 digits and start with 0'
-    ]),
-    password: await validateField('password', password.value, [
-      value => !value && 'Password is required',
-      value => value.length < 6 && 'Password must be at least 6 characters',
-      value => value.length > 20 && 'Password must be less than 20 characters',
-      value => !/[A-Z]/.test(value) && 'Password must contain an uppercase letter',
-      value => !/[a-z]/.test(value) && 'Password must contain a lowercase letter',
-      value => !/\d/.test(value) && 'Password must contain a number'
-    ])
-  };
+  errors.value.phoneNumber = await validateField('phoneNumber', phoneNumber.value, [
+    (value) => !value && 'Phone number is required',
+    (value) => !/^0\d{9}$/.test(value) && 'Phone number must be 10 digits and start with 0',
+  ]);
+
+  errors.value.password = await validateField('password', password.value, [
+    (value) => !value && 'Password is required',
+    (value) => value.length < 6 && 'Password must be at least 6 characters',
+    (value) => value.length > 20 && 'Password must be less than 20 characters',
+    (value) => !/[A-Z]/.test(value) && 'Password must contain an uppercase letter',
+    (value) => !/[a-z]/.test(value) && 'Password must contain a lowercase letter',
+    (value) => !/\d/.test(value) && 'Password must contain a number',
+  ]);
+
+  console.log('Validation errors:', errors.value);
 };
 
 const isValid = computed(() => {
-  return phoneNumber.value && password.value && !errors.value.phoneNumber && !errors.value.password;
+  return (
+    phoneNumber.value &&
+    password.value &&
+    !errors.value.phoneNumber &&
+    !errors.value.password
+  );
 });
 
 const passwordStrength = computed(() => {
@@ -165,7 +174,10 @@ const passwordStrength = computed(() => {
 
 const handleSignup = async () => {
   await validateFields();
-  if (!isValid.value) return;
+  if (!isValid.value) {
+    console.log('Form is invalid:', errors.value);
+    return;
+  }
 
   try {
     const success = await userStore.register(phoneNumber.value, password.value);
@@ -174,6 +186,7 @@ const handleSignup = async () => {
       currentStep.value = 'verify';
     }
   } catch (error) {
+    console.error('Registration failed:', error);
     showToast(error.message || 'Registration failed', 'error');
   }
 };

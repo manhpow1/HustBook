@@ -78,7 +78,7 @@
             class="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
             :aria-busy="isLoading">
             <span class="absolute left-0 inset-y-0 flex items-center pl-3">
-              <LockIcon class="h-5 w-5 text-indigo-500 group-hover:text-indigo-400" aria-hidden="true" />
+              <Lock class="h-5 w-5 text-indigo-500 group-hover:text-indigo-400" aria-hidden="true" />
             </span>
             <LoaderIcon v-if="isLoading" class="animate-spin -ml-1 mr-2 h-5 w-5 text-white" aria-hidden="true" />
             <span>{{ loginButtonText }}</span>
@@ -101,7 +101,7 @@ import { ref, computed, watch, onMounted, onUnmounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { storeToRefs } from 'pinia';
 import Cookies from 'js-cookie';
-import { LockIcon, LoaderIcon, CheckCircleIcon, AlertCircleIcon, EyeIcon, EyeOffIcon } from 'lucide-vue-next';
+import { Lock, LoaderIcon, CheckCircleIcon, AlertCircleIcon, EyeIcon, EyeOffIcon } from 'lucide-vue-next';
 import { useUserStore } from '../../stores/userStore';
 import { useErrorHandler } from '../../composables/useErrorHandler';
 import { useToast } from '../../composables/useToast';
