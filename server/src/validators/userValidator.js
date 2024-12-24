@@ -19,29 +19,25 @@ const passwordStrength = (value) => {
     // Return early if basic validation fails
     if (!value || typeof value !== 'string') return false;
 
-    // Check for common patterns
-    const commonPatterns = [
-        /^[a-zA-Z]+[0-9]+$/, // All letters followed by all numbers
-        /^[0-9]+[a-zA-Z]+$/, // All numbers followed by all letters
-        /(.)\1{2,}/, // Character repeated more than twice
-        /^(?:abc|123|password|admin|user|login|welcome)/i, // Common password patterns
-        /(?:qwerty|asdfgh|zxcvbn)/i // Keyboard patterns
+    // Check for overly weak patterns
+    const weakPatterns = [
+        /^(?:password|admin|user|login|welcome|123456|abcdef)$/i, // Explicitly weak patterns
+        /^(.)\1{3,}$/, // Character repeated more than three times consecutively
     ];
 
-    if (commonPatterns.some(pattern => pattern.test(value))) {
+    if (weakPatterns.some(pattern => pattern.test(value))) {
         return false;
     }
 
     // Calculate strength score
     let strength = 0;
     const rules = {
-        length: value.length >= 8, // Updated to allow minimum length of 8
-        uppercase: /[A-Z]/.test(value),
-        lowercase: /[a-z]/.test(value),
-        numbers: /[0-9]/.test(value),
-        special: /[!@#$%^&*]/.test(value),
-        mixedChars: /(?=.*[a-z])(?=.*[A-Z])(?=.*[0-9])/.test(value), // Removed special character requirement from mixedChars
-        noRepeat: !/(.)\1{2,}/.test(value)
+        length: value.length >= 8, // Minimum length of 8 for flexibility
+        uppercase: /[A-Z]/.test(value), // Contains at least one uppercase letter
+        lowercase: /[a-z]/.test(value), // Contains at least one lowercase letter
+        numbers: /[0-9]/.test(value), // Contains at least one number
+        special: /[!@#$%^&*]/.test(value), // Contains at least one special character
+        noRepeat: !/(.)\1{3,}/.test(value), // No character repeated more than three times
     };
 
     // Calculate score based on rules
@@ -49,7 +45,8 @@ const passwordStrength = (value) => {
         if (rule) strength += 1;
     });
 
-    return strength >= 4; // Adjusted to require at least 4 rules to pass
+    // Require at least 3 rules to pass for a flexible password policy
+    return strength >= 3;
 };
 
 
