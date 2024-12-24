@@ -10,7 +10,7 @@ const router = express.Router();
 const multer = require('multer');
 const userController = require('../controllers/userController');
 const { authenticateToken } = require('../middleware/auth');
-const { verifyCodeLimiter, checkVerifyCodeLimiter } = require('../middleware/rateLimiter');
+const {verifyCodeLimiterMiddleware, checkVerifyCodeLimiterMiddleware} = require('../middleware/rateLimiter');
 const rateLimit = require('express-rate-limit');
 const storage = multer.diskStorage({
     destination: (req, file, cb) => {
@@ -282,7 +282,7 @@ router.post('/logout', authenticateToken, userController.logout);
  *       '400':
  *         description: Invalid phone number or request
  */
-router.post('/get_verify_code', verifyCodeLimiter, userController.getVerifyCode);
+router.post('/get_verify_code', verifyCodeLimiterMiddleware, userController.getVerifyCode);
 
 /**
  * @swagger
@@ -332,7 +332,7 @@ router.post('/get_verify_code', verifyCodeLimiter, userController.getVerifyCode)
  *       '400':
  *         description: Invalid verification code
  */
-router.post('/check_verify_code', checkVerifyCodeLimiter, userController.checkVerifyCode);
+router.post('/check_verify_code', checkVerifyCodeLimiterMiddleware, userController.checkVerifyCode);
 
 /**
  * @swagger
