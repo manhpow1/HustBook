@@ -9,7 +9,6 @@ client.xml
 server.txt
 repomix.config.json
 .repomixignore
-server/config/production.json
 server/logs
 /server/logs
 /server/logs
