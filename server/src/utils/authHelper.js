@@ -59,8 +59,8 @@ const generateJWT = (payload) => {
             {
                 expiresIn: TOKEN_EXPIRY,
                 algorithm: 'HS256',
-                audience: config.get('app.domain'),
-                issuer: config.get('app.name')
+                audience: config.has('app.domain') ? config.get('app.domain') : undefined,
+                issuer: config.has('app.name') ? config.get('app.name') : 'HustBook'
             }
         );
 
@@ -79,7 +79,7 @@ const generateJWT = (payload) => {
 const generateRefreshToken = (user) => {
     try {
         const tokenFamily = user.tokenFamily || generateTokenFamily();
-        
+
         const token = jwt.sign(
             {
                 userId: user.uid,
@@ -92,12 +92,10 @@ const generateRefreshToken = (user) => {
             {
                 expiresIn: REFRESH_TOKEN_EXPIRY,
                 algorithm: 'HS256',
-                audience: config.get('app.domain'),
-                issuer: config.get('app.name')
+                audience: config.has('app.domain') ? config.get('app.domain') : undefined,
+                issuer: config.has('app.name') ? config.get('app.name') : 'HustBook'
             }
         );
-
-        // Log refresh token generation
         logger.info(`Refresh token generated for user ${user.uid}`);
         return token;
     } catch (error) {
@@ -121,7 +119,7 @@ const blacklistToken = async (token, expiry) => {
         if (timeToExpiry > 0) {
             await cache.set(`blacklist:${token}`, '1', timeToExpiry);
         }
-        
+
         logger.info(`Token blacklisted for user ${decoded.uid}`);
     } catch (error) {
         logger.error('Error blacklisting token:', error);
@@ -171,10 +169,10 @@ const generateRandomCode = () => {
         const min = 100000;
         const max = 999999;
         const range = max - min + 1;
-        
+
         const randomBytes = crypto.randomBytes(4);
         const randomNumber = (randomBytes.readUInt32BE(0) % range) + min;
-        
+
         return randomNumber.toString().padStart(VERIFICATION_CODE_LENGTH, '0');
     } catch (error) {
         logger.error('Error generating verification code:', error);

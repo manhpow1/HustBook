@@ -12,5 +12,10 @@
     },
     "auth": {
         "saltRounds": 10
+    },
+    "app": {
+        "name": "HustBook",
+        "domain": "https://hust-book.vercel.app",
+        "apiUrl": "https://hustbook.onrender.com"
     }
 }
