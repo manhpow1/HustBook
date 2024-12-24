@@ -1,7 +1,7 @@
-const videoValidator = require('../validators/videoValidator');
-const videoService = require('../services/videoService');
-const { sendResponse } = require('../utils/responseHandler');
-const { createError } = require('../utils/customError');
+import videoValidator from '../validators/videoValidator';
+import videoService from '../services/videoService';
+import { sendResponse } from '../utils/responseHandler';
+import { createError } from '../utils/customError';
 
 class VideoController {
     async getListVideos(req, res, next) {
@@ -46,4 +46,4 @@ class VideoController {
     }
 }
 
-module.exports = new VideoController();
+export default new VideoController();

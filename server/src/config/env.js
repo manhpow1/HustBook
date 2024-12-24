@@ -1,22 +1,23 @@
-const config = require('config');
+import config from 'config';
 
-module.exports = {
-    firebase: {
-        projectId: config.get('firebase.projectId'),
-        privateKey: (config.get('firebase.privateKey')).replace(/\\n/g, '\n'),
-        clientEmail: config.get('firebase.clientEmail'),
-    },
-    jwt: {
-        secret: config.get('jwt.secret'),
-        refreshSecret: config.get('jwt.refreshSecret'),
-        expiration: config.get('jwt.expiration'),
-        refreshExpiration: config.get('jwt.refreshExpiration'),
-    },
-    auth: {
-        saltRounds: config.get('auth.saltRounds'),
-    },
-    server: {
-        port: config.get('server.port'),
-        corsOrigin: config.get('server.corsOrigin'),
-    },
+export const firebase = {
+    projectId: config.get('firebase.projectId'),
+    privateKey: (config.get('firebase.privateKey')).replace(/\\n/g, '\n'),
+    clientEmail: config.get('firebase.clientEmail'),
+};
+
+export const jwt = {
+    secret: config.get('jwt.secret'),
+    refreshSecret: config.get('jwt.refreshSecret'),
+    expiration: config.get('jwt.expiration'),
+    refreshExpiration: config.get('jwt.refreshExpiration'),
+};
+
+export const auth = {
+    saltRounds: config.get('auth.saltRounds'),
+};
+
+export const server = {
+    port: config.get('server.port'),
+    corsOrigin: config.get('server.corsOrigin'),
 };

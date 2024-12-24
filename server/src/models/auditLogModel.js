@@ -1,5 +1,5 @@
-const { initializeFirebase } = require('../config/firebase');
-const logger = require('../utils/logger');
+import { initializeFirebase } from '../config/firebase';
+import logger from '../utils/logger';
 
 class AuditLogModel {
     constructor(db) {
@@ -34,4 +34,4 @@ class AuditLogModel {
     }
 }
 
-module.exports = AuditLogModel;
+export default AuditLogModel;

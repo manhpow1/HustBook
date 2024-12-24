@@ -1,7 +1,7 @@
-const { errorCodes } = require('./customError');
-const logger = require('./logger');
+import { errorCodes } from './customError';
+import logger from './logger';
 
-const sendResponse = (res, code, data = null, customMessage = null) => {
+export const sendResponse = (res, code, data = null, customMessage = null) => {
     const error = errorCodes[code] || errorCodes['1005'];
     const response = {
         code,
@@ -12,7 +12,7 @@ const sendResponse = (res, code, data = null, customMessage = null) => {
     res.status(error.statusCode).json(response);
 };
 
-const handleError = (err, req, res, next) => {
+export const handleError = (err, req, res, next) => {
     let code = err.code || '9999';
     let statusCode = err.statusCode || 500;
 
@@ -29,5 +29,3 @@ const handleError = (err, req, res, next) => {
 
     res.status(statusCode).json({ code, message });
 };
-
-module.exports = { sendResponse, handleError };

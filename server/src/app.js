@@ -1,24 +1,24 @@
-const express = require('express');
-const cors = require('cors');
-const helmet = require('helmet');
-const rateLimit = require('express-rate-limit');
-const morgan = require('morgan');
-const swaggerUi = require('swagger-ui-express');
-const swaggerSpecs = require('./config/swagger.js');
+import express from 'express';
+import cors from 'cors';
+import helmet from 'helmet';
+import rateLimit from 'express-rate-limit';
+import morgan from 'morgan';
+import swaggerUi from 'swagger-ui-express';
+import swaggerSpecs from './config/swagger.js';
 
-const authRoutes = require('./routes/auth');
-const postRoutes = require('./routes/posts');
-const userRoutes = require('./routes/users');
-const friendRoutes = require('./routes/friends');
-const searchRoutes = require('./routes/search');
-const chatRoutes = require('./routes/chat');
-const videoRoutes = require('./routes/video');
-const notificationRoutes = require('./routes/notifications');
+import authRoutes from './routes/auth.js';
+import postRoutes from './routes/posts.js';
+import userRoutes from './routes/users.js';
+import friendRoutes from './routes/friends.js';
+import searchRoutes from './routes/search.js';
+import chatRoutes from './routes/chat.js';
+import videoRoutes from './routes/video.js';
+import notificationRoutes from './routes/notifications.js';
+import { handleError } from './utils/responseHandler.js';
+import logger from './utils/logger.js';
+
 const authLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 5 }); // Auth routes
 const apiLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 200 }); // General routes
-
-const { handleError } = require('./utils/responseHandler');
-const logger = require('./utils/logger');
 
 const app = express();
 
@@ -65,4 +65,4 @@ process.on('SIGTERM', () => {
     }, 30000); // 30 second grace period
 });
 
-module.exports = app;
+export default app;

@@ -1,5 +1,5 @@
-const redis = require('redis');
-const logger = require('./logger');
+import redis from 'redis';
+import logger from './logger';
 
 const client = redis.createClient({
     url: process.env.REDIS_URL || 'redis://localhost:6379',
@@ -103,18 +103,7 @@ const verificationCodeHelpers = {
         } catch (err) {
             logger.error('Redis clearVerifyAttempts error:', err);
         }
-    },
-
-    setVerificationAttempts: async (userId, attempts) => {
-        try {
-            const key = `verify_attempts:${userId}`;
-            await client.set(key, attempts.toString(), {
-                EX: 24 * 60 * 60 // Hết hạn sau 24 giờ
-            });
-        } catch (err) {
-            logger.error('Redis setVerificationAttempts error:', err);
-        }
-    },
+    }
 };
 
 // Constants
@@ -275,38 +264,13 @@ const deviceHelpers = {
     }
 };
 
-module.exports = {
-    // Constants
+export {
     LOCKOUT_DURATION,
     MAX_LOGIN_ATTEMPTS,
     IP_BLACKLIST_DURATION,
     client,
-    get: cache.get,
-    set: cache.set,
-    del: cache.del,
-    setVerificationCode: verificationCodeHelpers.setVerificationCode,
-    getVerificationCode: verificationCodeHelpers.getVerificationCode,
-    setVerificationAttempts: verificationCodeHelpers.setVerificationAttempts,
-    incrementVerifyAttempts: verificationCodeHelpers.incrementVerifyAttempts,
-    getVerifyAttempts: verificationCodeHelpers.getVerifyAttempts,
-    clearVerifyAttempts: verificationCodeHelpers.clearVerifyAttempts,
-    // Add login attempt management functions
-    setLoginAttempts: loginAttemptHelpers.setLoginAttempts,
-    getLoginAttempts: loginAttemptHelpers.getLoginAttempts,
-    incrementLoginAttempts: loginAttemptHelpers.incrementLoginAttempts,
-    clearLoginAttempts: loginAttemptHelpers.clearLoginAttempts,
-    setUserLockout: loginAttemptHelpers.setUserLockout,
-    getUserLockout: loginAttemptHelpers.getUserLockout,
-    // IP blacklist functions
-    isIPBlacklisted: loginAttemptHelpers.isIPBlacklisted,
-    blacklistIP: loginAttemptHelpers.blacklistIP,
-    removeIPFromBlacklist: loginAttemptHelpers.removeIPFromBlacklist,
-    getIPBlacklistExpiry: loginAttemptHelpers.getIPBlacklistExpiry,
-    // Helper functions
-    getLockoutDuration: loginAttemptHelpers.getLockoutDuration,
-    getMaxLoginAttempts: loginAttemptHelpers.getMaxLoginAttempts,
-    getUserDevices: deviceHelpers.getUserDevices,
-    setUserDevices: deviceHelpers.setUserDevices,
-    addUserDevice: deviceHelpers.addUserDevice,
-    removeUserDevice: deviceHelpers.removeUserDevice
+    cache,
+    verificationCodeHelpers,
+    loginAttemptHelpers,
+    deviceHelpers
 };

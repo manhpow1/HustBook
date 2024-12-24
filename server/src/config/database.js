@@ -1,6 +1,6 @@
-const admin = require('firebase-admin');
-const { initializeFirebase } = require('./firebase');
-const logger = require('../utils/logger');
+import admin from 'firebase-admin';
+import { initializeFirebase } from './firebase';
+import logger from '../utils/logger';
 
 let db;
 (async () => {
@@ -109,7 +109,7 @@ const serverTimestamp = () => {
     return admin.firestore.FieldValue.serverTimestamp();
 };
 
-module.exports = {
+export {
     collections,
     createDocument,
     getDocument,

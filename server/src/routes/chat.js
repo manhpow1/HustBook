@@ -4,10 +4,11 @@
  *   name: Chat
  *   description: Chat and conversation-related endpoints
  */
-const express = require('express');
+import express from 'express';
+import { authenticateToken } from '../middleware/auth.js';
+import chatController from '../controllers/chatController.js';
 const router = express.Router();
-const { authenticateToken } = require('../middleware/auth');
-const chatController = require('../controllers/chatController');
+
 /**
  * @swagger
  * /chat/conversations/{conversationId}/messages/{messageId}:
@@ -326,4 +327,4 @@ router.patch('/conversations/:conversationId/messages/read', authenticateToken, 
  */
 router.delete('/conversations/:conversationId', authenticateToken, chatController.deleteConversation);
 
-module.exports = router;
+export default router;

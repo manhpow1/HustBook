@@ -1,8 +1,8 @@
-const fs = require('fs').promises;
-const path = require('path');
-const sharp = require('sharp');
-const { createError } = require('./customError');
-const logger = require('./logger');
+import fs from 'fs/promises';
+import path from 'path';
+import sharp from 'sharp';
+import { createError } from './customError';
+import logger from './logger';
 
 // Image processing constants
 const MAX_IMAGE_WIDTH = 1024;
@@ -201,7 +201,7 @@ const sanitizeDeviceInfo = (deviceInfo) => {
     return sanitized;
 };
 
-module.exports = {
+export {
     formatPhoneNumber,
     generateAvatarUrl,
     handleAvatarUpload,

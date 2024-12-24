@@ -1,8 +1,8 @@
-const firebase = require('./firebase');
-const database = require('./database');
-const server = require('./server');
+import firebase from './firebase';
+import database from './database';
+import server from './server';
 
-module.exports = {
+export default {
     firebase,
     database,
     server,

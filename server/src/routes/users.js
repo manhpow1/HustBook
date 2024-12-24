@@ -4,12 +4,12 @@
  *   name: User
  *   description: User account and profile management endpoints
  */
-const express = require('express');
-const router = express.Router();
-const { authenticateToken } = require('../middleware/auth');
-const userController = require('../controllers/userController');
-const userStatusController = require('../controllers/userStatusController');
-const { setBlockLimiter } = require('../middleware/rateLimiter');
+import { Router } from 'express';
+import { authenticateToken } from '../middleware/auth';
+import userController from '../controllers/userController';
+import userStatusController from '../controllers/userStatusController';
+import { setBlockLimiter } from '../middleware/rateLimiter';
+const router = Router();
 /**
  * @swagger
  * /user/get_user_info/{id}:
@@ -283,4 +283,4 @@ router.put('/set_block', authenticateToken, setBlockLimiter, userController.setB
  */
 router.get('/status', authenticateToken, userStatusController.checkUserStatus);
 
-module.exports = router;
+export default router;

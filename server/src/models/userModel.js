@@ -1,8 +1,8 @@
-const { initializeFirebase } = require('../config/firebase');
-const { collections, arrayUnion, arrayRemove } = require('../config/database');
-const { createError } = require('../utils/customError');
-const logger = require('../utils/logger');
-const redis = require('../utils/redis');
+import { initializeFirebase } from '../config/firebase';
+import { collections, arrayUnion, arrayRemove } from '../config/database';
+import { createError } from '../utils/customError';
+import logger from '../utils/logger';
+import redis from '../utils/redis';
 
 class User {
     constructor(data) {
@@ -146,4 +146,4 @@ class User {
     }
 }
 
-module.exports = User;
+export default User;

@@ -1,10 +1,10 @@
-const jwt = require('jsonwebtoken');
-const { getDocument, collections } = require('../config/database');
-const { createError } = require('../utils/customError');
-const cache = require('../utils/redis');
-const config = require('config');
-const crypto = require('crypto');
-const logger = require('../utils/logger');
+import jwt from 'jsonwebtoken';
+import { getDocument, collections } from '../config/database';
+import { createError } from '../utils/customError';
+import cache from '../utils/redis';
+import config from 'config';
+import crypto from 'crypto';
+import logger from '../utils/logger';
 
 // Common security headers
 const securityHeaders = {
@@ -139,4 +139,4 @@ const requireAdmin = (req, res, next) => {
     next();
 };
 
-module.exports = { authenticateToken, requireAdmin };
+export { authenticateToken, requireAdmin };

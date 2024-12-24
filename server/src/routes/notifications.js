@@ -4,11 +4,11 @@
  *   name: Notifications
  *   description: Endpoints for managing notification settings and retrieving notifications
  */
-const express = require('express');
-const router = express.Router();
-const notificationController = require('../controllers/notificationController');
-const { authenticateToken } = require('../middleware/auth');
-const { pushSettingsLimiter } = require('../middleware/rateLimiter');
+import { Router } from 'express';
+import notificationController from '../controllers/notificationController';
+import { authenticateToken } from '../middleware/auth';
+import { pushSettingsLimiter } from '../middleware/rateLimiter';
+const router = Router();
 /**
  * @swagger
  * /notification/get_push_settings:
@@ -319,4 +319,4 @@ router.get('/get_notification', authenticateToken, notificationController.getNot
  */
 router.patch('/:notificationId/read', authenticateToken, notificationController.setReadNotification);
 
-module.exports = router;
+export default router;

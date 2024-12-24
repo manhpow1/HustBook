@@ -1,11 +1,11 @@
-const { v4: uuidv4 } = require('uuid');
-const { collections, getDocument, queryDocuments } = require('../config/database');
-const { createError } = require('../utils/customError');
-const { generateDeviceToken, hashPassword, comparePassword } = require('../utils/authHelper');
-const { passwordStrength } = require('../validators/userValidator');
-const redis = require('../utils/redis');
-const logger = require('../utils/logger');
-const User = require('../models/userModel');
+import { v4 as uuidv4 } from 'uuid';
+import { collections, getDocument, queryDocuments } from '../config/database';
+import { createError } from '../utils/customError';
+import { generateDeviceToken, hashPassword, comparePassword } from '../utils/authHelper';
+import { passwordStrength } from '../validators/userValidator';
+import redis from '../utils/redis';
+import logger from '../utils/logger';
+import User from '../models/userModel';
 
 // Constants
 const MAX_DEVICES_PER_USER = 5;
@@ -612,4 +612,4 @@ class UserService {
     }
 }
 
-module.exports = new UserService();
+export default new UserService();

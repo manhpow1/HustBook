@@ -4,12 +4,12 @@
  *   name: Posts
  *   description: Endpoints related to user posts
  */
-const express = require('express');
+import express from 'express';
+import rateLimit from 'express-rate-limit';
+import multer from 'multer';
+import postController from '../controllers/postController';
+import { authenticateToken } from '../middleware/auth';
 const router = express.Router();
-const rateLimit = require('express-rate-limit');
-const multer = require('multer');
-const postController = require('../controllers/postController');
-const { authenticateToken } = require('../middleware/auth');
 const upload = multer({
     dest: 'uploads/',
     limits: { fileSize: 10 * 1024 * 1024 },
@@ -404,4 +404,4 @@ router.get('/:id/comments', authenticateToken, postController.getComments);
  */
 router.get('/get_list_posts', authenticateToken, postController.getListPosts);
 
-module.exports = router;
+export default router;

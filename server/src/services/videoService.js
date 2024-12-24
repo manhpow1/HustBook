@@ -1,10 +1,10 @@
-const { collections } = require('../config/database');
-const { db } = require('../config/firebase');
-const { getBoundingBox, getDistance } = require('../utils/geoUtils');
-const { createError } = require('../utils/customError');
-const logger = require('../utils/logger');
+import { collections } from '../config/database';
+import { db } from '../config/firebase';
+import { getBoundingBox, getDistance } from '../utils/geoUtils';
+import { createError } from '../utils/customError';
+import logger from '../utils/logger';
 
-class videoService {
+class VideoService {
     async getListVideos({
         userId,
         inCampaign,
@@ -89,4 +89,4 @@ class videoService {
     }
 }
 
-module.exports = new videoService();
+export default new VideoService();

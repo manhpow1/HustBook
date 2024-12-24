@@ -24,4 +24,4 @@ class Post {
     }
 }
 
-module.exports = Post;
+export default Post;

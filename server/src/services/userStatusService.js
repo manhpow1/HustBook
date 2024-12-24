@@ -1,6 +1,6 @@
-const { createError } = require('../utils/customError');
-const notificationService = require('./notificationService');
-const userService = require('./userService');
+import { createError } from '../utils/customError';
+import notificationService from './notificationService';
+import userService from './userService';
 // If you have a message service, import it as well.
 // For now, we assume a method getUnreadMessagesCount exists in userService or a related service.
 
@@ -38,4 +38,4 @@ class userStatusService {
     }
 }
 
-module.exports = new userStatusService();
+export default new userStatusService();

@@ -1,7 +1,7 @@
 const EARTH_RADIUS_KM = 6371; // Earth's radius in kilometers
 
 // Calculate the bounding box for a given center point and radius
-exports.getBoundingBox = (lat, lon, radiusKm) => {
+export function getBoundingBox(lat, lon, radiusKm) {
     const latChange = (radiusKm / EARTH_RADIUS_KM) * (180 / Math.PI);
     const lonChange = (radiusKm / EARTH_RADIUS_KM) * (180 / Math.PI) / Math.cos(lat * Math.PI / 180);
 
@@ -11,10 +11,10 @@ exports.getBoundingBox = (lat, lon, radiusKm) => {
         minLon: lon - lonChange,
         maxLon: lon + lonChange
     };
-};
+}
 
 // Calculate distance between two points using Haversine formula
-exports.getDistance = (lat1, lon1, lat2, lon2) => {
+export function getDistance(lat1, lon1, lat2, lon2) {
     const dLat = (lat2 - lat1) * (Math.PI / 180);
     const dLon = (lon2 - lon1) * (Math.PI / 180);
     const a =
@@ -23,4 +23,4 @@ exports.getDistance = (lat1, lon1, lat2, lon2) => {
         Math.sin(dLon / 2) * Math.sin(dLon / 2);
     const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
     return EARTH_RADIUS_KM * c;
-};
+}

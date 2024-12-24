@@ -1,9 +1,9 @@
-const PushSettings = require('../models/pushSettings');
-const { createError } = require('../utils/customError');
-const logger = require('../utils/logger');
-const { db } = require('../config/firebase');
+import PushSettings from '../models/pushSettings';
+import { createError } from '../utils/customError';
+import logger from '../utils/logger';
+import { db } from '../config/firebase';
 
-class notificationService {
+class NotificationService {
     async checkNewItems(lastId, categoryId) {
         try {
             const querySnapshot = await db.collection('posts')
@@ -132,4 +132,4 @@ class notificationService {
     }
 }
 
-module.exports = new notificationService();
+export default new NotificationService();

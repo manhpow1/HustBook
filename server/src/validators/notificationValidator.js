@@ -1,4 +1,4 @@
-const Joi = require('joi');
+import Joi from 'joi';
 
 const checkNewItemSchema = Joi.object({
     lastId: Joi.string().required().label('lastId'),
@@ -47,7 +47,7 @@ const validateSetReadNotification = (data) => {
     return setReadNotificationSchema.validate(data, { abortEarly: false });
 };
 
-module.exports = {
+export {
     validateCheckNewItem,
     validateSetPushSettings,
     validateGetNotifications,

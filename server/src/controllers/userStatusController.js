@@ -1,7 +1,7 @@
-const { sendResponse } = require('../utils/responseHandler');
-const { createError } = require('../utils/customError');
-const { validateCheckUserStatus } = require('../validators/userStatusValidator');
-const userStatusService = require('../services/userStatusService');
+import { sendResponse } from '../utils/responseHandler.js';
+import { createError } from '../utils/customError.js';
+import { validateCheckUserStatus } from '../validators/userStatusValidator.js';
+import userStatusService from '../services/userStatusService.js';
 
 class UserStatusController {
     async checkUserStatus(req, res, next) {
@@ -24,4 +24,4 @@ class UserStatusController {
     }
 }
 
-module.exports = new UserStatusController();
+export default new UserStatusController();

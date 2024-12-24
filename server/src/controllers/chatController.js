@@ -1,22 +1,20 @@
-const { createError } = require('../utils/customError');
-const { sendResponse } = require('../utils/responseHandler');
-const chatService = require('../services/chatService');
-const chatValidator = require('../validators/chatValidator');
-const logger = require('../utils/logger');
+import { createError } from '../utils/customError';
+import { sendResponse } from '../utils/responseHandler';
+import chatService from '../services/chatService';
+import chatValidator from '../validators/chatValidator';
+import logger from '../utils/logger';
 
-class chatController {
+class ChatController {
     async getListConversation(req, res, next) {
         try {
-            // Validate query parameters
             const { error, value } = chatValidator.validateGetListConversation(req.query);
             if (error) {
-                // Combine all validation error messages
                 const messages = error.details.map(detail => detail.message).join(', ');
                 throw createError('1002', messages);
             }
 
             const { index, count } = value;
-            const userId = req.user.uid; // from authenticateToken middleware
+            const userId = req.user.uid;
 
             const { conversations, numNewMessage } = await chatService.getListConversation(userId, index, count);
 
@@ -43,7 +41,7 @@ class chatController {
             }
 
             const { partnerId, conversationId, index, count } = value;
-            const userId = req.user.uid; // from authenticateToken middleware
+            const userId = req.user.uid;
 
             const messagesData = await chatService.getConversation(userId, partnerId, conversationId, index, count);
 
@@ -60,16 +58,14 @@ class chatController {
 
     async setReadMessage(req, res, next) {
         try {
-            // Validate query parameters
             const { error, value } = chatValidator.validateSetReadMessage(req.query);
             if (error) {
-                // Combine all validation error messages
                 const messages = error.details.map(detail => detail.message).join(', ');
                 throw createError('1002', messages);
             }
 
             const { partnerId, conversationId } = value;
-            const userId = req.user.uid; // from authenticateToken middleware
+            const userId = req.user.uid;
 
             const updatedCount = await chatService.setReadMessage(userId, partnerId, conversationId);
 
@@ -82,16 +78,14 @@ class chatController {
 
     async deleteMessage(req, res, next) {
         try {
-            // Validate query parameters
             const { error, value } = chatValidator.validateDeleteMessage(req.query);
             if (error) {
-                // Combine all validation error messages
                 const messages = error.details.map(detail => detail.message).join(', ');
                 throw createError('1002', messages);
             }
 
             const { partnerId, conversationId } = value;
-            const userId = req.user.uid; // from authenticateToken middleware
+            const userId = req.user.uid;
             const { messageId } = req.params;
 
             if (!messageId) {
@@ -109,16 +103,14 @@ class chatController {
 
     async deleteConversation(req, res, next) {
         try {
-            // Validate query parameters
             const { error, value } = chatValidator.validateDeleteConversation(req.query);
             if (error) {
-                // Combine all validation error messages
                 const messages = error.details.map(detail => detail.message).join(', ');
                 throw createError('1002', messages);
             }
 
             const { partnerId, conversationId } = value;
-            const userId = req.user.uid; // from authenticateToken middleware
+            const userId = req.user.uid;
 
             const deletionResult = await chatService.deleteConversation(userId, partnerId, conversationId);
 
@@ -130,4 +122,4 @@ class chatController {
     }
 }
 
-module.exports = new chatController();
+export default new ChatController();

@@ -1,9 +1,9 @@
-const { collections, queryDocuments, createDocument} = require('../config/database');
-const { db } = require('../config/firebase');
-const { createError } = require('../utils/customError');
-const logger = require('../utils/logger');
+import { collections, queryDocuments, createDocument } from '../config/database';
+import { db } from '../config/firebase';
+import { createError } from '../utils/customError';
+import logger from '../utils/logger';
 
-class searchService {
+class SearchService {
     async searchPosts(userId, keyword, index, count) {
         try {
             const normalizedKeyword = keyword.trim().toLowerCase();
@@ -104,4 +104,4 @@ class searchService {
     }
 }
 
-module.exports = new searchService();
+export default new SearchService();

@@ -1,7 +1,7 @@
-const { sendResponse } = require('../utils/responseHandler');
-const searchValidator = require('../validators/searchValidator');
-const searchService = require('../services/searchService');
-const { createError } = require('../utils/customError');
+import { sendResponse } from '../utils/responseHandler';
+import searchValidator from '../validators/searchValidator';
+import searchService from '../services/searchService';
+import { createError } from '../utils/customError';
 
 class SearchController {
     async search(req, res, next) {
@@ -74,4 +74,4 @@ class SearchController {
     }
 }
 
-module.exports = new SearchController();
+export default new SearchController();

@@ -5,10 +5,10 @@
  *   description: Endpoints for managing friends, friend requests, and blocking
  */
 
-const express = require('express');
+import express from 'express';
+import { authenticateToken } from '../middleware/auth';
+import friendController from '../controllers/friendController';
 const router = express.Router();
-const { authenticateToken } = require('../middleware/auth');
-const friendController = require('../controllers/friendController');
 
 /**
  * @swagger
@@ -337,4 +337,4 @@ router.get('/get_list_suggested_friends', authenticateToken, friendController.ge
  */
 router.get('/get_list_blocks', authenticateToken, friendController.getListBlocks);
 
-module.exports = router;
+export default router;

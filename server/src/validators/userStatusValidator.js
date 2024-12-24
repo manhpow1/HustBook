@@ -1,4 +1,4 @@
-const Joi = require('joi');
+import Joi from 'joi';
 
 const checkUserStatusSchema = Joi.object({});
 
@@ -7,6 +7,6 @@ const validateCheckUserStatus = (data) => {
     return checkUserStatusSchema.validate(data, { abortEarly: false });
 };
 
-module.exports = {
+export {
     validateCheckUserStatus
 };

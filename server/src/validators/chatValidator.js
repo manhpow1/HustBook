@@ -1,4 +1,4 @@
-const Joi = require('joi');
+import Joi from 'joi';
 
 const getListConversationSchema = Joi.object({
     index: Joi.number().integer().min(0).default(0),
@@ -55,7 +55,7 @@ const validateDeleteConversation = (data) => {
     return deleteConversationSchema.validate(data, { abortEarly: false });
 };
 
-module.exports = {
+export {
     validateGetListConversation,
     validateGetConversation,
     validateSetReadMessage,

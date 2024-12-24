@@ -1,11 +1,11 @@
-const jwt = require('jsonwebtoken');
-const config = require('config');
-const { getDocument, collections } = require('../config/database');
-const cache = require('../utils/redis');
-const { createError } = require('../utils/customError');
-const logger = require('../utils/logger');
-const { RateLimiterRedis } = require('rate-limiter-flexible');
-const client = require('../utils/redis');
+import jwt from 'jsonwebtoken';
+import config from 'config';
+import { getDocument, collections } from '../config/database';
+import cache from '../utils/redis';
+import { createError } from '../utils/customError';
+import logger from '../utils/logger';
+import { RateLimiterRedis } from 'rate-limiter-flexible';
+import client from '../utils/redis';
 
 const rateLimiter = new RateLimiterRedis({
     storeClient: client,
@@ -88,4 +88,4 @@ async function authenticateSocket(socket, next) {
     }
 }
 
-module.exports = { authenticateSocket };
+export { authenticateSocket };

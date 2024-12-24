@@ -1,4 +1,4 @@
-const Joi = require('joi');
+import Joi from 'joi';
 
 const searchSchema = Joi.object({
     keyword: Joi.string().required().min(1),
@@ -28,7 +28,7 @@ const validateDeleteSavedSearch = (params, query) => {
     return deleteSavedSearchSchema.validate({ ...params, ...query });
 };
 
-module.exports = {
+export {
     validateSearch,
     validateGetSavedSearch,
     validateDeleteSavedSearch

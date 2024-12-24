@@ -5,13 +5,14 @@
  *   description: Authentication and user account management
  */
 
-const express = require('express');
+import express from 'express';
+import multer from 'multer';
+import userController from '../controllers/userController';
+import { authenticateToken } from '../middleware/auth';
+import { verifyCodeLimiterMiddleware, checkVerifyCodeLimiterMiddleware } from '../middleware/rateLimiter';
+import rateLimit from 'express-rate-limit';
+
 const router = express.Router();
-const multer = require('multer');
-const userController = require('../controllers/userController');
-const { authenticateToken } = require('../middleware/auth');
-const {verifyCodeLimiterMiddleware, checkVerifyCodeLimiterMiddleware} = require('../middleware/rateLimiter');
-const rateLimit = require('express-rate-limit');
 const storage = multer.diskStorage({
     destination: (req, file, cb) => {
         cb(null, 'uploads/avatars/');
@@ -501,4 +502,4 @@ router.post('/refresh-token', userController.refreshToken);
  */
 router.post('/change_password', authenticateToken, userController.changePassword);
 
-module.exports = router;
+export default router;

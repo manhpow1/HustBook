@@ -1,5 +1,5 @@
-const Joi = require('joi');
-const sanitizeHtml = require('sanitize-html');
+import Joi from 'joi';
+import sanitizeHtml from 'sanitize-html';
 
 /**
  * Password complexity requirements:
@@ -471,7 +471,7 @@ const validateForgotPassword = (data) => {
     return forgotPasswordSchema.validate(sanitizedData, { abortEarly: false });
 };
 
-module.exports = {
+export {
     validateSignup,
     validateLogin,
     validateChangeInfoAfterSignup,

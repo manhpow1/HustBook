@@ -1,9 +1,9 @@
-const postService = require('../services/postService');
-const postValidator = require('../validators/postValidator');
-const { sendResponse } = require('../utils/responseHandler');
-const { createError } = require('../utils/customError');
-const { collections} = require('../config/database');
-const { db } = require('../config/firebase');
+import postService from '../services/postService';
+import postValidator from '../validators/postValidator';
+import { sendResponse } from '../utils/responseHandler';
+import { createError } from '../utils/customError';
+import { collections } from '../config/database';
+import { db } from '../config/firebase';
 
 class PostController {
     async createPost(req, res, next) {
@@ -258,4 +258,4 @@ class PostController {
     }
 }
 
-module.exports = new PostController();
+export default new PostController();

@@ -1,26 +1,24 @@
-const {collections, arrayRemove } = require('../config/database');
-const { db } = require('../config/firebase');
-const { createError } = require('../utils/customError');
-const logger = require('../utils/logger');
-const Conversation = require('../models/Conversation');
-const Message = require('../models/Message');
-const userService = require('./userService');
-const admin = require('firebase-admin');
-const { getIO } = require('../socket');
+import { collections, arrayRemove } from '../config/database';
+import { db } from '../config/firebase';
+import { createError } from '../utils/customError';
+import logger from '../utils/logger';
+import Conversation from '../models/Conversation';
+import Message from '../models/Message';
+import userService from './userService';
+import admin from 'firebase-admin';
+import { getIO } from '../socket';
 
 class ChatService {
     async getConversationRoomName(userId, partnerId, conversationId) {
         if (conversationId) {
             return `conversation_${conversationId}`;
         }
-        // If conversationId not provided, find or create it based on participant IDs
         const participants = [userId, partnerId].sort();
         const convSnapshot = await db.collection(collections.conversations)
             .where('participants', '==', participants)
             .limit(1)
             .get();
         if (convSnapshot.empty) {
-            // handle no conversation found scenario (could create one, or throw)
             throw createError('9994', 'No data or end of list data');
         }
         const convId = convSnapshot.docs[0].id;
@@ -32,14 +30,12 @@ class ChatService {
             let convRef;
             let convId = conversationId;
             if (!convId) {
-                // Find convId if not provided
                 const participants = [userId, partnerId].sort();
                 const convSnapshot = await db.collection(collections.conversations)
                     .where('participants', '==', participants)
                     .limit(1)
                     .get();
                 if (convSnapshot.empty) {
-                    // Create a new conversation if needed
                     const newConvRef = await db.collection(collections.conversations).add({
                         participants,
                         updatedAt: new Date()
@@ -57,7 +53,7 @@ class ChatService {
                 text,
                 senderId: userId,
                 createdAt: new Date(),
-                unreadBy: [partnerId] // partner hasn't read yet
+                unreadBy: [partnerId]
             };
 
             await db.runTransaction(async (transaction) => {
@@ -78,10 +74,9 @@ class ChatService {
                 messageId: msgRef.id,
                 unread: '1',
                 created: new Date().toISOString(),
-                sender: { id: userId, userName: '', avatar: '' } // fetch sender info if needed
+                sender: { id: userId, userName: '', avatar: '' }
             };
 
-            // Emit real-time event to the conversation room
             const io = getIO();
             const roomName = await this.getConversationRoomName(userId, partnerId, convId);
             io.to(roomName).emit('onmessage', { message: createdMessage });
@@ -97,7 +92,6 @@ class ChatService {
         const mapping = new Map();
         if (!userIds.length) return mapping;
 
-        // Firestore 'in' queries limited to 10 items, handle chunking if needed
         const chunks = [];
         for (let i = 0; i < userIds.length; i += 10) {
             chunks.push(userIds.slice(i, i + 10));
@@ -117,7 +111,6 @@ class ChatService {
 
     async getListConversation(userId, index, count) {
         try {
-            // Query conversations where the user is a participant
             let query = db.collection('conversations')
                 .where('participants', 'array-contains', userId)
                 .orderBy('updatedAt', 'desc')
@@ -131,7 +124,6 @@ class ChatService {
                 return { conversations: [], numNewMessage: 0 };
             }
 
-            // Collect partner IDs to fetch partner info
             const partnerIds = [];
             for (const doc of conversationDocs) {
                 const data = doc.data();
@@ -139,12 +131,10 @@ class ChatService {
                 if (partnerId) partnerIds.push(partnerId);
             }
 
-            // Fetch partner user data in bulk
             const uniquePartnerIds = [...new Set(partnerIds)];
             let partnerMapping = new Map();
             if (uniquePartnerIds.length > 0) {
                 const chunks = [];
-                // Firestore allows max 10 elements in 'in' queries, so split
                 for (let i = 0; i < uniquePartnerIds.length; i += 10) {
                     chunks.push(uniquePartnerIds.slice(i, i + 10));
                 }
@@ -166,7 +156,6 @@ class ChatService {
                 const partnerId = data.participants.find(p => p !== userId);
                 const partnerData = partnerMapping.get(partnerId) || {};
 
-                // Extract last message info and determine if there's an unread message
                 let lastMessageData = { message: '', created: '', unread: false };
                 if (data.lastMessage) {
                     const { message, created, unreadBy = [] } = data.lastMessage;
@@ -176,7 +165,6 @@ class ChatService {
                     if (lastMessageData.unread) numNewMessage += 1;
                 }
 
-                // Create a Conversation model instance
                 const convo = new Conversation({
                     id: conversationId,
                     partnerId: partnerId,
@@ -204,7 +192,6 @@ class ChatService {
             let convRef;
             let partnerIdFinal;
 
-            // Identify conversation
             if (conversationId) {
                 const convDoc = await db.collection('conversations').doc(conversationId).get();
                 if (!convDoc.exists) {
@@ -223,7 +210,7 @@ class ChatService {
                     .limit(1)
                     .get();
                 if (convSnapshot.empty) {
-                    return []; // No conversation yet
+                    return [];
                 }
                 convRef = convSnapshot.docs[0].ref;
                 partnerIdFinal = partnerId;
@@ -231,11 +218,9 @@ class ChatService {
                 throw createError('1002', 'Either "partnerId" or "conversationId" must be provided');
             }
 
-            // Check if partner is blocked
             const isUserBlocked = await userService.isUserBlocked(userId, partnerIdFinal);
             const isBlocked = isUserBlocked ? '1' : '0';
 
-            // Fetch messages
             let messagesQuery = convRef.collection('messages')
                 .orderBy('createdAt', 'asc');
 
@@ -251,14 +236,12 @@ class ChatService {
                 return [];
             }
 
-            // Collect sender IDs
             const senderIds = new Set();
             messagesSnapshot.docs.forEach(doc => {
                 const data = doc.data();
                 senderIds.add(data.senderId);
             });
 
-            // Fetch sender info
             const senderIdList = Array.from(senderIds);
             const senderDataMap = new Map();
             if (senderIdList.length > 0) {
@@ -304,7 +287,6 @@ class ChatService {
                 }
             }
 
-            // Return read messages first, then unread messages
             return readMessages.concat(unreadMessages);
         } catch (error) {
             logger.error('Error in getConversation service:', error);
@@ -342,13 +324,12 @@ class ChatService {
                 throw createError('1002', 'Either "partnerId" or "conversationId" must be provided');
             }
 
-            // Find all messages unread by userId
             const messagesSnapshot = await convRef.collection('messages')
                 .where('unreadBy', 'array-contains', userId)
                 .get();
 
             if (messagesSnapshot.empty) {
-                return 0; // No unread messages
+                return 0;
             }
 
             const batchSize = 500;
@@ -412,7 +393,6 @@ class ChatService {
 
             await msgRef.delete();
 
-            // Emit real-time event to notify clients
             const io = getIO();
             const roomName = await this.getConversationRoomName(userId, partnerId, convId);
             io.to(roomName).emit('deletemessage', { messageId: messageId });
@@ -465,10 +445,6 @@ class ChatService {
                 await convRef.delete();
             }
 
-            // No direct event to emit for deleting a conversation just for one user,
-            // but if you wanted to notify others, you could do so here.
-            // e.g., io.to(roomName).emit('conversationdeleted', { ... });
-
             return true;
         } catch (error) {
             logger.error('Error in deleteConversation service:', error);
@@ -480,4 +456,4 @@ class ChatService {
     }
 }
 
-module.exports = new ChatService();
+export default new ChatService();

@@ -1,11 +1,11 @@
-const { Server } = require('socket.io');
-const logger = require('./utils/logger');
-const { authenticateSocket } = require('./middleware/socketAuth');
-const chatService = require('./services/chatService');
+import { Server } from 'socket.io';
+import logger from './utils/logger';
+import { authenticateSocket } from './middleware/socketAuth';
+import chatService from './services/chatService';
 
 let io = null;
 
-function initSocketIO(server) {
+export function initSocketIO(server) {
     try {
         io = new Server(server, {
             cors: {
@@ -165,7 +165,7 @@ function initSocketIO(server) {
     }
 }
 
-function closeSocketServer() {
+export function closeSocketServer() {
     if (io) {
         try {
             io.close(() => {
@@ -177,16 +177,10 @@ function closeSocketServer() {
     }
 }
 
-function getIO() {
+export function getIO() {
     if (!io) {
         logger.error('Socket.IO not initialized');
         throw new Error('Socket.IO not initialized');
     }
     return io;
 }
-
-module.exports = {
-    initSocketIO,
-    getIO,
-    closeSocketServer
-};

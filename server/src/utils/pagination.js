@@ -8,4 +8,4 @@ const paginateQuery = async (query, startAfterDoc = null, limit = 20) => {
     return snapshot;
 };
 
-module.exports = { paginateQuery };
+export default { paginateQuery };

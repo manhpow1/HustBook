@@ -1,7 +1,7 @@
-const friendValidator = require('../validators/friendValidator');
-const friendService = require('../services/friendService');
-const { sendResponse } = require('../utils/responseHandler');
-const { createError } = require('../utils/customError');
+import friendValidator from '../validators/friendValidator';
+import friendService from '../services/friendService';
+import { sendResponse } from '../utils/responseHandler';
+import { createError } from '../utils/customError';
 
 class FriendController {
     async getRequestedFriends(req, res, next) {
@@ -147,4 +147,4 @@ class FriendController {
     }
 }
 
-module.exports = new FriendController();
+export default new FriendController();

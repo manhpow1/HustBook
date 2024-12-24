@@ -1,8 +1,8 @@
-const { sendResponse } = require('../utils/responseHandler');
-const notificationValidator = require('../validators/notificationValidator');
-const notificationService = require('../services/notificationService');
-const { createError } = require('../utils/customError');
-const logger = require('../utils/logger');
+import { sendResponse } from '../utils/responseHandler';
+import notificationValidator from '../validators/notificationValidator';
+import notificationService from '../services/notificationService';
+import { createError } from '../utils/customError';
+import logger from '../utils/logger';
 
 class NotificationController {
     async checkNewItem(req, res, next) {
@@ -104,4 +104,4 @@ class NotificationController {
     }
 }
 
-module.exports = new NotificationController();
+export default new NotificationController();

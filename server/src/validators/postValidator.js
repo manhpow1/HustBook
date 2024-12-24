@@ -1,4 +1,4 @@
-const Joi = require('joi');
+import Joi from 'joi';
 
 const acceptableReasons = [
     'spam',
@@ -101,7 +101,7 @@ const validateGetListPosts = (data) => {
     return getListPostsSchema.validate(data, { convert: true });
 };
 
-module.exports = {
+export {
     validateCreatePost,
     validateUpdatePost,
     validateComment,

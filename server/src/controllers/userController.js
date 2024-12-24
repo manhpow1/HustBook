@@ -1,19 +1,11 @@
-const crypto = require('crypto');
-const userService = require('../services/userService');
-const userValidator = require('../validators/userValidator');
-const {
-    comparePassword,
-    generateJWT,
-    generateRefreshToken,
-    generateRandomCode,
-    verifyRefreshToken,
-    generateDeviceToken,
-    generateTokenFamily,
-} = require('../utils/authHelper');
-const { formatPhoneNumber, sanitizeDeviceInfo, handleAvatarUpload, handleCoverPhotoUpload } = require('../utils/helpers');
-const { sendResponse } = require('../utils/responseHandler');
-const { createError } = require('../utils/customError');
-const logger = require('../utils/logger');
+import crypto from 'crypto';
+import userService from '../services/userService';
+import userValidator from '../validators/userValidator';
+import { comparePassword, generateJWT, generateRefreshToken, generateRandomCode, verifyRefreshToken, generateDeviceToken, generateTokenFamily } from '../utils/authHelper';
+import { formatPhoneNumber, sanitizeDeviceInfo, handleAvatarUpload, handleCoverPhotoUpload } from '../utils/helpers';
+import { sendResponse } from '../utils/responseHandler';
+import { createError } from '../utils/customError';
+import logger from '../utils/logger';
 
 class UserController {
     constructor() {
@@ -586,4 +578,4 @@ class UserController {
     }
 }
 
-module.exports = new UserController();
+export default new UserController();

@@ -1,11 +1,11 @@
-const admin = require('firebase-admin');
-const logger = require('../utils/logger');
+import admin from 'firebase-admin';
+import logger from '../utils/logger';
 
 let db;
 let auth;
 let isInitialized = false;
 
-const initializeFirebase = async () => {
+export const initializeFirebase = async () => {
   if (isInitialized) {
     return { db, auth };
   }
@@ -57,4 +57,4 @@ const initializeFirebase = async () => {
   }
 };
 
-module.exports = { initializeFirebase, db, auth };
+export { db, auth };

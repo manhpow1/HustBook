@@ -1,12 +1,12 @@
-const Post = require('../models/Post');
-const admin = require('firebase-admin');
-const { getBoundingBox, getDistance } = require('../utils/geoUtils');
-const { collections, createDocument, getDocument, updateDocument} = require('../config/database');
-const { db } = require('../config/firebase');
-const { createError } = require('../utils/customError');
-const logger = require('../utils/logger');
+import Post from '../models/Post';
+import admin from 'firebase-admin';
+import { getBoundingBox, getDistance } from '../utils/geoUtils';
+import { collections, createDocument, getDocument, updateDocument } from '../config/database';
+import { db } from '../config/firebase';
+import { createError } from '../utils/customError';
+import logger from '../utils/logger';
 
-class postService {
+class PostService {
     async createPost(userId, content, images) {
         try {
             const postData = new Post({ userId, content, images }).toJSON();
@@ -310,4 +310,4 @@ class postService {
     }
 }
 
-module.exports = new postService();
+export default new PostService();

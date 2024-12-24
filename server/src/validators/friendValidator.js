@@ -1,4 +1,4 @@
-const Joi = require('joi');
+import Joi from 'joi';
 
 const getRequestedFriendsSchema = Joi.object({
     index: Joi.number().integer().min(0).required(),
@@ -54,7 +54,7 @@ const validateGetListBlocks = (data) => {
     return getListBlocksSchema.validate(data);
 };
 
-module.exports = {
+export {
     validateGetRequestedFriends,
     validateGetUserFriends,
     validateSetAcceptFriend,

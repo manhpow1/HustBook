@@ -1,9 +1,9 @@
-const { collections, queryDocuments, getDocument, } = require('../config/database');
-const { db } = require('../config/firebase');
-const { createError } = require('../utils/customError');
-const logger = require('../utils/logger');
+import { collections, queryDocuments, getDocument } from '../config/database';
+import { db } from '../config/firebase';
+import { createError } from '../utils/customError';
+import logger from '../utils/logger';
 
-class friendService {
+class FriendService {
     async getRequestedFriends(userId, index, count) {
         try {
             const friendRequests = await queryDocuments(collections.friendRequests, (ref) =>
@@ -290,4 +290,4 @@ class friendService {
     }
 }
 
-module.exports = new friendService();
+export default new FriendService();

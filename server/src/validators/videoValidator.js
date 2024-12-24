@@ -1,4 +1,4 @@
-const Joi = require('joi');
+import Joi from 'joi';
 
 const getListVideosSchema = Joi.object({
     userId: Joi.string().optional(),
@@ -11,6 +11,6 @@ const getListVideosSchema = Joi.object({
     count: Joi.number().integer().min(1).max(100).optional()
 }).and('latitude', 'longitude');
 
-exports.validateGetListVideos = (data) => {
+export const validateGetListVideos = (data) => {
     return getListVideosSchema.validate(data, { convert: true });
 };

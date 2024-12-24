@@ -1,7 +1,7 @@
-const { initializeFirebase } = require('../config/firebase');
-const logger = require('../utils/logger');
+import { initializeFirebase } from '../config/firebase';
+import logger from '../utils/logger';
 
-const DEFAULT_PUSH_SETTINGS = {
+export const DEFAULT_PUSH_SETTINGS = {
     like_comment: '1',
     from_friends: '1',
     requested_friend: '1',
@@ -12,7 +12,7 @@ const DEFAULT_PUSH_SETTINGS = {
     notification_on: '1',
 };
 
-class PushSettings {
+export class PushSettings {
     constructor(userId) {
         if (!userId) {
             throw new Error('User ID is required to manage push settings.');
@@ -64,6 +64,3 @@ class PushSettings {
         }
     }
 }
-
-module.exports = PushSettings;
-module.exports.DEFAULT_PUSH_SETTINGS = DEFAULT_PUSH_SETTINGS;

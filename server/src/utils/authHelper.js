@@ -1,21 +1,21 @@
-const jwt = require('jsonwebtoken');
-const bcrypt = require('bcrypt');
-const config = require('config');
-const { v4: uuidv4 } = require('uuid');
-const logger = require('./logger');
-const crypto = require('crypto');
-const cache = require('./redis');
+import jwt from 'jsonwebtoken';
+import bcrypt from 'bcrypt';
+import config from 'config';
+import { v4 as uuidv4 } from 'uuid';
+import logger from './logger';
+import crypto from 'crypto';
+import cache from './redis';
 
 const SALT_ROUNDS = 12; // Increased from default 10
-const TOKEN_EXPIRY = '15m'; // Shorter access token lifetime
-const REFRESH_TOKEN_EXPIRY = '7d';
+export const TOKEN_EXPIRY = '15m'; // Shorter access token lifetime
+export const REFRESH_TOKEN_EXPIRY = '7d';
 const VERIFICATION_CODE_LENGTH = 6;
-const MIN_PASSWORD_LENGTH = 6;
+export const MIN_PASSWORD_LENGTH = 8;
 
 /**
  * Hash a password with bcrypt
  */
-const hashPassword = async (password) => {
+export const hashPassword = async (password) => {
     try {
         const salt = await bcrypt.genSalt(SALT_ROUNDS);
         return bcrypt.hash(password, salt);
@@ -28,7 +28,7 @@ const hashPassword = async (password) => {
 /**
  * Compare a plain password with a hashed password
  */
-const comparePassword = async (plainPassword, hashedPassword) => {
+export const comparePassword = async (plainPassword, hashedPassword) => {
     try {
         return await bcrypt.compare(plainPassword, hashedPassword);
     } catch (error) {
@@ -40,14 +40,14 @@ const comparePassword = async (plainPassword, hashedPassword) => {
 /**
  * Generate a secure random string for various security purposes
  */
-const generateSecureToken = (length = 32) => {
+export const generateSecureToken = (length = 32) => {
     return crypto.randomBytes(length).toString('hex');
 };
 
 /**
  * Generate a JWT access token
  */
-const generateJWT = (payload) => {
+export const generateJWT = (payload) => {
     try {
         const token = jwt.sign(
             {
@@ -76,7 +76,7 @@ const generateJWT = (payload) => {
 /**
  * Generate a refresh token with family tracking
  */
-const generateRefreshToken = (user) => {
+export const generateRefreshToken = (user) => {
     try {
         const tokenFamily = user.tokenFamily || generateTokenFamily();
 
@@ -107,7 +107,7 @@ const generateRefreshToken = (user) => {
 /**
  * Add a token to the blacklist
  */
-const blacklistToken = async (token, expiry) => {
+export const blacklistToken = async (token, expiry) => {
     try {
         const decoded = jwt.decode(token);
         if (!decoded) {
@@ -130,7 +130,7 @@ const blacklistToken = async (token, expiry) => {
 /**
  * Check if a token is blacklisted
  */
-const isTokenBlacklisted = async (token) => {
+export const isTokenBlacklisted = async (token) => {
     try {
         return !!(await cache.get(`blacklist:${token}`));
     } catch (error) {
@@ -142,7 +142,7 @@ const isTokenBlacklisted = async (token) => {
 /**
  * Verify a refresh token
  */
-const verifyRefreshToken = async (token) => {
+export const verifyRefreshToken = async (token) => {
     try {
         // First check if token is blacklisted
         if (await isTokenBlacklisted(token)) {
@@ -163,7 +163,7 @@ const verifyRefreshToken = async (token) => {
 /**
  * Generate a cryptographically secure verification code
  */
-const generateRandomCode = () => {
+export const generateRandomCode = () => {
     try {
         // Generate a secure random number between 100000 and 999999
         const min = 100000;
@@ -183,21 +183,21 @@ const generateRandomCode = () => {
 /**
  * Generate a unique token family identifier
  */
-const generateTokenFamily = () => {
+export const generateTokenFamily = () => {
     return uuidv4();
 };
 
 /**
  * Generate a device token for user sessions
  */
-const generateDeviceToken = () => {
+export const generateDeviceToken = () => {
     return generateSecureToken(32);
 };
 
 /**
  * Validate password complexity
  */
-const validatePassword = (password) => {
+export const validatePassword = (password) => {
     const hasUpperCase = /[A-Z]/.test(password);
     const hasLowerCase = /[a-z]/.test(password);
     const hasNumbers = /\d/.test(password);
@@ -212,21 +212,4 @@ const validatePassword = (password) => {
             length: !isLongEnough
         }
     };
-};
-
-module.exports = {
-    hashPassword,
-    comparePassword,
-    generateJWT,
-    generateRefreshToken,
-    verifyRefreshToken,
-    generateRandomCode,
-    generateDeviceToken,
-    generateTokenFamily,
-    validatePassword,
-    blacklistToken,
-    isTokenBlacklisted,
-    TOKEN_EXPIRY,
-    REFRESH_TOKEN_EXPIRY,
-    MIN_PASSWORD_LENGTH
 };

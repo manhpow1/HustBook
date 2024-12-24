@@ -1,6 +1,7 @@
-const env = require('./env');
+import env from './env';
+import crypto from 'crypto';
 
-module.exports = {
+export default {
     port: env.server.port,
     env: env.nodeEnv,
     jwtSecret: env.jwt.secret,

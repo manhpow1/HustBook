@@ -4,11 +4,10 @@
  *   name: Search
  *   description: Search related endpoints
  */
-
-const express = require('express');
-const router = express.Router();
-const { authenticateToken } = require('../middleware/auth');
-const searchController = require('../controllers/searchController');
+import { Router } from 'express';
+import { authenticateToken } from '../middleware/auth';
+import searchController from '../controllers/searchController';
+const router = Router();
 
 /**
  * @swagger
@@ -174,4 +173,4 @@ router.get('/get_saved_search', authenticateToken, searchController.getSavedSear
  */
 router.delete('/del_saved_search/:searchId', authenticateToken, searchController.deleteSavedSearches);
 
-module.exports = router;
+export default router;

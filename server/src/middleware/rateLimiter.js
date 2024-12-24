@@ -1,6 +1,6 @@
-const { RateLimiterRedis } = require('rate-limiter-flexible');
-const { client: redisClient } = require('../utils/redis');
-const logger = require('../utils/logger');
+import { RateLimiterRedis } from 'rate-limiter-flexible';
+import { client as redisClient } from '../utils/redis';
+import logger from '../utils/logger';
 
 // Helper to create a RateLimiter with given "points" and "duration"
 const createLimiter = (points, duration, prefix) => {
@@ -64,8 +64,7 @@ const checkVerifyCodeLimiterMiddleware = createRateLimitMiddleware(
     'Too many verification attempts, please try again later.'
 );
 
-module.exports = {
-    // Direct Express middlewares (for routes)
+export {
     authLimiter,
     verifyCodeLimiterMiddleware,
     pushSettingsLimiter,
