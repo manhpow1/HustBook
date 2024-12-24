@@ -31,7 +31,7 @@
                         <label for="phoneNumber" class="sr-only">Phone Number</label>
                         <div class="flex relative">
                             <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                <Phone class="h-5 w-5 text-gray-400" aria-hidden="true" />
+                                <Phone class="h-5 w-5 text-gray-900" aria-hidden="true" />
                             </div>
                             <input v-model="phoneNumber" type="tel" id="phoneNumber" name="phoneNumber" required
                                 :disabled="isLoading || isLocked"
@@ -85,7 +85,6 @@
 
 <script setup>
 import { ref, computed } from 'vue';
-import { useRouter } from 'vue-router';
 import { ShieldCheck, Phone, Loader, CheckCircleIcon, AlertCircleIcon, Clock } from 'lucide-vue-next';
 import { useUserStore } from '../../stores/userStore';
 import { useToast } from '../../composables/useToast';

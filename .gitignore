@@ -14,3 +14,4 @@ server/logs
 /server/logs
 /server/logs
 .vercel
+*.xml
