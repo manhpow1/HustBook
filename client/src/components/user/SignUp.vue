@@ -24,11 +24,12 @@
                   <Phone class="h-5 w-5 text-gray-400" aria-hidden="true" />
                 </div>
                 <input v-model="phoneNumber" id="phoneNumber" name="phoneNumber" type="tel" required
-                  @input="validateFields" :disabled="isLoading"
+                  @input="handlePhoneInput" @blur="handlePhoneBlur" :disabled="isLoading"
                   class="appearance-none rounded-none relative block w-full px-3 py-2 pl-10 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-t-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
-                  :class="{ 'border-red-500': errors.phoneNumber }" placeholder="Phone number" />
+                  :class="{ 'border-red-500': touched.phoneNumber && errors.phoneNumber }" placeholder="Phone number" />
               </div>
-              <p v-if="errors.phoneNumber" class="text-sm text-red-600 mt-1">{{ errors.phoneNumber }}</p>
+              <p v-if="touched.phoneNumber && errors.phoneNumber" class="text-sm text-red-600 mt-1">{{
+                errors.phoneNumber }}</p>
             </div>
 
             <div>
@@ -37,12 +38,12 @@
                 <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                   <Lock class="h-5 w-5 text-gray-400" aria-hidden="true" />
                 </div>
-                <input v-model="password" id="password" name="password" type="password" required @input="validateFields"
-                  :disabled="isLoading"
+                <input v-model="password" id="password" name="password" type="password" required
+                  @input="handlePasswordInput" @blur="handlePasswordBlur" :disabled="isLoading"
                   class="appearance-none rounded-none relative block w-full px-3 py-2 pl-10 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-b-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
-                  :class="{ 'border-red-500': errors.password }" placeholder="Password" />
+                  :class="{ 'border-red-500': touched.password && errors.password }" placeholder="Password" />
               </div>
-              <p v-if="errors.password" class="text-sm text-red-600 mt-1">{{ errors.password }}</p>
+              <p v-if="touched.password && errors.password" class="text-sm text-red-600 mt-1">{{ errors.password }}</p>
             </div>
           </div>
 
@@ -66,8 +67,7 @@
           <p class="text-sm font-medium text-gray-700">Password strength: {{ passwordStrength.text }}</p>
           <div class="mt-1 h-2 w-full bg-gray-200 rounded-full">
             <div class="h-full rounded-full transition-all duration-300" :class="passwordStrength.colorClass"
-              :style="{ width: `${passwordStrength.score}%` }">
-            </div>
+              :style="{ width: `${passwordStrength.score}%` }"></div>
           </div>
         </div>
       </div>
@@ -93,112 +93,124 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue';
-import { useRouter } from 'vue-router';
-import { useUserStore } from '../../stores/userStore';
-import { useToast } from '../../composables/useToast';
-import { useFormValidation } from '../../composables/useFormValidation';
-import { storeToRefs } from 'pinia';
-import { CheckCircleIcon, Lock, LoaderIcon, Phone } from 'lucide-vue-next';
-import VerifyCode from './VerifyCode.vue';
+import { ref, computed } from 'vue'
+import { useRouter } from 'vue-router'
+import { useUserStore } from '../../stores/userStore'
+import { useToast } from '../../composables/useToast'
+import { useFormValidation } from '../../composables/useFormValidation'
+import { storeToRefs } from 'pinia'
+import { CheckCircleIcon, Lock, LoaderIcon, Phone } from 'lucide-vue-next'
+import VerifyCode from './VerifyCode.vue'
 
-const router = useRouter();
-const userStore = useUserStore();
-const { showToast } = useToast();
-const { validateField } = useFormValidation();
+const router = useRouter()
+const userStore = useUserStore()
+const { showToast } = useToast()
+const { errors, validateField, validators } = useFormValidation()
+const { isLoading } = storeToRefs(userStore)
 
-const { isLoading } = storeToRefs(userStore);
+const currentStep = ref('signup')
+const phoneNumber = ref('')
+const password = ref('')
+const rememberMe = ref(false)
 
-const currentStep = ref('signup');
-const phoneNumber = ref('');
-const password = ref('');
-const rememberMe = ref(false);
-const errors = ref({
-  phoneNumber: null,
-  password: null,
-});
+const touched = ref({
+  phoneNumber: false,
+  password: false,
+})
 
-const validateFields = async () => {
-  errors.value.phoneNumber = await validateField('phoneNumber', phoneNumber.value, [
-    (value) => !value && 'Phone number is required',
-    (value) => !/^0\d{9}$/.test(value) && 'Phone number must be 10 digits and start with 0',
-  ]);
+const handlePhoneInput = async () => {
+  console.log('Phone input:', phoneNumber.value)
+  if (touched.value.phoneNumber) {
+    await validateField('phoneNumber', phoneNumber.value, validators.phoneNumber)
+    console.log(errors.value)
+  }
+}
 
-  errors.value.password = await validateField('password', password.value, [
-    (value) => !value && 'Password is required',
-    (value) => value.length < 6 && 'Password must be at least 6 characters',
-    (value) => value.length > 20 && 'Password must be less than 20 characters',
-    (value) => !/[A-Z]/.test(value) && 'Password must contain an uppercase letter',
-    (value) => !/[a-z]/.test(value) && 'Password must contain a lowercase letter',
-    (value) => !/\d/.test(value) && 'Password must contain a number',
-  ]);
+const handlePhoneBlur = async () => {
+  touched.value.phoneNumber = true
+  console.log('Phone blur triggered')
+  await validateField('phoneNumber', phoneNumber.value, validators.phoneNumber)
+  console.log(errors.value)
+}
 
-  console.log('Validation errors:', errors.value);
-};
+const handlePasswordInput = async () => {
+  console.log('Password input:', password.value)
+  if (touched.value.password) {
+    await validateField('password', password.value, validators.password)
+    console.log(errors.value)
+  }
+}
+
+const handlePasswordBlur = async () => {
+  touched.value.password = true
+  console.log('Password blur triggered')
+  await validateField('password', password.value, validators.password)
+  console.log(errors.value)
+}
 
 const isValid = computed(() => {
-  return (
-    phoneNumber.value &&
-    password.value &&
-    !errors.value.phoneNumber &&
-    !errors.value.password
-  );
-});
-
-const passwordStrength = computed(() => {
-  if (!password.value) return { score: 0, text: '', colorClass: '' };
-
-  let score = 0;
-  if (password.value.length >= 6) score += 20;
-  if (/[A-Z]/.test(password.value)) score += 20;
-  if (/[a-z]/.test(password.value)) score += 20;
-  if (/\d/.test(password.value)) score += 20;
-  if (/[^A-Za-z0-9]/.test(password.value)) score += 20;
-
-  let text = 'Weak';
-  let colorClass = 'bg-red-500';
-
-  if (score > 80) {
-    text = 'Very Strong';
-    colorClass = 'bg-green-500';
-  } else if (score > 60) {
-    text = 'Strong';
-    colorClass = 'bg-blue-500';
-  } else if (score > 40) {
-    text = 'Medium';
-    colorClass = 'bg-yellow-500';
+  if (!phoneNumber.value || !password.value) {
+    return false
   }
-
-  return { score, text, colorClass };
-});
+  return Object.keys(errors.value).length === 0
+})
 
 const handleSignup = async () => {
-  await validateFields();
+  console.log('Signup triggered')
+  await validateField('phoneNumber', phoneNumber.value, validators.phoneNumber)
+  await validateField('password', password.value, validators.password)
+  console.log(errors.value)
+
   if (!isValid.value) {
-    console.log('Form is invalid:', errors.value);
-    return;
+    console.log('Form is invalid:', errors.value)
+    return
   }
 
   try {
-    const success = await userStore.register(phoneNumber.value, password.value);
+    const success = await userStore.register(phoneNumber.value, password.value)
     if (success) {
-      showToast('Registration successful', 'success');
-      currentStep.value = 'verify';
+      showToast('Registration successful', 'success')
+      currentStep.value = 'verify'
     }
   } catch (error) {
-    console.error('Registration failed:', error);
-    showToast(error.message || 'Registration failed', 'error');
+    console.error('Registration failed:', error)
+    showToast(error.message || 'Registration failed', 'error')
   }
-};
+}
 
 const handleVerificationSuccess = () => {
-  showToast('Verification successful', 'success');
-  currentStep.value = 'complete';
-};
+  showToast('Verification successful', 'success')
+  currentStep.value = 'complete'
+}
 
 const handleVerificationError = (error) => {
-  showToast(error || 'Verification failed', 'error');
-};
+  showToast(error || 'Verification failed', 'error')
+}
+
+const passwordStrength = computed(() => {
+  if (!password.value) return { score: 0, text: '', colorClass: '' }
+  let score = 0
+  if (password.value.length >= 6) score += 20
+  if (/[A-Z]/.test(password.value)) score += 20
+  if (/[a-z]/.test(password.value)) score += 20
+  if (/\d/.test(password.value)) score += 20
+  if (/[^A-Za-z0-9]/.test(password.value)) score += 20
+
+  let text = 'Weak'
+  let colorClass = 'bg-red-500'
+
+  if (score > 80) {
+    text = 'Very Strong'
+    colorClass = 'bg-green-500'
+  } else if (score > 60) {
+    text = 'Strong'
+    colorClass = 'bg-blue-500'
+  } else if (score > 40) {
+    text = 'Medium'
+    colorClass = 'bg-yellow-500'
+  }
+  return { score, text, colorClass }
+})
 </script>
 
 <style scoped>
