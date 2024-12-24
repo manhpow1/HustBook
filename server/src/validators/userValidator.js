@@ -56,7 +56,7 @@ const passwordStrength = (value) => {
 const passwordComplexity = Joi.string()
     .min(8)
     .max(30)
-    .pattern(new RegExp('^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[!@#$%^&*])[a-zA-Z\\d!@#$%^&*]+$'))
+    .pattern(new RegExp('^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)[a-zA-Z\\d]+$'))
     .custom((value, helpers) => {
         if (!passwordStrength(value)) {
             return helpers.message('Password is too weak or contains common patterns');
@@ -65,7 +65,7 @@ const passwordComplexity = Joi.string()
     })
     .required()
     .messages({
-        'string.pattern.base': 'Password must include uppercase, lowercase letters, numbers, and special characters (!@#$%^&*).',
+        'string.pattern.base': 'Password must include uppercase, lowercase letters, and numbers.',
         'string.min': 'Password must be at least 8 characters long.',
         'string.max': 'Password must be at most 30 characters long.',
         'any.required': 'Password is required.',
