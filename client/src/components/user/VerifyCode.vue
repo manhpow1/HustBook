@@ -40,12 +40,14 @@
                                 <Phone class="h-5 w-5 text-gray-400" aria-hidden="true" />
                             </div>
                             <input v-model="phoneNumber" type="tel" id="phoneNumber" name="phoneNumber" required
-                                :disabled="isFormDisabled" @input="validatePhoneNumber"
+                                :disabled="isFormDisabled" aria-describedby="phone-error"
                                 class="appearance-none rounded-md relative block w-full pl-10 pr-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-                                :class="{ 'border-red-500': formErrors.phone }" placeholder="0123456789" />
+                                :class="{ 'border-red-500': formErrors.phone }" placeholder="0123456789"
+                                :aria-invalid="!!formErrors.phone"
+                                :aria-errormessage="formErrors.phone ? 'phone-error' : undefined" />
                         </div>
                         <transition name="fade">
-                            <p v-if="formErrors.phone" class="mt-2 text-sm text-red-600" role="alert">
+                            <p v-if="formErrors.phone" id="phone-error" class="mt-2 text-sm text-red-600" role="alert">
                                 {{ formErrors.phone }}
                             </p>
                         </transition>
@@ -54,7 +56,7 @@
 
                 <!-- Verification Code Fields -->
                 <div class="space-y-2">
-                    <label class="block text-sm font-medium text-gray-700">
+                    <label for="verification-code" class="block text-sm font-medium text-gray-700">
                         Verification Code
                     </label>
                     <div class="flex justify-between gap-2">
@@ -62,21 +64,23 @@
                             <input v-model="codeDigits[index]" type="text" inputmode="numeric" pattern="[0-9]"
                                 maxlength="1" :disabled="isFormDisabled" @input="onCodeInput(index)"
                                 @keydown="onCodeKeydown($event, index)" @paste="onCodePaste($event)" ref="codeInputs"
+                                :id="`code-digit-${index}`" :name="`code-digit-${index}`"
                                 :aria-label="`Verification code digit ${index + 1}`"
+                                :aria-describedby="formErrors.code ? 'code-error' : undefined"
+                                :aria-invalid="!!formErrors.code"
                                 class="w-12 h-12 text-center text-2xl border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500 disabled:bg-gray-100"
                                 :class="{ 'border-red-500': formErrors.code }" />
                         </template>
                     </div>
                     <transition name="fade">
-                        <p v-if="formErrors.code" class="mt-2 text-sm text-red-600" role="alert">
+                        <p v-if="formErrors.code" id="code-error" class="mt-2 text-sm text-red-600" role="alert">
                             {{ formErrors.code }}
                         </p>
                     </transition>
                 </div>
 
                 <!-- Submit Button -->
-                <div>
-                    <button type="submit" :disabled="isFormDisabled"
+                <div><button type="submit" :disabled="isFormDisabled"
                         class="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
                         :aria-busy="isLoading">
                         <span class="absolute left-0 inset-y-0 flex items-center pl-3">
@@ -120,190 +124,156 @@
                     </div>
                 </transition>
             </form>
-
-            <!-- Back Button -->
-            <div class="text-center">
-                <router-link to="/login" class="text-sm font-medium text-indigo-600 hover:text-indigo-500">
-                    ← Back to login
-                </router-link>
-            </div>
         </div>
     </div>
 </template>
 
 <script setup>
-import { ref, computed, watch, onMounted } from 'vue';
+import { ref, computed, watch } from 'vue';
+import { ShieldCheck, AlertCircleIcon, CheckCircleIcon, Clock, Phone, Loader } from 'lucide-vue-next';
 import { useRouter } from 'vue-router';
 import { useUserStore } from '../../stores/userStore';
-import { ShieldCheck, Phone, Loader, CheckCircleIcon, AlertCircleIcon, Clock } from 'lucide-vue-next';
 import { useToast } from '../../composables/useToast';
-import { useErrorHandler } from '../../composables/useErrorHandler';
-import { storeToRefs } from 'pinia';
 
 const router = useRouter();
 const userStore = useUserStore();
-const { handleError } = useErrorHandler();
 const { showToast } = useToast();
 
-// Form state
 const phoneNumber = ref('');
-const attemptsRemaining = ref(3);
-const codeDigits = ref(['', '', '', '', '', '']);
+const codeDigits = ref(Array(6).fill(''));
 const codeInputs = ref([]);
-
-// Store state
-const { isLoading, error, successMessage, cooldownTime } = storeToRefs(userStore);
-
-// Validation
-const validationErrors = ref({
+const isLoading = ref(false);
+const successMessage = ref('');
+const errorMessage = ref('');
+const cooldownTime = ref(0);
+const attemptsRemaining = ref(3);
+const formErrors = ref({
     phone: '',
     code: ''
 });
 
-const validatePhoneNumber = () => {
-    const phoneRegex = /^[0-9]{10}$/;
-    if (!phoneNumber.value) {
-        validationErrors.value.phone = 'Phone number is required';
-    } else if (!phoneRegex.test(phoneNumber.value)) {
-        validationErrors.value.phone = 'Invalid phone number format';
-    } else {
-        validationErrors.value.phone = '';
-    }
-};
-
-const isValidForm = computed(() => {
-    return phoneNumber.value && !validationErrors.value.phone;
-});
-
 // Computed properties
-const errorMessage = computed(() => error.value || '');
-
-const isFormDisabled = computed(() => {
-    return isLoading.value || cooldownTime.value > 0 || !isValidForm.value;
-});
-
-const buttonText = computed(() => {
-    if (isLoading.value) return 'Verifying...';
-    return 'Verify Code';
-});
-
+const isFormDisabled = computed(() => isLoading.value);
+const buttonText = computed(() => isLoading.value ? 'Verifying...' : 'Verify Account');
 const formattedCooldownTime = computed(() => {
     const minutes = Math.floor(cooldownTime.value / 60);
     const seconds = cooldownTime.value % 60;
     return `${minutes}:${seconds.toString().padStart(2, '0')}`;
 });
 
-const formErrors = computed(() => ({
-    phone: validationErrors.value.phone || error.value,
-    code: validationErrors.value.code,
-}));
-
-// Code input handlers
-const onCodeInput = (index) => {
-    const val = codeDigits.value[index];
-    if (!val) return;
-
-    if (!/^\d$/.test(val)) {
-        codeDigits.value[index] = '';
-        return;
-    }
-
-    if (index < 5) {
-        codeInputs.value[index + 1]?.focus();
+// Methods
+const validatePhoneNumber = () => {
+    const phoneRegex = /^[0-9]{10}$/;
+    if (!phoneNumber.value) {
+        formErrors.value.phone = 'Phone number is required';
+    } else if (!phoneRegex.test(phoneNumber.value)) {
+        formErrors.value.phone = 'Please enter a valid 10-digit phone number';
+    } else {
+        formErrors.value.phone = '';
     }
 };
 
-const onCodeKeydown = (event, index) => {
-    if (event.key === 'Backspace') {
-        if (!codeDigits.value[index] && index > 0) {
-            codeDigits.value[index - 1] = '';
-            codeInputs.value[index - 1]?.focus();
-        }
+const onCodeInput = (index) => {
+    const value = codeDigits.value[index];
+    if (value.length > 1) {
+        codeDigits.value[index] = value.slice(0, 1);
     }
-    else if (event.key === 'ArrowLeft' && index > 0) {
-        codeInputs.value[index - 1]?.focus();
-    }
-    else if (event.key === 'ArrowRight' && index < 5) {
+    if (value && index < codeDigits.value.length - 1) {
         codeInputs.value[index + 1]?.focus();
+    }
+    validateCode();
+};
+
+const onCodeKeydown = (event, index) => {
+    if (event.key === 'Backspace' && !codeDigits.value[index] && index > 0) {
+        codeInputs.value[index - 1]?.focus();
     }
 };
 
 const onCodePaste = (event) => {
     event.preventDefault();
-    const pastedText = event.clipboardData?.getData('text') || '';
-    const numbers = pastedText.replace(/\D/g, '').split('').slice(0, 6);
-
+    const pastedData = event.clipboardData.getData('text');
+    const numbers = pastedData.replace(/\D/g, '').split('').slice(0, 6);
     numbers.forEach((num, index) => {
-        if (index < 6) {
+        if (index < codeDigits.value.length) {
             codeDigits.value[index] = num;
         }
     });
-
-    const lastIndex = Math.min(numbers.length - 1, 5);
-    codeInputs.value[lastIndex]?.focus();
+    validateCode();
 };
 
-const resetAttempts = () => {
-    attemptsRemaining.value = 3;
-};
-
-const clearForm = () => {
-    phoneNumber.value = '';
-    codeDigits.value = ['', '', '', '', '', ''];
-    validationErrors.value = { phone: '', code: '' };
-};
-
-// Form submission
-const handleSubmit = async () => {
+const validateCode = () => {
     const code = codeDigits.value.join('');
-    if (!isValidForm.value || code.length !== 6) {
-        showToast('Please fill in all fields correctly', 'error');
+    if (!code) {
+        formErrors.value.code = 'Verification code is required';
+    } else if (code.length !== 6) {
+        formErrors.value.code = 'Please enter all 6 digits';
+    } else if (!/^\d{6}$/.test(code)) {
+        formErrors.value.code = 'Code must contain only numbers';
+    } else {
+        formErrors.value.code = '';
+    }
+};
+
+const handleSubmit = async () => {
+    validatePhoneNumber();
+    validateCode();
+
+    if (formErrors.value.phone || formErrors.value.code) {
         return;
     }
 
     try {
-        const success = await userStore.verifyCode(phoneNumber.value, code);
-        if (success) {
-            resetAttempts();
-            clearForm();
-            showToast('Verification successful!', 'success');
-            setTimeout(() => {
-                router.push('/home');
-            }, 1500);
-        } else {
-            showToast(error.value || 'Verification failed. Please try again.', 'error');
+        isLoading.value = true;
+        errorMessage.value = '';
+
+        const code = codeDigits.value.join('');
+        await userStore.verifyCode(phoneNumber.value, code);
+        successMessage.value = 'Phone number verified successfully!';
+        setTimeout(() => {
+            router.push('/complete-profile');
+        }, 2000);
+    } catch (error) {
+        errorMessage.value = error.message || 'Failed to verify code. Please try again.';
+        attemptsRemaining.value--;
+
+        if (attemptsRemaining.value <= 0) {
+            startCooldown();
         }
-    } catch (err) {
-        handleError(err);
-        showToast('An unexpected error occurred. Please try again.', 'error');
+    } finally {
+        isLoading.value = false;
     }
 };
 
-// Resend code
+const startCooldown = () => {
+    cooldownTime.value = 300; // 5 minutes
+    const timer = setInterval(() => {
+        if (cooldownTime.value > 0) {
+            cooldownTime.value--;
+        } else {
+            clearInterval(timer);
+            attemptsRemaining.value = 3;
+        }
+    }, 1000);
+};
+
 const resendCode = async () => {
-    if (cooldownTime.value > 0) return;
-
     try {
-        const success = await userStore.getVerifyCode(phoneNumber.value);
-        if (success) {
-            codeDigits.value = ['', '', '', '', '', ''];
-            codeInputs.value[0]?.focus();
-            showToast('Verification code resent successfully!', 'success');
-        } else {
-            showToast(error.value || 'Failed to resend code.', 'error');
-        }
-    } catch (err) {
-        handleError(err);
-        showToast('An unexpected error occurred. Please try again.', 'error');
+        isLoading.value = true;
+        errorMessage.value = '';
+
+        await userStore.resendVerificationCode(phoneNumber.value);
+        showToast('Verification code resent successfully', 'success');
+        startCooldown();
+    } catch (error) {
+        errorMessage.value = error.message || 'Failed to resend code. Please try again.';
+    } finally {
+        isLoading.value = false;
     }
 };
-
-onMounted(() => {
-    codeInputs.value[0]?.focus();
-});
 
 // Watch for success/error messages
-watch([successMessage, error], ([newSuccess, newError]) => {
+watch([successMessage, errorMessage], ([newSuccess, newError]) => {
     if (newSuccess) showToast(newSuccess, 'success');
     if (newError) showToast(newError, 'error');
 });
