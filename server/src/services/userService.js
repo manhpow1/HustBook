@@ -1,11 +1,11 @@
 import { v4 as uuidv4 } from 'uuid';
-import { collections, getDocument, queryDocuments } from '../config/database';
-import { createError } from '../utils/customError';
-import { generateDeviceToken, hashPassword, comparePassword } from '../utils/authHelper';
-import { passwordStrength } from '../validators/userValidator';
-import redis from '../utils/redis';
-import logger from '../utils/logger';
-import User from '../models/userModel';
+import { collections, getDocument, queryDocuments } from '../config/database.js';
+import { createError } from '../utils/customError.js';
+import { generateDeviceToken, hashPassword, comparePassword } from '../utils/authHelper.js';
+import { passwordStrength } from '../validators/userValidator.js';
+import redis from '../utils/redis.js';
+import logger from '../utils/logger.js';
+import User from '../models/userModel.js';
 
 // Constants
 const MAX_DEVICES_PER_USER = 5;

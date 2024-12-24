@@ -1,7 +1,7 @@
-import videoValidator from '../validators/videoValidator';
-import videoService from '../services/videoService';
-import { sendResponse } from '../utils/responseHandler';
-import { createError } from '../utils/customError';
+import videoValidator from '../validators/videoValidator.js';
+import videoService from '../services/videoService.js';
+import { sendResponse } from '../utils/responseHandler.js';
+import { createError } from '../utils/customError.js';
 
 class VideoController {
     async getListVideos(req, res, next) {

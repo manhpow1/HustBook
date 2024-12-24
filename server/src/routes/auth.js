@@ -7,9 +7,9 @@
 
 import express from 'express';
 import multer from 'multer';
-import userController from '../controllers/userController';
-import { authenticateToken } from '../middleware/auth';
-import { verifyCodeLimiterMiddleware, checkVerifyCodeLimiterMiddleware } from '../middleware/rateLimiter';
+import userController from '../controllers/userController.js';
+import { authenticateToken } from '../middleware/auth.js';
+import { verifyCodeLimiterMiddleware, checkVerifyCodeLimiterMiddleware } from '../middleware/rateLimiter.js';
 import rateLimit from 'express-rate-limit';
 
 const router = express.Router();

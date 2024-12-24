@@ -1,8 +1,8 @@
-import { createError } from '../utils/customError';
-import { sendResponse } from '../utils/responseHandler';
-import chatService from '../services/chatService';
-import chatValidator from '../validators/chatValidator';
-import logger from '../utils/logger';
+import { createError } from '../utils/customError.js';
+import { sendResponse } from '../utils/responseHandler.js';
+import chatService from '../services/chatService.js';
+import chatValidator from '../validators/chatValidator.js';
+import logger from '../utils/logger.js';
 
 class ChatController {
     async getListConversation(req, res, next) {

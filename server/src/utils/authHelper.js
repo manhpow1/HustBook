@@ -2,9 +2,9 @@ import jwt from 'jsonwebtoken';
 import bcrypt from 'bcrypt';
 import config from 'config';
 import { v4 as uuidv4 } from 'uuid';
-import logger from './logger';
+import logger from './logger.js';
 import crypto from 'crypto';
-import cache from './redis';
+import cache from './redis.js';
 
 const SALT_ROUNDS = 12; // Increased from default 10
 export const TOKEN_EXPIRY = '15m'; // Shorter access token lifetime

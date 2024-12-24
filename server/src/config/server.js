@@ -1,4 +1,4 @@
-import env from './env';
+import env from './env.js';
 import crypto from 'crypto';
 
 export default {

@@ -1,6 +1,6 @@
-import { createError } from '../utils/customError';
-import notificationService from './notificationService';
-import userService from './userService';
+import { createError } from '../utils/customError.js';
+import notificationService from './notificationService.js';
+import userService from './userService.js';
 // If you have a message service, import it as well.
 // For now, we assume a method getUnreadMessagesCount exists in userService or a related service.
 

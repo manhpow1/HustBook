@@ -1,5 +1,5 @@
-import { errorCodes } from './customError';
-import logger from './logger';
+import { errorCodes } from './customError.js';
+import logger from './logger.js';
 
 export const sendResponse = (res, code, data = null, customMessage = null) => {
     const error = errorCodes[code] || errorCodes['1005'];

@@ -5,8 +5,8 @@
  *   description: Search related endpoints
  */
 import { Router } from 'express';
-import { authenticateToken } from '../middleware/auth';
-import searchController from '../controllers/searchController';
+import { authenticateToken } from '../middleware/auth.js';
+import searchController from '../controllers/searchController.js';
 const router = Router();
 
 /**

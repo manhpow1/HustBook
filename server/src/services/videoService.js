@@ -1,8 +1,8 @@
-import { collections } from '../config/database';
-import { db } from '../config/firebase';
-import { getBoundingBox, getDistance } from '../utils/geoUtils';
-import { createError } from '../utils/customError';
-import logger from '../utils/logger';
+import { collections } from '../config/database.js';
+import { db } from '../config/firebase.js';
+import { getBoundingBox, getDistance } from '../utils/geoUtils.js';
+import { createError } from '../utils/customError.js';
+import logger from '../utils/logger.js';
 
 class VideoService {
     async getListVideos({

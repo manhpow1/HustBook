@@ -5,10 +5,10 @@
  *   description: User account and profile management endpoints
  */
 import { Router } from 'express';
-import { authenticateToken } from '../middleware/auth';
-import userController from '../controllers/userController';
-import userStatusController from '../controllers/userStatusController';
-import { setBlockLimiter } from '../middleware/rateLimiter';
+import { authenticateToken } from '../middleware/auth.js';
+import userController from '../controllers/userController.js';
+import userStatusController from '../controllers/userStatusController.js';
+import { setBlockLimiter } from '../middleware/rateLimiter.js';
 const router = Router();
 /**
  * @swagger

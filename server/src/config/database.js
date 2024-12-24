@@ -1,6 +1,6 @@
 import admin from 'firebase-admin';
-import { initializeFirebase } from './firebase';
-import logger from '../utils/logger';
+import { initializeFirebase } from './firebase.js';
+import logger from '../utils/logger.js';
 
 let db;
 (async () => {

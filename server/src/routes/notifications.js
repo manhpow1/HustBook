@@ -5,9 +5,9 @@
  *   description: Endpoints for managing notification settings and retrieving notifications
  */
 import { Router } from 'express';
-import notificationController from '../controllers/notificationController';
-import { authenticateToken } from '../middleware/auth';
-import { pushSettingsLimiter } from '../middleware/rateLimiter';
+import notificationController from '../controllers/notificationController.js';
+import { authenticateToken } from '../middleware/auth.js';
+import { pushSettingsLimiter } from '../middleware/rateLimiter.js';
 const router = Router();
 /**
  * @swagger

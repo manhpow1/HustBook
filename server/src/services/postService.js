@@ -1,10 +1,10 @@
-import Post from '../models/Post';
+import Post from '../models/Post.js';
 import admin from 'firebase-admin';
-import { getBoundingBox, getDistance } from '../utils/geoUtils';
-import { collections, createDocument, getDocument, updateDocument } from '../config/database';
-import { db } from '../config/firebase';
-import { createError } from '../utils/customError';
-import logger from '../utils/logger';
+import { getBoundingBox, getDistance } from '../utils/geoUtils.js';
+import { collections, createDocument, getDocument, updateDocument } from '../config/database.js';
+import { db } from '../config/firebase.js';
+import { createError } from '../utils/customError.js';
+import logger from '../utils/logger.js';
 
 class PostService {
     async createPost(userId, content, images) {

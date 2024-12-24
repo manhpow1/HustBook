@@ -1,5 +1,5 @@
-import { initializeFirebase } from '../config/firebase';
-import logger from '../utils/logger';
+import { initializeFirebase } from '../config/firebase.js';
+import logger from '../utils/logger.js';
 
 export const DEFAULT_PUSH_SETTINGS = {
     like_comment: '1',

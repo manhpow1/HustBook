@@ -1,5 +1,5 @@
 import admin from 'firebase-admin';
-import logger from '../utils/logger';
+import logger from '../utils/logger.js';
 
 let db;
 let auth;

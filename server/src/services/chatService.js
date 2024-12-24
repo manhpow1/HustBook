@@ -1,12 +1,12 @@
-import { collections, arrayRemove } from '../config/database';
-import { db } from '../config/firebase';
-import { createError } from '../utils/customError';
-import logger from '../utils/logger';
-import Conversation from '../models/Conversation';
-import Message from '../models/Message';
-import userService from './userService';
+import { collections, arrayRemove } from '../config/database.js';
+import { db } from '../config/firebase.js';
+import { createError } from '../utils/customError.js';
+import logger from '../utils/logger.js';
+import Conversation from '../models/Conversation.js';
+import Message from '../models/Message.js';
+import userService from './userService.js';
 import admin from 'firebase-admin';
-import { getIO } from '../socket';
+import { getIO } from '../socket.js';
 
 class ChatService {
     async getConversationRoomName(userId, partnerId, conversationId) {

@@ -6,8 +6,8 @@
  */
 
 import express from 'express';
-import { authenticateToken } from '../middleware/auth';
-import friendController from '../controllers/friendController';
+import { authenticateToken } from '../middleware/auth.js';
+import friendController from '../controllers/friendController.js';
 const router = express.Router();
 
 /**

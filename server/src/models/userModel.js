@@ -1,7 +1,7 @@
 import { initializeFirebase } from '../config/firebase';
 import { collections, arrayUnion, arrayRemove } from '../config/database';
 import { createError } from '../utils/customError';
-import logger from '../utils/logger';
+import logger from '../utils/logger.js';
 import redis from '../utils/redis';
 
 class User {

@@ -1,7 +1,7 @@
-import { collections, queryDocuments, getDocument } from '../config/database';
-import { db } from '../config/firebase';
-import { createError } from '../utils/customError';
-import logger from '../utils/logger';
+import { collections, queryDocuments, getDocument } from '../config/database.js';
+import { db } from '../config/firebase.js';
+import { createError } from '../utils/customError.js';
+import logger from '../utils/logger.js';
 
 class FriendService {
     async getRequestedFriends(userId, index, count) {

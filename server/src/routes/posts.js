@@ -7,8 +7,8 @@
 import express from 'express';
 import rateLimit from 'express-rate-limit';
 import multer from 'multer';
-import postController from '../controllers/postController';
-import { authenticateToken } from '../middleware/auth';
+import postController from '../controllers/postController.js';
+import { authenticateToken } from '../middleware/auth.js';
 const router = express.Router();
 const upload = multer({
     dest: 'uploads/',

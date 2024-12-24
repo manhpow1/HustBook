@@ -1,9 +1,9 @@
-import postService from '../services/postService';
-import postValidator from '../validators/postValidator';
-import { sendResponse } from '../utils/responseHandler';
-import { createError } from '../utils/customError';
-import { collections } from '../config/database';
-import { db } from '../config/firebase';
+import postService from '../services/postService.js';
+import postValidator from '../validators/postValidator.js';
+import { sendResponse } from '../utils/responseHandler.js';
+import { createError } from '../utils/customError.js';
+import { collections } from '../config/database.js';
+import { db } from '../config/firebase.js';
 
 class PostController {
     async createPost(req, res, next) {

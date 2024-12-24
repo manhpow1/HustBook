@@ -5,8 +5,8 @@
  *   description: Video related endpoints
  */
 import { Router } from 'express';
-import { authenticateToken } from '../middleware/auth';
-import videoController from '../controllers/videoController';
+import { authenticateToken } from '../middleware/auth.js';
+import videoController from '../controllers/videoController.js';
 const router = Router();
 /**
  * @swagger

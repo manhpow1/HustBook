@@ -1,9 +1,9 @@
 import dotenv from 'dotenv';
-import logger from './src/utils/logger';
-import app from './src/app';
+import logger from './src/utils/logger.js';
+import app from './src/app.js';
 import http from 'http';
-import { initSocketIO } from './src/socket';
-import { initializeFirebase } from './src/config/firebase';
+import { initSocketIO } from './src/socket.js';
+import { initializeFirebase } from './src/config/firebase.js';
 
 dotenv.config();
 

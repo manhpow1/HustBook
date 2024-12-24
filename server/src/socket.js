@@ -1,7 +1,7 @@
 import { Server } from 'socket.io';
-import logger from './utils/logger';
-import { authenticateSocket } from './middleware/socketAuth';
-import chatService from './services/chatService';
+import logger from './utils/logger.js';
+import { authenticateSocket } from './middleware/socketAuth.js';
+import chatService from './services/chatService.js';
 
 let io = null;
 

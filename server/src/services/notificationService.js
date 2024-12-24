@@ -1,7 +1,7 @@
-import PushSettings from '../models/pushSettings';
-import { createError } from '../utils/customError';
-import logger from '../utils/logger';
-import { db } from '../config/firebase';
+import PushSettings from '../models/pushSettings.js';
+import { createError } from '../utils/customError.js';
+import logger from '../utils/logger.js';
+import { db } from '../config/firebase.js';
 
 class NotificationService {
     async checkNewItems(lastId, categoryId) {

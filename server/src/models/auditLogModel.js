@@ -1,5 +1,5 @@
-import { initializeFirebase } from '../config/firebase';
-import logger from '../utils/logger';
+import { initializeFirebase } from '../config/firebase.js';
+import logger from '../utils/logger.js';
 
 class AuditLogModel {
     constructor(db) {
