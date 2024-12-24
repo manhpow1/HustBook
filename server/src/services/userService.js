@@ -368,35 +368,39 @@ class UserService {
                     throw createError('9995', 'User not found');
                 }
 
+                const userData = userDoc.data();
+                const currentTime = Date.now();
+                const lastModifiedAt = userData.lastModifiedAt || 0;
+                
+                // Check for rapid updates first
+                if (currentTime - lastModifiedAt < 1000) {
+                    throw createError('1003', 'Please wait a moment before updating again');
+                }
+
+                // Prepare update data after version check
+                const currentVersion = userData.version || 0;
+                const newVersion = currentVersion + 1;
+
                 const updateData = {
                     userName,
                     updatedAt: new Date().toISOString(),
-                    lastModifiedAt: Date.now(), // For optimistic locking
-                    version: (userDoc.data().version || 0) + 1
+                    lastModifiedAt: currentTime,
+                    version: newVersion
                 };
 
                 if (avatarUrl !== null) {
                     updateData.avatar_url = avatarUrl;
                 }
 
-                // Optimistic locking check
-                const currentVersion = userDoc.data().version || 0;
-                const lastModifiedAt = userDoc.data().lastModifiedAt || 0;
-                
-                if (Date.now() - lastModifiedAt < 1000) { // Prevent rapid updates
-                    throw createError('1003', 'Please wait a moment before updating again');
-                }
-
-                if (currentVersion !== updateData.version - 1) {
-                    throw createError('9999', 'Data was modified by another request');
-                }
-
                 transaction.update(userRef, updateData);
+                
+                // Clear user cache to ensure fresh data
+                await redis.deleteKey(`user:${userId}`);
                 
                 logger.info(`Updated user info after signup for user ${userId}`);
 
                 return {
-                    ...userDoc.data(),
+                    ...userData,
                     ...updateData
                 };
             });
