@@ -10,8 +10,8 @@ export const API_ENDPOINTS = {
     CHANGE_INFO_AFTER_SIGNUP: `${API_BASE_URL}/api/auth/change_info_after_signup`,
     REFRESH_TOKEN: `${API_BASE_URL}/api/auth/refresh-token`,
     AUTH_CHECK: `${API_BASE_URL}/api/auth/check`,
-    CHANGE_PASSWORD: `${API_BASE_URL}/api/change_password`,
-    FORGOT_PASSWORD: `${API_BASE_URL}/api/forgot_password`,
+    CHANGE_PASSWORD: `${API_BASE_URL}/api/auth/change_password`,
+    FORGOT_PASSWORD: `${API_BASE_URL}/api/auth/forgot-password`,
     GET_USER_INFO: (userId) => userId ? `${API_BASE_URL}/api/users/get_user_info/${userId}` : `${API_BASE_URL}/api/users/get_user_info`,
     SET_USER_INFO: `${API_BASE_URL}/api/users/set_user_info`,
     // Post Endpoints
