@@ -20,6 +20,9 @@ class UserController {
         this.sessionDuration = 15 * 60; // 15 minutes in seconds
         this.refreshTokenDuration = 7 * 24 * 60 * 60; // 7 days in seconds
         this.verifyCodeDuration = 5 * 60; // 5 minutes in seconds
+        this.refreshToken = this.refreshToken.bind(this);
+        this.signup = this.signup.bind(this);
+        this.login = this.login.bind(this);
     }
 
     async checkAuth(req, res, next) {
