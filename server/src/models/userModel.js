@@ -7,7 +7,7 @@ const redis = require('../utils/redis');
 class User {
     constructor(data) {
         this.id = data.uid;
-        this.userName = data.userName;
+        this.userName = data.userName || null;
         this.phoneNumber = data.phoneNumber;
         this.avatar = data.avatar || null;
         this.createdAt = data.createdAt || new Date().toISOString();
@@ -30,7 +30,7 @@ class User {
     toJSON() {
         return {
             id: this.id,
-            userName: this.userName,
+            ...(this.userName && { userName: this.userName }),
             phoneNumber: this.phoneNumber,
             avatar: this.avatar,
             createdAt: this.createdAt,
@@ -137,8 +137,12 @@ class User {
 
     async save() {
         const userRef = await this.getUserRef();
-        await userRef.set(this.toJSON());
-        await redis.deleteKey(`user:${this.id}`);
+        const userData = this.toJSON();
+        // Loại bỏ các trường undefined hoặc null
+        const cleanedData = Object.fromEntries(
+            Object.entries(userData).filter(([_, v]) => v != null)
+        );
+        await userRef.set(cleanedData, { merge: true });
     }
 }
 

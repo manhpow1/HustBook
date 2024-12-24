@@ -300,6 +300,10 @@ class UserService {
                 throw createError('9995', 'User not found');
             }
 
+            if (!userName) {
+                throw createError('1002', 'Username is required');
+            }
+
             // Rate limiting check
             const currentTime = Date.now();
             const lastModifiedAt = user.lastModifiedAt || 0;
