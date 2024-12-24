@@ -18,7 +18,6 @@ const verifyCodeRateLimiter = createLimiter(10, 60, 'rl:verify'); // Reduced to 
 const pushSettingsRateLimiter = createLimiter(100, 60, 'rl:push'); // Reduced to 2 minutes
 const setBlockRateLimiter = createLimiter(10, 60, 'rl:block'); // Remains at 1 minute
 const checkVerifyCodeRateLimiter = createLimiter(10, 60, 'rl:code'); // Reduced to 2 minutes
-const signupRateLimiter = createLimiter(10, 120, 'rl:signup'); // Reduced to 2 minutes
 
 // Convert a RateLimiter to an Express middleware
 function createRateLimitMiddleware(limiter, errorMessage) {
@@ -38,38 +37,6 @@ function createRateLimitMiddleware(limiter, errorMessage) {
             next(error);
         }
     };
-}
-
-// Function-based approach for checking signup attempts
-async function checkSignupLimit(ip) {
-    try {
-        await signupRateLimiter.consume(ip);
-        return { limited: false, timeLeft: 0 };
-    } catch (error) {
-        if (error.msBeforeNext) {
-            return {
-                limited: true,
-                timeLeft: Math.ceil(error.msBeforeNext / 1000),
-            };
-        }
-        throw error;
-    }
-}
-
-// Function-based approach for checking verify-code attempts
-async function checkVerifyCodeLimit(ip) {
-    try {
-        await verifyCodeRateLimiter.consume(ip);
-        return { limited: false, timeLeft: 0 };
-    } catch (error) {
-        if (error.msBeforeNext) {
-            return {
-                limited: true,
-                timeLeft: Math.ceil(error.msBeforeNext / 1000),
-            };
-        }
-        throw error;
-    }
 }
 
 // Middleware-based limiters (used in routes)
@@ -104,7 +71,4 @@ module.exports = {
     pushSettingsLimiter,
     setBlockLimiter,
     checkVerifyCodeLimiterMiddleware,
-    // Functions (for controllers or other logic)
-    checkSignupLimit,
-    checkVerifyCodeLimit,
 };

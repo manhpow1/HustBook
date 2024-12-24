@@ -73,13 +73,6 @@ class UserService {
 
             await user.save();
 
-            // Initialize Redis data
-            await Promise.all([
-                redis.setLoginAttempts(userId, 0),
-                redis.setVerificationAttempts(userId, 0),
-                redis.setUserDevices(userId, [deviceId])
-            ]);
-
             logger.info(`User created with ID: ${userId}`);
             return { userId, deviceToken, tokenFamily };
 
@@ -113,8 +106,6 @@ class UserService {
             user.deviceIds = [...new Set([...user.deviceIds, deviceId])];
 
             await user.save();
-            await redis.setUserDevices(userId, updatedDevices);
-
             logger.info(`Updated device info for user ${userId}, device ${deviceId}`);
         } catch (error) {
             logger.error('Error updating device info:', error);
@@ -263,19 +254,11 @@ class UserService {
 
     async getUserById(userId) {
         try {
-            const cached = await redis.getKey(`user:${userId}`);
-            if (cached) {
-                return new User(JSON.parse(cached));
-            }
-
             const userDoc = await getDocument(collections.users, userId);
             if (!userDoc) {
                 throw createError('9995', 'User not found');
             }
-
-            const user = new User(userDoc);
-            await redis.setKey(`user:${userId}`, JSON.stringify(userDoc), 3600);
-            return user;
+            return new User(userDoc);
         } catch (error) {
             logger.error('Error getting user by ID:', error);
             throw error;
@@ -490,10 +473,8 @@ class UserService {
                 throw createError('9997', 'New password does not meet security requirements');
             }
 
-            // Verify the code
             await this.verifyUserCode(user.id, code);
 
-            // Check password history
             const isPasswordReused = await Promise.any(
                 user.passwordHistory.map(async (hashedPwd) => comparePassword(newPassword, hashedPwd))
             ).catch(() => false);
@@ -514,13 +495,9 @@ class UserService {
 
             await user.save();
 
-            // Log password reset
             await AuditLogModel.logAction(user.id, null, 'password_reset', {
                 timestamp: new Date().toISOString()
             });
-
-            // Invalidate all sessions
-            await redis.blacklistUserTokens(user.id);
 
             return true;
         } catch (error) {
@@ -535,20 +512,7 @@ class UserService {
             if (!user) {
                 throw createError('9995', 'User not found');
             }
-
-            // Delete user document
             await user.delete();
-
-            // Clear all Redis keys
-            await Promise.all([
-                redis.deleteKey(`user:${userId}`),
-                redis.deleteKey(`user:${userId}:profile`),
-                redis.deleteKey(`user:${userId}:devices`),
-                redis.deleteKey(`user:${userId}:sessions`),
-                redis.deleteKey(`login_attempts:${userId}`),
-                redis.deleteKey(`lockout:${userId}`)
-            ]);
-
             logger.info(`Deleted user ${userId}`);
         } catch (error) {
             logger.error('Error deleting user:', error);
