@@ -2,38 +2,35 @@ const { RateLimiterRedis } = require('rate-limiter-flexible');
 const { client: redisClient } = require('../utils/redis');
 const logger = require('../utils/logger');
 
+// Helper to create a standard RateLimiter with given points & duration
 const createLimiter = (points, duration, prefix) => {
     return new RateLimiterRedis({
         storeClient: redisClient,
-        points, // Number of attempts
-        duration, // Time window in seconds
+        points,
+        duration,
         keyPrefix: prefix,
     });
 };
 
-// Rate limiter for auth endpoints (5 attempts per 15 minutes)
+// Example limiters
 const authRateLimiter = createLimiter(5, 15 * 60, 'rl:auth');
-
-// Rate limiter for verify code requests (3 attempts per hour)
 const verifyCodeRateLimiter = createLimiter(3, 60 * 60, 'rl:verify');
-
-// Rate limiter for push settings (100 requests per 15 minutes)
 const pushSettingsRateLimiter = createLimiter(100, 15 * 60, 'rl:push');
-
-// Rate limiter for blocking users (10 requests per minute)
 const setBlockRateLimiter = createLimiter(10, 60, 'rl:block');
-
-// Rate limiter for verify code checks (5 attempts per 15 minutes)
 const checkVerifyCodeRateLimiter = createLimiter(5, 15 * 60, 'rl:code');
 
-// Middleware factory
-const createRateLimitMiddleware = (limiter, errorMessage) => {
+// NEW: Limit signup attempts, e.g. 3 tries per hour
+const signupRateLimiter = createLimiter(3, 60 * 60, 'rl:signup');
+
+// Turn any RateLimiter into an Express middleware:
+function createRateLimitMiddleware(limiter, errorMessage) {
     return async (req, res, next) => {
         try {
             const key = req.user ? req.user.uid : req.ip;
             await limiter.consume(key);
             next();
         } catch (error) {
+            // If it's a standard RateLimiter error, respond with 429
             if (error.remainingPoints !== undefined) {
                 return res.status(429).json({
                     code: '9999',
@@ -44,37 +41,68 @@ const createRateLimitMiddleware = (limiter, errorMessage) => {
             next(error);
         }
     };
-};
+}
 
-// Export middleware functions
+async function checkSignupLimit(ip) {
+    try {
+        const rateRes = await signupRateLimiter.consume(ip);
+        // If consume() succeeds, not limited
+        return {
+            limited: false,
+            timeLeft: 0,
+        };
+    } catch (error) {
+        // If consume() fails because of too many requests:
+        if (error.msBeforeNext) {
+            return {
+                limited: true,
+                timeLeft: Math.ceil(error.msBeforeNext / 1000),
+            };
+        }
+        throw error;
+    }
+}
+
+async function checkVerifyCodeLimit(ip) {
+    try {
+        await verifyCodeRateLimiter.consume(ip);
+        return { limited: false, timeLeft: 0 };
+    } catch (error) {
+        if (error.msBeforeNext) {
+            return {
+                limited: true,
+                timeLeft: Math.ceil(error.msBeforeNext / 1000),
+            };
+        }
+        throw error;
+    }
+}
+
 const authLimiter = createRateLimitMiddleware(
     authRateLimiter,
     'Too many login attempts, please try again later.'
 );
-
-const verifyCodeLimiter = createRateLimitMiddleware(
+const verifyCodeLimiterMiddleware = createRateLimitMiddleware(
     verifyCodeRateLimiter,
     'Too many verification code requests, please try again later.'
 );
-
-const pushSettingsLimiter = createRateLimitMiddleware(
-    pushSettingsRateLimiter
-);
-
+const pushSettingsLimiter = createRateLimitMiddleware(pushSettingsRateLimiter);
 const setBlockLimiter = createRateLimitMiddleware(
     setBlockRateLimiter,
     'Too many requests. Please try again later.'
 );
-
-const checkVerifyCodeLimiter = createRateLimitMiddleware(
+const checkVerifyCodeLimiterMiddleware = createRateLimitMiddleware(
     checkVerifyCodeRateLimiter,
     'Too many verification attempts, please try again later.'
 );
 
 module.exports = {
+    // Existing middlewares for direct usage in routes:
     pushSettingsLimiter,
     setBlockLimiter,
     authLimiter,
-    verifyCodeLimiter,
-    checkVerifyCodeLimiter
+    verifyCodeLimiterMiddleware,
+    checkVerifyCodeLimiterMiddleware,
+    checkSignupLimit, 
+    checkVerifyCodeLimit,
 };

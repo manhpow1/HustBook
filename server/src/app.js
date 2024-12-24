@@ -26,6 +26,7 @@ const app = express();
 app.use(cors({ origin: process.env.CORS_ORIGIN }));
 app.use(express.json());
 app.use(helmet());
+app.set('trust proxy', 1);
 app.use(morgan('dev'));
 app.use(apiLimiter);
 

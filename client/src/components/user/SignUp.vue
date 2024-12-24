@@ -119,7 +119,6 @@ const touched = ref({
 })
 
 const handlePhoneInput = async () => {
-  console.log('Phone input:', phoneNumber.value)
   if (touched.value.phoneNumber) {
     await validateField('phoneNumber', phoneNumber.value, validators.phoneNumber)
     console.log(errors.value)
@@ -134,7 +133,6 @@ const handlePhoneBlur = async () => {
 }
 
 const handlePasswordInput = async () => {
-  console.log('Password input:', password.value)
   if (touched.value.password) {
     await validateField('password', password.value, validators.password)
     console.log(errors.value)

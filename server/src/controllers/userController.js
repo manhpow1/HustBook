@@ -179,7 +179,10 @@ class UserController {
             // Check rate limits
             const rateLimitResult = await rateLimit.checkVerifyCodeLimit(req.ip);
             if (rateLimitResult.limited) {
-                throw createError('1003', `Too many verification code requests. Please try again in ${rateLimitResult.timeLeft} seconds.`);
+                throw createError(
+                    '1003',
+                    `Too many verification code requests. Please try again in ${rateLimitResult.timeLeft} seconds.`
+                );
             }
 
             // Validate request body
@@ -219,7 +222,10 @@ class UserController {
             // Check rate limits
             const rateLimitResult = await rateLimit.checkSignupLimit(req.ip);
             if (rateLimitResult.limited) {
-                throw createError('1003', `Too many signup attempts. Please try again in ${rateLimitResult.timeLeft} seconds.`);
+                throw createError(
+                    '1003',
+                    `Too many signup attempts. Please try again in ${rateLimitResult.timeLeft} seconds.`
+                );
             }
 
             // Validate request body
