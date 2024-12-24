@@ -26,10 +26,11 @@
                 <input v-model="phoneNumber" id="phoneNumber" name="phoneNumber" type="tel" required
                   @input="handlePhoneInput" @blur="handlePhoneBlur" :disabled="isLoading"
                   class="appearance-none rounded-none relative block w-full px-3 py-2 pl-10 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-t-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
-                  :class="{ 'border-red-500': touched.phoneNumber && errors.phoneNumber }" placeholder="Phone number" />
+                  :class="{ 'border-red-500': touched.phoneNumber && errors.phoneNumber?.length }" placeholder="Phone number" />
               </div>
-              <p v-if="touched.phoneNumber && errors.phoneNumber" class="text-sm text-red-600 mt-1">{{
-                errors.phoneNumber }}</p>
+              <p v-if="touched.phoneNumber && errors.phoneNumber?.length" class="text-sm text-red-600 mt-1">
+                {{ errors.phoneNumber[0] }}
+              </p>
             </div>
 
             <div>
@@ -41,9 +42,11 @@
                 <input v-model="password" id="password" name="password" type="password" required
                   @input="handlePasswordInput" @blur="handlePasswordBlur" :disabled="isLoading"
                   class="appearance-none rounded-none relative block w-full px-3 py-2 pl-10 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-b-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
-                  :class="{ 'border-red-500': touched.password && errors.password }" placeholder="Password" />
+                  :class="{ 'border-red-500': touched.password && errors.password?.length }" placeholder="Password" />
               </div>
-              <p v-if="touched.password && errors.password" class="text-sm text-red-600 mt-1">{{ errors.password }}</p>
+              <p v-if="touched.password && errors.password?.length" class="text-sm text-red-600 mt-1">
+                {{ errors.password[0] }}
+              </p>
             </div>
           </div>
 
@@ -57,8 +60,7 @@
             class="group relative w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed">
             <span class="absolute left-0 inset-y-0 flex items-center pl-3">
               <Lock class="h-5 w-5 text-indigo-500 group-hover:text-indigo-400" aria-hidden="true" />
-            </span>
-            <LoaderIcon v-if="isLoading" class="animate-spin -ml-1 mr-2 h-5 w-5 text-white" aria-hidden="true" />
+            </span><LoaderIcon v-if="isLoading" class="animate-spin -ml-1 mr-2 h-5 w-5 text-white" aria-hidden="true" />
             {{ isLoading ? 'Signing up...' : 'Sign Up' }}
           </button>
         </form>
@@ -119,31 +121,34 @@ const touched = ref({
 })
 
 const handlePhoneInput = () => {
-  if (touched.value.phoneNumber) {
-    validatePhoneNumber(phoneNumber.value)}
+  validatePhoneNumber(phoneNumber.value)
+  touched.value.phoneNumber = true
 }
 
 const handlePhoneBlur = () => {
-  touched.value.phoneNumber = true
   validatePhoneNumber(phoneNumber.value)
+  touched.value.phoneNumber = true
 }
 
 const handlePasswordInput = () => {
-  if (touched.value.password) {
-    validatePassword(password.value, phoneNumber.value)
-  }
+  validatePassword(password.value, phoneNumber.value)
+  touched.value.password = true
 }
 
 const handlePasswordBlur = () => {
-  touched.value.password = true
   validatePassword(password.value, phoneNumber.value)
+  touched.value.password = true
 }
 
 const isValid = computed(() => {
   if (!phoneNumber.value || !password.value) {
     return false
   }
-  return Object.keys(errors.value).length === 0
+  validatePhoneNumber(phoneNumber.value)
+  validatePassword(password.value, phoneNumber.value)
+  
+  // Check if any field has errors (non-empty error arrays)
+  return !Object.values(errors.value).some(fieldErrors => fieldErrors.length > 0)
 })
 
 const handleSignup = async () => {
