@@ -58,12 +58,6 @@ const passwordComplexity = Joi.string()
     .min(8)
     .max(30)
     .pattern(new RegExp('^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)[a-zA-Z\\d]+$'))
-    .custom((value, helpers) => {
-        if (!passwordStrength(value)) {
-            return helpers.message('Password is too weak or contains common patterns');
-        }
-        return value;
-    })
     .required()
     .messages({
         'string.pattern.base': 'Password must include uppercase, lowercase letters, and numbers.',
