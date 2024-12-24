@@ -12,7 +12,7 @@ const collections = {
     notifications: 'notifications',
     friendRequests: 'friendRequests',
     friends: 'friends',
-    savedSearches: 'savedSearches',    
+    savedSearches: 'savedSearches',
 };
 
 const createDocument = async (collection, data) => {
@@ -53,9 +53,11 @@ const deleteDocument = async (collection, id) => {
     }
 };
 
-const queryDocuments = async (collection, queryFn) => {
+const queryDocuments = async (collection, field, operator, value) => {
     try {
-        const snapshot = await queryFn(db.collection(collection)).get();
+        const snapshot = await db.collection(collection)
+            .where(field, operator, value)
+            .get();
         return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
     } catch (error) {
         logger.error(`Error querying documents from ${collection}:`, error);
