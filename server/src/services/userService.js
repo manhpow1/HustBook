@@ -6,7 +6,6 @@ const { passwordStrength } = require('../validators/userValidator');
 const redis = require('../utils/redis');
 const logger = require('../utils/logger');
 const User = require('../models/userModel');
-const AuditLogModel = require('../models/auditLogModel');
 
 // Constants
 const MAX_DEVICES_PER_USER = 5;
@@ -175,7 +174,7 @@ class UserService {
 
             await user.save();
 
-            await AuditLogModel.logAction(userId, null, 'password_change', {
+            await req.app.locals.auditLog.logAction(userId, null, 'password_change', {
                 timestamp: new Date().toISOString()
             });
 
@@ -391,7 +390,7 @@ class UserService {
                 await user.unblockUser(targetUserId);
             }
 
-            await AuditLogModel.logAction(userId, targetUserId,
+            await req.app.locals.auditLog.logAction(userId, targetUserId,
                 type === 0 ? 'block_user' : 'unblock_user',
                 { timestamp: new Date().toISOString() }
             );
@@ -495,7 +494,7 @@ class UserService {
 
             await user.save();
 
-            await AuditLogModel.logAction(user.id, null, 'password_reset', {
+            await req.app.locals.auditLog.logAction(user.id, null, 'password_reset', {
                 timestamp: new Date().toISOString()
             });
 

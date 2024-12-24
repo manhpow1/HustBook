@@ -14,7 +14,6 @@ const { formatPhoneNumber, sanitizeDeviceInfo, handleAvatarUpload, handleCoverPh
 const { sendResponse } = require('../utils/responseHandler');
 const { createError } = require('../utils/customError');
 const logger = require('../utils/logger');
-const AuditLogModel = require('../models/auditLogModel');
 
 class UserController {
     constructor() {
@@ -60,7 +59,7 @@ class UserController {
 
             const currentDeviceId = req.get('X-Device-ID');
 
-            await AuditLogModel.logAction(userId, null, 'password_change', {
+            await req.app.locals.auditLog.logAction(userId, null, 'password_change', {
                 deviceId: currentDeviceId,
                 ip: req.ip,
                 timestamp: new Date().toISOString()
@@ -171,7 +170,6 @@ class UserController {
 
             const { phoneNumber, password, uuid } = value;
             const formattedPhoneNumber = formatPhoneNumber(phoneNumber);
-
             const existingUser = await userService.getUserByphoneNumber(formattedPhoneNumber);
             if (existingUser) {
                 if (existingUser.isVerified) {
@@ -214,7 +212,8 @@ class UserController {
                 deviceId
             });
 
-            await AuditLogModel.logAction(userId, null, 'signup', {
+            // Sử dụng auditLog từ req.app.locals
+            await req.app.locals.auditLog.logAction(userId, null, 'signup', {
                 deviceId,
                 ip: req.ip,
                 userAgent: req.get('User-Agent'),
@@ -303,7 +302,7 @@ class UserController {
 
             await Promise.all([
                 userService.updateUserRefreshToken(user.uid, refreshToken, deviceId),
-                AuditLogModel.logAction(user.uid, null, 'login', {
+                req.app.locals.auditLog.logAction(user.uid, null, 'login', {
                     deviceId,
                     ip: req.ip,
                     userAgent: req.get('User-Agent'),
@@ -365,7 +364,7 @@ class UserController {
 
             await userService.changeInfoAfterSignup(userId, userName, avatarUrl);
 
-            await AuditLogModel.logAction(userId, null, 'profile_update', {
+            await req.app.locals.auditLog.logAction(userId, null, 'profile_update', {
                 deviceId: req.get('Device-ID'),
                 ip: req.ip,
                 timestamp: new Date().toISOString()
@@ -396,7 +395,7 @@ class UserController {
 
             await Promise.all([
                 userService.clearUserDeviceToken(userId, deviceId),
-                AuditLogModel.logAction(userId, null, 'logout', {
+                req.app.locals.auditLog.logAction(userId, null, 'logout', {
                     deviceId,
                     ip: req.ip,
                     timestamp: new Date().toISOString()
