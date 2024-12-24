@@ -3,13 +3,18 @@ const logger = require('./src/utils/logger');
 const app = require('./src/app');
 const http = require('http');
 const { initSocketIO, closeSocketServer } = require('./src/socket');
+const { initializeFirebase } = require('./src/config/firebase');
 
 async function startServer() {
     try {
-        // Create an HTTP server from the Express app
+        // Khởi tạo Firebase trước
+        await initializeFirebase();
+        logger.info('Firebase initialized successfully');
+
+        // Tạo HTTP server
         const server = http.createServer(app);
 
-        // Initialize Socket.io
+        // Khởi tạo Socket.IO
         await initSocketIO(server);
 
         const PORT = process.env.PORT || 3000;
@@ -17,7 +22,6 @@ async function startServer() {
             logger.info(`Server running on port ${PORT}`);
         });
 
-        // Handle shutdown signals
         process.on('SIGTERM', () => gracefulShutdown(server));
         process.on('SIGINT', () => gracefulShutdown(server));
 
@@ -33,7 +37,7 @@ function gracefulShutdown(server) {
     // Close HTTP server first (stop accepting new connections)
     server.close(() => {
         logger.info('HTTP server closed');
-        
+
         // Close Socket.IO connections
         closeSocketServer();
 
