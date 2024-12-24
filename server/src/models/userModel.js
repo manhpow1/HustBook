@@ -2,6 +2,7 @@ const { initializeFirebase } = require('../config/firebase');
 const { collections, arrayUnion, arrayRemove } = require('../config/database');
 const { createError } = require('../utils/customError');
 const logger = require('../utils/logger');
+const redis = require('../utils/redis');
 
 class User {
     constructor(data) {
@@ -15,6 +16,15 @@ class User {
         this.online = data.online || false;
         this.tokenVersion = data.tokenVersion || 0;
         this.isAdmin = data.isAdmin || false;
+        this.deviceIds = data.deviceIds || [];
+        this.tokenFamily = data.tokenFamily;
+        this.deviceDetails = data.deviceDetails || [];
+        this.password = data.password;
+        this.passwordHistory = data.passwordHistory || [];
+        this.lastPasswordChange = data.lastPasswordChange;
+        this.verificationCode = data.verificationCode;
+        this.verificationCodeExpiration = data.verificationCodeExpiration;
+        this.verificationAttempts = data.verificationAttempts || 0;
     }
 
     toJSON() {
@@ -28,12 +38,57 @@ class User {
             isBlocked: this.isBlocked,
             online: this.online,
             isAdmin: this.isAdmin,
+            deviceIds: this.deviceIds,
+            tokenFamily: this.tokenFamily
         };
     }
 
     async getUserRef() {
         let db = await initializeFirebase();
         return db.collection(collections.users).doc(this.id);
+    }
+
+    async addDevice(deviceId) {
+        if (this.deviceIds.length >= 5) {
+            throw createError('1003', 'Maximum number of devices reached');
+        }
+
+        if (!this.deviceIds.includes(deviceId)) {
+            try {
+                const userRef = await this.getUserRef();
+                await userRef.update({
+                    deviceIds: arrayUnion(deviceId)
+                });
+
+                await redis.setKey(`user:${this.id}:devices`,
+                    JSON.stringify([...this.deviceIds, deviceId]));
+
+                this.deviceIds.push(deviceId);
+                logger.info(`Added device ${deviceId} for user ${this.id}`);
+            } catch (error) {
+                logger.error(`Error adding device for user ${this.id}:`, error);
+                throw createError('9999', 'Failed to add device');
+            }
+        }
+    }
+
+    async removeDevice(deviceId) {
+        try {
+            const userRef = await this.getUserRef();
+            await userRef.update({
+                deviceIds: arrayRemove(deviceId)
+            });
+
+            const updatedDevices = this.deviceIds.filter(id => id !== deviceId);
+            await redis.setKey(`user:${this.id}:devices`,
+                JSON.stringify(updatedDevices));
+
+            this.deviceIds = updatedDevices;
+            logger.info(`Removed device ${deviceId} for user ${this.id}`);
+        } catch (error) {
+            logger.error(`Error removing device for user ${this.id}:`, error);
+            throw createError('9999', 'Failed to remove device');
+        }
     }
 
     async blockUser(targetUserId) {
@@ -45,15 +100,13 @@ class User {
                 throw createError('9995', 'User not found.');
             }
 
-            const userData = userDoc.data();
-            const blockedUsers = userData.blockedUsers || [];
+            await userRef.update({
+                blockedUsers: arrayUnion(targetUserId),
+                updatedAt: new Date().toISOString()
+            });
 
-            if (!blockedUsers.includes(targetUserId)) {
-                await userRef.update({
-                    blockedUsers: arrayUnion(targetUserId)
-                });
-                logger.info(`User ${this.id} blocked user ${targetUserId}`);
-            }
+            await redis.deleteKey(`user:${this.id}`);
+            logger.info(`User ${this.id} blocked user ${targetUserId}`);
         } catch (error) {
             logger.error(`Error blocking user ${targetUserId} by user ${this.id}:`, error);
             throw createError('9999', 'Exception error while blocking user.');
@@ -69,19 +122,23 @@ class User {
                 throw createError('9995', 'User not found.');
             }
 
-            const userData = userDoc.data();
-            const blockedUsers = userData.blockedUsers || [];
+            await userRef.update({
+                blockedUsers: arrayRemove(targetUserId),
+                updatedAt: new Date().toISOString()
+            });
 
-            if (blockedUsers.includes(targetUserId)) {
-                await userRef.update({
-                    blockedUsers: arrayRemove(targetUserId)
-                });
-                logger.info(`User ${this.id} unblocked user ${targetUserId}`);
-            }
+            await redis.deleteKey(`user:${this.id}`);
+            logger.info(`User ${this.id} unblocked user ${targetUserId}`);
         } catch (error) {
             logger.error(`Error unblocking user ${targetUserId} by user ${this.id}:`, error);
             throw createError('9999', 'Exception error while unblocking user.');
         }
+    }
+
+    async save() {
+        const userRef = await this.getUserRef();
+        await userRef.set(this.toJSON());
+        await redis.deleteKey(`user:${this.id}`);
     }
 }
 

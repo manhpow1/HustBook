@@ -223,6 +223,47 @@ const loginAttemptHelpers = {
     }
 };
 
+const deviceHelpers = {
+    getUserDevices: async (userId) => {
+        try {
+            return await cache.get(`user:${userId}:devices`);
+        } catch (err) {
+            logger.error('Redis getUserDevices error:', err);
+            return null;
+        }
+    },
+
+    setUserDevices: async (userId, devices) => {
+        try {
+            await cache.set(`user:${userId}:devices`, devices);
+        } catch (err) {
+            logger.error('Redis setUserDevices error:', err);
+        }
+    },
+
+    addUserDevice: async (userId, deviceId) => {
+        try {
+            const devices = await cache.get(`user:${userId}:devices`) || [];
+            if (!devices.includes(deviceId)) {
+                devices.push(deviceId);
+                await cache.set(`user:${userId}:devices`, devices);
+            }
+        } catch (err) {
+            logger.error('Redis addUserDevice error:', err);
+        }
+    },
+
+    removeUserDevice: async (userId, deviceId) => {
+        try {
+            const devices = await cache.get(`user:${userId}:devices`) || [];
+            const updatedDevices = devices.filter(d => d !== deviceId);
+            await cache.set(`user:${userId}:devices`, updatedDevices);
+        } catch (err) {
+            logger.error('Redis removeUserDevice error:', err);
+        }
+    }
+};
+
 module.exports = {
     // Constants
     LOCKOUT_DURATION,
@@ -251,5 +292,9 @@ module.exports = {
     getIPBlacklistExpiry: loginAttemptHelpers.getIPBlacklistExpiry,
     // Helper functions
     getLockoutDuration: loginAttemptHelpers.getLockoutDuration,
-    getMaxLoginAttempts: loginAttemptHelpers.getMaxLoginAttempts
+    getMaxLoginAttempts: loginAttemptHelpers.getMaxLoginAttempts,
+    getUserDevices: deviceHelpers.getUserDevices,
+    setUserDevices: deviceHelpers.setUserDevices,
+    addUserDevice: deviceHelpers.addUserDevice,
+    removeUserDevice: deviceHelpers.removeUserDevice
 };
