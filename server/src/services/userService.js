@@ -71,6 +71,7 @@ class UserService {
                 lockoutUntil: null,
                 online: false,
                 isBlocked: false,
+                isAdmin: false, // Initialize new users as non-admin by default
                 securityLevel: 'standard', // Can be: standard, enhanced, maximum
                 twoFactorEnabled: false,
                 allowedIPs: [], // For IP whitelisting
@@ -744,7 +745,8 @@ class UserService {
                 location: user.location,
                 createdAt: user.createdAt,
                 isVerified: user.isVerified,
-                online: user.online
+                online: user.online,
+                isAdmin: user.isAdmin || false
             };
         } catch (error) {
             logger.error('Error getting user info:', error);

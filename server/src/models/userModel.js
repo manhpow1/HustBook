@@ -13,6 +13,7 @@ class User {
         this.isBlocked = data.isBlocked || false;
         this.online = data.online || false;
         this.tokenVersion = data.tokenVersion || 0;
+        this.isAdmin = data.isAdmin || false;
     }
 
     toJSON() {
@@ -25,6 +26,7 @@ class User {
             isVerified: this.isVerified,
             isBlocked: this.isBlocked,
             online: this.online,
+            isAdmin: this.isAdmin,
         };
     }
 

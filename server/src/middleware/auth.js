@@ -4,6 +4,7 @@ const { createError } = require('../utils/customError');
 const cache = require('../utils/redis');
 const config = require('config');
 const crypto = require('crypto');
+const logger = require('../utils/logger');
 
 // Common security headers
 const securityHeaders = {
@@ -13,7 +14,6 @@ const securityHeaders = {
     'Strict-Transport-Security': 'max-age=31536000; includeSubDomains',
     'Content-Security-Policy': "default-src 'self'; img-src 'self' data: https:; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline';",
     'Referrer-Policy': 'strict-origin-when-cross-origin',
-    'Permissions-Policy': 'geolocation=(), microphone=(), camera=()',
     'X-CSRF-Token': null
 };
 
@@ -108,7 +108,6 @@ const authenticateToken = async (req, res, next) => {
                 uid,
                 // Only include necessary fields
                 isAdmin: user.isAdmin || false,
-                permissions: user.permissions || [],
                 tokenVersion: user.tokenVersion
             };
 
@@ -132,4 +131,12 @@ const authenticateToken = async (req, res, next) => {
     }
 };
 
-module.exports = { authenticateToken };
+// Middleware to check for admin permissions
+const requireAdmin = (req, res, next) => {
+    if (!req.user || !req.user.isAdmin) {
+        throw createError('9998', 'Admin access required');
+    }
+    next();
+};
+
+module.exports = { authenticateToken, requireAdmin };
