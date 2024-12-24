@@ -1,5 +1,5 @@
 const admin = require('firebase-admin');
-const logger = require('./logger');
+const logger = require('../utils/logger');
 
 let db;
 let auth;
