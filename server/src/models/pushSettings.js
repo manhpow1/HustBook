@@ -1,4 +1,4 @@
-const { db } = require('../config/firebase');
+const { initializeFirebase } = require('../config/firebase');
 const logger = require('../utils/logger');
 
 const DEFAULT_PUSH_SETTINGS = {
@@ -18,17 +18,22 @@ class PushSettings {
             throw new Error('User ID is required to manage push settings.');
         }
         this.userId = userId;
-        this.settingsRef = db.collection('pushSettings').doc(userId);
+    }
+
+    async getSettingsRef() {
+        let db = await initializeFirebase();
+        return db.collection('pushSettings').doc(this.userId);
     }
 
     async getSettings() {
         try {
-            const doc = await this.settingsRef.get();
+            const settingsRef = await this.getSettingsRef();
+            const doc = await settingsRef.get();
             if (doc.exists) {
                 return doc.data();
             } else {
                 // Initialize with default settings if none exist
-                await this.settingsRef.set(DEFAULT_PUSH_SETTINGS);
+                await settingsRef.set(DEFAULT_PUSH_SETTINGS);
                 return DEFAULT_PUSH_SETTINGS;
             }
         } catch (error) {
@@ -39,6 +44,7 @@ class PushSettings {
 
     async updateSettings(settings) {
         try {
+            const settingsRef = await this.getSettingsRef();
             // Filter out invalid keys to prevent unwanted data insertion
             const allowedKeys = Object.keys(DEFAULT_PUSH_SETTINGS);
             const sanitizedSettings = {};
@@ -48,7 +54,7 @@ class PushSettings {
                 }
             });
             // Merge the sanitized settings with existing settings
-            await this.settingsRef.set(sanitizedSettings, { merge: true });
+            await settingsRef.set(sanitizedSettings, { merge: true });
             // Combine existing settings with the new settings for immediate feedback
             const updatedSettings = { ...DEFAULT_PUSH_SETTINGS, ...sanitizedSettings };
             return updatedSettings;

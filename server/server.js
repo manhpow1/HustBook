@@ -4,7 +4,7 @@ const app = require('./src/app');
 const http = require('http');
 const { initSocketIO, closeSocketServer } = require('./src/socket');
 const { initializeFirebase, getFirebaseServices } = require('./src/config/firebase');
-const AuditLogModel = require('./src/models/auditLogModel'); // Import the model
+const AuditLogModel = require('./src/models/auditLogModel');
 
 async function startServer() {
     try {
@@ -18,32 +18,26 @@ async function startServer() {
         // Retrieve Firebase services
         const { db, auth } = getFirebaseServices();
 
-        // Initialize models with db
+        // Initialize models with Firebase services
         const auditLogModel = new AuditLogModel(db);
-        // Initialize other models similarly if needed
-        // const userModel = new UserModel(db);
-        // ...
+
+        // Attach models to app locals for accessibility in routes/controllers
+        app.locals.auditLogModel = auditLogModel;
 
         // Create HTTP server
         const server = http.createServer(app);
 
-        // Initialize Socket.IO with server and db (if needed)
-        await initSocketIO(server, { db, auth, auditLogModel }); // Pass dependencies as needed
-
-        // Attach models to app locals for accessibility in routes/controllers
-        app.locals.auditLogModel = auditLogModel;
-        // app.locals.userModel = userModel;
-        // ...
+        // Initialize Socket.IO with server and Firebase services
+        await initSocketIO(server, { db, auth, auditLogModel });
 
         const PORT = process.env.PORT || 3000;
         server.listen(PORT, () => {
             logger.info(`Server running on port ${PORT}`);
         });
 
-        // Handle graceful shutdown
+        // Handle graceful shutdown signals
         process.on('SIGTERM', () => gracefulShutdown(server));
         process.on('SIGINT', () => gracefulShutdown(server));
-
     } catch (error) {
         logger.error('Failed to start server:', error);
         process.exit(1);
@@ -64,7 +58,7 @@ function validateEnvVars() {
         'CORS_ORIGIN',
         'REDIS_URL',
         'LOG_LEVEL',
-        'FIREBASE_SERVICE_ACCOUNT' // Include all necessary vars
+        'FIREBASE_SERVICE_ACCOUNT', // Include necessary Firebase vars
     ];
 
     const missingVars = requiredVars.filter((key) => !process.env[key]);
@@ -81,7 +75,7 @@ function validateEnvVars() {
  * @param {http.Server} server 
  */
 function gracefulShutdown(server) {
-    logger.info('Received shutdown signal');
+    logger.info('Received shutdown signal. Starting graceful shutdown...');
 
     // Stop accepting new connections
     server.close(() => {
@@ -90,18 +84,19 @@ function gracefulShutdown(server) {
         // Close Socket.IO connections
         closeSocketServer();
 
-        // Give existing connections time to complete
+        // Allow active connections to complete within 30 seconds
         setTimeout(() => {
-            logger.info('Shutting down process');
+            logger.info('Completed pending connections. Shutting down...');
             process.exit(0);
         }, 30000); // 30-second grace period
     });
 
-    // Force shutdown if graceful shutdown fails
+    // Force shutdown if graceful shutdown exceeds time limit
     setTimeout(() => {
-        logger.error('Could not close connections in time, forcefully shutting down');
+        logger.error('Forcefully shutting down due to timeout');
         process.exit(1);
     }, 50000); // Additional 20 seconds before force shutdown
 }
 
+// Start the server
 startServer();

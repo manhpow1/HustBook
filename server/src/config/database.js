@@ -55,12 +55,14 @@ const deleteDocument = async (collection, id) => {
 
 const queryDocuments = async (collection, field, operator, value) => {
     if (!db) {
-        logger.error('Firestore is not initialized');
-        throw new Error('Firestore is not initialized');
+        logger.error('Firestore is not initialized. Reinitializing...');
+        const firebase = await initializeFirebase();
+        db = firebase.db;
     }
+
     try {
         const snapshot = await db.collection(collection).where(field, operator, value).get();
-        return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        return snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
     } catch (error) {
         logger.error(`Error querying documents from ${collection}:`, error);
         throw error;

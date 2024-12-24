@@ -1,4 +1,5 @@
-const { collections, db, arrayUnion, arrayRemove } = require('../config/database');
+const { initializeFirebase } = require('../config/firebase');
+const { collections, arrayUnion, arrayRemove } = require('../config/database');
 const { createError } = require('../utils/customError');
 const logger = require('../utils/logger');
 
@@ -30,9 +31,14 @@ class User {
         };
     }
 
+    async getUserRef() {
+        let db = await initializeFirebase();
+        return db.collection(collections.users).doc(this.id);
+    }
+
     async blockUser(targetUserId) {
         try {
-            const userRef = db.collection(collections.users).doc(this.id);
+            const userRef = await this.getUserRef();
             const userDoc = await userRef.get();
 
             if (!userDoc.exists) {
@@ -56,7 +62,7 @@ class User {
 
     async unblockUser(targetUserId) {
         try {
-            const userRef = db.collection(collections.users).doc(this.id);
+            const userRef = await this.getUserRef();
             const userDoc = await userRef.get();
 
             if (!userDoc.exists) {
