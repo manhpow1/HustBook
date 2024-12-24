@@ -1,8 +1,7 @@
-const { db } = require('../config/firebase');
 const logger = require('../utils/logger');
 
 class AuditLogModel {
-    constructor() {
+    constructor(db) {
         this.auditLogsRef = db.collection('auditLogs');
     }
 
@@ -21,4 +20,4 @@ class AuditLogModel {
     }
 }
 
-module.exports = new AuditLogModel();
+module.exports = AuditLogModel;
