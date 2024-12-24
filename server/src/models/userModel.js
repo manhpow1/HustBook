@@ -44,7 +44,7 @@ class User {
     }
 
     async getUserRef() {
-        let db = await initializeFirebase();
+        const { db } = await initializeFirebase();
         return db.collection(collections.users).doc(this.id);
     }
 
