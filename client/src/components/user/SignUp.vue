@@ -105,7 +105,7 @@ import VerifyCode from './VerifyCode.vue'
 const router = useRouter()
 const userStore = useUserStore()
 const { showToast } = useToast()
-const { errors, validateField, validators } = useFormValidation()
+const { errors, validatePassword, validatePhoneNumber, clearErrors } = useFormValidation()
 const { isLoading } = storeToRefs(userStore)
 
 const currentStep = ref('signup')
@@ -118,32 +118,25 @@ const touched = ref({
   password: false,
 })
 
-const handlePhoneInput = async () => {
+const handlePhoneInput = () => {
   if (touched.value.phoneNumber) {
-    await validateField('phoneNumber', phoneNumber.value, validators.phoneNumber)
-    console.log(errors.value)
-  }
+    validatePhoneNumber(phoneNumber.value)}
 }
 
-const handlePhoneBlur = async () => {
+const handlePhoneBlur = () => {
   touched.value.phoneNumber = true
-  console.log('Phone blur triggered')
-  await validateField('phoneNumber', phoneNumber.value, validators.phoneNumber)
-  console.log(errors.value)
+  validatePhoneNumber(phoneNumber.value)
 }
 
-const handlePasswordInput = async () => {
+const handlePasswordInput = () => {
   if (touched.value.password) {
-    await validateField('password', password.value, validators.password)
-    console.log(errors.value)
+    validatePassword(password.value, phoneNumber.value)
   }
 }
 
-const handlePasswordBlur = async () => {
+const handlePasswordBlur = () => {
   touched.value.password = true
-  console.log('Password blur triggered')
-  await validateField('password', password.value, validators.password)
-  console.log(errors.value)
+  validatePassword(password.value, phoneNumber.value)
 }
 
 const isValid = computed(() => {
@@ -154,10 +147,9 @@ const isValid = computed(() => {
 })
 
 const handleSignup = async () => {
-  console.log('Signup triggered')
-  await validateField('phoneNumber', phoneNumber.value, validators.phoneNumber)
-  await validateField('password', password.value, validators.password)
-  console.log(errors.value)
+  clearErrors()
+  validatePhoneNumber(phoneNumber.value)
+  validatePassword(password.value, phoneNumber.value)
 
   if (!isValid.value) {
     console.log('Form is invalid:', errors.value)
@@ -187,26 +179,35 @@ const handleVerificationError = (error) => {
 
 const passwordStrength = computed(() => {
   if (!password.value) return { score: 0, text: '', colorClass: '' }
+  
   let score = 0
-  if (password.value.length >= 6) score += 20
+  if (password.value.length >= 8) score += 20
   if (/[A-Z]/.test(password.value)) score += 20
   if (/[a-z]/.test(password.value)) score += 20
   if (/\d/.test(password.value)) score += 20
-  if (/[^A-Za-z0-9]/.test(password.value)) score += 20
-
+  if (!/[^a-zA-Z0-9]/.test(password.value)) score += 20 // Only letters and numbers
+  
+  // Deductions
+  if (/(.)\1{2,}/.test(password.value)) score -= 20 // Repeated characters
+  if (/^(?:abc|123|password|admin|user|login|welcome|qwerty|asdfgh|zxcvbn)/i.test(password.value)) score -= 20 // Common patterns
+  if (password.value === phoneNumber.value) score = 0 // Matches phone number
+  
+  score = Math.max(0, Math.min(100, score)) // Ensure score is between 0 and 100
+  
   let text = 'Weak'
   let colorClass = 'bg-red-500'
-
-  if (score > 80) {
+  
+  if (score >= 80) {
     text = 'Very Strong'
     colorClass = 'bg-green-500'
-  } else if (score > 60) {
+  } else if (score >= 60) {
     text = 'Strong'
     colorClass = 'bg-blue-500'
-  } else if (score > 40) {
+  } else if (score >= 40) {
     text = 'Medium'
     colorClass = 'bg-yellow-500'
   }
+  
   return { score, text, colorClass }
 })
 </script>
