@@ -21,8 +21,8 @@ const passwordStrength = (value) => {
 
     // Check for common patterns
     const commonPatterns = [
-        /^[a-zA-Z]{1,}[0-9]{1,}$/, // All letters followed by all numbers
-        /^[0-9]{1,}[a-zA-Z]{1,}$/, // All numbers followed by all letters
+        /^[a-zA-Z]+[0-9]+$/, // All letters followed by all numbers
+        /^[0-9]+[a-zA-Z]+$/, // All numbers followed by all letters
         /(.)\1{2,}/, // Character repeated more than twice
         /^(?:abc|123|password|admin|user|login|welcome)/i, // Common password patterns
         /(?:qwerty|asdfgh|zxcvbn)/i // Keyboard patterns
@@ -35,13 +35,13 @@ const passwordStrength = (value) => {
     // Calculate strength score
     let strength = 0;
     const rules = {
-        'length': value.length >= 12,
-        'uppercase': /[A-Z]/.test(value),
-        'lowercase': /[a-z]/.test(value),
-        'numbers': /[0-9]/.test(value),
-        'special': /[!@#$%^&*]/.test(value),
-        'mixedChars': /(?=.*[a-z])(?=.*[A-Z])(?=.*[0-9])(?=.*[!@#$%^&*])/.test(value),
-        'noRepeat': !/(.)\1{2,}/.test(value)
+        length: value.length >= 8, // Updated to allow minimum length of 8
+        uppercase: /[A-Z]/.test(value),
+        lowercase: /[a-z]/.test(value),
+        numbers: /[0-9]/.test(value),
+        special: /[!@#$%^&*]/.test(value),
+        mixedChars: /(?=.*[a-z])(?=.*[A-Z])(?=.*[0-9])/.test(value), // Removed special character requirement from mixedChars
+        noRepeat: !/(.)\1{2,}/.test(value)
     };
 
     // Calculate score based on rules
@@ -49,8 +49,9 @@ const passwordStrength = (value) => {
         if (rule) strength += 1;
     });
 
-    return strength >= 5; // Require at least 5 rules to pass
+    return strength >= 4; // Adjusted to require at least 4 rules to pass
 };
+
 
 // Base password complexity validation
 const passwordComplexity = Joi.string()
