@@ -138,8 +138,6 @@ import { useUserStore } from '../../stores/userStore';
 import { ShieldCheck, Phone, Loader, CheckCircleIcon, AlertCircleIcon, Clock } from 'lucide-vue-next';
 import { useToast } from '../../composables/useToast';
 import { useErrorHandler } from '../../composables/useErrorHandler';
-import { useAuthForm } from '../../composables/useAuthForm';
-import { useAuthValidation } from '../../composables/useAuthValidation';
 import { storeToRefs } from 'pinia';
 
 const router = useRouter();
@@ -147,27 +145,35 @@ const userStore = useUserStore();
 const { handleError } = useErrorHandler();
 const { showToast } = useToast();
 
-// Form state management
-const {
-    phoneNumber,
-    clearForm,
-    attemptsRemaining,
-    resetAttempts,
-} = useAuthForm();
-
-// Form validation
-const {
-    validatePhoneNumber,
-    isValidForm,
-    validationErrors,
-} = useAuthValidation(phoneNumber);
+// Form state
+const phoneNumber = ref('');
+const attemptsRemaining = ref(3);
+const codeDigits = ref(['', '', '', '', '', '']);
+const codeInputs = ref([]);
 
 // Store state
 const { isLoading, error, successMessage, cooldownTime } = storeToRefs(userStore);
 
-// Code input state
-const codeDigits = ref(['', '', '', '', '', '']);
-const codeInputs = ref([]);
+// Validation
+const validationErrors = ref({
+    phone: '',
+    code: ''
+});
+
+const validatePhoneNumber = () => {
+    const phoneRegex = /^[0-9]{10}$/;
+    if (!phoneNumber.value) {
+        validationErrors.value.phone = 'Phone number is required';
+    } else if (!phoneRegex.test(phoneNumber.value)) {
+        validationErrors.value.phone = 'Invalid phone number format';
+    } else {
+        validationErrors.value.phone = '';
+    }
+};
+
+const isValidForm = computed(() => {
+    return phoneNumber.value && !validationErrors.value.phone;
+});
 
 // Computed properties
 const errorMessage = computed(() => error.value || '');
@@ -197,27 +203,23 @@ const onCodeInput = (index) => {
     const val = codeDigits.value[index];
     if (!val) return;
 
-    // Ensure only numbers
     if (!/^\d$/.test(val)) {
         codeDigits.value[index] = '';
         return;
     }
 
-    // Move to next input
     if (index < 5) {
         codeInputs.value[index + 1]?.focus();
     }
 };
 
 const onCodeKeydown = (event, index) => {
-    // Handle backspace
     if (event.key === 'Backspace') {
         if (!codeDigits.value[index] && index > 0) {
             codeDigits.value[index - 1] = '';
             codeInputs.value[index - 1]?.focus();
         }
     }
-    // Handle left/right arrows
     else if (event.key === 'ArrowLeft' && index > 0) {
         codeInputs.value[index - 1]?.focus();
     }
@@ -237,9 +239,18 @@ const onCodePaste = (event) => {
         }
     });
 
-    // Focus last filled input or first empty one
     const lastIndex = Math.min(numbers.length - 1, 5);
     codeInputs.value[lastIndex]?.focus();
+};
+
+const resetAttempts = () => {
+    attemptsRemaining.value = 3;
+};
+
+const clearForm = () => {
+    phoneNumber.value = '';
+    codeDigits.value = ['', '', '', '', '', ''];
+    validationErrors.value = { phone: '', code: '' };
 };
 
 // Form submission
@@ -275,7 +286,6 @@ const resendCode = async () => {
     try {
         const success = await userStore.getVerifyCode(phoneNumber.value);
         if (success) {
-            // Clear code inputs
             codeDigits.value = ['', '', '', '', '', ''];
             codeInputs.value[0]?.focus();
             showToast('Verification code resent successfully!', 'success');
@@ -289,7 +299,6 @@ const resendCode = async () => {
 };
 
 onMounted(() => {
-    // Focus first input on mount
     codeInputs.value[0]?.focus();
 });
 
@@ -315,7 +324,6 @@ input[type="text"] {
     caret-color: theme('colors.indigo.600');
 }
 
-/* Ensure accessibility for focus states */
 button:focus,
 input:focus {
     outline: none;

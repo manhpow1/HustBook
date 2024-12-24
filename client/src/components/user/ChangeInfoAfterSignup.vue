@@ -10,7 +10,7 @@
                 <label for="userName" class="block text-sm font-medium text-gray-700">userName</label>
                 <div class="mt-1 relative rounded-md shadow-sm">
                     <input v-model="userName" type="text" id="userName" name="userName" required
-                        aria-describedby="userName-error" @input="validateuserNameField"
+                        aria-describedby="userName-error" @input="validateUserNameField"
                         class="block w-full pr-10 border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
                         :class="{ 'border-red-300': userNameError }" placeholder="Enter your userName" />
                     <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
@@ -96,28 +96,31 @@ import { useFormValidation } from '../../composables/useFormValidation';
 import { useImageProcessing } from '../../composables/useImageProcessing';
 import { sanitizeInput } from '../../utils/sanitize';
 import { useToast } from '../../composables/useToast';
+import { storeToRefs } from 'pinia';
 
 const router = useRouter();
 const userStore = useUserStore();
-
-// Destructure store refs for reactivity
-const { user, isLoading, errorMessage, successMessage } = storeToRefs(userStore);
-
-// Initialize composables
 const { showToast } = useToast();
-const { validateuserName } = useFormValidation();
+const { validateField } = useFormValidation();
 const { compressImage, validateImage, isProcessing: isCompressing } = useImageProcessing();
 
-// Local component state
+// Store refs
+const { user, isLoading, error: errorMessage, successMessage } = storeToRefs(userStore);
+
+// Local state
 const userName = ref('');
 const userNameError = ref('');
 const avatar = ref(null);
 const avatarPreview = ref('');
 const avatarError = ref('');
 
-// Validate the userName field in real-time
-const validateuserNameField = () => {
-    userNameError.value = validateuserName(userName.value);
+const validateUserNameField = async () => {
+    userNameError.value = await validateField('userName', userName.value, [
+        value => !value?.trim() && 'Username is required',
+        value => value.length < 3 && 'Username must be at least 3 characters',
+        value => value.length > 30 && 'Username must be at most 30 characters',
+        value => !/^[a-zA-Z0-9_]+$/.test(value) && 'Username can only contain letters, numbers and underscores'
+    ]);
 };
 
 const handleFileChange = async (event) => {
@@ -125,20 +128,17 @@ const handleFileChange = async (event) => {
     if (!file) return;
 
     try {
-        // Validate file first
         if (!validateImage(file)) {
             event.target.value = '';
             return;
         }
 
-        // Show preview immediately for better UX
         const reader = new FileReader();
         reader.onload = (e) => {
             avatarPreview.value = e.target.result;
         };
         reader.readAsDataURL(file);
 
-        // Compress image
         const compressedFile = await compressImage(file);
         if (compressedFile) {
             avatar.value = compressedFile;
@@ -157,7 +157,6 @@ const handleFileChange = async (event) => {
     }
 };
 
-// Remove the selected avatar
 const removeAvatar = () => {
     avatar.value = null;
     avatarPreview.value = '';
@@ -166,7 +165,6 @@ const removeAvatar = () => {
     if (fileInput) fileInput.value = '';
 };
 
-// Handle form submission
 const handleSubmit = async () => {
     if (isCompressing.value) {
         showToast('Please wait while the image is being processed', 'info');
@@ -175,55 +173,48 @@ const handleSubmit = async () => {
     if (userNameError.value) return;
 
     try {
-        // Sanitize inputs
-        const sanitizeduserName = sanitizeInput(userName.value);
+        const sanitizedUserName = sanitizeInput(userName.value);
+        await userStore.updateProfile(sanitizedUserName, avatar.value);
 
-        await userStore.updateProfile(sanitizeduserName, avatar.value);
-
-        if (userStore.user.value?.isBlocked) {
+        if (user.value?.isBlocked) {
             showToast('Your account has been blocked.', 'error');
             router.push({ name: 'Login' });
         } else {
             showToast('Profile updated successfully.', 'success');
-            // Optionally, redirect to another page after a delay
             setTimeout(() => {
                 router.push({ name: 'Home' });
             }, 2000);
         }
     } catch (error) {
-        // Error handling is managed by the store and useErrorHandler
+        console.error('Error updating profile:', error);
     }
 };
 
-// Continue without uploading an avatar
 const continueWithoutAvatar = () => {
     removeAvatar();
     handleSubmit();
 };
 
-// Retry uploading the avatar
 const retryUpload = () => {
     avatarError.value = '';
     const fileInput = document.getElementById('avatar-upload');
     if (fileInput) fileInput.value = '';
 };
 
-// Watch for token changes to ensure the user is authenticated
 onMounted(() => {
-    if (!userStore.token) {
+    if (!userStore.isLoggedIn) {
         router.push({ name: 'Login' });
-    } else {
-        // Initialize form with existing user data if available
-        if (user.value) {
-            userName.value = user.value.userName || '';
-            if (user.value.avatar_url) {
-                avatarPreview.value = user.value.avatar_url;
-            }
+        return;
+    }
+
+    if (user.value) {
+        userName.value = user.value.userName || '';
+        if (user.value.avatar_url) {
+            avatarPreview.value = user.value.avatar_url;
         }
     }
 });
 
-// Watch for changes in the store's errorMessage and successMessage to show toast notifications
 watch(
     () => errorMessage.value,
     (newError) => {
@@ -244,17 +235,12 @@ watch(
 </script>
 
 <style scoped>
-/* Ensures the form is visually appealing and responsive */
-
-/* Adjust focus styles for accessibility */
 input:focus,
 button:focus {
     outline: none;
     box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.5);
-    /* Indigo focus ring */
 }
 
-/* Loader icon positioning within the button */
 button .animate-spin {
     animation: spin 1s linear infinite;
 }

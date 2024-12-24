@@ -5,6 +5,7 @@ server/serviceAccountKey.json
 /server/uploads
 repomix-output.txt
 client.txt
+client.xml
 server.txt
 repomix.config.json
 .repomixignore

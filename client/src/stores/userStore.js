@@ -6,7 +6,6 @@ import { useRouter } from 'vue-router';
 import logger from '../services/logging';
 import { useErrorHandler } from '../composables/useErrorHandler';
 import { useToast } from '../composables/useToast';
-import { useAuthValidation } from '../composables/useAuthValidation';
 import { initSocket } from '../services/socket';
 
 // Constants
@@ -21,7 +20,6 @@ export const useUserStore = defineStore('user', () => {
     const socket = initSocket();
     const { handleError } = useErrorHandler();
     const { showToast } = useToast();
-    const validation = useAuthValidation();
 
     // State
     const user = ref(null);
@@ -239,12 +237,6 @@ export const useUserStore = defineStore('user', () => {
         try {
             isLoading.value = true;
             error.value = null;
-
-            if (!validation.passwordStrength(password)) {
-                error.value = 'Password does not meet security requirements';
-                showToast('error', error.value);
-                return false;
-            }
 
             const uuid = crypto.randomUUID();
             localStorage.setItem('deviceId', deviceId.value);
@@ -509,12 +501,6 @@ export const useUserStore = defineStore('user', () => {
         try {
             isLoading.value = true;
             error.value = null;
-
-            if (!validation.passwordStrength(newPassword)) {
-                error.value = 'New password does not meet security requirements';
-                showToast('error', error.value);
-                return false;
-            }
 
             if (currentPassword === newPassword) {
                 error.value = 'New password must be different from current password';

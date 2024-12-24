@@ -3,13 +3,12 @@
     <Card class="w-full max-w-md p-8">
       <h2 class="text-2xl font-bold mb-6 text-center">Reset Password</h2>
 
-      <!-- Step 1: Phone Number -->
       <form v-if="step === 1" @submit.prevent="handlePhoneSubmit" class="space-y-4">
         <div>
           <Input v-model="phoneNumber" type="tel" placeholder="Enter your phone number" :error="errors.phoneNumber"
-            @input="errors.phoneNumber = ''" />
+            @input="validatePhoneNumber" />
         </div>
-        <Button type="submit" :loading="loading" class="w-full">
+        <Button type="submit" :loading="isLoading" class="w-full">
           Send Verification Code
         </Button>
         <div class="text-center mt-4">
@@ -19,21 +18,20 @@
         </div>
       </form>
 
-      <!-- Step 2: Verification Code and New Password -->
       <form v-if="step === 2" @submit.prevent="handleResetSubmit" class="space-y-4">
         <div>
           <Input v-model="code" type="text" maxlength="6" placeholder="Enter verification code" :error="errors.code"
-            @input="errors.code = ''" />
+            @input="validateCode" />
         </div>
         <div>
           <Input v-model="newPassword" type="password" placeholder="Enter new password" :error="errors.newPassword"
-            @input="errors.newPassword = ''" />
+            @input="validatePassword" />
         </div>
         <div>
           <Input v-model="confirmPassword" type="password" placeholder="Confirm new password"
-            :error="errors.confirmPassword" @input="errors.confirmPassword = ''" />
+            :error="errors.confirmPassword" @input="validateConfirmPassword" />
         </div>
-        <Button type="submit" :loading="loading" class="w-full">
+        <Button type="submit" :loading="isLoading" class="w-full">
           Reset Password
         </Button>
         <div class="text-center mt-4">
@@ -50,25 +48,29 @@
 <script setup>
 import { ref, onBeforeUnmount } from 'vue';
 import { useRouter } from 'vue-router';
-import { useAuth } from '../../composables/useAuth';
+import { useFormValidation } from '../../composables/useFormValidation';
+import { useUserStore } from '../../stores/userStore';
+import { useToast } from '../../composables/useToast';
+import { storeToRefs } from 'pinia';
 import Card from '../../components/ui/Card.vue';
 import Input from '../../components/ui/Input.vue';
 import Button from '../../components/ui/Button.vue';
 
 const router = useRouter();
-const { forgotPassword } = useAuth();
+const userStore = useUserStore();
+const { validateField } = useFormValidation();
+const { showToast } = useToast();
 
-// Form state
+const { isLoading } = storeToRefs(userStore);
+
 const step = ref(1);
 const phoneNumber = ref('');
 const code = ref('');
 const newPassword = ref('');
 const confirmPassword = ref('');
-const loading = ref(false);
 const cooldown = ref(0);
 const cooldownTimer = ref(null);
 
-// Error handling
 const errors = ref({
   phoneNumber: '',
   code: '',
@@ -76,62 +78,80 @@ const errors = ref({
   confirmPassword: '',
 });
 
-// Handle phone number submission
+const validatePhoneNumber = async () => {
+  errors.value.phoneNumber = await validateField('phoneNumber', phoneNumber.value, [
+    value => !value && 'Phone number is required',
+    value => !/^0\d{9}$/.test(value) && 'Invalid phone number format'
+  ]);
+};
+
+const validateCode = async () => {
+  errors.value.code = await validateField('code', code.value, [
+    value => !value && 'Verification code is required',
+    value => !/^\d{6}$/.test(value) && 'Code must be 6 digits'
+  ]);
+};
+
+const validatePassword = async () => {
+  errors.value.newPassword = await validateField('password', newPassword.value, [
+    value => !value && 'Password is required',
+    value => value.length < 6 && 'Password must be at least 6 characters',
+    value => value.length > 20 && 'Password must be less than 20 characters'
+  ]);
+};
+
+const validateConfirmPassword = async () => {
+  errors.value.confirmPassword = newPassword.value !== confirmPassword.value ? 'Passwords do not match' : '';
+};
+
 const handlePhoneSubmit = async () => {
-  if (!phoneNumber.value) {
-    errors.value.phoneNumber = 'Phone number is required';
-    return;
-  }
+  await validatePhoneNumber();
+  if (errors.value.phoneNumber) return;
 
-  loading.value = true;
-  const success = await forgotPassword(phoneNumber.value);
-  loading.value = false;
-
-  if (success) {
-    step.value = 2;
-    startCooldown();
+  try {
+    const success = await userStore.forgotPassword(phoneNumber.value);
+    if (success) {
+      step.value = 2;
+      startCooldown();
+      showToast('Verification code sent successfully', 'success');
+    }
+  } catch (error) {
+    showToast(error.message, 'error');
   }
 };
 
-// Handle password reset submission
 const handleResetSubmit = async () => {
-  // Validate inputs
-  if (!code.value) {
-    errors.value.code = 'Verification code is required';
-    return;
-  }
-  if (!newPassword.value) {
-    errors.value.newPassword = 'New password is required';
-    return;
-  }
-  if (newPassword.value !== confirmPassword.value) {
-    errors.value.confirmPassword = 'Passwords do not match';
-    return;
-  }
+  await validateCode();
+  await validatePassword();
+  await validateConfirmPassword();
 
-  loading.value = true;
-  const success = await forgotPassword(phoneNumber.value, code.value, newPassword.value);
-  loading.value = false;
+  if (errors.value.code || errors.value.newPassword || errors.value.confirmPassword) return;
 
-  if (success) {
-    router.push('/login');
+  try {
+    const success = await userStore.forgotPassword(phoneNumber.value, code.value, newPassword.value);
+    if (success) {
+      showToast('Password reset successfully', 'success');
+      router.push('/login');
+    }
+  } catch (error) {
+    showToast(error.message, 'error');
   }
 };
 
-// Resend verification code
 const resendCode = async () => {
   if (cooldown.value > 0) return;
 
-  loading.value = true;
-  const success = await forgotPassword(phoneNumber.value);
-  loading.value = false;
-
-  if (success) {
-    startCooldown();
+  try {
+    const success = await userStore.forgotPassword(phoneNumber.value);
+    if (success) {
+      startCooldown();
+      showToast('Verification code resent', 'success');
+    }
+  } catch (error) {
+    showToast(error.message, 'error');
   }
 };
 
-// Cooldown timer for resend code
 const startCooldown = () => {
   cooldown.value = 60;
   cooldownTimer.value = setInterval(() => {
@@ -143,7 +163,6 @@ const startCooldown = () => {
   }, 1000);
 };
 
-// Cleanup
 onBeforeUnmount(() => {
   if (cooldownTimer.value) {
     clearInterval(cooldownTimer.value);
