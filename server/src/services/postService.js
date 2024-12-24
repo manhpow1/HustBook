@@ -1,7 +1,8 @@
 const Post = require('../models/Post');
 const admin = require('firebase-admin');
 const { getBoundingBox, getDistance } = require('../utils/geoUtils');
-const { collections, db, createDocument, getDocument, updateDocument} = require('../config/database');
+const { collections, createDocument, getDocument, updateDocument} = require('../config/database');
+const { db } = require('../config/firebase');
 const { createError } = require('../utils/customError');
 const logger = require('../utils/logger');
 

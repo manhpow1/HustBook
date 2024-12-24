@@ -1,4 +1,5 @@
-const { db, collections, arrayRemove } = require('../config/database');
+const {collections, arrayRemove } = require('../config/database');
+const { db } = require('../config/firebase');
 const { createError } = require('../utils/customError');
 const logger = require('../utils/logger');
 const Conversation = require('../models/Conversation');

@@ -1,5 +1,6 @@
 const { v4: uuidv4 } = require('uuid');
-const { collections, db, createDocument, getDocument, updateDocument, queryDocuments, runTransaction, arrayUnion, } = require('../config/database');
+const { collections, createDocument, getDocument, updateDocument, queryDocuments, runTransaction, arrayUnion, } = require('../config/database');
+const { db } = require('../config/firebase');
 const { createError } = require('../utils/customError');
 const { generateDeviceToken, hashPassword, comparePassword, generateSecureToken } = require('../utils/authHelper');
 const { passwordStrength } = require('../validators/userValidator');

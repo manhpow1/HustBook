@@ -1,4 +1,5 @@
-const { collections, db } = require('../config/database');
+const { collections } = require('../config/database');
+const { db } = require('../config/firebase');
 const { getBoundingBox, getDistance } = require('../utils/geoUtils');
 const { createError } = require('../utils/customError');
 const logger = require('../utils/logger');

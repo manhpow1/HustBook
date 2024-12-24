@@ -3,7 +3,7 @@ const logger = require('./src/utils/logger');
 const app = require('./src/app');
 const http = require('http');
 const { initSocketIO, closeSocketServer } = require('./src/socket');
-const { initializeFirebase, getFirebaseServices } = require('./src/config/firebase');
+const { initializeFirebase } = require('./src/config/firebase');
 const AuditLogModel = require('./src/models/auditLogModel');
 
 async function startServer() {
@@ -12,11 +12,8 @@ async function startServer() {
         validateEnvVars();
 
         // Initialize Firebase before starting the server
-        await initializeFirebase();
+        const { db, auth } = await initializeFirebase();
         logger.info('Firebase initialized successfully');
-
-        // Retrieve Firebase services
-        const { db, auth } = getFirebaseServices();
 
         // Initialize models with Firebase services
         const auditLogModel = new AuditLogModel(db);

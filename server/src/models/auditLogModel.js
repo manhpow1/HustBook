@@ -1,13 +1,27 @@
+const { initializeFirebase } = require('../config/firebase');
 const logger = require('../utils/logger');
 
 class AuditLogModel {
     constructor(db) {
-        this.auditLogsRef = db.collection('auditLogs');
+        this.db = db;
+    }
+
+    async ensureAuditLogsRef() {
+        if (!this.auditLogsRef) {
+            if (!this.db) {
+                logger.error('Firestore is not initialized. Reinitializing...');
+                const firebase = await initializeFirebase();
+                this.db = firebase.db;
+            }
+            this.auditLogsRef = this.db.collection('auditLogs');
+        }
+        return this.auditLogsRef;
     }
 
     async logAction(userId, targetUserId, action) {
         try {
-            await this.auditLogsRef.add({
+            const auditLogsRef = await this.ensureAuditLogsRef();
+            await auditLogsRef.add({
                 userId,
                 targetUserId,
                 action,
