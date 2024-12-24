@@ -103,7 +103,18 @@ const verificationCodeHelpers = {
         } catch (err) {
             logger.error('Redis clearVerifyAttempts error:', err);
         }
-    }
+    },
+
+    setVerificationAttempts: async (userId, attempts) => {
+        try {
+            const key = `verify_attempts:${userId}`;
+            await client.set(key, attempts.toString(), {
+                EX: 24 * 60 * 60 // Hết hạn sau 24 giờ
+            });
+        } catch (err) {
+            logger.error('Redis setVerificationAttempts error:', err);
+        }
+    },
 };
 
 // Constants
@@ -275,6 +286,7 @@ module.exports = {
     del: cache.del,
     setVerificationCode: verificationCodeHelpers.setVerificationCode,
     getVerificationCode: verificationCodeHelpers.getVerificationCode,
+    setVerificationAttempts: verificationCodeHelpers.setVerificationAttempts,
     incrementVerifyAttempts: verificationCodeHelpers.incrementVerifyAttempts,
     getVerifyAttempts: verificationCodeHelpers.getVerifyAttempts,
     clearVerifyAttempts: verificationCodeHelpers.clearVerifyAttempts,
