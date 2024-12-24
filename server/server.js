@@ -1,26 +1,28 @@
-require('dotenv').config();
-const logger = require('./src/utils/logger');
-const app = require('./src/app');
-const http = require('http');
-const { initSocketIO } = require('./src/socket');
-const { initializeFirebase } = require('./src/config/firebase');
+import dotenv from 'dotenv';
+import logger from './src/utils/logger';
+import app from './src/app';
+import http from 'http';
+import { initSocketIO } from './src/socket';
+import { initializeFirebase } from './src/config/firebase';
+
+dotenv.config();
 
 async function startServer() {
     try {
         const { db } = await initializeFirebase();
-        const AuditLogModel = require('./src/models/auditLogModel');
+        const { default: AuditLogModel } = await import('./src/models/auditLogModel');
         const auditLog = new AuditLogModel(db);
-        app.locals.auditLog = auditLog; // Lưu instance vào app.locals
+        app.locals.auditLog = auditLog;
 
         const server = http.createServer(app);
         await initSocketIO(server);
 
         const PORT = process.env.PORT || 3000;
         server.listen(PORT, () => {
-            console.log(`Server running on port ${PORT}`);
+            logger.info(`Server running on port ${PORT}`);
         });
     } catch (error) {
-        console.error('Failed to start server:', error);
+        logger.error('Failed to start server:', error);
         process.exit(1);
     }
 }
