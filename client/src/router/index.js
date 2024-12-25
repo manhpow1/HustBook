@@ -50,7 +50,8 @@ const routes = [
     {
         path: '/get-verify-code',
         name: 'GetVerifyCode',
-        component: () => import('../components/user/GetVerifyCode.vue')
+        component: () => import('../components/user/GetVerifyCode.vue'),
+        meta: { allowWithoutAuth: true }
     },
     {
         path: '/verify-code/:verificationCode',
@@ -143,7 +144,14 @@ const router = createRouter({
 router.beforeEach(async (to, from, next) => {
     logger.debug(`Navigating to: ${to.name}`);
     const requiresAuth = to.matched.some((record) => record.meta.requiresAuth);
+    const isVerifyCodeRoute = to.name === 'GetVerifyCode';
     const userStore = useUserStore();
+
+    // Cho phép truy cập trực tiếp vào GetVerifyCode
+    if (isVerifyCodeRoute) {
+        next();
+        return;
+    }
 
     if (requiresAuth) {
         if (!userStore.isLoggedIn) {
