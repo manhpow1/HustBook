@@ -382,32 +382,36 @@ export const useUserStore = defineStore('user', () => {
             showToast('error', 'Account is temporarily locked. Please try again later.');
             return false;
         }
-
-        // Check cooldown
         const now = Date.now();
         if (now - lastVerificationRequest.value < VERIFICATION_CODE_COOLDOWN) {
             const remainingTime = Math.ceil((VERIFICATION_CODE_COOLDOWN - (now - lastVerificationRequest.value)) / 1000);
             showToast('error', `Please wait ${remainingTime} seconds before requesting another code`);
             return false;
         }
-
         try {
             isLoading.value = true;
             error.value = null;
-
             const response = await apiService.getVerifyCode({ phoneNumber });
-
             if (response.data.code === '1000') {
                 lastVerificationRequest.value = now;
                 successMessage.value = 'Verification code sent successfully!';
                 showToast('success', successMessage.value);
                 startCooldown();
-                return true;
+                return {
+                    success: true,
+                    code: response.data.data.verifyCode || null
+                };
             }
-            return false;
+            return {
+                success: false,
+                code: null
+            };
         } catch (err) {
             handleAuthError(err);
-            return false;
+            return {
+                success: false,
+                code: null
+            };
         } finally {
             isLoading.value = false;
         }

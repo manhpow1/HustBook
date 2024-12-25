@@ -11,7 +11,6 @@
             </p>
         </div>
 
-        <!-- Error and Warning Alerts -->
         <div v-if="verificationAttempts >= 3" class="bg-red-100 text-red-700 p-4 rounded-md mt-4">
             Too many attempts. Please try again later.
         </div>
@@ -20,7 +19,6 @@
             {{ 5 - verificationAttempts }} verification attempts remaining.
         </div>
 
-        <!-- Input Form -->
         <form @submit.prevent="handleSubmit" class="mt-8 space-y-6" novalidate>
             <div class="space-y-1">
                 <label for="phoneNumber" class="block text-sm font-medium text-gray-700">Phone Number</label>
@@ -33,7 +31,6 @@
                 <p v-if="errors.phoneNumber" class="text-red-500 text-xs mt-1">{{ errors.phoneNumber[0] }}</p>
             </div>
 
-            <!-- Submit Button -->
             <button type="submit" :disabled="isLoading || cooldownRemaining > 0" :class="[
                 'w-full flex items-center justify-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500',
                 { 'opacity-50 cursor-not-allowed': isLoading || cooldownRemaining > 0 }
@@ -46,7 +43,7 @@
             </button>
         </form>
 
-        <!-- Verification Code Display -->
+        <!-- Thêm phần hiển thị mã xác thực -->
         <div v-if="verificationCode" class="mt-6 space-y-4">
             <div class="bg-gray-50 p-4 rounded-lg border border-gray-200">
                 <div class="flex justify-between items-center">
@@ -79,12 +76,14 @@ const router = useRouter();
 const route = useRoute();
 const userStore = useUserStore();
 const { showToast } = useToast();
-const { errors, validatePhoneNumber, clearErrors } = useFormValidation();
-const { cooldownRemaining, isLoading, verificationAttempts } = storeToRefs(userStore);
 
-const phoneNumber = ref(route.query.phoneNumber || '');
+// Thêm các refs mới
 const verificationCode = ref('');
 const copied = ref(false);
+
+const { errors, validatePhoneNumber, clearErrors } = useFormValidation();
+const { cooldownRemaining, isLoading, verificationAttempts } = storeToRefs(userStore);
+const phoneNumber = ref(route.query.phoneNumber || '');
 
 const copyToClipboard = async () => {
     try {
@@ -109,17 +108,16 @@ const proceedToVerification = () => {
 
 const handleSubmit = async () => {
     clearErrors();
-
-    // Validate phone number
     if (!validatePhoneNumber(phoneNumber.value)) {
         return;
     }
 
-    // Request verification code
     try {
-        const response = await userStore.getVerifyCode(phoneNumber.value);
-        verificationCode.value = response.code;
-        showToast('Verification code sent successfully', 'success');
+        const result = await userStore.getVerifyCode(phoneNumber.value);
+        if (result.success && result.code) {
+            verificationCode.value = result.code;
+            showToast('Verification code received successfully', 'success');
+        }
     } catch (error) {
         console.error('Error requesting verification code:', error);
         showToast(error.message || 'Failed to get verification code', 'error');
