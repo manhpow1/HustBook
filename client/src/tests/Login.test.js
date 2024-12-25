@@ -19,8 +19,8 @@ describe('Login Component', () => {
     console.log('Test setup complete')
   })
 
-  const fillForm = async (phonenumber, password) => {
-    await wrapper.find('input[type="tel"]').setValue(phonenumber)
+  const fillForm = async (phoneNumber, password) => {
+    await wrapper.find('input[type="tel"]').setValue(phoneNumber)
     await wrapper.find('input[type="password"]').setValue(password)
   }
 
@@ -38,7 +38,7 @@ describe('Login Component', () => {
     expect(axios.post).toHaveBeenCalledWith(
       'http://localhost:3000/api/auth/login',
       expect.objectContaining({
-        phonenumber: '0123456789',
+        phoneNumber: '0123456789',
         password: 'validPass',
         deviceId: expect.any(String)
       })

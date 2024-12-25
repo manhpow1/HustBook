@@ -46,7 +46,7 @@ describe('VerifyCode Component', () => {
 
         expect(axios.post).toHaveBeenCalledWith(
             expect.any(String),
-            { phonenumber: '0123456789', code: '123456' }
+            { phoneNumber: '0123456789', code: '123456' }
         )
         expect(wrapper.emitted('verification-success')).toBeTruthy()
         expect(wrapper.vm.successMessage).toBe('Verification successful!')
@@ -117,7 +117,7 @@ describe('VerifyCode Component', () => {
 
         expect(axios.post).toHaveBeenCalledWith(
             expect.any(String),
-            { phonenumber: expect.any(String) }
+            { phoneNumber: expect.any(String) }
         )
         expect(wrapper.vm.successMessage).toBe('Verification code resent successfully')
     })

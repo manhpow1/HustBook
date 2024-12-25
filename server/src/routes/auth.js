@@ -259,9 +259,9 @@ router.post('/logout', authenticateToken, userController.logout);
  *         application/json:
  *           schema:
  *             type: object
- *             required: [phonenumber]
+ *             required: [phoneNumber]
  *             properties:
- *               phonenumber:
+ *               phoneNumber:
  *                 type: string
  *                 example: "0123456789"
  *     responses:
@@ -298,9 +298,9 @@ router.post('/get_verify_code', verifyCodeLimiterMiddleware, userController.getV
  *         application/json:
  *           schema:
  *             type: object
- *             required: [phonenumber, code]
+ *             required: [phoneNumber, code]
  *             properties:
- *               phonenumber:
+ *               phoneNumber:
  *                 type: string
  *                 example: "0123456789"
  *               code:

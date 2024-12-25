@@ -140,8 +140,8 @@ class UserController {
                 throw createError('1002', errorMessage);
             }
 
-            const { phonenumber } = value;
-            const formattedPhoneNumber = formatPhoneNumber(phonenumber);
+            const { phoneNumber } = value;
+            const formattedPhoneNumber = formatPhoneNumber(phoneNumber);
             const verificationCode = generateRandomCode();
 
             sendResponse(res, '1000', {
@@ -417,8 +417,8 @@ class UserController {
                 throw createError('1002', errorMessage);
             }
 
-            const { phonenumber, code } = value;
-            const formattedPhoneNumber = formatPhoneNumber(phonenumber);
+            const { phoneNumber, code } = value;
+            const formattedPhoneNumber = formatPhoneNumber(phoneNumber);
 
             const user = await userService.getUserByphoneNumber(formattedPhoneNumber);
             if (!user) {

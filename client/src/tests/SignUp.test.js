@@ -61,7 +61,7 @@ describe('SignUp Component', () => {
     expect(axios.post).toHaveBeenCalledWith(
       'http://localhost:3000/api/auth/signup',
       expect.objectContaining({
-        phonenumber: '0123456789',
+        phoneNumber: '0123456789',
         password: 'validPass',
         uuid: 'device-uuid',
         rememberMe: false

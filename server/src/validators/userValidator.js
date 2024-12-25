@@ -230,14 +230,14 @@ const refreshTokenSchema = Joi.object({
  * Get verify code schema
  */
 const getVerifyCodeSchema = Joi.object({
-    phonenumber: phoneNumberSchema,
+    phoneNumber: phoneNumberSchema,
 }).required();
 
 /**
  * Check verify code schema
  */
 const checkVerifyCodeSchema = Joi.object({
-    phonenumber: phoneNumberSchema,
+    phoneNumber: phoneNumberSchema,
     code: Joi.string()
         .length(6)
         .pattern(/^\d+$/)
@@ -377,7 +377,7 @@ const validateRefreshToken = (data) => {
 
 const validateGetVerifyCode = (data) => {
     const sanitizedData = {
-        phonenumber: sanitizeInput(data.phonenumber)
+        phoneNumber: sanitizeInput(data.phoneNumber)
     };
     return getVerifyCodeSchema.validate(sanitizedData, { abortEarly: false });
 };
@@ -440,7 +440,7 @@ const getUserInfoSchema = Joi.object({
 
 const validateCheckVerifyCode = (data) => {
     const sanitizedData = {
-        phonenumber: sanitizeInput(data.phonenumber),
+        phoneNumber: sanitizeInput(data.phoneNumber),
         code: data.code
     };
     return checkVerifyCodeSchema.validate(sanitizedData, { abortEarly: false });
