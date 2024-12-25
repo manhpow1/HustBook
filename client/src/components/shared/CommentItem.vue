@@ -66,7 +66,7 @@ import logger from '../../services/logging';
 
 // Components
 import ConfirmDialog from '../ui/ConfirmDialog.vue';
-import Button from '../ui/Button.vue';
+import { Button } from '../ui/button';
 
 // Props
 const props = defineProps({

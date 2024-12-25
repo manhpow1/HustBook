@@ -171,9 +171,9 @@ import SendFriendRequest from '../../components/friend/SendFriendRequest.vue';
 import { LoaderIcon, AlertCircleIcon, VideoOffIcon, EyeIcon } from 'lucide-vue-next';
 import { useToast } from '../../composables/useToast';
 import { useErrorHandler } from '../../composables/useErrorHandler';
-import Button from '../../components/ui/Button.vue';
+import Button from '@/components/ui/button';
 import CopyLinkButton from '../../components/ui/CopyLinkButton.vue';
-import Input from '../../components/ui/Input.vue';
+import Input from '@/components/ui/input';
 
 const route = useRoute();
 const router = useRouter();
