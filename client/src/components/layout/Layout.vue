@@ -68,7 +68,8 @@
                 Sign Up
               </router-link>
               <router-link to="/get-verify-code"
-                class="bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-2 px-4 rounded transition duration-300">
+                class="bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-2 px-4 rounded transition duration-300"
+                @click.native.prevent="openInNewTab('/get-verify-code')">
                 Get Verification Code
               </router-link>
             </template>
@@ -165,6 +166,7 @@ import { useHead } from '@unhead/vue';
 import SearchPosts from '../search/SearchPosts.vue';
 import NotificationTab from '../notification/NotificationTab.vue';
 import { storeToRefs } from 'pinia';
+import { useRouter } from 'vue-router';
 
 // Function to create async components with fallback
 const createAsyncComponent = (loader) =>
@@ -202,6 +204,7 @@ const iconComponents = {
 // Access Pinia store and reactive properties
 const userStore = useUserStore();
 const { isLoggedIn } = storeToRefs(userStore);
+const router = useRouter();
 
 // Menu state management
 const { showUserMenu, showMobileMenu, toggleUserMenu, toggleMobileMenu } = useMenuState();
@@ -213,6 +216,11 @@ const currentYear = computed(() => new Date().getFullYear());
 const handleLogoutSuccess = async () => {
   await userStore.logout();
   router.push('/login');
+};
+
+const openInNewTab = (url) => {
+  const fullPath = router.resolve(url).href;
+  window.open(fullPath, '_blank');
 };
 
 // SEO Meta Tags

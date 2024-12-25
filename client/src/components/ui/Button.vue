@@ -46,7 +46,6 @@ const props = defineProps({
 
 const emit = defineEmits(['click']);
 
-// Compute variant classes
 const variantClasses = computed(() => ({
     primary: 'bg-primary-600 text-white hover:bg-primary-700 focus:ring-primary-500',
     secondary: 'bg-secondary-600 text-white hover:bg-secondary-700 focus:ring-secondary-500',
@@ -56,29 +55,20 @@ const variantClasses = computed(() => ({
     warning: 'bg-yellow-600 text-white hover:bg-yellow-700 focus:ring-yellow-500'
 })[props.variant]);
 
-// Compute size classes
 const sizeClasses = computed(() => ({
     small: 'px-2 py-1 text-sm',
     medium: 'px-4 py-2 text-base',
     large: 'px-6 py-3 text-lg'
 })[props.size]);
 
-// Compute icon size classes
 const iconClasses = computed(() => ({
     small: 'h-4 w-4',
     medium: 'h-5 w-5',
     large: 'h-6 w-6'
 })[props.size]);
 
-// Compute aria-label for accessibility
-const ariaLabel = computed(() => {
-    if (props.tooltip) {
-        return props.tooltip;
-    }
-    return undefined;
-});
+const ariaLabel = computed(() => props.tooltip);
 
-// Handle click events
 const handleClick = (event) => {
     if (!props.disabled && !props.loading) {
         emit('click', event);
@@ -90,6 +80,5 @@ const handleClick = (event) => {
 button:focus {
     outline: none;
     box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.5);
-    /* Focus ring color */
 }
 </style>
