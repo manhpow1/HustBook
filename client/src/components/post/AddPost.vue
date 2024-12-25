@@ -102,7 +102,7 @@ import { PencilIcon, LoaderIcon, SmileIcon } from 'lucide-vue-next';
 import FileUpload from '../shared/FileUpload.vue';
 import EmojiPicker from '../ui/EmojiPicker.vue';
 import { Button } from '@/components/ui/button';
-import Alert from '@/components/ui/alert';
+import { Alert } from '@/components/ui/alert';
 import UnsavedChangesModal from '../shared/UnsavedChangesModal.vue';
 import { usePostStore } from '../../stores/postStore';
 import { useFormValidation } from '../../composables/useFormValidation';

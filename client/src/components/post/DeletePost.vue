@@ -45,8 +45,8 @@
 <script setup>
 import { ref, onMounted, onBeforeUnmount } from 'vue';
 import { TrashIcon, LoaderIcon } from 'lucide-vue-next';
-import Alert from '@/components/ui/alert';
-import Button from '@/components/ui/button';
+import { Alert } from '@/components/ui/alert';
+import { Button } from '@/components/ui/button';
 import { usePostStore } from '../../stores/postStore';
 import { useRouter } from 'vue-router';
 import { useErrorHandler } from '../../composables/useErrorHandler';

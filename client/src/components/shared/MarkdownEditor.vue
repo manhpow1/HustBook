@@ -74,7 +74,7 @@ import { debounce } from 'lodash-es';
 
 // Components
 import ToolbarButton from '../ui/ToolbarButton.vue';
-import Button from '@/components/ui/button';
+import { Button } from '@/components/ui/button';
 import EmojiPicker from '../ui/EmojiPicker.vue';
 
 // Props
