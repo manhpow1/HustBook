@@ -148,13 +148,13 @@ const copyToClipboard = async () => {
     try {
         await navigator.clipboard.writeText(verificationCode.value);
         copied.value = true;
-        showToast('success', 'Đã sao chép mã xác thực');
+        showToast('success', 'Verification code copied');
         setTimeout(() => {
             copied.value = false;
         }, 2000);
         return true;
     } catch (err) {
-        showToast('error', 'Không thể sao chép mã');
+        showToast('error', 'Unable to copy verification code');
         return false;
     }
 };
@@ -164,7 +164,7 @@ const copyAndProceed = async () => {
     if (copySuccess) {
         setTimeout(() => {
             proceedToVerification();
-        }, 500); // Đợi 500ms để người dùng thấy trạng thái copied
+        }, 500);
     }
 };
 

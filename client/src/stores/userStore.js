@@ -384,7 +384,7 @@ export const useUserStore = defineStore('user', () => {
 
     const getVerifyCode = async (phoneNumber) => {
         if (isLocked.value) {
-            showToast('error', 'Tài khoản tạm thời bị khóa. Vui lòng thử lại sau.');
+            showToast('error', 'Account is temporarily locked. Please try again later.');
             return false;
         }
 
@@ -393,7 +393,7 @@ export const useUserStore = defineStore('user', () => {
             const remainingTime = Math.ceil(
                 (VERIFICATION_CODE_COOLDOWN - (now - lastVerificationRequest.value)) / 1000
             );
-            showToast('error', `Vui lòng đợi ${remainingTime} giây trước khi yêu cầu mã mới`);
+            showToast('error', `Please wait ${remainingTime} seconds before requesting a new code`);
             return false;
         }
 
@@ -408,12 +408,12 @@ export const useUserStore = defineStore('user', () => {
 
             if (response.data.code === '1000') {
                 lastVerificationRequest.value = now;
-                successMessage.value = 'Mã xác thực đã được gửi thành công!';
+                successMessage.value = 'Verification code sent successfully!';
                 showToast('success', successMessage.value);
                 startCooldown();
                 return {
                     success: true,
-                    code: process.env.NODE_ENV !== 'production' ? response.data.data?.verifyCode : null
+                    code: response.data.data?.verifyCode
                 };
             }
             return { success: false, code: null };
@@ -427,7 +427,7 @@ export const useUserStore = defineStore('user', () => {
 
     const verifyCode = async (phoneNumber, code) => {
         if (isLocked.value) {
-            showToast('error', 'Tài khoản tạm thời bị khóa. Vui lòng thử lại sau.');
+            showToast('error', 'Account is temporarily locked. Please try again later.');
             return false;
         }
 
@@ -448,12 +448,12 @@ export const useUserStore = defineStore('user', () => {
                 if (verified && exists) {
                     setAuthCookies(token);
                     user.value = { ...user.value, isVerified: true, id };
-                    successMessage.value = 'Xác thực thành công!';
+                    successMessage.value = 'Verification successful!';
                     showToast('success', successMessage.value);
                     verificationAttempts.value = 0;
                     return { success: true, exists: true };
                 } else if (verified && !exists) {
-                    successMessage.value = 'Xác thực thành công. Vui lòng tiếp tục đăng ký!';
+                    successMessage.value = 'Verification successful. Please continue registration!';
                     showToast('success', successMessage.value);
                     verificationAttempts.value = 0;
                     return { success: true, exists: false };
