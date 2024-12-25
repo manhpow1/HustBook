@@ -104,7 +104,7 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue';
+import { ref, computed, watch } from 'vue';
 import { ShieldCheck, CheckCircleIcon, XCircleIcon, CopyIcon, CheckIcon, ArrowRightIcon, Loader2, CheckCircle, XCircle } from 'lucide-vue-next';
 import { useRouter, useRoute } from 'vue-router';
 import { useUserStore } from '../../stores/userStore';
