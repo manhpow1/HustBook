@@ -112,35 +112,6 @@ class UserService {
         }
     }
 
-    async removeDevice(userId, deviceId) {
-        try {
-            const user = await this.getUserById(userId);
-            if (!user) {
-                throw createError('9995', 'User not found');
-            }
-
-            const deviceToRemove = user.deviceDetails.find(d => d.id === deviceId);
-            if (!deviceToRemove) {
-                throw createError('9994', 'Device not found');
-            }
-
-            user.deviceDetails = user.deviceDetails.filter(d => d.id !== deviceId);
-            user.deviceTokens = user.deviceTokens.filter(t => t !== deviceToRemove.token);
-            user.deviceIds = user.deviceIds.filter(id => id !== deviceId);
-
-            await Promise.all([
-                user.save(),
-                redis.setUserDevices(userId, user.deviceDetails),
-                redis.blacklistToken(deviceToRemove.token)
-            ]);
-
-            logger.info(`Removed device ${deviceId} for user ${userId}`);
-        } catch (error) {
-            logger.error('Error removing device:', error);
-            throw error;
-        }
-    }
-
     async updatePassword(req, userId, currentPassword, newPassword) {
         try {
             const user = await this.getUserById(userId);
@@ -539,57 +510,6 @@ class UserService {
         } catch (error) {
             logger.error('Error updating verification status:', error);
             throw error;
-        }
-    }
-
-    async handleLoginAttempt(userId, success) {
-        try {
-            const user = await this.getUserById(userId);
-            if (!user) {
-                throw createError('9995', 'User not found');
-            }
-
-            if (success) {
-                await redis.clearLoginAttempts(userId);
-                user.failedLoginAttempts = 0;
-                user.lockoutUntil = null;
-                user.lastLoginAt = new Date().toISOString();
-            } else {
-                const attempts = await redis.incrementLoginAttempts(userId);
-                user.failedLoginAttempts = attempts;
-
-                if (attempts >= MAX_LOGIN_ATTEMPTS) {
-                    user.lockoutUntil = new Date(Date.now() + LOCKOUT_DURATION);
-                    await redis.setUserLockout(userId, LOCKOUT_DURATION);
-                }
-            }
-
-            await user.save();
-        } catch (error) {
-            logger.error('Error handling login attempt:', error);
-            throw error;
-        }
-    }
-
-    async isUserLocked(userId) {
-        try {
-            const user = await this.getUserById(userId);
-            if (!user || !user.lockoutUntil) {
-                return false;
-            }
-
-            const isLocked = new Date(user.lockoutUntil) > new Date();
-            if (!isLocked) {
-                user.lockoutUntil = null;
-                user.failedLoginAttempts = 0;
-                await user.save();
-                await redis.clearLoginAttempts(userId);
-            }
-
-            return isLocked;
-        } catch (error) {
-            logger.error('Error checking user lock status:', error);
-            return false;
         }
     }
 

@@ -5,20 +5,20 @@ import logger from '../utils/logger.js';
 // Helper to create a RateLimiter with given "points" and "duration"
 const createLimiter = (points, duration, prefix) => {
     return new RateLimiterRedis({
-        storeClient: redisClient,
+        storeClient: redisClient.client, 
         points,
         duration,
         keyPrefix: prefix,
-        enableOfflineQueue: false
+        insuranceLimiter: false
     });
 };
 
 // Rate-limiters for various endpoints/actions
-const authRateLimiter = createLimiter(5, 60, 'rl:auth'); // Reduced to 2 minutes
-const verifyCodeRateLimiter = createLimiter(10, 60, 'rl:verify'); // Reduced to 2 minutes
-const pushSettingsRateLimiter = createLimiter(100, 60, 'rl:push'); // Reduced to 2 minutes
-const setBlockRateLimiter = createLimiter(10, 60, 'rl:block'); // Remains at 1 minute
-const checkVerifyCodeRateLimiter = createLimiter(10, 60, 'rl:code'); // Reduced to 2 minutes
+const authRateLimiter = createLimiter(5, 60, 'rl:auth');
+const verifyCodeRateLimiter = createLimiter(10, 60, 'rl:verify');
+const pushSettingsRateLimiter = createLimiter(100, 60, 'rl:push');
+const setBlockRateLimiter = createLimiter(10, 60, 'rl:block');
+const checkVerifyCodeRateLimiter = createLimiter(10, 60, 'rl:code');
 
 // Convert a RateLimiter to an Express middleware
 function createRateLimitMiddleware(limiter, errorMessage) {
