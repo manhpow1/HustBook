@@ -40,7 +40,15 @@ const cache = {
             return await client.incr(key);
         } catch (err) {
             logger.error('Redis incr error:', err);
-            throw err; // Re-throw the error to handle it at a higher level
+            throw err;
+        }
+    },
+    expire: async (key, seconds) => {
+        try {
+            return await client.expire(key, seconds);
+        } catch (err) {
+            logger.error('Redis expire error:', err);
+            throw err;
         }
     }
 };
