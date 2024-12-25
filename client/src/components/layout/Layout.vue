@@ -67,11 +67,11 @@
                 class="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded transition duration-300">
                 Sign Up
               </router-link>
-              <router-link to="/get-verify-code"
+              <button
                 class="bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-2 px-4 rounded transition duration-300"
-                @click.prevent="openInNewTab('/get-verify-code')">
+                @click="openVerifyCodeInNewTab">
                 Get Verification Code
-              </router-link>
+              </button>
             </template>
           </div>
 
@@ -167,6 +167,7 @@ import SearchPosts from '../search/SearchPosts.vue';
 import NotificationTab from '../notification/NotificationTab.vue';
 import { storeToRefs } from 'pinia';
 import { useRouter } from 'vue-router';
+import logger from '../../services/logging';
 
 // Function to create async components with fallback
 const createAsyncComponent = (loader) =>
@@ -218,9 +219,10 @@ const handleLogoutSuccess = async () => {
   router.push('/login');
 };
 
-const openInNewTab = (url) => {
-  const fullPath = router.resolve(url).href;
-  window.open(fullPath, '_blank');
+const openVerifyCodeInNewTab = () => {
+  const route = router.resolve({ name: 'GetVerifyCode' });
+  logger.debug('Opening Verify Code route in new tab:', route.href);
+  window.open(route.href, '_blank');
 };
 
 // SEO Meta Tags

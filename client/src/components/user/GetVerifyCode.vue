@@ -75,8 +75,8 @@ const handleSubmit = async () => {
     try {
         await userStore.getVerifyCode(phoneNumber.value);
         router.push({
-            name: 'verify-code',
-            params: { phoneNumber: phoneNumber.value }
+            name: 'VerifyCode',
+            query: { phoneNumber: phoneNumber.value }
         });
     } catch (error) {
         console.error('Error requesting verification code:', error);

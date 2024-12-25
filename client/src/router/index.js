@@ -54,10 +54,10 @@ const routes = [
         meta: { allowWithoutAuth: true }
     },
     {
-        path: '/verify-code/:verificationCode',
+        path: '/verify-code',
         name: 'VerifyCode',
         component: () => import('../components/user/VerifyCode.vue'),
-        props: true
+        meta: { allowWithoutAuth: true }
     },
     {
         path: '/complete-profile',
@@ -142,31 +142,39 @@ const router = createRouter({
 
 // Global navigation guard
 router.beforeEach(async (to, from, next) => {
-    logger.debug(`Navigating to: ${to.name}`);
-    const requiresAuth = to.matched.some((record) => record.meta.requiresAuth);
-    const isVerifyCodeRoute = to.name === 'GetVerifyCode';
-    const userStore = useUserStore();
+    // List of public routes that don't require auth - thêm route gốc '/'
+    const publicRoutes = ['Login', 'SignUp', 'GetVerifyCode', 'Home'];
 
-    // Cho phép truy cập trực tiếp vào GetVerifyCode
-    if (isVerifyCodeRoute) {
+    logger.debug('Navigating from:', from.fullPath, 'to:', to.fullPath);
+
+    // If route is public or explicitly marked as allowWithoutAuth, allow direct access
+    if (publicRoutes.includes(to.name) || to.path === '/' || to.meta.allowWithoutAuth) {
+        logger.debug('Public route or explicitly allowed without auth:', to.name);
         next();
         return;
     }
 
-    if (requiresAuth) {
-        if (!userStore.isLoggedIn) {
-            logger.debug('User not logged in, checking authentication...');
+    const userStore = useUserStore();
+
+    logger.debug('Route requires authentication:', to.name);
+
+    // For all other routes, check if authentication is required
+    if (!userStore.isLoggedIn) {
+        logger.debug('User not logged in, attempting to authenticate...');
+        try {
             await userStore.checkAuth();
+            logger.debug('Authentication check completed. isLoggedIn:', userStore.isLoggedIn);
+        } catch (error) {
+            logger.error('Error during authentication check:', error);
         }
-        if (userStore.isLoggedIn) {
-            logger.debug('User authenticated, proceeding to route...');
-            next();
-        } else {
-            logger.warn('User not authenticated, redirecting to login...');
-            next({ name: 'Login', query: { redirect: to.fullPath } });
-        }
-    } else {
+    }
+
+    if (userStore.isLoggedIn) {
+        logger.debug('User is authenticated. Proceeding to:', to.name);
         next();
+    } else {
+        logger.warn('User is not authenticated. Redirecting to Login...');
+        next({ name: 'Login', query: { redirect: to.fullPath } });
     }
 });
 

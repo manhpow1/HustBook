@@ -44,8 +44,17 @@ export function useFormValidation() {
         return validateField('phoneNumber', phoneNumber, phoneNumberRules);
     };
 
+    const verificationCodeRules = [
+        (value) => !value ? 'Verification code is required.' : null,
+        (value) => !/^\d{6}$/.test(value) ? 'Verification code must be 6 digits.' : null,
+    ];
+
     const validateUsername = (username) => {
         return validateField('username', username, usernameRules);
+    };
+
+    const validateVerificationCode = (code) => {
+        return validateField('code', code, verificationCodeRules);
     };
 
     const clearErrors = (field) => {
@@ -61,6 +70,7 @@ export function useFormValidation() {
         validatePassword,
         validatePhoneNumber,
         validateUsername,
+        validateVerificationCode,
         clearErrors,
     };
 }
