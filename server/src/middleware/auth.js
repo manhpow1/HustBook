@@ -1,10 +1,12 @@
 import jwt from 'jsonwebtoken';
 import { getDocument, collections } from '../config/database.js';
 import { createError } from '../utils/customError.js';
-import cache from '../utils/redis.js';
+import redis from '../utils/redis.js';
 import config from 'config';
 import crypto from 'crypto';
 import logger from '../utils/logger.js';
+
+const { cache } = redis;
 
 // Common security headers
 const securityHeaders = {

@@ -1,12 +1,13 @@
 import jwt from 'jsonwebtoken';
 import config from 'config';
 import { getDocument, collections } from '../config/database.js';
-import cache from '../utils/redis.js';
+import redis from '../utils/redis.js';
 import { createError } from '../utils/customError.js';
 import logger from '../utils/logger.js';
 import { RateLimiterRedis } from 'rate-limiter-flexible';
 import client from '../utils/redis.js';
 
+const { cache } = redis;
 const rateLimiter = new RateLimiterRedis({
     storeClient: client,
     keyPrefix: 'socket_limit',
