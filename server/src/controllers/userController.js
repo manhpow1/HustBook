@@ -2,9 +2,10 @@ import crypto from 'crypto';
 import userService from '../services/userService.js';
 import userValidator from '../validators/userValidator.js';
 import { comparePassword, generateJWT, generateRefreshToken, generateRandomCode, verifyRefreshToken, generateDeviceToken, generateTokenFamily } from '../utils/authHelper.js';
-import { formatPhoneNumber, sanitizeDeviceInfo, handleAvatarUpload, handleCoverPhotoUpload } from '../utils/helpers.js';
+import { sanitizeDeviceInfo, handleAvatarUpload, handleCoverPhotoUpload } from '../utils/helpers.js';
 import { sendResponse } from '../utils/responseHandler.js';
 import { createError } from '../utils/customError.js';
+import { db } from '../config/firebase.js';
 import logger from '../utils/logger.js';
 
 class UserController {
@@ -141,9 +142,21 @@ class UserController {
             }
 
             const { phoneNumber } = value;
-            const formattedPhoneNumber = formatPhoneNumber(phoneNumber);
             const verificationCode = generateRandomCode();
+            const expirationTime = Date.now() + (5 * 60 * 1000); // 5 minutes expiration
 
+            // Store verification code in temporary collection
+            const verificationRef = db.collection('verificationCodes').doc(phoneNumber);
+            await verificationRef.set({
+                code: verificationCode,
+                attempts: 0,
+                expiresAt: new Date(expirationTime),
+                createdAt: new Date()
+            });
+
+            logger.info(`Verification code generated for phone number: ${phoneNumber}`);
+
+            // In production, code won't be returned
             sendResponse(res, '1000', {
                 message: 'Verification code sent successfully',
                 ...(process.env.NODE_ENV !== 'production' && { verifyCode: verificationCode })
@@ -164,8 +177,7 @@ class UserController {
             }
 
             const { phoneNumber, password, uuid } = value;
-            const formattedPhoneNumber = formatPhoneNumber(phoneNumber);
-            const existingUser = await userService.getUserByphoneNumber(formattedPhoneNumber);
+            const existingUser = await userService.getUserByphoneNumber(phoneNumber);
             if (existingUser) {
                 if (existingUser.isVerified) {
                     throw createError('9996', 'Phone number already registered');
@@ -191,7 +203,7 @@ class UserController {
             };
 
             const { userId, deviceToken, tokenFamily } = await userService.createUser(
-                formattedPhoneNumber,
+                phoneNumber,
                 password,
                 uuid,
                 verificationCode,
@@ -201,7 +213,7 @@ class UserController {
 
             const token = generateJWT({
                 uid: userId,
-                phone: formattedPhoneNumber,
+                phone: phoneNumber,
                 tokenVersion: 0,
                 tokenFamily,
                 deviceId
@@ -244,10 +256,9 @@ class UserController {
                 throw createError('1002', errorMessage);
             }
 
-            const { phoneNumber, password, deviceId, biometricAuth } = value;
-            const formattedPhoneNumber = formatPhoneNumber(phoneNumber);
+            const { phoneNumber, password, deviceId } = value;
 
-            const user = await userService.getUserByphoneNumber(formattedPhoneNumber);
+            const user = await userService.getUserByphoneNumber(phoneNumber);
             if (!user) {
                 throw createError('9995', 'User not found.');
             }
@@ -418,9 +429,42 @@ class UserController {
             }
 
             const { phoneNumber, code } = value;
-            const formattedPhoneNumber = formatPhoneNumber(phoneNumber);
 
-            const user = await userService.getUserByphoneNumber(formattedPhoneNumber);
+            // Kiểm tra mã xác thực trong collection verificationCodes
+            const verificationRef = db.collection('verificationCodes').doc(phoneNumber);
+            const verificationDoc = await verificationRef.get();
+
+            if (!verificationDoc.exists) {
+                throw createError('9993', 'Verification code has expired or does not exist');
+            }
+
+            const verificationData = verificationDoc.data();
+            const currentTime = Date.now();
+            const expirationTime = verificationData.expiresAt.toDate().getTime();
+
+            if (currentTime > expirationTime) {
+                await verificationRef.delete();
+                throw createError('9993', 'Verification code has expired');
+            }
+
+            // Kiểm tra số lần thử
+            if (verificationData.attempts >= 5) {
+                throw createError('9993', 'Maximum verification attempts exceeded');
+            }
+
+            // Kiểm tra mã xác thực
+            if (verificationData.code !== code) {
+                await verificationRef.update({
+                    attempts: verificationData.attempts + 1
+                });
+                throw createError('9993', 'Invalid verification code');
+            }
+
+            // Xóa mã xác thực sau khi verify thành công
+            await verificationRef.delete();
+
+            // Kiểm tra user đã tồn tại chưa
+            const user = await userService.getUserByphoneNumber(phoneNumber);
             if (!user) {
                 sendResponse(res, '1000', {
                     verified: true,
@@ -430,6 +474,7 @@ class UserController {
                 return;
             }
 
+            // Cập nhật trạng thái xác thực cho user nếu tồn tại
             await userService.updateVerificationStatus(user.uid, true);
 
             const deviceToken = generateDeviceToken();
@@ -437,11 +482,13 @@ class UserController {
 
             const token = generateJWT({
                 uid: user.uid,
-                phone: formattedPhoneNumber,
+                phone: phoneNumber,
                 tokenVersion: user.tokenVersion || 0,
                 tokenFamily,
                 deviceId: req.get('Device-ID') || crypto.randomUUID()
             });
+
+            logger.info(`Phone number ${phoneNumber} verified successfully`);
 
             sendResponse(res, '1000', {
                 verified: true,

@@ -39,13 +39,6 @@ const safeRename = async (oldPath, newPath, baseDir) => {
     await fs.rename(resolvedOldPath, resolvedNewPath);
 };
 
-const formatPhoneNumber = (phoneNumber) => {
-    if (phoneNumber.startsWith('0')) {
-        return '+84' + phoneNumber.slice(1);
-    }
-    return phoneNumber;
-};
-
 const generateAvatarUrl = (filename) => {
     if (!filename) return null;
     // In production, this would be your CDN or domain URL
@@ -221,7 +214,6 @@ const sanitizeDeviceInfo = (deviceInfo) => {
 };
 
 export {
-    formatPhoneNumber,
     generateAvatarUrl,
     handleAvatarUpload,
     sanitizeDeviceInfo,

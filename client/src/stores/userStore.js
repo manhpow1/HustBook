@@ -14,6 +14,8 @@ const TOKEN_REFRESH_MARGIN = 60 * 1000; // 1 minute before expiry
 const VERIFICATION_CODE_COOLDOWN = 60 * 1000; // 1 minute
 const LOCKOUT_DURATION = 5 * 60 * 1000; // 5 minutes
 const DEVICE_CLEANUP_INTERVAL = 24 * 60 * 60 * 1000; // 24 hours
+const VERIFY_CODE_LENGTH = 6;
+const MAX_VERIFY_ATTEMPTS = 5;
 
 export const useUserStore = defineStore('user', () => {
     const router = useRouter();
@@ -39,6 +41,9 @@ export const useUserStore = defineStore('user', () => {
     const pendingRefresh = ref(false);
     const verificationAttempts = ref(0);
     const lastVerificationRequest = ref(0);
+    const verifyCodeError = ref('');
+    const isVerifyCodeExpired = ref(false);
+    const remainingAttempts = ref(MAX_VERIFY_ATTEMPTS);
 
     // Computed
     const isLoggedIn = computed(() => !!Cookies.get('accessToken'));
@@ -379,39 +384,42 @@ export const useUserStore = defineStore('user', () => {
 
     const getVerifyCode = async (phoneNumber) => {
         if (isLocked.value) {
-            showToast('error', 'Account is temporarily locked. Please try again later.');
+            showToast('error', 'Tài khoản tạm thời bị khóa. Vui lòng thử lại sau.');
             return false;
         }
+
         const now = Date.now();
         if (now - lastVerificationRequest.value < VERIFICATION_CODE_COOLDOWN) {
-            const remainingTime = Math.ceil((VERIFICATION_CODE_COOLDOWN - (now - lastVerificationRequest.value)) / 1000);
-            showToast('error', `Please wait ${remainingTime} seconds before requesting another code`);
+            const remainingTime = Math.ceil(
+                (VERIFICATION_CODE_COOLDOWN - (now - lastVerificationRequest.value)) / 1000
+            );
+            showToast('error', `Vui lòng đợi ${remainingTime} giây trước khi yêu cầu mã mới`);
             return false;
         }
+
         try {
             isLoading.value = true;
             error.value = null;
+            verifyCodeError.value = '';
+            isVerifyCodeExpired.value = false;
+            remainingAttempts.value = MAX_VERIFY_ATTEMPTS;
+
             const response = await apiService.getVerifyCode({ phoneNumber });
+
             if (response.data.code === '1000') {
                 lastVerificationRequest.value = now;
-                successMessage.value = 'Verification code sent successfully!';
+                successMessage.value = 'Mã xác thực đã được gửi thành công!';
                 showToast('success', successMessage.value);
                 startCooldown();
                 return {
                     success: true,
-                    code: response.data.data.verifyCode || null
+                    code: process.env.NODE_ENV !== 'production' ? response.data.data?.verifyCode : null
                 };
             }
-            return {
-                success: false,
-                code: null
-            };
+            return { success: false, code: null };
         } catch (err) {
             handleAuthError(err);
-            return {
-                success: false,
-                code: null
-            };
+            return { success: false, code: null };
         } finally {
             isLoading.value = false;
         }
@@ -419,23 +427,14 @@ export const useUserStore = defineStore('user', () => {
 
     const verifyCode = async (phoneNumber, code) => {
         if (isLocked.value) {
-            showToast('error', 'Account is temporarily locked. Please try again later.');
-            return false;
-        }
-
-        if (verificationAttempts.value >= 5) {
-            isLocked.value = true;
-            setTimeout(() => {
-                isLocked.value = false;
-                verificationAttempts.value = 0;
-            }, LOCKOUT_DURATION);
-            showToast('error', 'Too many verification attempts. Please try again later.');
+            showToast('error', 'Tài khoản tạm thời bị khóa. Vui lòng thử lại sau.');
             return false;
         }
 
         try {
             isLoading.value = true;
             error.value = null;
+            verifyCodeError.value = '';
 
             const response = await apiService.verifyCode({
                 phoneNumber,
@@ -444,19 +443,40 @@ export const useUserStore = defineStore('user', () => {
             });
 
             if (response.data.code === '1000') {
-                const { token, isVerified } = response.data.data;
-                setAuthCookies(token);
-                user.value = { ...user.value, isVerified };
-                successMessage.value = 'Verification successful!';
-                showToast('success', successMessage.value);
-                verificationAttempts.value = 0;
-                return true;
+                const { verified, exists, token, id } = response.data.data;
+
+                if (verified && exists) {
+                    setAuthCookies(token);
+                    user.value = { ...user.value, isVerified: true, id };
+                    successMessage.value = 'Xác thực thành công!';
+                    showToast('success', successMessage.value);
+                    verificationAttempts.value = 0;
+                    return { success: true, exists: true };
+                } else if (verified && !exists) {
+                    successMessage.value = 'Xác thực thành công. Vui lòng tiếp tục đăng ký!';
+                    showToast('success', successMessage.value);
+                    verificationAttempts.value = 0;
+                    return { success: true, exists: false };
+                }
             }
-            verificationAttempts.value++;
-            return false;
+            return { success: false, exists: false };
         } catch (err) {
+            if (err.response?.data?.code === '9993') {
+                verifyCodeError.value = err.response.data.message;
+                if (err.response.data.message.includes('expired')) {
+                    isVerifyCodeExpired.value = true;
+                }
+                remainingAttempts.value = Math.max(0, remainingAttempts.value - 1);
+                if (remainingAttempts.value === 0) {
+                    isLocked.value = true;
+                    setTimeout(() => {
+                        isLocked.value = false;
+                        remainingAttempts.value = MAX_VERIFY_ATTEMPTS;
+                    }, LOCKOUT_DURATION);
+                }
+            }
             handleAuthError(err);
-            return false;
+            return { success: false, exists: false };
         } finally {
             isLoading.value = false;
         }
@@ -594,6 +614,9 @@ export const useUserStore = defineStore('user', () => {
         lastVerificationRequest,
         cooldownTime,
         deviceId,
+        verifyCodeError,
+        isVerifyCodeExpired,
+        remainingAttempts,
 
         // Computed
         isLoggedIn,

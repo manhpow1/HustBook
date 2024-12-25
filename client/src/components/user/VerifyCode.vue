@@ -11,40 +11,59 @@
             </p>
         </div>
 
-        <!-- Error and Warning Alerts -->
-        <div v-if="verificationAttempts >= 3" class="bg-red-100 text-red-700 p-4 rounded-md mt-4">
-            Too many attempts. Please try again later.
+        <!-- Lockout Warning -->
+        <div v-if="isLocked" class="bg-red-100 text-red-700 p-4 rounded-md mt-4">
+            <XCircleIcon class="h-5 w-5 inline mr-2" />
+            Temporarily locked due to too many incorrect attempts
+            <br />Please try again after 5 minutes
         </div>
 
-        <div v-else-if="verificationAttempts > 0" class="bg-yellow-100 text-yellow-700 p-4 rounded-md mt-4">
-            {{ 5 - verificationAttempts }} verification attempts remaining.
+        <!-- Remaining Attempts Warning -->
+        <div v-else-if="remainingAttempts < 5" class="bg-yellow-100 text-yellow-700 p-4 rounded-md mt-4">
+            <AlertTriangle class="h-5 w-5 inline mr-2" />
+            {{ remainingAttempts }} attempts remaining
         </div>
 
-        <!-- Input Form -->
+        <!-- Verification Code Form -->
         <form @submit.prevent="handleSubmit" class="mt-8 space-y-6" novalidate>
-            <div class="space-y-1">
-                <label for="code" class="block text-sm font-medium text-gray-700">Verification Code</label>
-                <input v-model="code" id="code" type="text" name="code" placeholder="Enter verification code" :class="[ 
-                    'w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500', 
-                    { 'border-red-500': errors.code }, 
-                    { 'border-gray-300': !errors.code } 
-                ]" :disabled="isLoading" required />
-                <p v-if="errors.code" class="text-red-500 text-xs mt-1">{{ errors.code[0] }}</p>
+            <div>
+                <label class="block text-sm font-medium text-gray-700">
+                    Verification Code
+                </label>
+                <div class="mt-1 flex justify-between gap-2">
+                    <input v-for="(digit, index) in 6" :key="index" v-model="codeDigits[index]" type="text"
+                        maxlength="1"
+                        class="w-12 h-12 text-center border-2 rounded-lg text-lg font-semibold focus:border-blue-500 focus:ring-blue-500"
+                        :class="{
+                            'border-red-500': verifyCodeError,
+                            'border-gray-300': !verifyCodeError
+                        }" @input="handleDigitInput($event, index)" @keydown="handleKeyDown($event, index)"
+                        @paste="handlePaste" ref="digitInputs" />
+                </div>
+                <p v-if="verifyCodeError" class="mt-2 text-sm text-red-600">
+                    {{ verifyCodeError }}
+                </p>
             </div>
 
-            <!-- Submit and Resend Buttons -->
+            <!-- Submit Button -->
             <div class="space-y-4">
-                <button type="submit" :disabled="isLoading" :class="[ 
-                    'w-full flex items-center justify-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500', 
-                    { 'opacity-50 cursor-not-allowed': isLoading } 
-                ]">
-                    <ShieldCheck class="h-5 w-5 mr-2" aria-hidden="true" />
-                    Verify Code
+                <button type="submit" :disabled="!isCodeComplete || isLoading"
+                    class="w-full flex justify-center items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed">
+                    <Loader2 v-if="isLoading" class="animate-spin h-5 w-5 mr-2" />
+                    <span>Verification Code</span>
                 </button>
 
-                <button type="button" @click="handleResendCode" :disabled="isLoading || cooldownRemaining > 0"
-                    class="w-full flex items-center justify-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
-                    <RefreshCw class="h-5 w-5 mr-2" aria-hidden="true" />
+                <!-- Complete Profile Button -->
+                <button v-if="verificationSuccess" @click="goToCompleteProfile"
+                    class="w-full flex justify-center items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500">
+                    <UserPlus class="h-5 w-5 mr-2" />
+                    <span>Complete Your Profile</span>
+                </button>
+
+                <!-- Resend Code Button -->
+                <button type="button" @click="handleResendCode" :disabled="cooldownRemaining > 0 || isLoading"
+                    class="w-full flex justify-center items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed">
+                    <RefreshCw v-if="!cooldownRemaining" class="h-5 w-5 mr-2" />
                     <span v-if="cooldownRemaining > 0">
                         Resend code in {{ cooldownRemaining }}s
                     </span>
@@ -52,56 +71,120 @@
                 </button>
             </div>
         </form>
+
+        <!-- Back Button -->
+        <div class="mt-4">
+            <button @click="goBack"
+                class="w-full flex justify-center items-center px-4 py-2 text-sm text-gray-600 hover:text-gray-900">
+                <ArrowLeft class="h-4 w-4 mr-2" />
+                Quay lại
+            </button>
+        </div>
     </div>
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue';
-import { ShieldCheck, RefreshCw } from 'lucide-vue-next';
+import { ref, computed, onMounted, watch } from 'vue';
+import { ShieldCheck, RefreshCw, Loader2, XCircleIcon, AlertTriangle, ArrowLeft, UserPlus } from 'lucide-vue-next';
 import { useRouter, useRoute } from 'vue-router';
 import { useUserStore } from '../../stores/userStore';
-import { useFormValidation } from '../../composables/useFormValidation';
 import { storeToRefs } from 'pinia';
 
 const router = useRouter();
 const route = useRoute();
 const userStore = useUserStore();
-const { errors, validateVerificationCode, clearErrors } = useFormValidation();
-const { cooldownRemaining, isLoading, verificationAttempts } = storeToRefs(userStore);
+const { isLoading, cooldownRemaining, isLocked, remainingAttempts, verifyCodeError, isVerifyCodeExpired } = storeToRefs(userStore);
 
-const code = ref('');
-const phoneNumber = ref(route.query.phoneNumber || '');
+const phoneNumber = ref(route.query.phoneNumber);
+const codeDigits = ref(Array(6).fill(''));
+const digitInputs = ref([]);
+const verificationSuccess = ref(false);
 
-const handleSubmit = async () => {
-    clearErrors();
+const isCodeComplete = computed(() => {
+    return codeDigits.value.every(digit => digit !== '');
+});
 
-    // Validate verification code
-    if (!validateVerificationCode(code.value)) {
+const handleDigitInput = (event, index) => {
+    const input = event.target;
+    const value = input.value;
+
+    if (!/^\d*$/.test(value)) {
+        input.value = '';
         return;
     }
 
-    try {
-        const success = await userStore.verifyCode(phoneNumber.value, code.value);
-        if (success) {
-            router.push({ name: 'ChangeInfoAfterSignUp' });
-        }
-    } catch (error) {
-        console.error('Error verifying code:', error);
+    codeDigits.value[index] = value;
+
+    if (value !== '' && index < 5) {
+        digitInputs.value[index + 1].focus();
     }
 };
 
-const handleResendCode = async () => {
-    try {
-        await userStore.getVerifyCode(phoneNumber.value);
-        code.value = ''; // Clear the input field
-    } catch (error) {
-        console.error('Error resending code:', error);
+const handleKeyDown = (event, index) => {
+    if (event.key === 'Backspace' && !codeDigits.value[index] && index > 0) {
+        codeDigits.value[index - 1] = '';
+        digitInputs.value[index - 1].focus();
     }
+};
+
+const handlePaste = (event) => {
+    event.preventDefault();
+    const pastedData = event.clipboardData.getData('text');
+    const numbers = pastedData.replace(/\D/g, '').slice(0, 6);
+
+    numbers.split('').forEach((number, index) => {
+        if (index < 6) {
+            codeDigits.value[index] = number;
+        }
+    });
+};
+
+const handleSubmit = async () => {
+    if (!isCodeComplete.value || isLoading.value) return;
+
+    const code = codeDigits.value.join('');
+    const result = await userStore.verifyCode(phoneNumber.value, code);
+
+    if (result.success) {
+        verificationSuccess.value = true;
+        if (result.exists) {
+            router.push({ name: 'Home' });
+        }
+    }
+};
+
+const goToCompleteProfile = () => {
+    router.push({
+        name: 'CompleteProfile',
+        query: { phoneNumber: phoneNumber.value }
+    });
+};
+
+const handleResendCode = async () => {
+    await userStore.getVerifyCode(phoneNumber.value);
+    // Reset mã cũ
+    codeDigits.value = Array(6).fill('');
+    digitInputs.value[0]?.focus();
+};
+
+const goBack = () => {
+    router.push({
+        name: 'GetVerifyCode',
+        query: { phoneNumber: phoneNumber.value }
+    });
 };
 
 onMounted(() => {
     if (!phoneNumber.value) {
         router.push('/get-verify-code');
+        return;
+    }
+    digitInputs.value[0]?.focus();
+});
+
+watch(isVerifyCodeExpired, (newValue) => {
+    if (newValue) {
+        codeDigits.value = Array(6).fill('');
     }
 });
 </script>
