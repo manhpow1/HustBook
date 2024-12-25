@@ -15,7 +15,7 @@ import sanitizeHtml from 'sanitize-html';
  */
 
 // Password strength checker
-const passwordStrength = (value) => {
+export const passwordStrength = (value) => {
     // Return early if basic validation fails
     if (!value || typeof value !== 'string') return false;
 
@@ -484,5 +484,4 @@ export default{
     validateSetUserInfo,
     validateGetUserInfo,
     sanitizeInput,
-    passwordStrength // Export for testing
 };
