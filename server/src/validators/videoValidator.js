@@ -11,6 +11,10 @@ const getListVideosSchema = Joi.object({
     count: Joi.number().integer().min(1).max(100).optional()
 }).and('latitude', 'longitude');
 
-export const validateGetListVideos = (data) => {
+const validateGetListVideos = (data) => {
     return getListVideosSchema.validate(data, { convert: true });
+};
+
+export default {
+    validateGetListVideos,
 };

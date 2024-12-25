@@ -101,7 +101,7 @@ const validateGetListPosts = (data) => {
     return getListPostsSchema.validate(data, { convert: true });
 };
 
-export {
+export default{
     validateCreatePost,
     validateUpdatePost,
     validateComment,

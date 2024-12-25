@@ -4,7 +4,7 @@ import userValidator from '../validators/userValidator.js';
 import { comparePassword, generateJWT, generateRefreshToken, generateRandomCode, verifyRefreshToken, generateDeviceToken, generateTokenFamily } from '../utils/authHelper.js';
 import { formatPhoneNumber, sanitizeDeviceInfo, handleAvatarUpload, handleCoverPhotoUpload } from '../utils/helpers.js';
 import { sendResponse } from '../utils/responseHandler.js';
-import { createError } from '../utils/customError.js';
+import createError from '../utils/customError.js';
 import logger from '../utils/logger.js';
 
 class UserController {
@@ -50,7 +50,7 @@ class UserController {
             const { password, new_password } = value;
             const userId = req.user.uid;
 
-            await userService.updatePassword(userId, password, new_password);
+            await userService.updatePassword(req, userId, password, new_password);
 
             const currentDeviceId = req.get('X-Device-ID');
 
@@ -473,7 +473,7 @@ class UserController {
                 throw createError('1002', 'Cannot block yourself');
             }
 
-            await userService.setBlock(userId, targetUserId, type);
+            await userService.setBlock(req, userId, targetUserId, type);
 
             sendResponse(res, '1000', {
                 message: type === 0 ? 'User blocked successfully' : 'User unblocked successfully'
@@ -568,7 +568,7 @@ class UserController {
                 return;
             }
 
-            await userService.resetPassword(phoneNumber, code, newPassword);
+            await userService.resetPassword(req, phoneNumber, code, newPassword);
 
             sendResponse(res, '1000', { message: 'Password has been reset successfully.' });
         } catch (error) {

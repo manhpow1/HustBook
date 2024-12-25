@@ -1,5 +1,5 @@
 import { RateLimiterRedis } from 'rate-limiter-flexible';
-import { client as redisClient } from '../utils/redis.js';
+import redisClient from '../utils/redis.js';
 import logger from '../utils/logger.js';
 
 // Helper to create a RateLimiter with given "points" and "duration"

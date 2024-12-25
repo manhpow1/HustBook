@@ -7,6 +7,6 @@ const validateCheckUserStatus = (data) => {
     return checkUserStatusSchema.validate(data, { abortEarly: false });
 };
 
-export {
+export default {
     validateCheckUserStatus
 };

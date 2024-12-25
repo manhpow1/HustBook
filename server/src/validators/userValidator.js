@@ -471,7 +471,7 @@ const validateForgotPassword = (data) => {
     return forgotPasswordSchema.validate(sanitizedData, { abortEarly: false });
 };
 
-export {
+export default{
     validateSignup,
     validateLogin,
     validateChangeInfoAfterSignup,

@@ -10,7 +10,7 @@ dotenv.config();
 async function startServer() {
     try {
         const { db } = await initializeFirebase();
-        const { default: AuditLogModel } = await import('./src/models/auditLogModel');
+        const { default: AuditLogModel } = await import('./src/models/auditLogModel.js');
         const auditLog = new AuditLogModel(db);
         app.locals.auditLog = auditLog;
 

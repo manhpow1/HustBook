@@ -1,6 +1,6 @@
 import { sendResponse } from '../utils/responseHandler.js';
-import { createError } from '../utils/customError.js';
-import { validateCheckUserStatus } from '../validators/userStatusValidator.js';
+import createError from '../utils/customError.js';
+import validateCheckUserStatus from '../validators/userStatusValidator.js';
 import userStatusService from '../services/userStatusService.js';
 
 class UserStatusController {

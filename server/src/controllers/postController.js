@@ -1,7 +1,7 @@
 import postService from '../services/postService.js';
 import postValidator from '../validators/postValidator.js';
 import { sendResponse } from '../utils/responseHandler.js';
-import { createError } from '../utils/customError.js';
+import createError from '../utils/customError.js';
 import { collections } from '../config/database.js';
 import { db } from '../config/firebase.js';
 

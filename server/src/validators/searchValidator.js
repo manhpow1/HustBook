@@ -28,7 +28,7 @@ const validateDeleteSavedSearch = (params, query) => {
     return deleteSavedSearchSchema.validate({ ...params, ...query });
 };
 
-export {
+export default{
     validateSearch,
     validateGetSavedSearch,
     validateDeleteSavedSearch

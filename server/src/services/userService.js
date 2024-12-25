@@ -1,8 +1,8 @@
 import { v4 as uuidv4 } from 'uuid';
 import { collections, getDocument, queryDocuments } from '../config/database.js';
-import { createError } from '../utils/customError.js';
+import createError from '../utils/customError.js';
 import { generateDeviceToken, hashPassword, comparePassword } from '../utils/authHelper.js';
-import { passwordStrength } from '../validators/userValidator.js';
+import passwordStrength from '../validators/userValidator.js';
 import redis from '../utils/redis.js';
 import logger from '../utils/logger.js';
 import User from '../models/userModel.js';
@@ -141,7 +141,7 @@ class UserService {
         }
     }
 
-    async updatePassword(userId, currentPassword, newPassword) {
+    async updatePassword(req, userId, currentPassword, newPassword) {
         try {
             const user = await this.getUserById(userId);
             if (!user) {
@@ -371,7 +371,7 @@ class UserService {
         }
     }
 
-    async setBlock(userId, targetUserId, type) {
+    async setBlock(req, userId, targetUserId, type) {
         try {
             const user = await this.getUserById(userId);
             if (!user) {
@@ -461,7 +461,7 @@ class UserService {
         }
     }
 
-    async resetPassword(phoneNumber, code, newPassword) {
+    async resetPassword(req, phoneNumber, code, newPassword) {
         try {
             const user = await this.getUserByphoneNumber(phoneNumber);
             if (!user) {

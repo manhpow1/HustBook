@@ -54,7 +54,7 @@ const validateGetListBlocks = (data) => {
     return getListBlocksSchema.validate(data);
 };
 
-export {
+export default{
     validateGetRequestedFriends,
     validateGetUserFriends,
     validateSetAcceptFriend,

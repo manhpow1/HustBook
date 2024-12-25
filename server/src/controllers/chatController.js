@@ -1,4 +1,4 @@
-import { createError } from '../utils/customError.js';
+import createError from '../utils/customError.js';
 import { sendResponse } from '../utils/responseHandler.js';
 import chatService from '../services/chatService.js';
 import chatValidator from '../validators/chatValidator.js';

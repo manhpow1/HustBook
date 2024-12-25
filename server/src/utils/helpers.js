@@ -1,7 +1,7 @@
 import fs from 'fs/promises';
 import path from 'path';
 import sharp from 'sharp';
-import { createError } from './customError.js';
+import createError from './customError.js';
 import logger from './logger.js';
 
 // Image processing constants
@@ -9,6 +9,35 @@ const MAX_IMAGE_WIDTH = 1024;
 const MAX_IMAGE_HEIGHT = 1024;
 const MIN_IMAGE_WIDTH = 100;
 const MIN_IMAGE_HEIGHT = 100;
+const UPLOAD_DIR = path.resolve(process.cwd(), 'uploads');
+const AVATAR_DIR = path.join(UPLOAD_DIR, 'avatars');
+const COVER_DIR = path.join(UPLOAD_DIR, 'covers');
+
+
+const validatePath = (filePath, baseDir) => {
+    const resolvedPath = path.resolve(filePath);
+    if (!resolvedPath.startsWith(baseDir)) {
+        throw createError('1001', 'Invalid file path');
+    }
+    return resolvedPath;
+};
+
+const safeUnlink = async (filePath, baseDir) => {
+    try {
+        const resolvedPath = validatePath(filePath, baseDir);
+        await fs.unlink(resolvedPath);
+    } catch (err) {
+        if (err.code !== 'ENOENT') {
+            logger.error(`Error deleting file ${filePath}:`, err);
+        }
+    }
+};
+
+const safeRename = async (oldPath, newPath, baseDir) => {
+    const resolvedOldPath = validatePath(oldPath, baseDir);
+    const resolvedNewPath = validatePath(newPath, baseDir);
+    await fs.rename(resolvedOldPath, resolvedNewPath);
+};
 
 const formatPhoneNumber = (phoneNumber) => {
     if (phoneNumber.startsWith('0')) {
@@ -32,49 +61,48 @@ const generateCoverPhotoUrl = (filename) => {
 
 const validateAndProcessImage = async (file) => {
     try {
-        const image = sharp(file.path);
+        const baseDir = path.dirname(file.path);
+
+        // Validate file path
+        const filePath = validatePath(file.path, UPLOAD_DIR);
+
+        const image = sharp(filePath);
         const metadata = await image.metadata();
 
         // Check dimensions
         if (metadata.width < MIN_IMAGE_WIDTH || metadata.height < MIN_IMAGE_HEIGHT) {
-            await fs.unlink(file.path); // Clean up invalid file
+            await safeUnlink(filePath, baseDir);
             throw createError('1002', `Image dimensions too small. Minimum size is ${MIN_IMAGE_WIDTH}x${MIN_IMAGE_HEIGHT} pixels`);
         }
 
         // Resize if image is too large while maintaining aspect ratio
         if (metadata.width > MAX_IMAGE_WIDTH || metadata.height > MAX_IMAGE_HEIGHT) {
+            const resizedPath = `${filePath}_resized`;
             await image
                 .resize(MAX_IMAGE_WIDTH, MAX_IMAGE_HEIGHT, {
                     fit: 'inside',
-                    withoutEnlargement: true
+                    withoutEnlargement: true,
                 })
-                .toFile(file.path + '_resized');
+                .toFile(resizedPath);
 
-            // Replace original with resized version
-            await fs.unlink(file.path);
-            await fs.rename(file.path + '_resized', file.path);
+            await safeRename(resizedPath, filePath, baseDir);
         }
 
         // Optimize the image
+        const optimizedPath = `${filePath}_optimized`;
         await image
             .jpeg({ quality: 80, progressive: true })
             .png({ compressionLevel: 9, progressive: true })
-            .toFile(file.path + '_optimized');
+            .toFile(optimizedPath);
 
-        // Replace original with optimized version
-        await fs.unlink(file.path);
-        await fs.rename(file.path + '_optimized', file.path);
+        await safeRename(optimizedPath, filePath, baseDir);
 
         return true;
     } catch (error) {
         // Clean up files in case of error
-        try {
-            await fs.unlink(file.path);
-            await fs.unlink(file.path + '_resized').catch(() => { });
-            await fs.unlink(file.path + '_optimized').catch(() => { });
-        } catch (cleanupError) {
-            logger.error('Error cleaning up files:', cleanupError);
-        }
+        await safeUnlink(file.path, path.dirname(file.path));
+        await safeUnlink(file.path + '_resized', path.dirname(file.path));
+        await safeUnlink(file.path + '_optimized', path.dirname(file.path));
         throw error;
     }
 };
@@ -83,98 +111,89 @@ const handleCoverPhotoUpload = async (file, oldCoverPath = null) => {
     try {
         if (!file) return null;
 
-        // Create uploads directory if it doesn't exist
-        const uploadDir = path.join(process.cwd(), 'uploads', 'covers');
+        // Define the base directory for cover photos
+        const uploadDir = COVER_DIR;
+
+        // Validate paths
+        const filePath = validatePath(file.path, UPLOAD_DIR);
+
+        // Create uploads/covers directory if it doesn't exist
         await fs.mkdir(uploadDir, { recursive: true });
 
-        // Delete old cover photo if exists
+        // Delete the old cover photo if it exists
         if (oldCoverPath) {
-            const fullOldPath = path.join(process.cwd(), oldCoverPath);
-            try {
-                await fs.unlink(fullOldPath);
-                logger.info(`Deleted old cover photo: ${oldCoverPath}`);
-            } catch (err) {
-                if (err.code !== 'ENOENT') {
-                    logger.error('Error deleting old cover photo:', err);
-                }
-            }
+            const oldPath = validatePath(path.join(UPLOAD_DIR, oldCoverPath), UPLOAD_DIR);
+            await safeUnlink(oldPath, UPLOAD_DIR);
+            logger.info(`Deleted old cover photo: ${oldCoverPath}`);
         }
 
-        // Process new cover photo
-        const image = sharp(file.path);
+        // Process the new cover photo
+        const image = sharp(filePath);
         const metadata = await image.metadata();
 
         // Validate dimensions
-        if (metadata.width < MIN_COVER_WIDTH || metadata.height < MIN_COVER_HEIGHT) {
-            await fs.unlink(file.path);
-            throw createError('1002', `Cover photo dimensions too small. Minimum size is ${MIN_COVER_WIDTH}x${MIN_COVER_HEIGHT} pixels`);
+        if (metadata.width < MIN_IMAGE_WIDTH || metadata.height < MIN_IMAGE_HEIGHT) {
+            await safeUnlink(filePath, path.dirname(filePath));
+            throw createError('1002', `Cover photo dimensions too small. Minimum size is ${MIN_IMAGE_WIDTH}x${MIN_IMAGE_HEIGHT} pixels`);
         }
 
         // Resize if necessary while maintaining aspect ratio
-        if (metadata.width > MAX_COVER_WIDTH || metadata.height > MAX_COVER_HEIGHT) {
+        if (metadata.width > MAX_IMAGE_WIDTH || metadata.height > MAX_IMAGE_HEIGHT) {
+            const resizedPath = `${filePath}_resized`;
             await image
-                .resize(MAX_COVER_WIDTH, MAX_COVER_HEIGHT, {
+                .resize(MAX_IMAGE_WIDTH, MAX_IMAGE_HEIGHT, {
                     fit: 'inside',
-                    withoutEnlargement: true
+                    withoutEnlargement: true,
                 })
-                .toFile(file.path + '_resized');
+                .toFile(resizedPath);
 
-            await fs.unlink(file.path);
-            await fs.rename(file.path + '_resized', file.path);
+            await safeRename(resizedPath, filePath, path.dirname(filePath));
         }
 
         // Optimize the image
+        const optimizedPath = `${filePath}_optimized`;
         await image
             .jpeg({ quality: 85, progressive: true })
             .png({ compressionLevel: 8, progressive: true })
-            .toFile(file.path + '_optimized');
+            .toFile(optimizedPath);
 
-        await fs.unlink(file.path);
-        await fs.rename(file.path + '_optimized', file.path);
+        await safeRename(optimizedPath, filePath, path.dirname(filePath));
 
-        // Generate and return URL
+        // Generate and return the cover photo URL
         const coverPhotoUrl = generateCoverPhotoUrl(file.filename);
         return coverPhotoUrl;
 
     } catch (error) {
         // Clean up files in case of error
-        try {
-            await fs.unlink(file.path).catch(() => { });
-            await fs.unlink(file.path + '_resized').catch(() => { });
-            await fs.unlink(file.path + '_optimized').catch(() => { });
-        } catch (cleanupError) {
-            logger.error('Error cleaning up files:', cleanupError);
-        }
+        await safeUnlink(file.path, path.dirname(file.path));
+        await safeUnlink(`${file.path}_resized`, path.dirname(file.path));
+        await safeUnlink(`${file.path}_optimized`, path.dirname(file.path));
 
         logger.error('Cover photo upload error:', error);
         throw createError('9999', 'Failed to process cover photo upload');
     }
 };
 
+
 const handleAvatarUpload = async (file, oldAvatarPath = null) => {
     try {
         if (!file) return null;
 
+        // Validate paths
+        const uploadDir = AVATAR_DIR;
+        const filePath = validatePath(file.path, UPLOAD_DIR);
+
         // Create uploads/avatars directory if it doesn't exist
-        const uploadDir = path.join(process.cwd(), 'uploads', 'avatars');
         await fs.mkdir(uploadDir, { recursive: true });
 
         // Delete old avatar if it exists
         if (oldAvatarPath) {
-            const fullOldPath = path.join(process.cwd(), oldAvatarPath);
-            try {
-                await fs.unlink(fullOldPath);
-                logger.info(`Deleted old avatar: ${oldAvatarPath}`);
-            } catch (err) {
-                // Don't throw if old file doesn't exist
-                if (err.code !== 'ENOENT') {
-                    logger.error('Error deleting old avatar:', err);
-                }
-            }
+            const oldPath = validatePath(path.join(UPLOAD_DIR, oldAvatarPath), UPLOAD_DIR);
+            await safeUnlink(oldPath, UPLOAD_DIR);
         }
 
         // Validate and process image
-        await validateAndProcessImage(file);
+        await validateAndProcessImage({ path: filePath });
 
         // Generate avatar URL for database after successful processing
         const avatarUrl = generateAvatarUrl(file.filename);

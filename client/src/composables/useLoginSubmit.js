@@ -1,6 +1,5 @@
 import { ref } from 'vue'
-import axios from 'axios'
-import { API_ENDPOINTS } from '../config/api'
+import { apiService } from '../services/api'
 
 export function useLoginSubmit(login, router) {
     const isLoading = ref(false)
@@ -13,12 +12,12 @@ export function useLoginSubmit(login, router) {
         errorMessage.value = ""
 
         try {
-            const response = await axios.post(API_ENDPOINTS.LOGIN, {
+            const response = await apiService.login({
                 phoneNumber,
                 password,
-                deviceId: "device-uuid",
+                deviceId,
                 rememberMe
-            })
+            });
 
             if (response.data.code === "1000") {
                 loginSuccess.value = true

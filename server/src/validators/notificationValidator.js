@@ -47,7 +47,7 @@ const validateSetReadNotification = (data) => {
     return setReadNotificationSchema.validate(data, { abortEarly: false });
 };
 
-export {
+export default {
     validateCheckNewItem,
     validateSetPushSettings,
     validateGetNotifications,

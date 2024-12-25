@@ -2,7 +2,7 @@ import jwt from 'jsonwebtoken';
 import config from 'config';
 import { getDocument, collections } from '../config/database.js';
 import cache from '../utils/redis.js';
-import { createError } from '../utils/customError.js';
+import createError from '../utils/customError.js';
 import logger from '../utils/logger.js';
 import { RateLimiterRedis } from 'rate-limiter-flexible';
 import client from '../utils/redis.js';

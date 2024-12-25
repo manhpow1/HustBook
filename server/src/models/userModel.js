@@ -1,8 +1,8 @@
-import { initializeFirebase } from '../config/firebase';
-import { collections, arrayUnion, arrayRemove } from '../config/database';
-import { createError } from '../utils/customError';
+import { initializeFirebase } from '../config/firebase.js';
+import { collections, arrayUnion, arrayRemove } from '../config/database.js';
+import createError from '../utils/customError.js';
 import logger from '../utils/logger.js';
-import redis from '../utils/redis';
+import redis from '../utils/redis.js';
 
 class User {
     constructor(data) {

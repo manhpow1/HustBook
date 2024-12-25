@@ -264,7 +264,7 @@ const deviceHelpers = {
     }
 };
 
-export {
+export default{
     LOCKOUT_DURATION,
     MAX_LOGIN_ATTEMPTS,
     IP_BLACKLIST_DURATION,

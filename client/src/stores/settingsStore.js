@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia';
-import { ref } from 'vue';
+import { ref, computed } from 'vue';
 import apiService from '../services/api';
 import { useErrorHandler } from '../composables/useErrorHandler';
 

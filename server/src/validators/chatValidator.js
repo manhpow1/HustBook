@@ -55,7 +55,7 @@ const validateDeleteConversation = (data) => {
     return deleteConversationSchema.validate(data, { abortEarly: false });
 };
 
-export {
+export default{
     validateGetListConversation,
     validateGetConversation,
     validateSetReadMessage,
