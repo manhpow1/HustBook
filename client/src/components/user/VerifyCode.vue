@@ -24,19 +24,19 @@
         <form @submit.prevent="handleSubmit" class="mt-8 space-y-6" novalidate>
             <div class="space-y-1">
                 <label for="code" class="block text-sm font-medium text-gray-700">Verification Code</label>
-                <input v-model="code" id="code" type="text" name="code" placeholder="Enter verification code" :class="[
-                    'w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500',
-                    { 'border-red-500': errors.code },
-                    { 'border-gray-300': !errors.code }
+                <input v-model="code" id="code" type="text" name="code" placeholder="Enter verification code" :class="[ 
+                    'w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500', 
+                    { 'border-red-500': errors.code }, 
+                    { 'border-gray-300': !errors.code } 
                 ]" :disabled="isLoading" required />
                 <p v-if="errors.code" class="text-red-500 text-xs mt-1">{{ errors.code[0] }}</p>
             </div>
 
             <!-- Submit and Resend Buttons -->
             <div class="space-y-4">
-                <button type="submit" :disabled="isLoading" :class="[
-                    'w-full flex items-center justify-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500',
-                    { 'opacity-50 cursor-not-allowed': isLoading }
+                <button type="submit" :disabled="isLoading" :class="[ 
+                    'w-full flex items-center justify-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500', 
+                    { 'opacity-50 cursor-not-allowed': isLoading } 
                 ]">
                     <ShieldCheck class="h-5 w-5 mr-2" aria-hidden="true" />
                     Verify Code
@@ -83,7 +83,7 @@ const handleSubmit = async () => {
     try {
         const success = await userStore.verifyCode(phoneNumber.value, code.value);
         if (success) {
-            router.push('/');
+            router.push({ name: 'ChangeInfoAfterSignUp' });
         }
     } catch (error) {
         console.error('Error verifying code:', error);

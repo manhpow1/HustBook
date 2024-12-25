@@ -165,10 +165,8 @@ const handleSignup = async () => {
     const success = await userStore.register(phoneNumber.value, password.value)
     if (success) {
       showToast('Registration successful', 'success')
-      router.push({
-        name: 'GetVerifyCode',
-        query: { phoneNumber: phoneNumber.value }
-      })
+      router.push({ name: 'GetVerifyCode', query: { phoneNumber: phoneNumber.value } })
+      // After navigating to GetVerifyCode, we will handle the verification process there
     }
   } catch (error) {
     console.error('Registration failed:', error)
