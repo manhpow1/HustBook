@@ -34,6 +34,14 @@ const cache = {
         } catch (err) {
             logger.error('Redis del error:', err);
         }
+    },
+    incr: async (key) => {
+        try {
+            return await client.incr(key);
+        } catch (err) {
+            logger.error('Redis incr error:', err);
+            throw err; // Re-throw the error to handle it at a higher level
+        }
     }
 };
 

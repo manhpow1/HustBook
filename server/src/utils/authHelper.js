@@ -4,7 +4,6 @@ import config from 'config';
 import { v4 as uuidv4 } from 'uuid';
 import logger from './logger.js';
 import crypto from 'crypto';
-import cache from './redis.js';
 
 const SALT_ROUNDS = 12; // Increased from default 10
 export const TOKEN_EXPIRY = '15m'; // Shorter access token lifetime
@@ -101,41 +100,6 @@ export const generateRefreshToken = (user) => {
     } catch (error) {
         logger.error('Error generating refresh token:', error);
         throw new Error('Refresh token generation failed');
-    }
-};
-
-/**
- * Add a token to the blacklist
- */
-export const blacklistToken = async (token, expiry) => {
-    try {
-        const decoded = jwt.decode(token);
-        if (!decoded) {
-            throw new Error('Invalid token format');
-        }
-
-        // Store in Redis with TTL matching token expiry
-        const timeToExpiry = expiry || (decoded.exp - Math.floor(Date.now() / 1000));
-        if (timeToExpiry > 0) {
-            await cache.set(`blacklist:${token}`, '1', timeToExpiry);
-        }
-
-        logger.info(`Token blacklisted for user ${decoded.uid}`);
-    } catch (error) {
-        logger.error('Error blacklisting token:', error);
-        throw error;
-    }
-};
-
-/**
- * Check if a token is blacklisted
- */
-export const isTokenBlacklisted = async (token) => {
-    try {
-        return !!(await cache.get(`blacklist:${token}`));
-    } catch (error) {
-        logger.error('Error checking token blacklist:', error);
-        return true; // Fail secure
     }
 };
 
