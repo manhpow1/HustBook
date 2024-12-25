@@ -39,4 +39,4 @@ export const createError = (code, customMessage) => {
     return new CustomError(code, customMessage || error.message, error.statusCode);
 };
 
-export default { CustomError };
+export default { CustomError, createError, errorCodes  };
