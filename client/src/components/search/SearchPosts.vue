@@ -119,7 +119,9 @@ import { ref, computed, onMounted, watch } from 'vue';
 import { useSearchStore } from '../../stores/searchStore';
 import { useUserStore } from '../../stores/userStore';
 import { useRouter } from 'vue-router';
-import { Button, Input, Card } from '../ui';
+import { Button } from '@/components/ui/button'
+import { Card } from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
 import { SearchIcon, UserIcon, CalendarIcon, Loader2Icon } from 'lucide-vue-next';
 import { formatDate } from '../../utils/helpers';
 import { useDebounce } from '../../composables/useDebounce';
@@ -128,40 +130,31 @@ import { storeToRefs } from 'pinia';
 import { sanitizeInput } from '../../utils/sanitize';
 import { useToast } from '../../composables/useToast';
 
-// Initialize store instances
 const searchStore = useSearchStore();
 const userStore = useUserStore();
 const router = useRouter();
-
-// Initialize composables
 const { showToast } = useToast();
 
-// Destructure store refs for reactivity
+// Destructure store refs
 const { searchResults, isLoading, error, hasMore } = storeToRefs(searchStore);
 const { isLoggedIn } = storeToRefs(userStore);
 
-// Local component state
 const keyword = ref('');
 const userId = ref('');
-
-// Debounced search function
-const debouncedSearch = useDebounce(() => {
-    handleSearch();
-}, 500);
-
-// Saved searches state
 const savedSearches = ref([]);
 
-// Computed property: Normalize saved searches by removing duplicates and sorting
+// Computed properties
+const sortedSearchResults = computed(() => {
+    return [...searchResults.value].sort((a, b) => new Date(b.created) - new Date(a.created));
+});
+
 const normalizedSavedSearches = computed(() => {
     const uniqueSearches = new Map();
     savedSearches.value.forEach((search) => {
         if (search.id && search.keyword && search.created) {
             const normalizedKeyword = search.keyword.trim().toLowerCase();
-            if (
-                !uniqueSearches.has(normalizedKeyword) ||
-                new Date(search.created) > new Date(uniqueSearches.get(normalizedKeyword).created)
-            ) {
+            if (!uniqueSearches.has(normalizedKeyword) ||
+                new Date(search.created) > new Date(uniqueSearches.get(normalizedKeyword).created)) {
                 uniqueSearches.set(normalizedKeyword, search);
             }
         }
@@ -171,115 +164,87 @@ const normalizedSavedSearches = computed(() => {
         .slice(0, 20);
 });
 
-// Computed property: Sort search results by creation date descending
-const sortedSearchResults = computed(() => {
-    return [...searchResults.value].sort((a, b) => new Date(b.created) - new Date(a.created));
-});
-
-// Computed property: Determine if form is valid
-const isFormValid = computed(() => {
-    return keyword.value.trim() !== '' || userId.value.trim() !== '';
-});
-
-// Handle search action
+// Search handling
 const handleSearch = async () => {
-    if (!isFormValid.value) {
-        searchStore.setError('Please enter a keyword or User ID to search.');
+    if (!keyword.value.trim() && !userId.value.trim()) {
+        console.error("Please enter a keyword or User ID to search.");
         return;
     }
-    searchStore.setError(null);
+
     try {
-        // Sanitize input to prevent injection attacks
-        const sanitizedKeyword = sanitizeInput(keyword.value);
-        const sanitizedUserId = sanitizeInput(userId.value);
         await searchStore.searchPosts({
-            keyword: sanitizedKeyword,
-            userId: sanitizedUserId,
+            keyword: sanitizeInput(keyword.value),
+            userId: sanitizeInput(userId.value),
             index: 0,
-            count: 20,
+            count: 20
         });
     } catch (err) {
         console.error("Error during search:", err);
-        // handleError already manages error notifications
     }
 };
 
-// Load more search results
+const debouncedSearch = useDebounce(handleSearch, 500);
+
 const loadMore = async () => {
+    if (!hasMore.value || isLoading.value) return;
+
     try {
         await searchStore.searchPosts({
             keyword: keyword.value.trim(),
             userId: userId.value.trim(),
-            index: searchStore.index + searchStore.count,
-            count: searchStore.count,
+            index: searchResults.value.length,
+            count: 20
         });
     } catch (err) {
-        console.error("Error loading more search results:", err);
-        // handleError already manages error notifications
+        console.error("Error loading more results:", err);
     }
 };
 
-// View a specific post
-const viewPost = (postId) => {
-    router.push(`/posts/${postId}`);
-};
-
-// Retry search in case of errors
-const retrySearch = () => {
-    searchStore.setError(null);
-    handleSearch();
-};
-
-// Fetch saved searches from the store
+// Saved searches management
 const fetchSavedSearches = async () => {
     try {
-        const response = await searchStore.getSavedSearches(0, 100); // Fetch more to handle duplicates
-        savedSearches.value = response.data;
+        const response = await searchStore.getSavedSearches();
+        savedSearches.value = response;
     } catch (error) {
         console.error('Error fetching saved searches:', error);
-        // handleError already manages error notifications
     }
 };
 
-// Apply a saved search
 const applySavedSearch = (search) => {
     keyword.value = search.keyword;
     userId.value = search.userId || '';
     handleSearch();
 };
 
-// Delete a specific saved search
 const deleteSavedSearch = async (searchId) => {
     try {
         await searchStore.deleteSavedSearch(searchId);
         await fetchSavedSearches();
-        showToast('Saved search deleted successfully.', 'success');
+        showToast('Saved search deleted successfully', 'success');
     } catch (error) {
-        console.error(`Error deleting saved search with ID ${searchId}:`, error);
-        // handleError already manages error notifications
+        console.error('Error deleting saved search:', error);
     }
 };
 
-// Delete all saved searches
 const deleteAllSavedSearches = async () => {
     try {
         await searchStore.deleteSavedSearch(null, true);
         await fetchSavedSearches();
-        showToast('All saved searches deleted successfully.', 'success');
+        showToast('All saved searches deleted successfully', 'success');
     } catch (error) {
         console.error('Error deleting all saved searches:', error);
-        // handleError already manages error notifications
     }
 };
 
-// Watch for changes in keyword and userId to reset search results
-watch([keyword, userId], ([newKeyword, newUserId], [oldKeyword, oldUserId]) => {
-    if (newKeyword !== oldKeyword || newUserId !== oldUserId) {
-        searchStore.resetSearch();
-    }
+const viewPost = (postId) => {
+    router.push(`/posts/${postId}`);
+};
+
+// Watchers
+watch([keyword, userId], () => {
+    searchStore.resetSearch();
 }, { deep: true });
 
-// Watch for authentication status to redirect if not logged in
 watch(isLoggedIn, async (newVal) => {
     if (!newVal) {
         router.push('/login');
@@ -288,14 +253,13 @@ watch(isLoggedIn, async (newVal) => {
     }
 });
 
-// Fetch saved searches and initiate search on component mount
+// Lifecycle
 onMounted(async () => {
     if (!isLoggedIn.value) {
         router.push('/login');
-    } else {
-        await handleSearch();
-        await fetchSavedSearches();
+        return;
     }
+    await fetchSavedSearches();
 });
 </script>
 

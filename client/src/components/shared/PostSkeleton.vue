@@ -31,7 +31,8 @@
 
 <script setup>
 import { computed } from 'vue';
-import { Card, Skeleton } from '../ui';
+import Alert from '@/components/ui/alert';
+import Skeleton from '@/components/ui/skeleton';
 
 const props = defineProps({
     avatarSize: {

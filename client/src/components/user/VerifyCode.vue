@@ -77,7 +77,7 @@
             <button @click="goBack"
                 class="w-full flex justify-center items-center px-4 py-2 text-sm text-gray-600 hover:text-gray-900">
                 <ArrowLeft class="h-4 w-4 mr-2" />
-                Quay lại
+                Go back
             </button>
         </div>
     </div>

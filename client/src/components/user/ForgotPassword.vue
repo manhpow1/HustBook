@@ -52,9 +52,9 @@ import { useFormValidation } from '../../composables/useFormValidation';
 import { useUserStore } from '../../stores/userStore';
 import { useToast } from '../../composables/useToast';
 import { storeToRefs } from 'pinia';
-import Card from '../../components/ui/Card.vue';
-import Input from '../../components/ui/Input.vue';
-import Button from '../../components/ui/Button.vue';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
 
 const router = useRouter();
 const userStore = useUserStore();

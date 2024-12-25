@@ -23,7 +23,8 @@
 <script setup>
 import { ref, computed } from 'vue';
 import { useUserStore } from '../../stores/userStore';
-import { Input, Button } from '../ui';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
 
 const userStore = useUserStore();
 

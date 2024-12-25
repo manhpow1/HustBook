@@ -67,11 +67,10 @@
                 class="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded transition duration-300">
                 Sign Up
               </router-link>
-              <button
-                class="bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-2 px-4 rounded transition duration-300"
-                @click="openVerifyCodeInNewTab">
+              <router-link to="/get-verify-code"
+                class="bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-2 px-4 rounded transition duration-300">
                 Get Verification Code
-              </button>
+              </router-link>
             </template>
           </div>
 
@@ -217,12 +216,6 @@ const currentYear = computed(() => new Date().getFullYear());
 const handleLogoutSuccess = async () => {
   await userStore.logout();
   router.push('/login');
-};
-
-const openVerifyCodeInNewTab = () => {
-  const route = router.resolve({ name: 'GetVerifyCode' });
-  logger.debug('Opening Verify Code route in new tab:', route.href);
-  window.open(route.href, '_blank');
 };
 
 // SEO Meta Tags

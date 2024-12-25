@@ -80,8 +80,8 @@ import CommentItem from '../shared/CommentItem.vue';
 import ErrorMessage from '../ui/ErrorMessage.vue';
 import { RecycleScroller } from 'vue-virtual-scroller';
 import 'vue-virtual-scroller/dist/vue-virtual-scroller.css';
-import Alert from '../ui/Alert.vue';
-import Button from '../ui/Button.vue';
+import Alert from '@/components/ui/alert';
+import Button from '@/components/ui/button';
 
 // Props
 const props = defineProps({
