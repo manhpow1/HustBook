@@ -9,6 +9,7 @@ const createLimiter = (points, duration, prefix) => {
         points,
         duration,
         keyPrefix: prefix,
+        enableOfflineQueue: false
     });
 };
 
