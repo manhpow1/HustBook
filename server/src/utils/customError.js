@@ -8,7 +8,7 @@ class CustomError extends Error {
     }
 }
 
-const errorCodes = {
+export const errorCodes = {
     '1000': { message: 'OK', statusCode: 200 },
     '9992': { message: 'The requested post does not exist.', statusCode: 404 },
     '9993': { message: 'Verification code is incorrect.', statusCode: 400 },
@@ -39,4 +39,4 @@ const createError = (code, customMessage) => {
     return new CustomError(code, customMessage || error.message, error.statusCode);
 };
 
-export default { CustomError, createError, errorCodes };
+export default { CustomError, createError};

@@ -1,4 +1,4 @@
-import errorCodes from './customError.js';
+import { errorCodes } from './customError.js';
 import logger from './logger.js';
 
 export const sendResponse = (res, code, data = null, customMessage = null) => {
