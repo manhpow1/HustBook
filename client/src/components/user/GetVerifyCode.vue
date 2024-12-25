@@ -54,8 +54,7 @@
         </form>
 
         <!-- Verification Code Display -->
-        <div v-if="verificationCode"
-            class="mt-6 bg-green-50 border border-green-200 rounded-md p-4">
+        <div v-if="verificationCode" class="mt-6 bg-green-50 border border-green-200 rounded-md p-4">
             <div class="flex justify-between items-start">
                 <div class="flex">
                     <div class="flex-shrink-0">
@@ -76,12 +75,20 @@
                 </button>
             </div>
 
-            <!-- Continue Button -->
-            <div class="mt-4">
-                <button @click="proceedToVerification"
+            <!-- Actions Buttons -->
+            <div class="mt-4 space-y-2">
+                <!-- Copy & Continue Button -->
+                <button @click="copyAndProceed"
                     class="w-full flex justify-center items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
                     <ArrowRightIcon class="h-5 w-5 mr-2" />
-                    Continue to Verification
+                    Copy & Continue to Verification
+                </button>
+
+                <!-- Skip Copy Button -->
+                <button @click="proceedToVerification"
+                    class="w-full flex justify-center items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                    <ArrowRightIcon class="h-5 w-5 mr-2" />
+                    Skip Copy and Continue
                 </button>
             </div>
         </div>
@@ -130,7 +137,6 @@ const isValidPhone = computed(() => {
 });
 
 const handlePhoneNumberInput = () => {
-    // Chỉ cho phép nhập số và giới hạn độ dài
     phoneNumber.value = phoneNumber.value.replace(/\D/g, '').slice(0, 10);
     if (phoneNumber.value && phoneNumber.value[0] !== '0') {
         phoneNumber.value = '0' + phoneNumber.value;
@@ -146,8 +152,19 @@ const copyToClipboard = async () => {
         setTimeout(() => {
             copied.value = false;
         }, 2000);
+        return true;
     } catch (err) {
         showToast('error', 'Không thể sao chép mã');
+        return false;
+    }
+};
+
+const copyAndProceed = async () => {
+    const copySuccess = await copyToClipboard();
+    if (copySuccess) {
+        setTimeout(() => {
+            proceedToVerification();
+        }, 500); // Đợi 500ms để người dùng thấy trạng thái copied
     }
 };
 
@@ -165,34 +182,29 @@ const handleSubmit = async () => {
     }
 
     if (isLocked.value) {
-        showToast('error', 'Tài khoản tạm thời bị khóa. Vui lòng thử lại sau.');
+        showToast('error', 'Account temporarily locked. Please try again later.');
         return;
     }
 
     try {
         const result = await userStore.getVerifyCode(phoneNumber.value);
         if (result.success) {
-            successMessage.value = 'Mã xác thực đã được gửi thành công!';
+            successMessage.value = 'Verification code sent successfully!';
             if (result.code) {
                 verificationCode.value = result.code;
             }
-
-            if (process.env.NODE_ENV === 'production') {
-                // Trong môi trường production, chuyển thẳng sang trang xác thực
-                proceedToVerification();
-            }
         } else {
-            error.value = 'Không thể gửi mã xác thực';
+            error.value = 'Unable to send verification code';
         }
     } catch (err) {
-        error.value = err.message || 'Đã xảy ra lỗi';
+        error.value = err.message || 'An error occurred';
     }
 };
 
-// Theo dõi trạng thái khóa
+// Watch for lock status
 watch(() => isLocked.value, (newValue) => {
     if (newValue) {
-        error.value = 'Tài khoản tạm thời bị khóa do quá nhiều lần thử. Vui lòng thử lại sau 5 phút.';
+        error.value = 'Temporarily locked due to too many attempts. Please try again after 5 minutes.';
     } else {
         error.value = '';
     }
