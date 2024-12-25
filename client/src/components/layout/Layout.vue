@@ -69,7 +69,7 @@
               </router-link>
               <router-link to="/get-verify-code"
                 class="bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-2 px-4 rounded transition duration-300"
-                @click.native.prevent="openInNewTab('/get-verify-code')">
+                @click.prevent="openInNewTab('/get-verify-code')">
                 Get Verification Code
               </router-link>
             </template>
