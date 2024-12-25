@@ -1,7 +1,7 @@
 import { sendResponse } from '../utils/responseHandler.js';
 import searchValidator from '../validators/searchValidator.js';
 import searchService from '../services/searchService.js';
-import createError from '../utils/customError.js';
+import { createError } from '../utils/customError.js';
 
 class SearchController {
     async search(req, res, next) {

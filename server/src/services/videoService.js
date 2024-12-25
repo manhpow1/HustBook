@@ -1,7 +1,7 @@
 import { collections } from '../config/database.js';
 import { db } from '../config/firebase.js';
 import { getBoundingBox, getDistance } from '../utils/geoUtils.js';
-import createError from '../utils/customError.js';
+import { createError } from '../utils/customError.js';
 import logger from '../utils/logger.js';
 
 class VideoService {

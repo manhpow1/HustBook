@@ -1,5 +1,5 @@
 import { PushSettings } from '../models/pushSettings.js';
-import createError from '../utils/customError.js';
+import { createError } from '../utils/customError.js';
 import logger from '../utils/logger.js';
 import { db } from '../config/firebase.js';
 import { collections } from '../config/database.js';

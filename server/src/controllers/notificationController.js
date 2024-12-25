@@ -1,7 +1,7 @@
 import { sendResponse } from '../utils/responseHandler.js';
 import notificationValidator from '../validators/notificationValidator.js';
 import notificationService from '../services/notificationService.js';
-import createError from '../utils/customError.js';
+import { createError } from '../utils/customError.js';
 import logger from '../utils/logger.js';
 
 class NotificationController {

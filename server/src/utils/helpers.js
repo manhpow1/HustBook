@@ -1,7 +1,7 @@
 import fs from 'fs/promises';
 import path from 'path';
 import sharp from 'sharp';
-import createError from './customError.js';
+import { createError } from './customError.js';
 import logger from './logger.js';
 
 // Image processing constants

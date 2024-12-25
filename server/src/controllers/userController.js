@@ -4,7 +4,7 @@ import userValidator from '../validators/userValidator.js';
 import { comparePassword, generateJWT, generateRefreshToken, generateRandomCode, verifyRefreshToken, generateDeviceToken, generateTokenFamily } from '../utils/authHelper.js';
 import { formatPhoneNumber, sanitizeDeviceInfo, handleAvatarUpload, handleCoverPhotoUpload } from '../utils/helpers.js';
 import { sendResponse } from '../utils/responseHandler.js';
-import createError from '../utils/customError.js';
+import { createError } from '../utils/customError.js';
 import logger from '../utils/logger.js';
 
 class UserController {

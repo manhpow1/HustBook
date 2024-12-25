@@ -1,4 +1,4 @@
-import createError from '../utils/customError.js';
+import { createError } from '../utils/customError.js';
 import notificationService from './notificationService.js';
 import userService from './userService.js';
 // If you have a message service, import it as well.

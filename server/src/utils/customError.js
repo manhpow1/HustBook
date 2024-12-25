@@ -34,9 +34,9 @@ export const errorCodes = {
     // Add more error codes as needed
 };
 
-const createError = (code, customMessage) => {
+export const createError = (code, customMessage) => {
     const error = errorCodes[code] || errorCodes['1005']; // Default to 'Unknown error' if code not found
     return new CustomError(code, customMessage || error.message, error.statusCode);
 };
 
-export default { CustomError, createError};
+export default { CustomError };

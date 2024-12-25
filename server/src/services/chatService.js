@@ -1,6 +1,6 @@
 import { collections, arrayRemove } from '../config/database.js';
 import { db } from '../config/firebase.js';
-import createError from '../utils/customError.js';
+import { createError } from '../utils/customError.js';
 import logger from '../utils/logger.js';
 import Conversation from '../models/Conversation.js';
 import Message from '../models/Message.js';
