@@ -41,7 +41,12 @@ export function useFormValidation() {
     };
 
     const validatePhoneNumber = (phoneNumber) => {
-        return validateField('phoneNumber', phoneNumber, phoneNumberRules);
+        const error = validateField('phoneNumber', phoneNumber, phoneNumberRules);
+        if (error) {
+            errors.value.phoneNumber = [error];
+            return false;
+        }
+        return true;
     };
 
     const verificationCodeRules = [
