@@ -144,8 +144,8 @@ const handlePaste = (event) => {
 const handleSubmit = async () => {
     if (!isCodeComplete.value || isLoading.value) return;
 
-    const code = codeDigits.value.join('');
-    const result = await userStore.verifyCode(phoneNumber.value, code);
+    const verifyCode = codeDigits.value.join('');
+    const result = await userStore.VerifyCode(phoneNumber.value, verifyCode);
 
     if (result.success) {
         verificationSuccess.value = true;
