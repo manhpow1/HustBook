@@ -12,7 +12,8 @@ export function useFormValidation() {
         for (const rule of rules) {
             if (typeof rule === 'function') {
                 const error = rule(value, context);
-                if (error) return error;
+                // Only return error if it's a non-null string
+                if (error && typeof error === 'string') return error;
             }
         }
         return '';

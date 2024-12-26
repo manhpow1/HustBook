@@ -115,12 +115,13 @@ const avatarPreview = ref('');
 const avatarError = ref('');
 
 const validateUserNameField = () => {
-    userNameError.value = validateField('userName', userName.value, [
-        value => !value?.trim() && 'Username is required',
-        value => value.length < 3 && 'Username must be at least 3 characters',
-        value => value.length > 30 && 'Username must be at most 30 characters',
-        value => !/^[a-zA-Z0-9_]+$/.test(value) && 'Username can only contain letters, numbers and underscores'
-    ]);
+    const rules = [
+        value => !value?.trim() ? 'Username is required' : null,
+        value => value?.length < 3 ? 'Username must be at least 3 characters' : null,
+        value => value?.length > 30 ? 'Username must be at most 30 characters' : null,
+        value => !/^[a-zA-Z0-9_]+$/.test(value) ? 'Username can only contain letters, numbers and underscores' : null
+    ];
+    userNameError.value = validateField('userName', userName.value, rules);
 };
 
 const handleFileChange = async (event) => {
