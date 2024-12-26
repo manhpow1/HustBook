@@ -198,6 +198,7 @@ const handleSubmit = async () => {
     } catch (err) {
         error.value = err.message || 'An error occurred';
     }
+    }
 };
 
 // Watch for lock status
