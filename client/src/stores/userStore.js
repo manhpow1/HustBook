@@ -411,7 +411,7 @@ export const useUserStore = defineStore('user', () => {
                 startCooldown();
                 return {
                     success: true,
-                    code: response.data.verifyCode
+                    verifyCode: response.data.verificationCode
                 };
             }
             return { success: false, code: null };

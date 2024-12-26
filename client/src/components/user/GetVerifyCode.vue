@@ -187,12 +187,11 @@ const handleSubmit = async () => {
     }
 
     try {
-        const result = await userStore.getVerifyCode(phoneNumber.value);
-        if (result.success) {
-            successMessage.value = 'Verification code sent successfully!';
-            if (result.verifyCode) {
-                verificationCode.value = result.verifyCode;
-            }
+        const response = await userStore.getVerifyCode(phoneNumber.value);
+            if (response.success) {
+                successMessage.value = 'Verification code sent successfully!';
+                if (response.verifyCode) {
+                    verificationCode.value = response.verifyCode;
         } else {
             error.value = 'Unable to send verification code';
         }
