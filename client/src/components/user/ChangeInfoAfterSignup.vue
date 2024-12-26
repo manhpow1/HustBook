@@ -114,21 +114,11 @@ const avatar = ref(null);
 const avatarPreview = ref('');
 const avatarError = ref('');
 
+const { validateUsername } = useFormValidation();
+    
 const validateUserNameField = () => {
-    if (!userName.value) {
-        userNameError.value = 'Username is required';
-        return;
-    }
-
-    const rules = [
-        value => (!value || !value.trim()) ? 'Username is required' : '',
-        value => (value && value.length < 3) ? 'Username must be at least 3 characters' : '',
-        value => (value && value.length > 30) ? 'Username must be at most 30 characters' : '',
-        value => (value && !/^[a-zA-Z0-9_]+$/.test(value)) ? 'Username can only contain letters, numbers and underscores' : ''
-    ];
-        
     try {
-        userNameError.value = validateField('userName', userName.value, rules) || '';
+        userNameError.value = validateUsername(userName.value) || '';
     } catch (err) {
         console.error('Username validation error:', err);
         userNameError.value = 'Error validating username';

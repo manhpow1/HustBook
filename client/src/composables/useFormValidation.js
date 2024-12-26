@@ -4,11 +4,10 @@ export function useFormValidation() {
     const errors = ref({});
 
     const validateField = (field, value, rules, context = {}, immediate = false) => {
-        // Skip validation if value is empty and not immediate validation
-        if (!immediate && !value) {
+        // Always validate if immediate is true
+        if (!immediate && value === '') {
             return '';
         }
-        
         try {
             for (const rule of rules) {
                 if (typeof rule === 'function') {
