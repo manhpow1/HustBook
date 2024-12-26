@@ -21,10 +21,12 @@ class User {
         this.deviceDetails = data.deviceDetails || [];
         this.password = data.password;
         this.passwordHistory = data.passwordHistory || [];
-        this.lastPasswordChange = data.lastPasswordChange;
+        this.lastPasswordChange = data.lastPasswordChange || new Date().toISOString();
         this.verificationCode = data.verificationCode;
         this.verificationCodeExpiration = data.verificationCodeExpiration;
         this.verificationAttempts = data.verificationAttempts || 0;
+        this.uuid = data.uuid;
+        this.updatedAt = data.updatedAt || new Date().toISOString();
     }
 
     toJSON() {
@@ -137,12 +139,37 @@ class User {
 
     async save() {
         const userRef = await this.getUserRef();
-        const userData = this.toJSON();
-        // Loại bỏ các trường undefined hoặc null
+        const userData = {
+            uid: this.uid,
+            userName: this.userName,
+            phoneNumber: this.phoneNumber,
+            avatar: this.avatar,
+            createdAt: this.createdAt,
+            isVerified: this.isVerified,
+            isBlocked: this.isBlocked,
+            online: this.online,
+            tokenVersion: this.tokenVersion,
+            isAdmin: this.isAdmin,
+            deviceIds: this.deviceIds,
+            tokenFamily: this.tokenFamily,
+            deviceDetails: this.deviceDetails,
+            password: this.password,
+            passwordHistory: this.passwordHistory,
+            lastPasswordChange: this.lastPasswordChange,
+            verificationCode: this.verificationCode,
+            verificationCodeExpiration: this.verificationCodeExpiration,
+            verificationAttempts: this.verificationAttempts,
+            uuid: this.uuid,
+            updatedAt: new Date().toISOString()
+        };
+
+        // Remove undefined/null values
         const cleanedData = Object.fromEntries(
             Object.entries(userData).filter(([_, v]) => v != null)
         );
+
         await userRef.set(cleanedData, { merge: true });
+        return this;
     }
 }
 

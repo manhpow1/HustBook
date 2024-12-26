@@ -31,19 +31,17 @@ class UserService {
             const tokenFamily = uuidv4();
             const hashedPassword = await hashPassword(password);
 
+            // Create new User model instance with all required fields
             const user = new User({
-                uid: userId,  // Standardized to uid
+                uid: userId,
                 phoneNumber,
                 password: hashedPassword,
                 passwordHistory: [hashedPassword],
                 uuid,
                 verificationCode,
-                verificationCodeTimestamp: Date.now(),
                 verificationCodeExpiration: Date.now() + VERIFICATION_CODE_EXPIRY,
                 verificationAttempts: 0,
                 isVerified: false,
-                deviceToken,
-                deviceTokens: [deviceToken],
                 deviceIds: [deviceId],
                 deviceDetails: [{
                     id: deviceId,
@@ -52,22 +50,15 @@ class UserService {
                 }],
                 tokenVersion: 0,
                 tokenFamily,
-                lastTokenRefresh: new Date().toISOString(),
-                createdAt: new Date().toISOString(),
-                updatedAt: new Date().toISOString(),
-                lastLoginAt: null,
-                lastPasswordChange: new Date().toISOString(),
-                failedLoginAttempts: 0,
-                lockoutUntil: null,
                 online: false,
                 isBlocked: false,
                 isAdmin: false,
-                securityLevel: 'standard',
-                twoFactorEnabled: false,
-                allowedIPs: [],
-                lastSecurityAudit: new Date().toISOString()
+                createdAt: new Date().toISOString(),
+                updatedAt: new Date().toISOString(),
+                lastPasswordChange: new Date().toISOString()
             });
 
+            // Save to Firestore and return the saved user
             await user.save();
 
             logger.info(`User created with ID: ${userId}`);
