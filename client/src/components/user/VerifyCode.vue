@@ -47,13 +47,12 @@
 
             <!-- Submit Button -->
             <div class="space-y-4">
-                <button type="submit" :disabled="!isCodeComplete || isLoading"
+                <button v-if="!verificationSuccess" type="submit" :disabled="!isCodeComplete || isLoading"
                     class="w-full flex justify-center items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed">
                     <Loader2 v-if="isLoading" class="animate-spin h-5 w-5 mr-2" />
-                    <span>Verification Code</span>
+                    <span>Verify Code</span>
                 </button>
 
-                <!-- Complete Profile Button -->
                 <button v-if="verificationSuccess" @click="goToCompleteProfile"
                     class="w-full flex justify-center items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500">
                     <UserPlus class="h-5 w-5 mr-2" />
@@ -149,17 +148,11 @@ const handleSubmit = async () => {
 
     if (result.success) {
         verificationSuccess.value = true;
-        if (!result.exists) {
-            // For new users, go to complete profile
-            goToCompleteProfile();
-        } else {
-            // For existing users, store the token and redirect to home
+        if (result.exists) {
             const token = result.token;
             if (token) {
                 localStorage.setItem('user', JSON.stringify({ isVerified: true }));
-                Cookies.set('accessToken', token, { expires: 1/96 }); // 15 minutes
-                await userStore.fetchUserProfile();
-                router.push('/');
+                Cookies.set('accessToken', token, { expires: 1 / 96 });
             }
         }
     } else if (isVerifyCodeExpired.value) {
