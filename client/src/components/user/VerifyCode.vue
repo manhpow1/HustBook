@@ -147,9 +147,7 @@ const handleSubmit = async () => {
 
     if (result.success) {
         verificationSuccess.value = true;
-        if (result.exists) {
-            router.push({ name: 'Home' });
-        }
+        goToCompleteProfile();
     }
 };
 
@@ -162,7 +160,6 @@ const goToCompleteProfile = () => {
 
 const handleResendCode = async () => {
     await userStore.getVerifyCode(phoneNumber.value);
-    // Reset mã cũ
     codeDigits.value = Array(6).fill('');
     digitInputs.value[0]?.focus();
 };

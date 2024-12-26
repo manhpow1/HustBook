@@ -430,7 +430,7 @@ class UserController {
 
             const { phoneNumber, code } = value;
 
-            // Kiểm tra mã xác thực trong collection verificationCodes
+            // Fetch verification code from database
             const verificationRef = db.collection('verificationCodes').doc(phoneNumber);
             const verificationDoc = await verificationRef.get();
 
@@ -447,12 +447,12 @@ class UserController {
                 throw createError('9993', 'Verification code has expired');
             }
 
-            // Kiểm tra số lần thử
+            // Check remaining attempts
             if (verificationData.attempts >= 5) {
                 throw createError('9993', 'Maximum verification attempts exceeded');
             }
 
-            // Kiểm tra mã xác thực
+            // Check verification code
             if (verificationData.code !== code) {
                 await verificationRef.update({
                     attempts: verificationData.attempts + 1
@@ -460,10 +460,10 @@ class UserController {
                 throw createError('9993', 'Invalid verification code');
             }
 
-            // Xóa mã xác thực sau khi verify thành công
+            // Delete verification code after success
             await verificationRef.delete();
 
-            // Kiểm tra user đã tồn tại chưa
+            // Check if the user exists
             const user = await userService.getUserByphoneNumber(phoneNumber);
             if (!user) {
                 sendResponse(res, '1000', {
@@ -474,7 +474,7 @@ class UserController {
                 return;
             }
 
-            // Cập nhật trạng thái xác thực cho user nếu tồn tại
+            // Update user verification status if user exists
             await userService.updateVerificationStatus(user.uid, true);
 
             const deviceToken = generateDeviceToken();
@@ -488,8 +488,6 @@ class UserController {
                 deviceId: req.get('Device-ID') || crypto.randomUUID()
             });
 
-            logger.info(`Phone number ${phoneNumber} verified successfully`);
-
             sendResponse(res, '1000', {
                 verified: true,
                 exists: true,
@@ -498,7 +496,6 @@ class UserController {
                 deviceToken,
                 active: user.active ? "1" : "0"
             });
-
         } catch (error) {
             logger.error('Check Verify Code Error:', error);
             next(error);

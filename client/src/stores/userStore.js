@@ -426,7 +426,7 @@ export const useUserStore = defineStore('user', () => {
                 startCooldown();
                 return {
                     success: true,
-                    code: response.data.data?.verifyCode
+                    code: response.data.verifyCode
                 };
             }
             return { success: false, code: null };
@@ -458,42 +458,52 @@ export const useUserStore = defineStore('user', () => {
             if (response.data.code === '1000') {
                 const { verified, exists, token, id } = response.data.data;
 
-                if (verified && exists) {
+                if (verified) {
                     setAuthCookies(token);
                     user.value = { ...user.value, isVerified: true, id };
-                    successMessage.value = 'Verification successful!';
-                    showToast('success', successMessage.value);
+
                     verificationAttempts.value = 0;
-                    return { success: true, exists: true };
-                } else if (verified && !exists) {
-                    successMessage.value = 'Verification successful. Please continue registration!';
-                    showToast('success', successMessage.value);
-                    verificationAttempts.value = 0;
-                    return { success: true, exists: false };
+
+                    if (exists) {
+                        successMessage.value = 'Verification successful!';
+                        showToast('success', successMessage.value);
+                        return { success: true, exists: true };
+                    } else {
+                        successMessage.value = 'Verification successful. Please continue registration!';
+                        showToast('success', successMessage.value);
+                        return { success: true, exists: false };
+                    }
                 }
             }
+
             return { success: false, exists: false };
         } catch (err) {
             if (err.response?.data?.code === '9993') {
                 verifyCodeError.value = err.response.data.message;
+
                 if (err.response.data.message.includes('expired')) {
                     isVerifyCodeExpired.value = true;
                 }
+
                 remainingAttempts.value = Math.max(0, remainingAttempts.value - 1);
+
                 if (remainingAttempts.value === 0) {
                     isLocked.value = true;
+
                     setTimeout(() => {
                         isLocked.value = false;
                         remainingAttempts.value = MAX_VERIFY_ATTEMPTS;
                     }, LOCKOUT_DURATION);
                 }
             }
+
             handleAuthError(err);
             return { success: false, exists: false };
         } finally {
             isLoading.value = false;
         }
     };
+
 
     // Profile Management Methods
     const updateProfile = async (userName, avatar = null) => {
