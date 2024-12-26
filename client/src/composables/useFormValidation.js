@@ -3,10 +3,10 @@ import { ref } from 'vue';
 export function useFormValidation() {
     const errors = ref({});
 
-    const validateField = (field, value, rules) => {
+    const validateField = (field, value, rules, context = {}) => {
         for (const rule of rules) {
             if (typeof rule === 'function') {
-                const error = rule(value);
+                const error = rule(value, context);
                 if (error) return error;
             }
         }
@@ -36,8 +36,8 @@ export function useFormValidation() {
         (value) => !/^[a-zA-Z0-9_]+$/.test(value) ? 'Username can only contain letters, numbers, and underscores.' : null,
     ];
 
-    const validatePassword = (password, phoneNumber) => {
-        return validateField('password', password, passwordRules, { phoneNumber });
+    const validatePassword = (password, context = {}) => {
+        return validateField('password', password, passwordRules, context);
     };
 
     const validatePhoneNumber = (phoneNumber) => {
