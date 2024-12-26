@@ -4,7 +4,7 @@ import App from './App.vue';
 import router from './router';
 import { createPinia } from 'pinia';
 import 'vue-virtual-scroller/dist/vue-virtual-scroller.css';
-import './styles/index.css';
+import './styles/globals.css';
 import logger from './services/logging';
 
 // Create core app instance and plugins
