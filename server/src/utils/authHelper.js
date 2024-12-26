@@ -28,6 +28,11 @@ export const hashPassword = async (password) => {
  * Compare a plain password with a hashed password
  */
 export const comparePassword = async (plainPassword, hashedPassword) => {
+    if (!plainPassword || !hashedPassword) {
+        logger.error('Error: Missing data for password comparison');
+        throw new Error('Both password and hash are required');
+    }
+    
     try {
         return await bcrypt.compare(plainPassword, hashedPassword);
     } catch (error) {
