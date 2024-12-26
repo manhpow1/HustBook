@@ -1,5 +1,5 @@
 <template>
-    <div class="max-w-md mx-auto mt-8 bg-white shadow-md rounded-lg p-6">
+    <div class="min-h-screen max-w-md mx-auto mt-8 bg-white shadow-md rounded-lg p-6">
         <div class="text-center">
             <img class="mx-auto h-12 w-auto" src="../../assets/logo.svg" alt="HUSTBOOK Logo" />
             <h2 class="mt-6 text-3xl font-extrabold text-gray-900 flex items-center justify-center">
