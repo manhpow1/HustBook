@@ -81,6 +81,7 @@ class UserService {
                 throw createError('9994', 'Maximum number of devices reached');
             }
 
+            // Update device details
             const updatedDevices = user.deviceDetails.filter(d => d.id !== deviceId);
             updatedDevices.push({
                 id: deviceId,
@@ -88,9 +89,16 @@ class UserService {
                 lastUsed: new Date().toISOString(),
             });
 
+            // Update user device information
             user.deviceDetails = updatedDevices;
-            user.deviceTokens = [...new Set([...user.deviceTokens, deviceToken])];
-            user.deviceIds = [...new Set([...user.deviceIds, deviceId])];
+            user.deviceTokens = Array.from(new Set([
+                ...(user.deviceTokens || []),
+                deviceToken
+            ]));
+            user.deviceIds = Array.from(new Set([
+                ...(user.deviceIds || []),
+                deviceId
+            ]));
 
             await user.save();
             logger.info(`Updated device info for user ${userId}, device ${deviceId}`);

@@ -17,6 +17,7 @@ class User {
         this.tokenVersion = data.tokenVersion || 0;
         this.isAdmin = data.isAdmin || false;
         this.deviceIds = data.deviceIds || [];
+        this.deviceTokens = data.deviceTokens || [];
         this.tokenFamily = data.tokenFamily;
         this.deviceDetails = data.deviceDetails || [];
         this.password = data.password;
