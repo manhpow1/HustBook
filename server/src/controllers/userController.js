@@ -150,7 +150,7 @@ class UserController {
             // Store verification code in temporary collection
             const verificationRef = db.collection('verificationCodes').doc(phoneNumber);
             await verificationRef.set({
-                code: verificationCode,
+                verifyCode: verificationCode, 
                 attempts: 0,
                 expiresAt: new Date(expirationTime),
                 createdAt: new Date()
