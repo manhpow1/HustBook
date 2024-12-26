@@ -191,7 +191,7 @@ const handleSubmit = async () => {
         if (result.success) {
             successMessage.value = 'Verification code sent successfully!';
             if (result.verifyCode) {
-                verificationCode.value = result.code;
+                verificationCode.value = result.verifyCode;
             }
         } else {
             error.value = 'Unable to send verification code';
