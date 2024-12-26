@@ -12,7 +12,7 @@
                     <input v-model="userName" type="text" id="userName" name="userName" required
                         aria-describedby="userName-error" @blur="validateUserNameField"
                         class="block w-full pr-10 border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-                        :class="{ 'border-red-300': userNameError }" placeholder="Enter your userName" />
+                        :class="{ 'border-red-300': userNameError }" placeholder="Enter your User Name" />
                     <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
                         <CheckCircleIcon v-if="!userNameError && userName && userName.length >= 3" class="h-5 w-5 text-green-500"
                             aria-hidden="true" />
@@ -115,13 +115,24 @@ const avatarPreview = ref('');
 const avatarError = ref('');
 
 const validateUserNameField = () => {
+    if (!userName.value) {
+        userNameError.value = 'Username is required';
+        return;
+    }
+
     const rules = [
-        value => !value?.trim() ? 'Username is required' : null,
-        value => value?.length < 3 ? 'Username must be at least 3 characters' : null,
-        value => value?.length > 30 ? 'Username must be at most 30 characters' : null,
-        value => !/^[a-zA-Z0-9_]+$/.test(value) ? 'Username can only contain letters, numbers and underscores' : null
+        value => (!value || !value.trim()) ? 'Username is required' : '',
+        value => (value && value.length < 3) ? 'Username must be at least 3 characters' : '',
+        value => (value && value.length > 30) ? 'Username must be at most 30 characters' : '',
+        value => (value && !/^[a-zA-Z0-9_]+$/.test(value)) ? 'Username can only contain letters, numbers and underscores' : ''
     ];
-    userNameError.value = validateField('userName', userName.value, rules);
+        
+    try {
+        userNameError.value = validateField('userName', userName.value, rules) || '';
+    } catch (err) {
+        console.error('Username validation error:', err);
+        userNameError.value = 'Error validating username';
+    }
 };
 
 const handleFileChange = async (event) => {
