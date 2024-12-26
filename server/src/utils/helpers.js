@@ -198,25 +198,9 @@ const handleAvatarUpload = async (file, oldAvatarPath = null) => {
     }
 };
 
-const sanitizeDeviceInfo = (deviceInfo) => {
-    if (!deviceInfo) return {};
-
-    const allowed = ['ip', 'userAgent', 'platform', 'isMobile', 'lastUsed', 'lastLocation'];
-    const sanitized = {};
-
-    for (const key of allowed) {
-        if (deviceInfo[key] !== undefined) {
-            sanitized[key] = deviceInfo[key];
-        }
-    }
-
-    return sanitized;
-};
-
 export {
     generateAvatarUrl,
     handleAvatarUpload,
-    sanitizeDeviceInfo,
     handleCoverPhotoUpload,
     generateCoverPhotoUrl,
 };

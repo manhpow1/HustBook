@@ -56,11 +56,6 @@ export const useUserStore = defineStore('user', () => {
     const isVerified = computed(() => user.value?.isVerified || false);
     const cooldownRemaining = computed(() => cooldownTime.value);
     const lastLoginTime = computed(() => user.value?.lastLoginAt);
-    const deviceInfo = computed(() => ({
-        id: deviceId.value,
-        count: deviceCount.value,
-        canAdd: canAddDevice.value
-    }));
 
     // Watchers
     watch(isLoggedIn, (newValue) => {
@@ -264,11 +259,6 @@ export const useUserStore = defineStore('user', () => {
                 password,
                 uuid,
                 deviceId: deviceId.value,
-                deviceInfo: {
-                    userAgent: navigator.userAgent,
-                    language: navigator.language,
-                    timezone: Intl.DateTimeFormat().resolvedOptions().timeZone
-                }
             });
 
             if (response.data?.code === '1000') {
@@ -302,11 +292,6 @@ export const useUserStore = defineStore('user', () => {
                 phoneNumber,
                 password,
                 deviceId: deviceId.value,
-                deviceInfo: {
-                    userAgent: navigator.userAgent,
-                    language: navigator.language,
-                    timezone: Intl.DateTimeFormat().resolvedOptions().timeZone
-                }
             };
 
             const response = await apiService.login(loginData);
@@ -652,7 +637,6 @@ export const useUserStore = defineStore('user', () => {
         isVerified,
         cooldownRemaining,
         lastLoginTime,
-        deviceInfo,
 
         // Methods
         login,

@@ -147,8 +147,6 @@ const loginSchema = Joi.object({
             'string.empty': 'Device ID cannot be empty.',
             'any.required': 'Device ID is required.',
         }),
-    biometricAuth: Joi.boolean()
-        .default(false)
 }).required();
 
 /**

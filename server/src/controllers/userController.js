@@ -196,21 +196,12 @@ class UserController {
             const verificationCode = generateRandomCode();
             const deviceId = req.body.deviceId || crypto.randomUUID();
 
-            const deviceInfo = {
-                ip: req.ip,
-                userAgent: req.get('User-Agent'),
-                platform: req.get('sec-ch-ua-platform'),
-                isMobile: req.get('sec-ch-ua-mobile') === '?1',
-                lastLocation: null
-            };
-
             const { userId, deviceToken, tokenFamily } = await userService.createUser(
                 phoneNumber,
                 password,
                 uuid,
                 verificationCode,
                 deviceId,
-                sanitizeDeviceInfo(deviceInfo)
             );
 
             const token = generateJWT({
@@ -279,21 +270,13 @@ class UserController {
             }
 
             const deviceToken = generateDeviceToken();
-            const deviceInfo = {
-                ip: req.ip,
-                userAgent: req.get('User-Agent'),
-                platform: req.get('sec-ch-ua-platform'),
-                isMobile: req.get('sec-ch-ua-mobile') === '?1',
-                lastUsed: new Date().toISOString(),
-                biometricEnabled: biometricAuth || false
-            };
 
             const isTrustedDevice = user.deviceIds.includes(deviceId);
             if (!isTrustedDevice && user.deviceIds.length >= 5) {
                 throw createError('1003', 'Maximum number of devices reached. Please remove a device first.');
             }
 
-            await userService.updateUserDeviceInfo(user.uid, deviceToken, deviceId, sanitizeDeviceInfo(deviceInfo));
+            await userService.updateUserDeviceInfo(user.uid, deviceToken, deviceId);
 
             const tokenPayload = {
                 uid: user.uid,

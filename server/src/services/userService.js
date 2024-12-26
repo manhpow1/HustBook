@@ -79,7 +79,7 @@ class UserService {
         }
     }
 
-    async updateUserDeviceInfo(userId, deviceToken, deviceId, deviceInfo = {}) {
+    async updateUserDeviceInfo(userId, deviceToken, deviceId) {
         try {
             const user = await this.getUserById(userId);
             if (!user) {
@@ -95,7 +95,6 @@ class UserService {
                 id: deviceId,
                 token: deviceToken,
                 lastUsed: new Date().toISOString(),
-                ...deviceInfo
             });
 
             user.deviceDetails = updatedDevices;
