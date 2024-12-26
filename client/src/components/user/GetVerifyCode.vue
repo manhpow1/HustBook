@@ -54,7 +54,7 @@
         </form>
 
         <!-- Verification Code Display -->
-        <div v-if="verificationCode" class="mt-6 bg-green-50 border border-green-200 rounded-md p-4">
+        <div class="mt-6 bg-green-50 border border-green-200 rounded-md p-4">
             <div class="flex justify-between items-start">
                 <div class="flex">
                     <div class="flex-shrink-0">
