@@ -11,10 +11,8 @@ import User from '../models/userModel.js';
 const MAX_DEVICES_PER_USER = 5;
 const VERIFICATION_CODE_EXPIRY = 5 * 60 * 1000;
 const VERIFICATION_CODE_COOLDOWN = 60 * 1000;
-const MAX_LOGIN_ATTEMPTS = 5;
 const MAX_VERIFICATION_ATTEMPTS = 5;
 const PASSWORD_HISTORY_SIZE = 5;
-const LOCKOUT_DURATION = 5 * 60 * 1000;
 
 class UserService {
     async createUser(phoneNumber, password, uuid, verificationCode, deviceId) {

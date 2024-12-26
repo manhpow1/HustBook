@@ -190,7 +190,7 @@ const handleSubmit = async () => {
         const result = await userStore.getVerifyCode(phoneNumber.value);
         if (result.success) {
             successMessage.value = 'Verification code sent successfully!';
-            if (result.code) {
+            if (result.verifyCode) {
                 verificationCode.value = result.code;
             }
         } else {
