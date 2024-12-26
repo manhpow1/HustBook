@@ -21,7 +21,7 @@ export function useFormValidation() {
         (value) => /[^a-zA-Z0-9]/.test(value) ? 'Password must contain only letters and numbers.' : null,
         (value) => /(.)\1{2,}/.test(value) ? 'Password cannot contain characters repeated more than twice.' : null,
         (value) => /^(?:abc|123|password|admin|user|login|welcome|qwerty|asdfgh|zxcvbn)/i.test(value) ? 'Password cannot contain common patterns.' : null,
-        (value, { phoneNumber }) => value === phoneNumber ? 'Password cannot match the phone number.' : null,
+        (value, context = {}) => value === context?.phoneNumber ? 'Password cannot match the phone number.' : null,
     ];
 
     const phoneNumberRules = [
