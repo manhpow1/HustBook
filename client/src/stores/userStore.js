@@ -524,7 +524,7 @@ export const useUserStore = defineStore('user', () => {
                 formData.append('avatar', avatar);
             }
 
-            const response = await apiService.updateProfile(formData, {
+            const response = await apiService.changeInfoAfterSignup(formData, {
                 headers: {
                     'Content-Type': 'multipart/form-data',
                     'Device-ID': deviceId.value
