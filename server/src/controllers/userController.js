@@ -20,7 +20,8 @@ class UserController {
 
     async checkAuth(req, res, next) {
         try {
-            const user = await userService.getUserById(req.user.uid);
+            const userId = req.user.uid;
+            const user = await userService.getUserById(userId);
             if (!user) {
                 throw createError('9995', 'User not found');
             }
@@ -84,7 +85,8 @@ class UserController {
                 throw createError('1006', 'Invalid refresh token');
             }
 
-            const user = await userService.getUserById(decoded.uid);
+            const userId = decoded.uid;
+            const user = await userService.getUserById(userId);
             if (!user) {
                 throw createError('9995', 'User not found');
             }
