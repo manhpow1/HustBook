@@ -2,7 +2,7 @@ import crypto from 'crypto';
 import userService from '../services/userService.js';
 import userValidator from '../validators/userValidator.js';
 import { comparePassword, generateJWT, generateRefreshToken, generateRandomCode, verifyRefreshToken, generateDeviceToken, generateTokenFamily } from '../utils/authHelper.js';
-import { sanitizeDeviceInfo, handleAvatarUpload, handleCoverPhotoUpload } from '../utils/helpers.js';
+import { handleAvatarUpload, handleCoverPhotoUpload } from '../utils/helpers.js';
 import { sendResponse } from '../utils/responseHandler.js';
 import { createError } from '../utils/customError.js';
 import { db } from '../config/firebase.js';
