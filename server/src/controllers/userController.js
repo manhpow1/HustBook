@@ -412,7 +412,7 @@ class UserController {
             const verificationRef = db.collection('verificationCodes').doc(phoneNumber);
             const verificationDoc = await verificationRef.get();
 
-            if (!verificationDoc.exists) {
+            if (!verificationDoc.exists || !verificationDoc.data()) {
                 throw createError('9993', 'Verification code has expired or does not exist');
             }
 
