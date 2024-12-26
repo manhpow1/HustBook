@@ -190,11 +190,9 @@ const handleSubmit = async () => {
         const response = await userStore.getVerifyCode(phoneNumber.value);
         if (response.success) {
             successMessage.value = 'Verification code sent successfully!';
-            if (response.verifyCode) {  // Changed from response.verificationCode to response.verifyCode
-                verificationCode.value = response.verifyCode;  // Store the verification code
-            } else {
-                error.value = 'Unable to retrieve verification code';
-            }
+            verificationCode.value = response.verifyCode || '';
+        } else {
+            error.value = 'Unable to retrieve verification code';
         }
     } catch (err) {
         error.value = err.message || 'An error occurred';

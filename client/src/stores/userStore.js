@@ -411,10 +411,11 @@ export const useUserStore = defineStore('user', () => {
                 startCooldown();
                 return {
                     success: true,
-                    verifyCode: response.data.verificationCode
+                    verifyCode: response.data.data.verifyCode,
+                    exists: response.data.data.exists || false
                 };
             }
-            return { success: false, code: null };
+            return { success: false, verifyCode: null, exists: false };
         } catch (err) {
             handleAuthError(err);
             return { success: false, code: null };
@@ -446,22 +447,28 @@ export const useUserStore = defineStore('user', () => {
                 if (verified) {
                     setAuthCookies(token);
                     user.value = { ...user.value, isVerified: true, id };
-
                     verificationAttempts.value = 0;
-
-                    if (exists) {
-                        successMessage.value = 'Verification successful!';
-                        showToast('success', successMessage.value);
-                        return { success: true, exists: true };
-                    } else {
-                        successMessage.value = 'Verification successful. Please continue registration!';
-                        showToast('success', successMessage.value);
-                        return { success: true, exists: false };
-                    }
+                    
+                    const message = exists 
+                        ? 'Verification successful!' 
+                        : 'Verification successful. Please continue registration!';
+                    
+                    successMessage.value = message;
+                    showToast('success', message);
+                    
+                    return { 
+                        success: true, 
+                        exists,
+                        verifyCode: response.data.data.verifyCode 
+                    };
                 }
             }
 
-            return { success: false, exists: false };
+            return { 
+                success: false, 
+                exists: false,
+                verifyCode: null 
+            };
         } catch (err) {
             if (err.response?.data?.code === '9993') {
                 verifyCodeError.value = err.response.data.message;
