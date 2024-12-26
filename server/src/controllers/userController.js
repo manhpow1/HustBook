@@ -412,7 +412,7 @@ class UserController {
                 throw createError('1002', errorMessage);
             }
 
-            const { phoneNumber, verifyCode } = value;
+            const { phoneNumber, code } = value;
 
             // Fetch verification code from database
             const verificationRef = db.collection('verificationCodes').doc(phoneNumber);
@@ -437,7 +437,7 @@ class UserController {
             }
 
             // Check verification code
-            if (verificationData.verifyCode !== verifyCode && verificationData.verifyCode !== verifyCode) {
+            if (verificationData.verifyCode !== code) {
                 await verificationRef.update({
                     attempts: verificationData.attempts + 1
                 });

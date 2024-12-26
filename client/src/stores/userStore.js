@@ -424,7 +424,7 @@ export const useUserStore = defineStore('user', () => {
         }
     };
 
-    const VerifyCode = async (phoneNumber, verifyCode) => {
+    const verifyCode = async (phoneNumber, verifyCode) => {
         if (isLocked.value) {
             showToast('error', 'Account is temporarily locked. Please try again later.');
             return false;
@@ -437,7 +437,7 @@ export const useUserStore = defineStore('user', () => {
 
             const response = await apiService.verifyCode({
                 phoneNumber,
-                verifyCode,
+                code: verifyCode,  // Changed from verifyCode to code to match server expectation
                 deviceId: deviceId.value
             });
 
