@@ -26,12 +26,10 @@ class UserService {
                 throw createError('9996', 'Phone number already registered');
             }
 
-            const hashedPassword = await hashPassword(password);
-            user.password = hashedPassword; // Ensure hashed password is saved
-            user.passwordHistory = [hashedPassword];
             const deviceToken = generateDeviceToken();
             const userId = uuidv4();
             const tokenFamily = uuidv4();
+            const hashedPassword = await hashPassword(password);
 
             const user = new User({
                 uid: userId,  // Standardized to uid
