@@ -26,26 +26,26 @@ export function useFormValidation() {
     };
 
     const passwordRules = [
-        (value) => (value.length < 8 || value.length > 30) ? 'Password must be 8-30 characters long.' : null,
-        (value) => !/[a-z]/.test(value) ? 'Password must contain at least one lowercase letter.' : null,
-        (value) => !/[A-Z]/.test(value) ? 'Password must contain at least one uppercase letter.' : null,
-        (value) => !/\d/.test(value) ? 'Password must contain at least one number.' : null,
-        (value) => /[^a-zA-Z0-9]/.test(value) ? 'Password must contain only letters and numbers.' : null,
-        (value) => /(.)\1{2,}/.test(value) ? 'Password cannot contain characters repeated more than twice.' : null,
-        (value) => /^(?:abc|123|password|admin|user|login|welcome|qwerty|asdfgh|zxcvbn)/i.test(value) ? 'Password cannot contain common patterns.' : null,
-        (value, context = {}) => value === context?.phoneNumber ? 'Password cannot match the phone number.' : null,
+        (value) => (value.length < 8 || value.length > 30) ? 'Password must be 8-30 characters long.' : '',
+        (value) => !/[a-z]/.test(value) ? 'Password must contain at least one lowercase letter.' : '',
+        (value) => !/[A-Z]/.test(value) ? 'Password must contain at least one uppercase letter.' : '',
+        (value) => !/\d/.test(value) ? 'Password must contain at least one number.' : '',
+        (value) => /[^a-zA-Z0-9]/.test(value) ? 'Password must contain only letters and numbers.' : '',
+        (value) => /(.)\1{2,}/.test(value) ? 'Password cannot contain characters repeated more than twice.' : '',
+        (value) => /^(?:abc|123|password|admin|user|login|welcome|qwerty|asdfgh|zxcvbn)/i.test(value) ? 'Password cannot contain common patterns.' : '',
+        (value, context = {}) => value === context?.phoneNumber ? 'Password cannot match the phone number.' : '',
     ];
 
     const phoneNumberRules = [
-        (value) => !value ? 'Phone number is required.' : null,
-        (value) => !/^0\d{9}$/.test(value) ? 'Phone number must start with 0 and be 10 digits long.' : null,
+        (value) => !value ? 'Phone number is required.' : '',
+        (value) => !/^0\d{9}$/.test(value) ? 'Phone number must start with 0 and be 10 digits long.' : '',
     ];
 
     const usernameRules = [
-        (value) => !value ? 'Username is required.' : null,
-        (value) => value.length < 3 ? 'Username must be at least 3 characters long.' : null,
-        (value) => value.length > 30 ? 'Username cannot exceed 30 characters.' : null,
-        (value) => !/^[a-zA-Z0-9_]+$/.test(value) ? 'Username can only contain letters, numbers, and underscores.' : null,
+        (value) => !value ? 'Username is required.' : '',
+        (value) => value.length < 3 ? 'Username must be at least 3 characters long.' : '',
+        (value) => value.length > 30 ? 'Username cannot exceed 30 characters.' : '',
+        (value) => !/^[a-zA-Z0-9_]+$/.test(value) ? 'Username can only contain letters, numbers, and underscores.' : '',
     ];
 
     const validatePassword = (password, context = {}) => {
@@ -66,17 +66,8 @@ export function useFormValidation() {
         return true;
     };
 
-    const verificationCodeRules = [
-        (value) => !value ? 'Verification code is required.' : null,
-        (value) => !/^\d{6}$/.test(value) ? 'Verification code must be 6 digits.' : null,
-    ];
-
     const validateUsername = (username) => {
         return validateField('username', username, usernameRules);
-    };
-
-    const validateVerificationCode = (code) => {
-        return validateField('code', code, verificationCodeRules);
     };
 
     const clearErrors = (field) => {
@@ -92,7 +83,6 @@ export function useFormValidation() {
         validatePassword,
         validatePhoneNumber,
         validateUsername,
-        validateVerificationCode,
         clearErrors,
     };
 }
