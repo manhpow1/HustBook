@@ -66,11 +66,7 @@
               <router-link to="/signup"
                 class="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded transition duration-300">
                 Sign Up
-              </router-link>
-              <router-link to="/get-verify-code"
-                class="bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-2 px-4 rounded transition duration-300">
-                Get Verification Code
-              </router-link>
+              </router-link>              
             </template>
           </div>
 

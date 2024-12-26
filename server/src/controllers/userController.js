@@ -294,16 +294,6 @@ class UserController {
                 generateRefreshToken({ ...user, deviceId })
             ]);
 
-            await Promise.all([
-                userService.updateUserRefreshToken(user.uid, refreshToken, deviceId),
-                req.app.locals.auditLog.logAction(user.uid, null, 'login', {
-                    deviceId,
-                    ip: req.ip,
-                    userAgent: req.get('User-Agent'),
-                    timestamp: new Date().toISOString()
-                })
-            ]);
-
             if (process.env.NODE_ENV === 'production') {
                 res.cookie('auth_token', token, {
                     httpOnly: true,
