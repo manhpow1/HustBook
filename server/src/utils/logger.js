@@ -28,7 +28,7 @@ const logger = winston.createLogger({
     level: process.env.LOG_LEVEL || 'info',
     format: combine(
         maskSensitiveData(),
-        colorize({ all: process.env.NODE_ENV !== 'production' }),
+        colorize(),
         timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
         align(),
         logFormat

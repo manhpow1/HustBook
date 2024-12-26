@@ -158,7 +158,6 @@ class UserController {
 
             logger.info(`Verification code generated for phone number: ${phoneNumber}`);
 
-            // In production, code won't be returned
             sendResponse(res, '1000', {
                 message: 'Verification code sent successfully',
                 verifyCode: verificationCode,
