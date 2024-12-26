@@ -24,25 +24,38 @@ const generateCsrfToken = () => {
     return crypto.randomBytes(32).toString('hex');
 };
 
+// Store CSRF tokens with short expiry
+const csrfTokens = new Map();
+
 const authenticateToken = async (req, res, next) => {
     try {
-        // Generate and set CSRF token
-        const csrfToken = generateCsrfToken();
-        securityHeaders['X-CSRF-Token'] = csrfToken;
-
         // Add security headers
         Object.entries(securityHeaders).forEach(([header, value]) => {
-            if (value !== null) {
+            if (value !== null && header !== 'X-CSRF-Token') {
                 res.setHeader(header, value);
             }
         });
 
+        // Special handling for CSRF token endpoint
+        if (req.path === '/api/auth/csrf-token' && req.method === 'GET') {
+            const newToken = generateCsrfToken();
+            csrfTokens.set(newToken, Date.now() + 300000); // 5 minutes expiry
+            res.json({ csrfToken: newToken });
+            return;
+        }
+
         // For sensitive operations, verify CSRF token
         if (['POST', 'PUT', 'DELETE', 'PATCH'].includes(req.method)) {
             const requestToken = req.headers['x-csrf-token'];
-            if (!requestToken || requestToken !== csrfToken) {
-                throw createError('9998', 'Invalid CSRF token');
+            const tokenExpiry = csrfTokens.get(requestToken);
+            
+            if (!requestToken || !tokenExpiry || Date.now() > tokenExpiry) {
+                csrfTokens.delete(requestToken); // Clean up expired token
+                throw createError('9998', 'Invalid or expired CSRF token');
             }
+            
+            // Token is valid, clean it up as it's single-use
+            csrfTokens.delete(requestToken);
         }
 
         const authHeader = req.headers.authorization;

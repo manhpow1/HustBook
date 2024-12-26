@@ -62,10 +62,16 @@ axiosInstance.interceptors.request.use(
             config.headers['Authorization'] = `Bearer ${accessToken}`;
         }
 
-        // Set CSRF token for mutations
+        // For mutations, get a fresh CSRF token first
         if (['post', 'put', 'delete', 'patch'].includes(config.method?.toLowerCase())) {
-            if (csrfToken) {
-                config.headers['X-CSRF-Token'] = csrfToken;
+            try {
+                const csrfResponse = await axios.get(`${axiosInstance.defaults.baseURL}/api/auth/csrf-token`);
+                const newCsrfToken = csrfResponse.data.csrfToken;
+                if (newCsrfToken) {
+                    config.headers['X-CSRF-Token'] = newCsrfToken;
+                }
+            } catch (error) {
+                logger.error('Error fetching CSRF token:', error);
             }
         }
 

@@ -7,12 +7,37 @@
 
 import express from 'express';
 import multer from 'multer';
+import crypto from 'crypto';
 import userController from '../controllers/userController.js';
 import { authenticateToken } from '../middleware/auth.js';
 import { verifyCodeLimiterMiddleware, checkVerifyCodeLimiterMiddleware } from '../middleware/rateLimiter.js';
 import rateLimit from 'express-rate-limit';
 
 const router = express.Router();
+
+/**
+ * @swagger
+ * /auth/csrf-token:
+ *   get:
+ *     summary: Get a new CSRF token
+ *     tags: [Auth]
+ *     responses:
+ *       '200':
+ *         description: New CSRF token generated
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 csrfToken:
+ *                   type: string
+ *                   example: "abc123..."
+ */
+router.get('/csrf-token', (req, res) => {
+    const token = crypto.randomBytes(32).toString('hex');
+    res.json({ csrfToken: token });
+});
+
 const storage = multer.diskStorage({
     destination: (req, file, cb) => {
         cb(null, 'uploads/avatars/');
