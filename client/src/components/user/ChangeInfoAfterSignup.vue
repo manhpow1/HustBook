@@ -7,7 +7,7 @@
         <form @submit.prevent="handleSubmit" class="space-y-6" novalidate>
             <!-- userName Field -->
             <div>
-                <label for="userName" class="block text-sm font-medium text-gray-700">userName</label>
+                <label for="userName" class="block text-sm font-medium text-gray-700">User Name</label>
                 <div class="mt-1 relative rounded-md shadow-sm">
                     <input v-model="userName" type="text" id="userName" name="userName" required
                         aria-describedby="userName-error" @input="(e) => validateUserNameField(e)"

@@ -8,6 +8,12 @@ class SearchController {
         try {
             // Filter out internal query parameters and parse numbers
             const { _t, ...cleanQuery } = req.query;
+            // Don't validate if no search parameters provided
+            if (!cleanQuery.keyword) {
+                sendResponse(res, '9994', 'No data or end of list data');
+                return;
+            }
+
             const { error, value } = searchValidator.validateSearch({
                 ...cleanQuery,
                 index: parseInt(cleanQuery.index || '0'),

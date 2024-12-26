@@ -53,11 +53,11 @@
                     <span>Verify Code</span>
                 </button>
 
-                <button v-if="verificationSuccess" @click="goToCompleteProfile"
+                <router-link v-if="verificationSuccess" :to="{ name: 'CompleteProfile', query: { phoneNumber } }"
                     class="w-full flex justify-center items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500">
                     <UserPlus class="h-5 w-5 mr-2" />
                     <span>Complete Your Profile</span>
-                </button>
+                </router-link>
 
                 <!-- Resend Code Button -->
                 <button type="button" @click="handleResendCode" :disabled="cooldownRemaining > 0 || isLoading"
@@ -161,12 +161,6 @@ const handleSubmit = async () => {
     }
 };
 
-const goToCompleteProfile = () => {
-    router.push({
-        name: 'CompleteProfile',
-        query: { phoneNumber: phoneNumber.value }
-    });
-};
 
 const handleResendCode = async () => {
     const response = await userStore.getVerifyCode(phoneNumber.value);
