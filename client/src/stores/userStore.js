@@ -650,7 +650,7 @@ export const useUserStore = defineStore('user', () => {
         logout,
         register,
         getVerifyCode,
-        VerifyCode,
+        verifyCode,
         updateProfile,
         changePassword,
         updateLastActivity,

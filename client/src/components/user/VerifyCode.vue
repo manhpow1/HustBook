@@ -145,7 +145,7 @@ const handleSubmit = async () => {
     if (!isCodeComplete.value || isLoading.value) return;
 
     const verifyCode = codeDigits.value.join('');
-    const result = await userStore.VerifyCode(phoneNumber.value, verifyCode);
+    const result = await userStore.verifyCode(phoneNumber.value, verifyCode);
 
     if (result.success) {
         verificationSuccess.value = true;
