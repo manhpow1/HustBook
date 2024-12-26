@@ -150,10 +150,17 @@ const handleSubmit = async () => {
     if (result.success) {
         verificationSuccess.value = true;
         if (!result.exists) {
+            // For new users, go to complete profile
             goToCompleteProfile();
         } else {
-            // Auto login and redirect to home
-            router.push('/');
+            // For existing users, store the token and redirect to home
+            const token = result.token;
+            if (token) {
+                localStorage.setItem('user', JSON.stringify({ isVerified: true }));
+                Cookies.set('accessToken', token, { expires: 1/96 }); // 15 minutes
+                await userStore.fetchUserProfile();
+                router.push('/');
+            }
         }
     } else if (isVerifyCodeExpired.value) {
         codeDigits.value = Array(6).fill('');

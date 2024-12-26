@@ -46,7 +46,11 @@ export const useUserStore = defineStore('user', () => {
     const remainingAttempts = ref(MAX_VERIFY_ATTEMPTS);
 
     // Computed
-    const isLoggedIn = computed(() => !!Cookies.get('accessToken'));
+    const isLoggedIn = computed(() => {
+        const hasToken = !!Cookies.get('accessToken');
+        const hasUser = !!user.value || !!localStorage.getItem('user');
+        return hasToken && hasUser;
+    });
     const userInfo = computed(() => user.value);
     const hasVerifiedPhone = computed(() => user.value?.isVerified);
     const isSessionExpired = computed(() => !Cookies.get('accessToken') && !Cookies.get('refreshToken'));
@@ -123,7 +127,11 @@ export const useUserStore = defineStore('user', () => {
         deviceCleanupInterval.value = setInterval(async () => {
             try {
                 if (isLoggedIn.value) {
-                    await apiService.cleanupDevices({ deviceId: deviceId.value });
+                    const deviceToken = localStorage.getItem('deviceToken');
+                    await apiService.cleanupDevices({ 
+                        deviceId: deviceId.value,
+                        deviceToken 
+                    });
                 }
             } catch (err) {
                 logger.error('Device cleanup error:', err);
@@ -298,15 +306,22 @@ export const useUserStore = defineStore('user', () => {
 
             if (response.data?.code === '1000') {
                 failedAttempts.value = 0;
-                const { token, refreshToken, id, userName, securityLevel: userSecurityLevel } = response.data.data;
+                const { token, refreshToken, id, userName, phoneNumber: userPhone, deviceToken } = response.data.data;
                 setAuthCookies(token, refreshToken, rememberMe);
-                user.value = { id, userName, phoneNumber };
-                securityLevel.value = userSecurityLevel || 'standard';
+                user.value = { 
+                    uid: id,
+                    userName, 
+                    phoneNumber: userPhone,
+                    isVerified: true, // Server only returns success if verified
+                    lastLoginAt: new Date().toISOString()
+                };
+                localStorage.setItem('deviceToken', deviceToken);
                 successMessage.value = 'Login successful!';
                 updateLastActivity();
-                showToast('success', successMessage.value);
                 setupInactivityTimer();
                 setupSessionTimeout();
+                setupDeviceCleanup();
+                localStorage.setItem('user', JSON.stringify(user.value));
                 return true;
             }
             return false;

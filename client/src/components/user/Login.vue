@@ -162,6 +162,7 @@ const handleSubmit = async () => {
     const success = await userStore.login(phoneNumber.value, password.value, rememberMe.value);
     if (success) {
       showToast('Login successful!', 'success');
+      // Server already verified the user, no need to fetch profile again
       router.push({ name: 'Home' });
     } else {
       remainingAttempts.value--;
@@ -188,8 +189,11 @@ watch(
   () => successMessage.value,
   (val) => {
     if (val) {
-      setTimeout(() => {
-        router.push({ name: 'Home' });
+      setTimeout(async () => {
+        if (userStore.isLoggedIn) {
+          await userStore.fetchUserProfile();
+          router.push({ name: 'Home' });
+        }
       }, 1500);
     }
   }
