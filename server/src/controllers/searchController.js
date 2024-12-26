@@ -6,7 +6,7 @@ import { createError } from '../utils/customError.js';
 class SearchController {
     async search(req, res, next) {
         try {
-            const { error } = searchValidator.validateSearch(req.query);
+            const { error, value } = searchValidator.validateSearch(req.query);
             if (error) {
                 throw createError('1002', error.details.map(detail => detail.message).join(', '));
             }

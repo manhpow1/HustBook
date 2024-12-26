@@ -10,7 +10,7 @@
                 <label for="userName" class="block text-sm font-medium text-gray-700">userName</label>
                 <div class="mt-1 relative rounded-md shadow-sm">
                     <input v-model="userName" type="text" id="userName" name="userName" required
-                        aria-describedby="userName-error" @input="validateUserNameField"
+                        aria-describedby="userName-error" @input="(e) => validateUserNameField(e)"
                         class="block w-full pr-10 border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
                         :class="{ 'border-red-300': userNameError }" placeholder="Enter your userName" />
                     <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
