@@ -46,11 +46,16 @@ export function useFormValidation() {
     };
 
     const validatePhoneNumber = (phoneNumber) => {
+        if (!phoneNumber) {
+            errors.value.phoneNumber = [];
+            return true;
+        }
         const error = validateField('phoneNumber', phoneNumber, phoneNumberRules);
         if (error) {
             errors.value.phoneNumber = [error];
             return false;
         }
+        errors.value.phoneNumber = [];
         return true;
     };
 

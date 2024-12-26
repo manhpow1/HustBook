@@ -138,9 +138,10 @@ const formatPhoneNumber = (event) => {
   // Update the input value
   phoneNumber.value = value
 
-  // Validate after formatting
-  validatePhoneNumber(value)
-  touched.value.phoneNumber = true
+  // Only validate if field has been touched before
+  if (touched.value.phoneNumber) {
+    validatePhoneNumber(value)
+  }
 }
 
 const handlePhoneBlur = () => {
