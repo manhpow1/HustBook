@@ -159,7 +159,7 @@ class UserController {
             // In production, code won't be returned
             sendResponse(res, '1000', {
                 message: 'Verification code sent successfully',
-                ...(process.env.NODE_ENV !== 'production' && { verifyCode: verificationCode })
+                verifyCode: verificationCode,
             });
 
         } catch (error) {
