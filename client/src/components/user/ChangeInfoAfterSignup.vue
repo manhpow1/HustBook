@@ -10,13 +10,13 @@
                 <label for="userName" class="block text-sm font-medium text-gray-700">User Name</label>
                 <div class="mt-1 relative rounded-md shadow-sm">
                     <input v-model="userName" type="text" id="userName" name="userName" required
-                        aria-describedby="userName-error" @input="validateUserNameField"
+                        aria-describedby="userName-error" @blur="validateUserNameField"
                         class="block w-full pr-10 border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
                         :class="{ 'border-red-300': userNameError }" placeholder="Enter your userName" />
                     <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
-                        <CheckCircleIcon v-if="!userNameError && userName" class="h-5 w-5 text-green-500"
+                        <CheckCircleIcon v-if="!userNameError && userName && userName.length >= 3" class="h-5 w-5 text-green-500"
                             aria-hidden="true" />
-                        <XCircleIcon v-if="userNameError" class="h-5 w-5 text-red-500" aria-hidden="true" />
+                        <XCircleIcon v-if="userNameError && userName.length >= 3" class="h-5 w-5 text-red-500" aria-hidden="true" />
                     </div>
                 </div>
                 <p v-if="userNameError" id="userName-error" class="text-sm text-red-600 mt-1" role="alert">

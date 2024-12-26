@@ -49,20 +49,12 @@ class SearchService {
 
     async getSavedSearches(userId, index, count) {
         try {
-            const query = queryDocuments(collections.savedSearches, (ref) =>
-                ref.where('userId', '==', userId)
-                    .orderBy('created', 'desc')
-                    .offset(index)
-                    .limit(count)
-            );
-
+            const query = queryDocuments(collections.savedSearches, 'userId', '==', userId);
             const savedSearches = await query;
+            return savedSearches
+                .sort((a, b) => b.created - a.created)
+                .slice(index, index + count);
 
-            return savedSearches.map(search => ({
-                id: search.id,
-                keyword: search.keyword,
-                created: search.created.toDate(),
-            }));
         } catch (error) {
             logger.error('Get saved searches service error:', error);
             throw createError('9999', 'Exception error');
