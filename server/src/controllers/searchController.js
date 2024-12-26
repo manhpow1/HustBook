@@ -7,7 +7,7 @@ class SearchController {
     async search(req, res, next) {
         try {
             // Filter out internal query parameters and parse numbers
-            const { _t, ...cleanQuery } = req.query;
+            const { ...cleanQuery } = req.query;
             // Don't validate if no search parameters provided
             if (!cleanQuery.keyword) {
                 sendResponse(res, '9994', 'No data or end of list data');

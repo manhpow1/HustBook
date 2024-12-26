@@ -56,12 +56,6 @@ let csrfToken = null;
 // Request interceptor
 axiosInstance.interceptors.request.use(
     async config => {
-        // Add current timestamp to prevent caching
-        config.params = {
-            ...config.params,
-            _t: Date.now()
-        };
-
         // Set authorization header
         const accessToken = Cookies.get('accessToken');
         if (accessToken) {
