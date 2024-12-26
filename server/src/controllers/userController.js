@@ -438,11 +438,11 @@ class UserController {
                 throw createError('9993', 'Invalid verification code');
             }
 
-            // Delete verification code after success
-            await verificationRef.delete();
-
-            // Check if the user exists
+            // Check if the user exists first
             const user = await userService.getUserByphoneNumber(phoneNumber);
+
+            // Delete verification code only after user update
+            await verificationRef.delete();
             if (!user) {
                 sendResponse(res, '1000', {
                     verified: true,

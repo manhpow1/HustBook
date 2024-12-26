@@ -6,10 +6,12 @@ import { createError } from '../utils/customError.js';
 class SearchController {
     async search(req, res, next) {
         try {
+            // Filter out internal query parameters and parse numbers
+            const { _t, ...cleanQuery } = req.query;
             const { error, value } = searchValidator.validateSearch({
-                ...req.query,
-                index: parseInt(req.query.index || '0'),
-                count: parseInt(req.query.count || '20')
+                ...cleanQuery,
+                index: parseInt(cleanQuery.index || '0'),
+                count: parseInt(cleanQuery.count || '20')
             });
             if (error) {
                 throw createError('1002', error.details.map(detail => detail.message).join(', '));
