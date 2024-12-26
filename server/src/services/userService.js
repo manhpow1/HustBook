@@ -2,7 +2,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { collections, getDocument, queryDocuments } from '../config/database.js';
 import { createError } from '../utils/customError.js';
 import { generateDeviceToken, hashPassword, comparePassword } from '../utils/authHelper.js';
-import { passwordStrength }from '../validators/userValidator.js';
+import { passwordStrength } from '../validators/userValidator.js';
 import redis from '../utils/redis.js';
 import logger from '../utils/logger.js';
 import User from '../models/userModel.js';
@@ -32,7 +32,7 @@ class UserService {
             const tokenFamily = uuidv4();
 
             const user = new User({
-                uid: userId,
+                uid: userId,  // Standardized to uid
                 phoneNumber,
                 password: hashedPassword,
                 passwordHistory: [hashedPassword],
@@ -378,7 +378,7 @@ class UserService {
             }
 
             return {
-                uid: user.id,
+                uid: user.uid,  // Standardized to uid
                 userName: user.userName,
                 fullName: user.fullName,
                 avatar_url: user.avatar_url,
@@ -441,7 +441,7 @@ class UserService {
                 throw createError('9997', 'New password does not meet security requirements');
             }
 
-            await this.verifyUserCode(user.id, code);
+            await this.verifyUserCode(user.uid, code);  // Updated to use uid
 
             const isPasswordReused = await Promise.any(
                 user.passwordHistory.map(async (hashedPwd) => comparePassword(newPassword, hashedPwd))
@@ -463,7 +463,7 @@ class UserService {
 
             await user.save();
 
-            await req.app.locals.auditLog.logAction(user.id, null, 'password_reset', {
+            await req.app.locals.auditLog.logAction(user.uid, null, 'password_reset', {
                 timestamp: new Date().toISOString()
             });
 

@@ -6,7 +6,7 @@ import redis from '../utils/redis.js';
 
 class User {
     constructor(data) {
-        this.id = data.uid;
+        this.uid = data.uid;  // Updated to use uid consistently
         this.userName = data.userName || null;
         this.phoneNumber = data.phoneNumber;
         this.avatar = data.avatar || null;
@@ -29,7 +29,7 @@ class User {
 
     toJSON() {
         return {
-            id: this.id,
+            uid: this.uid,  // Updated to use uid consistently
             ...(this.userName && { userName: this.userName }),
             phoneNumber: this.phoneNumber,
             avatar: this.avatar,
@@ -45,7 +45,7 @@ class User {
 
     async getUserRef() {
         const { db } = await initializeFirebase();
-        return db.collection(collections.users).doc(this.id);
+        return db.collection(collections.users).doc(this.uid);  // Updated to use uid consistently
     }
 
     async addDevice(deviceId) {
@@ -60,13 +60,13 @@ class User {
                     deviceIds: arrayUnion(deviceId)
                 });
 
-                await redis.setKey(`user:${this.id}:devices`,
+                await redis.setKey(`user:${this.uid}:devices`,
                     JSON.stringify([...this.deviceIds, deviceId]));
 
                 this.deviceIds.push(deviceId);
-                logger.info(`Added device ${deviceId} for user ${this.id}`);
+                logger.info(`Added device ${deviceId} for user ${this.uid}`);
             } catch (error) {
-                logger.error(`Error adding device for user ${this.id}:`, error);
+                logger.error(`Error adding device for user ${this.uid}:`, error);
                 throw createError('9999', 'Failed to add device');
             }
         }
@@ -80,13 +80,13 @@ class User {
             });
 
             const updatedDevices = this.deviceIds.filter(id => id !== deviceId);
-            await redis.setKey(`user:${this.id}:devices`,
+            await redis.setKey(`user:${this.uid}:devices`,
                 JSON.stringify(updatedDevices));
 
             this.deviceIds = updatedDevices;
-            logger.info(`Removed device ${deviceId} for user ${this.id}`);
+            logger.info(`Removed device ${deviceId} for user ${this.uid}`);
         } catch (error) {
-            logger.error(`Error removing device for user ${this.id}:`, error);
+            logger.error(`Error removing device for user ${this.uid}:`, error);
             throw createError('9999', 'Failed to remove device');
         }
     }
@@ -105,10 +105,10 @@ class User {
                 updatedAt: new Date().toISOString()
             });
 
-            await redis.deleteKey(`user:${this.id}`);
-            logger.info(`User ${this.id} blocked user ${targetUserId}`);
+            await redis.deleteKey(`user:${this.uid}`);
+            logger.info(`User ${this.uid} blocked user ${targetUserId}`);
         } catch (error) {
-            logger.error(`Error blocking user ${targetUserId} by user ${this.id}:`, error);
+            logger.error(`Error blocking user ${targetUserId} by user ${this.uid}:`, error);
             throw createError('9999', 'Exception error while blocking user.');
         }
     }
@@ -127,10 +127,10 @@ class User {
                 updatedAt: new Date().toISOString()
             });
 
-            await redis.deleteKey(`user:${this.id}`);
-            logger.info(`User ${this.id} unblocked user ${targetUserId}`);
+            await redis.deleteKey(`user:${this.uid}`);
+            logger.info(`User ${this.uid} unblocked user ${targetUserId}`);
         } catch (error) {
-            logger.error(`Error unblocking user ${targetUserId} by user ${this.id}:`, error);
+            logger.error(`Error unblocking user ${targetUserId} by user ${this.uid}:`, error);
             throw createError('9999', 'Exception error while unblocking user.');
         }
     }
