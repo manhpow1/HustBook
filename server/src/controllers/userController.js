@@ -263,6 +263,10 @@ class UserController {
                 throw createError('9995', 'Account is blocked. Please contact support.');
             }
 
+            if (!password || !user.password) {
+                throw createError('1002', 'Password is required');
+            }
+            
             const isPasswordCorrect = await comparePassword(password, user.password);
             if (!isPasswordCorrect) {
                 throw createError('1004', 'Incorrect password.');
