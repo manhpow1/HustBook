@@ -412,7 +412,7 @@ class UserController {
             const verificationRef = db.collection('verificationCodes').doc(phoneNumber);
             const verificationDoc = await verificationRef.get();
 
-            if (!verificationDoc.exists || !verificationDoc.data()) {
+            if (!verificationDoc.exists) {
                 throw createError('9993', 'Verification code has expired or does not exist');
             }
 
@@ -438,11 +438,11 @@ class UserController {
                 throw createError('9993', 'Invalid verification code');
             }
 
-            // Check if the user exists first
-            const user = await userService.getUserByphoneNumber(phoneNumber);
-
             // Delete verification code only after user update
             await verificationRef.delete();
+
+            // Check if the user exists first
+            const user = await userService.getUserByphoneNumber(phoneNumber);
             if (!user) {
                 sendResponse(res, '1000', {
                     verified: true,
