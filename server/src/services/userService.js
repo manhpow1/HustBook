@@ -27,6 +27,8 @@ class UserService {
             }
 
             const hashedPassword = await hashPassword(password);
+            user.password = hashedPassword; // Ensure hashed password is saved
+            user.passwordHistory = [hashedPassword];
             const deviceToken = generateDeviceToken();
             const userId = uuidv4();
             const tokenFamily = uuidv4();
