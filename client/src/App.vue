@@ -28,6 +28,7 @@
 
 <script setup>
 import { ref, onMounted } from 'vue';
+import { storeToRefs } from 'pinia';
 import Layout from './components/layout/Layout.vue';
 import ErrorBoundary from './components/shared/ErrorBoundary.vue';
 import logger from './services/logging';
@@ -41,6 +42,21 @@ import Toast from './components/ui/Toast.vue';
 // Initialize Global Error Handling
 logger.debug('Initializing global error handling...');
 useGlobalErrorHandler();
+
+const init = async () => {
+  const { isLoggedIn } = storeToRefs(userStore);
+  if (isLoggedIn.value) {
+    try {
+      const isValid = await userStore.verifyAuthState();
+      if (!isValid) {
+        userStore.clearAuthState();
+      }
+    } catch (error) {
+      logger.error('Error during auth verification:', error);
+      userStore.clearAuthState();
+    }
+  }
+};
 
 // Define components to cache with KeepAlive
 const cachedComponents = ref(['Home', 'Profile', 'Settings']);
@@ -77,6 +93,13 @@ onMounted(async () => {
   logger.debug('App mounted. Initializing user state...');
   try {
     if (userStore.isLoggedIn) {
+      logger.debug('Checking auth state...');
+      const isValid = await userStore.verifyAuthState();
+      if (!isValid) {
+        logger.debug('Auth state invalid, clearing...');
+        userStore.clearAuthState();
+        return;
+      }
       logger.debug('Fetching user profile...');
       await userStore.fetchUserProfile().catch((error) => {
         logger.error('Error fetching user profile:', error);

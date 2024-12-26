@@ -91,6 +91,19 @@ export const useUserStore = defineStore('user', () => {
         localStorage.setItem('lastActivity', lastActivity.value.toString());
     };
 
+    const verifyAuthState = async () => {
+        try {
+            const token = Cookies.get('accessToken');
+            if (!token) return false;
+
+            const response = await apiService.authCheck();
+            return response.data?.code === '1000';
+        } catch (err) {
+            logger.error('Auth verification failed:', err);
+            return false;
+        }
+    }
+
     const setupInactivityTimer = () => {
         clearInterval(inactivityTimer.value);
         inactivityTimer.value = setInterval(() => {
@@ -645,5 +658,6 @@ export const useUserStore = defineStore('user', () => {
         startCooldown,
         fetchUserProfile,
         forgotPassword,
+        verifyAuthState,
     };
 });

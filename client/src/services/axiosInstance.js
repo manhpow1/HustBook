@@ -112,9 +112,9 @@ axiosInstance.interceptors.response.use(
         const userStore = useUserStore();
 
         // If error is not due to authentication or already retried, reject
-        if (!error.response || 
-            error.response.status !== 401 || 
-            originalRequest._retry || 
+        if (!error.response ||
+            error.response.status !== 401 ||
+            originalRequest._retry ||
             retryCount >= MAX_RETRY_ATTEMPTS) {
             handleError(error);
             return Promise.reject(error);
@@ -163,9 +163,9 @@ axiosInstance.interceptors.response.use(
                 Cookies.set('accessToken', newAccessToken, {
                     secure: true,
                     sameSite: 'strict',
-                    expires: 1/96 // 15 minutes
+                    expires: 1 / 96 // 15 minutes
                 });
-                
+
                 Cookies.set('refreshToken', newRefreshToken, {
                     secure: true,
                     sameSite: 'strict',
@@ -207,6 +207,19 @@ axiosInstance.interceptors.response.use(
     error => {
         if (error.response) {
             error.response.headers['x-response-time'] = Date.now();
+        }
+        return Promise.reject(error);
+    }
+);
+
+axiosInstance.interceptors.response.use(
+    response => response,
+    async error => {
+        if (error.response?.status === 401) {
+            const userStore = useUserStore();
+            await userStore.clearAuthState();
+            window.location.href = '/login';
+            return Promise.reject(error);
         }
         return Promise.reject(error);
     }
