@@ -3,14 +3,14 @@ import { ref } from 'vue';
 export function useFormValidation() {
     const errors = ref({});
 
-    const validateField = (field, value, rules, extraArgs = {}) => {
-        const fieldErrors = [];
-        rules.forEach(rule => {
-            const error = rule(value, extraArgs);
-            if (error) fieldErrors.push(error);
-        });
-        errors.value[field] = fieldErrors;
-        return fieldErrors.length === 0;
+    const validateField = (field, value, rules) => {
+        for (const rule of rules) {
+            if (typeof rule === 'function') {
+                const error = rule(value);
+                if (error) return error;
+            }
+        }
+        return '';
     };
 
     const passwordRules = [
