@@ -3,7 +3,12 @@ import { ref } from 'vue';
 export function useFormValidation() {
     const errors = ref({});
 
-    const validateField = (field, value, rules, context = {}) => {
+    const validateField = (field, value, rules, context = {}, immediate = false) => {
+        // Skip validation if value is empty and not immediate validation
+        if (!immediate && !value) {
+            return '';
+        }
+        
         for (const rule of rules) {
             if (typeof rule === 'function') {
                 const error = rule(value, context);
