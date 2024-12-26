@@ -24,9 +24,11 @@
                   <Phone class="h-5 w-5 text-gray-400" aria-hidden="true" />
                 </div>
                 <input v-model="phoneNumber" id="phoneNumber" name="phoneNumber" type="tel" required
-                  @input="handlePhoneInput" @blur="handlePhoneBlur" :disabled="isLoading"
+                  @input="formatPhoneNumber" @blur="handlePhoneBlur" :disabled="isLoading" maxlength="10"
+                  pattern="[0-9]*"
                   class="appearance-none rounded-none relative block w-full px-3 py-2 pl-10 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-t-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
-                  :class="{ 'border-red-500': touched.phoneNumber && errors.phoneNumber?.length }" placeholder="Phone number" />
+                  :class="{ 'border-red-500': touched.phoneNumber && errors.phoneNumber?.length }"
+                  placeholder="Phone number (10 digits)" />
               </div>
               <p v-if="touched.phoneNumber && errors.phoneNumber?.length" class="text-sm text-red-600 mt-1">
                 {{ errors.phoneNumber[0] }}
@@ -60,7 +62,8 @@
             class="group relative w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed">
             <span class="absolute left-0 inset-y-0 flex items-center pl-3">
               <Lock class="h-5 w-5 text-indigo-500 group-hover:text-indigo-400" aria-hidden="true" />
-            </span><LoaderIcon v-if="isLoading" class="animate-spin -ml-1 mr-2 h-5 w-5 text-white" aria-hidden="true" />
+            </span>
+            <LoaderIcon v-if="isLoading" class="animate-spin -ml-1 mr-2 h-5 w-5 text-white" aria-hidden="true" />
             {{ isLoading ? 'Signing up...' : 'Sign Up' }}
           </button>
         </form>
@@ -120,8 +123,23 @@ const touched = ref({
   password: false,
 })
 
-const handlePhoneInput = () => {
-  validatePhoneNumber(phoneNumber.value)
+const formatPhoneNumber = (event) => {
+  // Remove any non-digit characters
+  let value = event.target.value.replace(/\D/g, '')
+
+  // Ensure it starts with 0
+  if (value && value[0] !== '0') {
+    value = '0' + value
+  }
+
+  // Limit to 10 digits
+  value = value.slice(0, 10)
+
+  // Update the input value
+  phoneNumber.value = value
+
+  // Validate after formatting
+  validatePhoneNumber(value)
   touched.value.phoneNumber = true
 }
 
@@ -146,7 +164,7 @@ const isValid = computed(() => {
   }
   validatePhoneNumber(phoneNumber.value)
   validatePassword(password.value, phoneNumber.value)
-  
+
   // Check if any field has errors (non-empty error arrays)
   return !Object.values(errors.value).some(fieldErrors => fieldErrors.length > 0)
 })
@@ -185,24 +203,24 @@ const handleVerificationError = (error) => {
 
 const passwordStrength = computed(() => {
   if (!password.value) return { score: 0, text: '', colorClass: '' }
-  
+
   let score = 0
   if (password.value.length >= 8) score += 20
   if (/[A-Z]/.test(password.value)) score += 20
   if (/[a-z]/.test(password.value)) score += 20
   if (/\d/.test(password.value)) score += 20
   if (!/[^a-zA-Z0-9]/.test(password.value)) score += 20 // Only letters and numbers
-  
+
   // Deductions
   if (/(.)\1{2,}/.test(password.value)) score -= 20 // Repeated characters
   if (/^(?:abc|123|password|admin|user|login|welcome|qwerty|asdfgh|zxcvbn)/i.test(password.value)) score -= 20 // Common patterns
   if (password.value === phoneNumber.value) score = 0 // Matches phone number
-  
+
   score = Math.max(0, Math.min(100, score)) // Ensure score is between 0 and 100
-  
+
   let text = 'Weak'
   let colorClass = 'bg-red-500'
-  
+
   if (score >= 80) {
     text = 'Very Strong'
     colorClass = 'bg-green-500'
@@ -213,7 +231,7 @@ const passwordStrength = computed(() => {
     text = 'Medium'
     colorClass = 'bg-yellow-500'
   }
-  
+
   return { score, text, colorClass }
 })
 </script>
