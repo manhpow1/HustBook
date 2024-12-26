@@ -412,7 +412,7 @@ class UserController {
                 throw createError('1002', errorMessage);
             }
 
-            const { phoneNumber, code } = value;
+            const { phoneNumber, verifyCode } = value;
 
             // Fetch verification code from database
             const verificationRef = db.collection('verificationCodes').doc(phoneNumber);
@@ -437,7 +437,7 @@ class UserController {
             }
 
             // Check verification code
-            if (verificationData.code !== code) {
+            if (verificationData.verifyCode !== verifyCode && verificationData.verifyCode !== verifyCode) {
                 await verificationRef.update({
                     attempts: verificationData.attempts + 1
                 });
@@ -579,14 +579,14 @@ class UserController {
                 throw createError('1002', errorMessage);
             }
 
-            const { phoneNumber, code, newPassword } = value;
+            const { phoneNumber, verifyCode, newPassword } = value;
 
             const user = await userService.getUserByphoneNumber(phoneNumber);
             if (!user) {
                 throw createError('9995', 'User not found');
             }
 
-            if (!code || !newPassword) {
+            if (!verifyCode || !newPassword) {
                 const verificationCode = generateRandomCode();
 
                 sendResponse(res, '1000', {
@@ -596,7 +596,7 @@ class UserController {
                 return;
             }
 
-            await userService.resetPassword(req, phoneNumber, code, newPassword);
+            await userService.resetPassword(req, phoneNumber, verifyCode, newPassword);
 
             sendResponse(res, '1000', { message: 'Password has been reset successfully.' });
         } catch (error) {
