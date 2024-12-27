@@ -108,7 +108,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, watch, nextTick } from 'vue';
+import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue';
 import { useSearchStore } from '../../stores/searchStore';
 import { useUserStore } from '../../stores/userStore';
 import { useRouter } from 'vue-router';
