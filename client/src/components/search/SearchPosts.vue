@@ -204,8 +204,9 @@ const loadMore = async () => {
 const fetchSavedSearches = async () => {
     try {
         const response = await searchStore.getSavedSearches();
-        savedSearches.value = response;
+        savedSearches.value = response || [];
     } catch (error) {
+        savedSearches.value = [];
         console.error('Error fetching saved searches:', error);
     }
 };
