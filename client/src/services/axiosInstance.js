@@ -24,6 +24,17 @@ const axiosInstance = axios.create({
 let isRefreshing = false;
 let failedQueue = [];
 let retryCount = 0;
+let csrfToken = null;
+
+const getCsrfToken = async () => {
+    try {
+        const response = await axios.get(`${axiosInstance.defaults.baseURL}/api/auth/csrf-token`);
+        return response.data.csrfToken;
+    } catch (error) {
+        logger.error('Error fetching CSRF token:', error);
+        throw error;
+    }
+};
 
 const processQueue = (error, token = null) => {
     failedQueue.forEach(prom => {
@@ -40,10 +51,9 @@ const processQueue = (error, token = null) => {
 const shouldRefreshToken = () => {
     const token = Cookies.get('accessToken');
     if (!token) return false;
-
     try {
         const payload = JSON.parse(atob(token.split('.')[1]));
-        const exp = payload.exp * 1000; // Convert to milliseconds
+        const exp = payload.exp * 1000;
         return Date.now() > exp - REFRESH_THRESHOLD;
     } catch (error) {
         logger.error('Error parsing token:', error);
@@ -51,31 +61,28 @@ const shouldRefreshToken = () => {
     }
 };
 
-let csrfToken = null;
-
 // Request interceptor
 axiosInstance.interceptors.request.use(
     async config => {
-        // Set authorization header
         const accessToken = Cookies.get('accessToken');
         if (accessToken) {
             config.headers['Authorization'] = `Bearer ${accessToken}`;
         }
 
-        // For mutations, get a fresh CSRF token first
+        // Handle CSRF token for mutating requests
         if (['post', 'put', 'delete', 'patch'].includes(config.method?.toLowerCase())) {
             try {
-                const csrfResponse = await axios.get(`${axiosInstance.defaults.baseURL}/api/auth/csrf-token`);
-                const newCsrfToken = csrfResponse.data.csrfToken;
-                if (newCsrfToken) {
-                    config.headers['X-CSRF-Token'] = newCsrfToken;
+                // Get new CSRF token if we don't have one
+                if (!csrfToken) {
+                    csrfToken = await getCsrfToken();
                 }
+                config.headers['X-CSRF-Token'] = csrfToken;
             } catch (error) {
-                logger.error('Error fetching CSRF token:', error);
+                logger.error('Error setting CSRF token:', error);
             }
         }
 
-        // Check if token needs to be refreshed before request
+        // Handle token refresh if needed
         if (shouldRefreshToken() && !config.url.includes('refresh-token')) {
             try {
                 const userStore = useUserStore();
@@ -98,6 +105,7 @@ axiosInstance.interceptors.request.use(
 );
 
 // Response interceptor
+// Response interceptors
 axiosInstance.interceptors.response.use(
     response => {
         // Capture CSRF token from response headers
@@ -105,11 +113,27 @@ axiosInstance.interceptors.response.use(
         if (newCsrfToken) {
             csrfToken = newCsrfToken;
         }
+        response.headers['x-response-time'] = Date.now();
         return response;
     },
     async error => {
         const originalRequest = error.config;
         const userStore = useUserStore();
+
+        // Handle CSRF token errors first
+        if (error.response?.data?.code === '9998' &&
+            error.response?.data?.message?.includes('CSRF') &&
+            !originalRequest._csrfRetry) {
+            try {
+                originalRequest._csrfRetry = true;
+                csrfToken = await getCsrfToken();
+                originalRequest.headers['X-CSRF-Token'] = csrfToken;
+                return axiosInstance(originalRequest);
+            } catch (retryError) {
+                logger.error('CSRF token refresh failed:', retryError);
+                return Promise.reject(retryError);
+            }
+        }
 
         // If error is not due to authentication or already retried, reject
         if (!error.response ||
@@ -120,7 +144,7 @@ axiosInstance.interceptors.response.use(
             return Promise.reject(error);
         }
 
-        // If already refreshing, queue the request
+        // If already refreshing token, queue the request
         if (isRefreshing) {
             return new Promise((resolve, reject) => {
                 failedQueue.push({ resolve, reject });
@@ -145,13 +169,17 @@ axiosInstance.interceptors.response.use(
                 throw new Error('No refresh token available');
             }
 
+            // Get new CSRF token before refreshing
+            const newCsrfToken = await getCsrfToken();
+
             // Attempt to refresh token
             const response = await axios.post(
                 `${axiosInstance.defaults.baseURL}/api/auth/refresh-token`,
                 { refreshToken },
                 {
                     headers: {
-                        'Content-Type': 'application/json'
+                        'Content-Type': 'application/json',
+                        'X-CSRF-Token': newCsrfToken
                     }
                 }
             );
@@ -177,8 +205,10 @@ axiosInstance.interceptors.response.use(
                 // Process queued requests
                 processQueue(null, newAccessToken);
 
-                // Retry original request
+                // Update headers for original request
                 originalRequest.headers['Authorization'] = `Bearer ${newAccessToken}`;
+                originalRequest.headers['X-CSRF-Token'] = newCsrfToken;
+
                 return axiosInstance(originalRequest);
             } else {
                 throw new Error(response.data.message || 'Failed to refresh token');
