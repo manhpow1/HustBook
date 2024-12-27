@@ -171,6 +171,7 @@ axiosInstance.interceptors.response.use(
 
             // Get new CSRF token before refreshing
             const newCsrfToken = await getCsrfToken();
+            csrfToken = newCsrfToken; // Update the global CSRF token
 
             // Attempt to refresh token
             const response = await axios.post(

@@ -203,9 +203,22 @@ const loadMore = async () => {
 // Saved searches management
 const fetchSavedSearches = async () => {
     try {
+        // Add a small delay to ensure CSRF token is properly set
+        await new Promise(resolve => setTimeout(resolve, 500));
         const response = await searchStore.getSavedSearches();
         savedSearches.value = response || [];
     } catch (error) {
+        if (error?.response?.data?.code === '9998') {
+            // CSRF token error - retry once
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            try {
+                const retryResponse = await searchStore.getSavedSearches();
+                savedSearches.value = retryResponse || [];
+                return;
+            } catch (retryError) {
+                console.error('Retry failed:', retryError);
+            }
+        }
         savedSearches.value = [];
         console.error('Error fetching saved searches:', error);
     }
