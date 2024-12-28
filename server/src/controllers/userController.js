@@ -582,9 +582,11 @@ class UserController {
                 hasNewPassword: !!newPassword
             });
 
-            // Validate that both verifyCode and newPassword are provided together
-            if ((verifyCode && !newPassword) || (!verifyCode && newPassword)) {
-                throw createError('1002', 'Both verification code and new password are required for reset');
+            // For step 2, ensure both verifyCode and newPassword are provided
+            if (verifyCode || newPassword) {
+                if (!verifyCode || !newPassword) {
+                    throw createError('1002', 'Both verification code and new password are required for reset');
+                }
             }
 
             const user = await userService.getUserByphoneNumber(phoneNumber);

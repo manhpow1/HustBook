@@ -36,7 +36,7 @@
         </div>
 
         <Button type="submit" :loading="isLoading" class="w-full" :disabled="!!verificationCode">
-          Send Verification Code
+          Get Verification Code
         </Button>
         <div class="text-center mt-4">
           <router-link to="/login" class="text-blue-600 hover:text-blue-800">
@@ -225,6 +225,11 @@ const handleResetSubmit = async () => {
   validateConfirmPassword();
 
   if (errors.value.code || errors.value.newPassword || errors.value.confirmPassword) return;
+
+  if (!code.value || !newPassword.value) {
+    showToast('Both verification code and new password are required', 'error');
+    return;
+  }
 
   logger.info('Sending reset request with:', {
     phoneNumber: phoneNumber.value,
