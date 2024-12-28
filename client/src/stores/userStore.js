@@ -634,10 +634,11 @@ export const useUserStore = defineStore('user', () => {
             isLoading.value = true;
             error.value = null;
 
-            const payload = { phoneNumber };
-            // Thêm code và newPassword nếu có
-            if (code) payload.code = code;
-            if (newPassword) payload.newPassword = newPassword;
+            const payload = {
+                phoneNumber,
+                ...(code && { verifyCode: code }),
+                ...(newPassword && { newPassword })
+            };
 
             const response = await apiService.forgotPassword(payload);
 
