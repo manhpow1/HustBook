@@ -6,12 +6,9 @@ import { createError } from '../utils/customError.js';
 class SearchController {
     async search(req, res, next) {
         try {
-            // Filter out internal query parameters and parse numbers
             const { ...cleanQuery } = req.query;
-            // Don't validate if no search parameters provided
             if (!cleanQuery.keyword) {
-                sendResponse(res, '9994', 'No data or end of list data');
-                return;
+                return sendResponse(res, '1000', []);
             }
 
             const { error, value } = searchValidator.validateSearch({
@@ -54,7 +51,7 @@ class SearchController {
                 throw createError('9994', 'No data or end of list data');
             }
 
-            sendResponse(res, '1000', {
+            return sendResponse(res, '1000', {
                 data: savedSearches.map(search => ({
                     id: search.id,
                     keyword: search.keyword,

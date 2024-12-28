@@ -211,7 +211,9 @@ class PostController {
     async getListPosts(req, res, next) {
         try {
             const { error, value } = postValidator.validateGetListPosts(req.query);
-            if (error) throw createError('1002', error.details.map(detail => detail.message).join(', '));
+            if (error) {
+                throw createError('1002', error.details.map(detail => detail.message).join(', '));
+            }
 
             const {
                 userId,
@@ -224,11 +226,9 @@ class PostController {
             } = value;
 
             let startAfterDoc = null;
-
             if (lastVisible) {
                 const lastVisibleId = Buffer.from(lastVisible, 'base64').toString('utf-8');
                 startAfterDoc = await db.collection(collections.posts).doc(lastVisibleId).get();
-
                 if (!startAfterDoc.exists) {
                     throw createError('1004', 'Invalid lastVisible value');
                 }
@@ -248,7 +248,7 @@ class PostController {
                 ? Buffer.from(newLastVisible.id).toString('base64')
                 : null;
 
-            sendResponse(res, '1000', {
+            return sendResponse(res, '1000', {
                 posts,
                 lastVisible: encodedLastVisible,
             });

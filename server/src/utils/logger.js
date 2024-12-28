@@ -28,37 +28,12 @@ const logger = winston.createLogger({
     level: process.env.LOG_LEVEL || 'info',
     format: combine(
         maskSensitiveData(),
-        colorize(),
         timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
         align(),
         logFormat
-    ),
-    transports: [
-        // Log to console
-        new winston.transports.Console({
-            format: combine(
-                maskSensitiveData(),
-                colorize(),
-                timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
-                logFormat
-            ),
-        }),
-    ],
+    )
 });
 
-// In non-production environments, log to console with simple format
-if (process.env.NODE_ENV !== 'production') {
-    logger.add(new winston.transports.Console({
-        format: combine(
-            maskSensitiveData(),
-            colorize(),
-            timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
-            logFormat
-        ),
-    }));
-}
-
-// In production, use console transport as well
 if (process.env.NODE_ENV === 'production') {
     logger.add(new winston.transports.Console({
         format: combine(
@@ -66,7 +41,17 @@ if (process.env.NODE_ENV === 'production') {
             colorize(),
             timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
             logFormat
-        ),
+        )
+    }));
+} else {
+    // Development environment
+    logger.add(new winston.transports.Console({
+        format: combine(
+            maskSensitiveData(),
+            colorize(),
+            timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
+            logFormat
+        )
     }));
 }
 
