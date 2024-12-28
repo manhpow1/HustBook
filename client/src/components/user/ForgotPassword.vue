@@ -17,13 +17,25 @@
           </p>
         </div>
 
-        <div v-if="verificationCode" class="mt-2 p-2 bg-blue-50 border border-blue-200 rounded">
-          <p class="text-sm text-blue-600">
-            Verification Code: <span class="font-mono font-bold">{{ verificationCode }}</span>
-          </p>
+        <div v-if="verificationCode" class="mt-2 p-4 bg-blue-50 border border-blue-200 rounded">
+          <div class="flex items-center justify-between">
+            <p class="text-sm text-blue-600">
+              Verification Code: <span class="font-mono font-bold">{{ verificationCode }}</span>
+            </p>
+            <Button type="button" @click="copyToClipboard(verificationCode)"
+              class="text-sm text-blue-600 hover:text-blue-800 focus:outline-none">
+              Copy
+            </Button>
+          </div>
+          <div class="mt-4 flex justify-end">
+            <Button type="button" @click="proceedToVerification"
+              class="text-sm text-white bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded-md">
+              Continue to Reset
+            </Button>
+          </div>
         </div>
 
-        <Button type="submit" :loading="isLoading" class="w-full">
+        <Button type="submit" :loading="isLoading" class="w-full" :disabled="!!verificationCode">
           Send Verification Code
         </Button>
         <div class="text-center mt-4">
@@ -48,9 +60,9 @@
           <div v-if="cooldown > 0" class="mt-2 text-sm text-gray-600">
             Resend code in {{ cooldown }}s
           </div>
-          <button v-else type="button" @click="resendCode" class="mt-2 text-sm text-blue-600 hover:text-blue-800">
+          <Button v-else type="button" @click="resendCode" class="mt-2 text-sm text-blue-600 hover:text-blue-800">
             Resend verification code
-          </button>
+          </Button>
         </div>
 
         <div>
@@ -171,6 +183,23 @@ const validateConfirmPassword = () => {
   }
 };
 
+const copyToClipboard = async (text) => {
+  try {
+    await navigator.clipboard.writeText(text);
+    showToast('Verification code copied to clipboard', 'success');
+  } catch (err) {
+    showToast('Failed to copy to clipboard', 'error');
+  }
+};
+
+const proceedToVerification = () => {
+  if (verificationCode.value) {
+    step.value = 2;
+    startCooldown();
+    showToast('Please enter the verification code', 'info');
+  }
+};
+
 const handlePhoneSubmit = async () => {
   submitted.value = true;
   validatePhoneNumber();
@@ -178,10 +207,9 @@ const handlePhoneSubmit = async () => {
 
   try {
     const response = await userStore.forgotPassword({ phoneNumber: phoneNumber.value });
-    if (response) {
-      step.value = 2;
-      startCooldown();
-      showToast('Verification code sent successfully', 'success');
+    if (response?.success) {
+      verificationCode.value = response.verifyCode;
+      showToast('Verification code generated successfully', 'success');
     }
   } catch (error) {
     showToast(error.message, 'error');
