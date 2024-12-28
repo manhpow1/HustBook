@@ -72,7 +72,7 @@ const phoneNumberSchema = Joi.string()
     .pattern(/^(0[1-9][0-9]{8})$/)
     .required()
     .messages({
-        'string.pattern.base': 'Phone number must start with 0 and be 10 digits long.',
+        'string.pattern.base': 'Phone number needs to start with 0 and be 10 digits long.',
         'any.required': 'Phone number is required.',
     });
 
