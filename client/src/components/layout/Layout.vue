@@ -52,7 +52,6 @@
                       role="menuitem">
                       Settings
                     </router-link>
-                    <LogoutButton @logout-success="handleLogoutSuccess" class="w-full text-left" />
                   </div>
                 </transition>
               </div>
@@ -93,7 +92,6 @@
               {{ item.name }}
             </router-link>
             <NotificationTab />
-            <LogoutButton v-if="isLoggedIn" @logout-success="handleLogoutSuccess" class="w-full text-left" />
           </div>
         </div>
       </transition>
@@ -155,7 +153,6 @@
 import { defineAsyncComponent, computed } from 'vue';
 import { useUserStore } from '../../stores/userStore';
 import { useMenuState } from '../../composables/useMenuState';
-import LogoutButton from '../user/Logout.vue';
 import { navItems } from '../../config/navigation';
 import { useHead } from '@unhead/vue';
 import SearchPosts from '../search/SearchPosts.vue';
@@ -208,11 +205,6 @@ const { showUserMenu, showMobileMenu, toggleUserMenu, toggleMobileMenu } = useMe
 // Current Year for Footer
 const currentYear = computed(() => new Date().getFullYear());
 
-// Handle successful logout
-const handleLogoutSuccess = async () => {
-  await userStore.logout();
-  router.push('/login');
-};
 
 // SEO Meta Tags
 useHead({
