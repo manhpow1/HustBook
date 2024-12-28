@@ -45,7 +45,8 @@ const routes = [
     {
         path: '/forgot-password',
         name: 'ForgotPassword',
-        component: () => import('../components/user/ForgotPassword.vue')
+        component: () => import('../components/user/ForgotPassword.vue'),
+        meta: { requiresAuth: true }
     },
     {
         path: '/get-verify-code',
@@ -143,7 +144,7 @@ const router = createRouter({
 // Global navigation guard
 router.beforeEach(async (to, from, next) => {
     // List of public routes that don't require auth - thêm route gốc '/'
-    const publicRoutes = ['Login', 'SignUp', 'GetVerifyCode', 'Home'];
+    const publicRoutes = ['Login', 'SignUp', 'GetVerifyCode', 'Home', 'ForgotPassword'];
 
     logger.debug('Navigating from:', from.fullPath, 'to:', to.fullPath);
 
