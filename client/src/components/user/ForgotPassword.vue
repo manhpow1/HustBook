@@ -231,7 +231,7 @@ const handleResetSubmit = async () => {
       code: code.value,
       newPassword: newPassword.value,
     });
-    if (response) {
+    if (response?.success) {
       showToast('Password reset successfully', 'success');
       router.push('/login');
     }

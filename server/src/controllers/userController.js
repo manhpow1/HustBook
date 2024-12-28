@@ -575,6 +575,8 @@ class UserController {
 
             const { phoneNumber, verifyCode, newPassword } = value;
 
+            console.log('Reset password request:', { phoneNumber, verifyCode, newPassword: '***' });
+
             const user = await userService.getUserByphoneNumber(phoneNumber);
             if (!user) {
                 throw createError('9995', 'User not found');

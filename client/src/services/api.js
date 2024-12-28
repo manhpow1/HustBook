@@ -83,11 +83,7 @@ const apiService = {
      * @param {string} [data.newPassword] - Required for reset step
      */
     async forgotPassword(data) {
-        return axiosInstance.post(API_ENDPOINTS.FORGOT_PASSWORD, {
-            phoneNumber: data.phoneNumber,
-            ...(data.code && { verifyCode: data.code }),
-            ...(data.newPassword && { newPassword: data.newPassword })
-        });
+        return axiosInstance.post(API_ENDPOINTS.FORGOT_PASSWORD, data);
     },
 
     /**

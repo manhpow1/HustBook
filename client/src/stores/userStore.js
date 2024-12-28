@@ -131,9 +131,9 @@ export const useUserStore = defineStore('user', () => {
             try {
                 if (isLoggedIn.value) {
                     const deviceToken = localStorage.getItem('deviceToken');
-                    await apiService.cleanupDevices({ 
+                    await apiService.cleanupDevices({
                         deviceId: deviceId.value,
-                        deviceToken 
+                        deviceToken
                     });
                 }
             } catch (err) {
@@ -311,9 +311,9 @@ export const useUserStore = defineStore('user', () => {
                 failedAttempts.value = 0;
                 const { token, refreshToken, id, userName, phoneNumber: userPhone, deviceToken } = response.data.data;
                 setAuthCookies(token, refreshToken, rememberMe);
-                user.value = { 
+                user.value = {
                     uid: id,
-                    userName, 
+                    userName,
                     phoneNumber: userPhone,
                     isVerified: true, // Server only returns success if verified
                     lastLoginAt: new Date().toISOString()
@@ -390,15 +390,15 @@ export const useUserStore = defineStore('user', () => {
         const now = Date.now();
         lastVerificationRequest.value = now;
         cooldownTime.value = VERIFICATION_CODE_COOLDOWN / 1000;
-        
+
         if (cooldownInterval.value) {
             clearInterval(cooldownInterval.value);
         }
-        
+
         cooldownInterval.value = setInterval(() => {
             const elapsed = Date.now() - now;
             const remaining = Math.ceil((VERIFICATION_CODE_COOLDOWN - elapsed) / 1000);
-            
+
             if (remaining <= 0) {
                 cooldownTime.value = 0;
                 clearInterval(cooldownInterval.value);
@@ -487,27 +487,27 @@ export const useUserStore = defineStore('user', () => {
                     user.value = { ...user.value, isVerified: true, id };
                     verificationAttempts.value = 0;
                     isVerifyCodeExpired.value = false;
-                    
-                    const message = exists 
-                        ? 'Verification successful!' 
+
+                    const message = exists
+                        ? 'Verification successful!'
                         : 'Verification successful. Please continue registration!';
-                    
+
                     successMessage.value = message;
                     showToast('success', message);
-                    
-                    return { 
-                        success: true, 
+
+                    return {
+                        success: true,
                         exists,
-                        verifyCode: response.data.data.verifyCode 
+                        verifyCode: response.data.data.verifyCode
                     };
                 }
             }
 
             verificationAttempts.value++;
-            return { 
-                success: false, 
+            return {
+                success: false,
                 exists: false,
-                verifyCode: null 
+                verifyCode: null
             };
         } catch (err) {
             if (err.response?.data?.code === '9993') {
@@ -629,12 +629,13 @@ export const useUserStore = defineStore('user', () => {
         }
     }
 
-    const forgotPassword = async (phoneNumber, code = null, newPassword = null) => {
+    const forgotPassword = async ({ phoneNumber, code, newPassword }) => {
         try {
             isLoading.value = true;
             error.value = null;
 
             const payload = { phoneNumber };
+            // Thêm code và newPassword nếu có
             if (code) payload.code = code;
             if (newPassword) payload.newPassword = newPassword;
 
@@ -652,13 +653,8 @@ export const useUserStore = defineStore('user', () => {
                         success: true,
                         verifyCode: response.data.data.verifyCode
                     };
-                } else if (code && !newPassword) {
-                    // Step 2: Verified code
-                    forgotPasswordCode.value = code;
-                    forgotPasswordStep.value = 3;
-                    return { success: true };
                 } else {
-                    // Step 3: Reset password complete
+                    // Reset password complete
                     successMessage.value = 'Password reset successfully!';
                     showToast('success', successMessage.value);
                     resetForgotPasswordState();
