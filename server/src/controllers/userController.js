@@ -581,12 +581,12 @@ class UserController {
             }
 
             if (!verifyCode || !newPassword) {
-                const verificationCode = generateRandomCode();
+                const verifyCode = generateRandomCode();
 
-                // Always include verification code in response for demo purposes
+                // Always include verify code in response for demo purposes
                 sendResponse(res, '1000', {
                     message: 'Verification code generated successfully.',
-                    verificationCode: verificationCode
+                    verifyCode: verifyCode
                 });
                 return;
             }

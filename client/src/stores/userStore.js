@@ -36,6 +36,9 @@ export const useUserStore = defineStore('user', () => {
     const deviceId = ref(localStorage.getItem('deviceId') || crypto.randomUUID());
     const isLocked = ref(false);
     const failedAttempts = ref(0);
+    const forgotPasswordStep = ref(1);
+    const forgotPasswordPhone = ref('');
+    const forgotPasswordCode = ref('');
     const securityLevel = ref('standard');
     const lastActivity = ref(Date.now());
     const pendingRefresh = ref(false);
@@ -626,46 +629,57 @@ export const useUserStore = defineStore('user', () => {
         }
     }
 
-    const forgotPassword = async (phoneNumber, verifyCode = null, newPassword = null) => {
+    const forgotPassword = async (phoneNumber, code = null, newPassword = null) => {
         try {
             isLoading.value = true;
             error.value = null;
 
-            // Step 1: Request verification code
-            if (!verifyCode && !newPassword) {
-                const response = await apiService.forgotPassword({ phoneNumber });
-                if (response.data?.code === '1000') {
-                    const verificationCode = response.data.verificationCode;
-                    successMessage.value = `Verification code sent successfully: ${verificationCode}`;
-                    showToast('success', successMessage.value);
-                    startCooldown();
-                    return {
-                        success: true,
-                        verificationCode: verificationCode
-                    };
-                }
-                return { success: false };
-            }
+            const payload = { phoneNumber };
+            if (code) payload.code = code;
+            if (newPassword) payload.newPassword = newPassword;
 
-            // Step 2: Reset password with code
-            const response = await apiService.forgotPassword({
-                phoneNumber,
-                verifyCode,
-                newPassword
-            });
+            const response = await apiService.forgotPassword(payload);
 
             if (response.data?.code === '1000') {
-                successMessage.value = 'Password reset successfully!';
-                showToast('success', successMessage.value);
-                return { success: true };
+                if (!code && !newPassword) {
+                    // Step 1: Got verification code
+                    forgotPasswordPhone.value = phoneNumber;
+                    successMessage.value = 'Verification code sent successfully';
+                    showToast('success', successMessage.value);
+                    startCooldown();
+                    forgotPasswordStep.value = 2;
+                    return {
+                        success: true,
+                        verifyCode: response.data.data.verifyCode
+                    };
+                } else if (code && !newPassword) {
+                    // Step 2: Verified code
+                    forgotPasswordCode.value = code;
+                    forgotPasswordStep.value = 3;
+                    return { success: true };
+                } else {
+                    // Step 3: Reset password complete
+                    successMessage.value = 'Password reset successfully!';
+                    showToast('success', successMessage.value);
+                    resetForgotPasswordState();
+                    return { success: true };
+                }
             }
             return { success: false };
         } catch (err) {
             handleAuthError(err);
-            return false;
+            return { success: false };
         } finally {
             isLoading.value = false;
         }
+    };
+
+    const resetForgotPasswordState = () => {
+        forgotPasswordStep.value = 1;
+        forgotPasswordPhone.value = '';
+        forgotPasswordCode.value = '';
+        error.value = null;
+        successMessage.value = '';
     };
 
     return {
@@ -711,6 +725,10 @@ export const useUserStore = defineStore('user', () => {
         startCooldown,
         fetchUserProfile,
         forgotPassword,
+        resetForgotPasswordState,
+        forgotPasswordStep,
+        forgotPasswordPhone,
+        forgotPasswordCode,
         verifyAuthState,
     };
 });

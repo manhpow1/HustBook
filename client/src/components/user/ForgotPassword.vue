@@ -3,16 +3,26 @@
     <Card class="w-full max-w-md p-8">
       <h2 class="text-2xl font-bold mb-6 text-center">Reset Password</h2>
 
+      <!-- Step 1: Phone Number Form -->
       <form v-if="step === 1" @submit.prevent="handlePhoneSubmit" class="space-y-4">
         <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Phone Number</label>
           <Input v-model="phoneNumber" type="tel" placeholder="Enter your phone number"
-            :error="submitted && errors.phoneNumber" @input="submitted = false" />
-          <div v-if="verificationCode" class="mt-2 p-2 bg-blue-50 border border-blue-200 rounded">
-            <p class="text-sm text-blue-600">
-              Verification Code: <span class="font-mono font-bold">{{ verificationCode }}</span>
-            </p>
-          </div>
+            :error="submitted && errors.phoneNumber" @input="clearErrors" />
+          <p v-if="submitted && errors.phoneNumber" class="mt-1 text-sm text-red-600">
+            {{ errors.phoneNumber }}
+          </p>
+          <p v-if="cooldownTime > 0" class="mt-1 text-sm text-gray-600">
+            Please wait {{ cooldownTime }} seconds before requesting a new code
+          </p>
         </div>
+
+        <div v-if="verificationCode" class="mt-2 p-2 bg-blue-50 border border-blue-200 rounded">
+          <p class="text-sm text-blue-600">
+            Verification Code: <span class="font-mono font-bold">{{ verificationCode }}</span>
+          </p>
+        </div>
+
         <Button type="submit" :loading="isLoading" class="w-full">
           Send Verification Code
         </Button>
@@ -23,20 +33,48 @@
         </div>
       </form>
 
+      <!-- Step 2: Verification and New Password Form -->
       <form v-if="step === 2" @submit.prevent="handleResetSubmit" class="space-y-4">
         <div>
-          <Input v-model="code" type="text" maxlength="6" placeholder="Enter verification code"
-            :error="submitted && errors.code" @input="submitted = false" />
+          <label class="block text-sm font-medium text-gray-700 mb-1">Verification Code</label>
+          <Input v-model="code" type="text" placeholder="Enter verification code" :error="submitted && errors.code"
+            @input="clearErrors" maxlength="6" />
+          <div v-if="submitted && errors.code" class="mt-1 text-sm text-red-600">
+            {{ errors.code }}
+          </div>
+          <div v-if="remainingAttempts < 5" class="mt-1 text-sm text-gray-600">
+            {{ remainingAttempts }} attempts remaining
+          </div>
+          <div v-if="cooldown > 0" class="mt-2 text-sm text-gray-600">
+            Resend code in {{ cooldown }}s
+          </div>
+          <button v-else type="button" @click="resendCode" class="mt-2 text-sm text-blue-600 hover:text-blue-800">
+            Resend verification code
+          </button>
         </div>
+
         <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">New Password</label>
           <Input v-model="newPassword" type="password" placeholder="Enter new password"
-            :error="submitted && errors.newPassword" @input="submitted = false" />
+            :error="submitted && errors.newPassword" @input="clearErrors" />
+          <div v-if="submitted && errors.newPassword" class="mt-1 text-sm text-red-600">
+            {{ errors.newPassword }}
+          </div>
+          <p class="mt-1 text-sm text-gray-500">
+            Password must be at least 8 characters long and include uppercase, lowercase, and numbers
+          </p>
         </div>
+
         <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Confirm Password</label>
           <Input v-model="confirmPassword" type="password" placeholder="Confirm new password"
-            :error="submitted && errors.confirmPassword" @input="submitted = false" />
+            :error="submitted && errors.confirmPassword" @input="clearErrors" />
+          <div v-if="submitted && errors.confirmPassword" class="mt-1 text-sm text-red-600">
+            {{ errors.confirmPassword }}
+          </div>
         </div>
-        <Button type="submit" :loading="isLoading" class="w-full">
+
+        <Button type="submit" :loading="isLoading" class="w-full" :disabled="isSubmitDisabled">
           Reset Password
         </Button>
         <div class="text-center mt-4">
@@ -80,6 +118,14 @@ const errors = ref({
   code: '',
   newPassword: '',
   confirmPassword: '',
+});
+
+// Computed property to control form submission
+const isSubmitDisabled = computed(() => {
+  if (step.value === 2) {
+    return !code.value || !newPassword.value || !confirmPassword.value || isLoading.value;
+  }
+  return !phoneNumber.value || isLoading.value;
 });
 
 const validatePhoneNumber = () => {

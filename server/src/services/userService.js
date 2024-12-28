@@ -435,11 +435,22 @@ class UserService {
                 throw createError('9995', 'User not found');
             }
 
+            // Verify code first
+            const verificationRef = db.collection('verificationCodes').doc(phoneNumber);
+            const verificationDoc = await verificationRef.get();
+
+            if (!verificationDoc.exists) {
+                throw createError('9993', 'Verification code has expired or does not exist');
+            }
+
+            const verificationData = verificationDoc.data();
+            if (verificationData.verifyCode !== code) {
+                throw createError('9993', 'Invalid verification code');
+            }
+
             if (!passwordStrength(newPassword)) {
                 throw createError('9997', 'New password does not meet security requirements');
             }
-
-            await this.verifyUserCode(user.uid, code);  // Updated to use uid
 
             const isPasswordReused = await Promise.any(
                 user.passwordHistory.map(async (hashedPwd) => comparePassword(newPassword, hashedPwd))
@@ -454,16 +465,14 @@ class UserService {
             user.passwordHistory = [hashedPassword, ...user.passwordHistory].slice(0, PASSWORD_HISTORY_SIZE);
             user.lastPasswordChange = new Date().toISOString();
             user.tokenVersion += 1;
-            user.verificationCode = null;
-            user.verificationCodeTimestamp = null;
-            user.verificationCodeExpiration = null;
-            user.verificationAttempts = null;
 
-            await user.save();
-
-            await req.app.locals.auditLog.logAction(user.uid, null, 'password_reset', {
-                timestamp: new Date().toISOString()
-            });
+            await Promise.all([
+                user.save(),
+                verificationRef.delete(),
+                req.app.locals.auditLog.logAction(user.uid, null, 'password_reset', {
+                    timestamp: new Date().toISOString()
+                })
+            ]);
 
             return true;
         } catch (error) {
