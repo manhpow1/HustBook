@@ -430,20 +430,28 @@ class UserService {
 
     async resetPassword(req, phoneNumber, code, newPassword) {
         try {
+            logger.info('Starting password reset process', { phoneNumber });
+
             const user = await this.getUserByphoneNumber(phoneNumber);
+            logger.debug('User lookup result', { found: !!user });
             if (!user) {
                 throw createError('9995', 'User not found');
             }
 
-            // Verify code first
             const verificationRef = db.collection('verificationCodes').doc(phoneNumber);
             const verificationDoc = await verificationRef.get();
-
+            logger.debug('Verification document status', { exists: verificationDoc.exists });
             if (!verificationDoc.exists) {
                 throw createError('9993', 'Verification code has expired or does not exist');
             }
 
             const verificationData = verificationDoc.data();
+            logger.debug('Verifying code match', {
+                storedCode: verificationData.verifyCode,
+                receivedCode: code,
+                matches: verificationData.verifyCode === code
+            });
+
             if (verificationData.verifyCode !== code) {
                 throw createError('9993', 'Invalid verification code');
             }
@@ -452,14 +460,7 @@ class UserService {
                 throw createError('9997', 'New password does not meet security requirements');
             }
 
-            const isPasswordReused = await Promise.any(
-                user.passwordHistory.map(async (hashedPwd) => comparePassword(newPassword, hashedPwd))
-            ).catch(() => false);
-
-            if (isPasswordReused) {
-                throw createError('9992', 'Password has been used recently');
-            }
-
+            logger.info('Password validation passed, proceeding with update');
             const hashedPassword = await hashPassword(newPassword);
             user.password = hashedPassword;
             user.passwordHistory = [hashedPassword, ...user.passwordHistory].slice(0, PASSWORD_HISTORY_SIZE);
@@ -474,9 +475,14 @@ class UserService {
                 })
             ]);
 
+            logger.info('Password reset completed successfully', { userId: user.uid });
             return true;
         } catch (error) {
-            logger.error('Error resetting password:', error);
+            logger.error('Password reset failed', {
+                error: error.message,
+                code: error.code,
+                stack: error.stack
+            });
             throw error;
         }
     }
