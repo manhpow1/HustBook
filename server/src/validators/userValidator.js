@@ -69,7 +69,7 @@ const passwordComplexity = Joi.string()
  * - Must be exactly 10 digits
  */
 const phoneNumberSchema = Joi.string()
-    .pattern(/^0\d{9}$/)
+    .pattern(/^(0[1-9][0-9]{8})$/)
     .required()
     .messages({
         'string.pattern.base': 'Phone number must start with 0 and be 10 digits long.',
@@ -83,24 +83,6 @@ const validatePasswordNotPhone = (password, phoneNumber) => {
     if (!password || !phoneNumber) return null;
     return password === phoneNumber ? 'Password cannot match the phone number.' : null;
 };
-
-/**
- * Token validation schema
- */
-const tokenSchema = Joi.object({
-    token: Joi.string()
-        .required()
-        .min(32)
-        .max(512)
-        .pattern(/^[A-Za-z0-9-_]+\.[A-Za-z0-9-_]+\.[A-Za-z0-9-_.+/=]*$/) // JWT format
-        .messages({
-            'string.empty': 'Token cannot be empty.',
-            'string.min': 'Token is too short.',
-            'string.max': 'Token is too long.',
-            'string.pattern.base': 'Invalid token format.',
-            'any.required': 'Token is required.',
-        }),
-}).required();
 
 /**
  * Signup validation schema
