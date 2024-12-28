@@ -578,7 +578,7 @@ class UserController {
 
             // Handle verification code request (Step 1)
             if (!verifyCode && !newPassword) {
-                const user = await userService.getUserByPhoneNumber(phoneNumber);
+                const user = await userService.getUserByphoneNumber(phoneNumber);
                 if (!user) {
                     logger.warn('User not found during password reset', { phoneNumber });
                     throw createError('9995', 'User not found');
