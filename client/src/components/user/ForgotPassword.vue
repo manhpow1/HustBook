@@ -1,12 +1,12 @@
 <template>
-  <div class="flex flex-col items-center justify-center min-h-screen p-4">
+  <div class="flex flex-col items-center justify-center p-4">
     <Card class="w-full max-w-md p-8">
       <h2 class="text-2xl font-bold mb-6 text-center">Reset Password</h2>
 
       <form v-if="step === 1" @submit.prevent="handlePhoneSubmit" class="space-y-4">
         <div>
-          <Input v-model="phoneNumber" type="tel" placeholder="Enter your phone number" :error="errors.phoneNumber"
-            @input="validatePhoneNumber" />
+          <Input v-model="phoneNumber" type="tel" placeholder="Enter your phone number"
+            :error="submitted && errors.phoneNumber" @input="submitted = false" />
           <div v-if="verificationCode" class="mt-2 p-2 bg-blue-50 border border-blue-200 rounded">
             <p class="text-sm text-blue-600">
               Verification Code: <span class="font-mono font-bold">{{ verificationCode }}</span>
@@ -25,16 +25,16 @@
 
       <form v-if="step === 2" @submit.prevent="handleResetSubmit" class="space-y-4">
         <div>
-          <Input v-model="code" type="text" maxlength="6" placeholder="Enter verification code" :error="errors.code"
-            @input="validateCode" />
+          <Input v-model="code" type="text" maxlength="6" placeholder="Enter verification code"
+            :error="submitted && errors.code" @input="submitted = false" />
         </div>
         <div>
-          <Input v-model="newPassword" type="password" placeholder="Enter new password" :error="errors.newPassword"
-            @input="validatePassword" />
+          <Input v-model="newPassword" type="password" placeholder="Enter new password"
+            :error="submitted && errors.newPassword" @input="submitted = false" />
         </div>
         <div>
           <Input v-model="confirmPassword" type="password" placeholder="Confirm new password"
-            :error="errors.confirmPassword" @input="validateConfirmPassword" />
+            :error="submitted && errors.confirmPassword" @input="submitted = false" />
         </div>
         <Button type="submit" :loading="isLoading" class="w-full">
           Reset Password
@@ -73,6 +73,7 @@ const newPassword = ref('');
 const confirmPassword = ref('');
 const cooldown = ref(0);
 const cooldownTimer = ref(null);
+const submitted = ref(false);
 
 const errors = ref({
   phoneNumber: '',
@@ -125,6 +126,7 @@ const validateConfirmPassword = () => {
 };
 
 const handlePhoneSubmit = async () => {
+  submitted.value = true;
   validatePhoneNumber();
   if (errors.value.phoneNumber) return;
 
@@ -141,6 +143,7 @@ const handlePhoneSubmit = async () => {
 };
 
 const handleResetSubmit = async () => {
+  submitted.value = true;
   validateCode();
   validatePassword();
   validateConfirmPassword();
