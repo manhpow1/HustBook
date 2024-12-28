@@ -1,21 +1,9 @@
 {
     "version": 2,
-    "routes": [
+    "rewrites": [
         {
-            "src": "^/assets/(.*)",
-            "dest": "/assets/$1"
-        },
-        {
-            "src": "^/api/(.*)",
-            "dest": "/api/$1"
-        },
-        {
-            "handle": "filesystem"
-        },
-        {
-            "src": "/(.*)",
-            "dest": "/index.html",
-            "continue": true
+            "source": "/:path*",
+            "destination": "/index.html"
         }
     ],
     "headers": [
