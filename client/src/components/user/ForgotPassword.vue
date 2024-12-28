@@ -208,7 +208,10 @@ const handlePhoneSubmit = async () => {
   if (errors.value.phoneNumber) return;
 
   try {
-    const response = await userStore.forgotPassword({ phoneNumber: phoneNumber.value });
+    const response = await userStore.forgotPassword({
+      phoneNumber: phoneNumber.value
+    });
+
     if (response?.success) {
       verificationCode.value = response.verifyCode;
       // Store verification code in localStorage for step 2
@@ -229,32 +232,13 @@ const handleResetSubmit = async () => {
 
   if (errors.value.code || errors.value.newPassword || errors.value.confirmPassword) return;
 
-  // Retrieve stored verification data
-  const storedCode = localStorage.getItem('resetVerificationCode');
-  const storedPhone = localStorage.getItem('resetPhoneNumber');
-
-  if (!storedPhone || !storedCode || !code.value || !newPassword.value) {
-    showToast('Verification code and new password are required', 'error');
-    return;
-  }
-
-  if (code.value !== storedCode) {
-    showToast('Invalid verification code', 'error');
-    return;
-  }
-
-  logger.info('Sending reset request with:', {
-    phoneNumber: storedPhone,
-    code: code.value,
-    newPassword: 'hidden'
-  });
-
   try {
     const response = await userStore.forgotPassword({
-      phoneNumber: storedPhone,
+      phoneNumber: phoneNumber.value,
       code: code.value,
-      newPassword: newPassword.value,
+      newPassword: newPassword.value
     });
+
     if (response?.success) {
       // Clear stored verification data
       localStorage.removeItem('resetVerificationCode');
