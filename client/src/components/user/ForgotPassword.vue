@@ -233,14 +233,13 @@ const handleResetSubmit = async () => {
   const storedCode = localStorage.getItem('resetVerificationCode');
   const storedPhone = localStorage.getItem('resetPhoneNumber');
 
-  if (!storedPhone || !storedCode) {
-    showToast('Verification session expired. Please request a new code.', 'error');
-    step.value = 1;
+  if (!storedPhone || !storedCode || !code.value || !newPassword.value) {
+    showToast('Verification code and new password are required', 'error');
     return;
   }
 
-  if (!code.value || !newPassword.value) {
-    showToast('Verification code and new password are required', 'error');
+  if (code.value !== storedCode) {
+    showToast('Invalid verification code', 'error');
     return;
   }
 
