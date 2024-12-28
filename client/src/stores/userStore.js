@@ -634,7 +634,11 @@ export const useUserStore = defineStore('user', () => {
             isLoading.value = true;
             error.value = null;
 
-            logger.debug('Store received:', { phoneNumber, code, newPassword: '***' });
+            logger.debug('Initiating password reset:', {
+                phoneNumber,
+                hasCode: !!code,
+                hasNewPassword: !!newPassword
+            });
 
             const payload = { phoneNumber };
 
@@ -642,8 +646,6 @@ export const useUserStore = defineStore('user', () => {
                 payload.verifyCode = code;
                 payload.newPassword = newPassword;
             }
-
-            logger.debug('Sending payload:', { ...payload, newPassword: '***' });
 
             const response = await apiService.forgotPassword(payload);
 
@@ -654,16 +656,23 @@ export const useUserStore = defineStore('user', () => {
                         success: true,
                         verifyCode: response.data.data.verifyCode
                     };
-                } else if (code && newPassword) {
+                } else {
                     // Step 2: Reset password
                     successMessage.value = 'Password reset successfully!';
                     showToast('success', successMessage.value);
+
+                    // Clear any stored verification data
+                    localStorage.removeItem('resetVerificationCode');
+                    localStorage.removeItem('resetPhoneNumber');
+
                     return { success: true };
                 }
             }
+
             return { success: false };
-        } catch (err) {
-            handleAuthError(err);
+        } catch (error) {
+            logger.error('Password reset error:', error);
+            handleError(error);
             return { success: false };
         } finally {
             isLoading.value = false;

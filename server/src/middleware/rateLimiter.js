@@ -5,7 +5,7 @@ import logger from '../utils/logger.js';
 // Helper to create a RateLimiter with given "points" and "duration"
 const createLimiter = (points, duration, prefix) => {
     return new RateLimiterRedis({
-        storeClient: redisClient.client, 
+        storeClient: redisClient.client,
         points,
         duration,
         keyPrefix: prefix,

@@ -567,13 +567,7 @@ class UserController {
 
     async forgotPassword(req, res, next) {
         try {
-            const { error, value } = userValidator.validateForgotPassword(req.body);
-            if (error) {
-                const errorMessage = error.details.map(detail => detail.message).join(', ');
-                throw createError('1002', errorMessage);
-            }
-
-            const { phoneNumber, verifyCode, newPassword } = value;
+            const { phoneNumber, verifyCode, newPassword } = req.body;
 
             logger.info('Processing forgot password request', {
                 step: verifyCode && newPassword ? 2 : 1,
@@ -582,80 +576,74 @@ class UserController {
                 hasNewPassword: !!newPassword
             });
 
-            // For step 2, ensure both verifyCode and newPassword are provided together
-            if (verifyCode || newPassword) {
-                if (!verifyCode || !newPassword) {
-                    throw createError('1002', 'Both verification code and new password are required for reset');
-                }
-            }
-
-            const user = await userService.getUserByphoneNumber(phoneNumber);
-            if (!user) {
-                logger.warn('User not found during password reset', { phoneNumber });
-                throw createError('9995', 'User not found');
-            }
-
-            // Step 1: Generate and send verification code
+            // Handle verification code request (Step 1)
             if (!verifyCode && !newPassword) {
-                const generatedCode = generateRandomCode();
+                const user = await userService.getUserByPhoneNumber(phoneNumber);
+                if (!user) {
+                    logger.warn('User not found during password reset', { phoneNumber });
+                    throw createError('9995', 'User not found');
+                }
+
+                // Check for existing verification code
                 const verificationRef = db.collection('verificationCodes').doc(phoneNumber);
-                
-                // Check for existing verification attempt
                 const existingVerification = await verificationRef.get();
+
                 if (existingVerification.exists) {
                     const data = existingVerification.data();
-                    if (Date.now() < data.expiresAt.toDate().getTime()) {
+                    const currentTime = Date.now();
+
+                    // If existing code is still valid, return it
+                    if (currentTime < data.expiresAt.toDate().getTime()) {
                         logger.info('Using existing verification code', {
                             phoneNumber,
                             expires: data.expiresAt.toDate()
                         });
-                        sendResponse(res, '1000', {
+
+                        return res.status(200).json({
+                            code: '1000',
                             message: 'Existing verification code is still valid',
-                            verifyCode: data.verifyCode
+                            data: { verifyCode: data.verifyCode }
                         });
-                        return;
                     }
                 }
 
+                const generatedCode = generateRandomCode();
                 await verificationRef.set({
                     verifyCode: generatedCode,
                     attempts: 0,
-                    expiresAt: new Date(Date.now() + (5 * 60 * 1000)), // 5 minutes
+                    expiresAt: new Date(Date.now() + VERIFICATION_CODE_EXPIRY),
                     createdAt: new Date(),
                     type: 'password_reset'
                 });
 
                 logger.info('New verification code generated for password reset', {
                     phoneNumber,
-                    expires: new Date(Date.now() + (5 * 60 * 1000))
+                    expires: new Date(Date.now() + VERIFICATION_CODE_EXPIRY)
                 });
 
-                sendResponse(res, '1000', {
+                return res.status(200).json({
+                    code: '1000',
                     message: 'Verification code sent successfully',
-                    verifyCode: generatedCode
+                    data: { verifyCode: generatedCode }
                 });
-                return;
             }
 
-            // Step 2: Verify code and reset password
+            // Handle password reset (Step 2)
             if (verifyCode && newPassword) {
                 logger.info('Proceeding with password reset verification', { phoneNumber });
 
-                // Step 2: Verify code and reset password
-                logger.info('Attempting password reset', { phoneNumber });
-                await userService.resetPassword(req, phoneNumber, verifyCode, newPassword);
-
-                await req.app.locals.auditLog.logAction(user.uid, null, 'password_reset', {
-                    deviceId: req.get('Device-ID'),
-                    ip: req.ip,
-                    timestamp: new Date().toISOString()
-                });
-
-                logger.info('Password reset completed successfully', { phoneNumber });
-                sendResponse(res, '1000', { message: 'Password has been reset successfully' });
+                const resetResult = await userService.resetPassword(req, phoneNumber, verifyCode, newPassword);
+                if (resetResult.success) {
+                    logger.info('Password reset completed successfully', { phoneNumber });
+                    return res.status(200).json({
+                        code: '1000',
+                        message: 'Password has been reset successfully'
+                    });
+                }
             }
+            throw createError('1002', 'Invalid request parameters');
         } catch (error) {
-            logger.error('Forgot Password Error:', error);
+            logger.error('Forgot password error:', error);
             next(error);
         }
     }
