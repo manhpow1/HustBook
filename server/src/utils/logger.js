@@ -34,21 +34,28 @@ const logger = winston.createLogger({
     )
 });
 
+// Add console transport for all environments
+logger.add(new winston.transports.Console({
+    level: 'debug',
+    format: combine(
+        maskSensitiveData(),
+        colorize(),
+        timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
+        logFormat
+    )
+}));
+
+// Add file transport only in production
 if (process.env.NODE_ENV === 'production') {
-    logger.add(new winston.transports.Console({
+    logger.add(new winston.transports.DailyRotateFile({
+        level: 'debug',
+        filename: 'logs/app-%DATE%.log',
+        datePattern: 'YYYY-MM-DD',
+        zippedArchive: true,
+        maxSize: '20m',
+        maxFiles: '14d',
         format: combine(
             maskSensitiveData(),
-            colorize(),
-            timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
-            logFormat
-        )
-    }));
-} else {
-    // Development environment
-    logger.add(new winston.transports.Console({
-        format: combine(
-            maskSensitiveData(),
-            colorize(),
             timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
             logFormat
         )

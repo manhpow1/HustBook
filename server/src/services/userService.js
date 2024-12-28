@@ -433,7 +433,15 @@ class UserService {
             logger.info('Starting password reset process', { phoneNumber });
 
             const user = await this.getUserByphoneNumber(phoneNumber);
-            logger.info('User lookup result', { found: !!user });
+            logger.info('User lookup result', { 
+                found: !!user,
+                userId: user?.uid,
+                isVerified: user?.isVerified
+            });
+
+            if (!user) {
+                logger.warn('User not found during password reset', { phoneNumber });
+            }
             if (!user) {
                 throw createError('9995', 'User not found');
             }
