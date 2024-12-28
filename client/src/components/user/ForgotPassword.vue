@@ -1,5 +1,5 @@
 <template>
-  <div class="flex flex-col items-center justify-center p-4">
+  <div class="flex flex-col items-center justify-center p-4 min-h-screen">
     <Card class="w-full max-w-md p-8">
       <h2 class="text-2xl font-bold mb-6 text-center">Reset Password</h2>
 
