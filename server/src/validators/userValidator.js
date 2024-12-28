@@ -69,7 +69,7 @@ const passwordComplexity = Joi.string()
  * - Must be exactly 10 digits
  */
 const phoneNumberSchema = Joi.string()
-    .pattern(/^(0[1-9][0-9]{8})$/)
+    .pattern(/^0[1-9][0-9]{8}$/)
     .required()
     .messages({
         'string.pattern.base': 'Phone number needs to start with 0 and be 10 digits long.',
