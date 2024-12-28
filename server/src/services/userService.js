@@ -430,45 +430,77 @@ class UserService {
 
     async resetPassword(req, phoneNumber, code, newPassword) {
         try {
-            logger.info('Starting password reset process', { phoneNumber });
+            logger.info('Starting password reset verification', { phoneNumber });
 
             const user = await this.getUserByphoneNumber(phoneNumber);
-            logger.info('User lookup result', { 
-                found: !!user,
-                userId: user?.uid,
-                isVerified: user?.isVerified
-            });
-
             if (!user) {
                 logger.warn('User not found during password reset', { phoneNumber });
-            }
-            if (!user) {
                 throw createError('9995', 'User not found');
             }
 
+            logger.info('Found user for password reset', { 
+                userId: user.uid,
+                isVerified: user.isVerified
+            });
+
             const verificationRef = db.collection('verificationCodes').doc(phoneNumber);
             const verificationDoc = await verificationRef.get();
-            logger.info('Verification document status', { exists: verificationDoc.exists });
+
             if (!verificationDoc.exists) {
+                logger.warn('Verification code not found', { phoneNumber });
                 throw createError('9993', 'Verification code has expired or does not exist');
             }
 
             const verificationData = verificationDoc.data();
-            logger.info('Verifying code match', {
-                storedCode: verificationData.verifyCode,
-                receivedCode: code,
-                matches: verificationData.verifyCode === code
-            });
+            
+            // Verify code type and expiration
+            if (verificationData.type !== 'password_reset') {
+                logger.warn('Invalid verification code type', { 
+                    expected: 'password_reset',
+                    received: verificationData.type
+                });
+                throw createError('9993', 'Invalid verification code');
+            }
+
+            if (Date.now() > verificationData.expiresAt.toDate().getTime()) {
+                logger.warn('Verification code expired', {
+                    expiredAt: verificationData.expiresAt.toDate()
+                });
+                await verificationRef.delete();
+                throw createError('9993', 'Verification code has expired');
+            }
 
             if (verificationData.verifyCode !== code) {
+                logger.warn('Invalid verification code provided', { phoneNumber });
+                
+                // Increment attempts
+                const attempts = (verificationData.attempts || 0) + 1;
+                if (attempts >= 5) {
+                    await verificationRef.delete();
+                    throw createError('9993', 'Maximum verification attempts exceeded');
+                }
+                
+                await verificationRef.update({ attempts });
                 throw createError('9993', 'Invalid verification code');
             }
 
             if (!passwordStrength(newPassword)) {
+                logger.warn('Password strength check failed', { userId: user.uid });
                 throw createError('9997', 'New password does not meet security requirements');
             }
 
-            logger.info('Password validation passed, proceeding with update');
+            // Check password history
+            const isPasswordReused = await Promise.any(
+                user.passwordHistory.map(async (hashedPwd) => comparePassword(newPassword, hashedPwd))
+            ).catch(() => false);
+
+            if (isPasswordReused) {
+                logger.warn('Password reuse detected', { userId: user.uid });
+                throw createError('9992', 'Password has been used recently');
+            }
+
+            logger.info('Password validation passed, updating user', { userId: user.uid });
+            
             const hashedPassword = await hashPassword(newPassword);
             user.password = hashedPassword;
             user.passwordHistory = [hashedPassword, ...user.passwordHistory].slice(0, PASSWORD_HISTORY_SIZE);
@@ -477,10 +509,7 @@ class UserService {
 
             await Promise.all([
                 user.save(),
-                verificationRef.delete(),
-                req.app.locals.auditLog.logAction(user.uid, null, 'password_reset', {
-                    timestamp: new Date().toISOString()
-                })
+                verificationRef.delete()
             ]);
 
             logger.info('Password reset completed successfully', { userId: user.uid });
@@ -489,7 +518,7 @@ class UserService {
             logger.error('Password reset failed', {
                 error: error.message,
                 code: error.code,
-                stack: error.stack
+                phoneNumber
             });
             throw error;
         }
