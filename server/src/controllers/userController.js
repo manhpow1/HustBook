@@ -598,6 +598,11 @@ class UserController {
             }
 
             await userService.resetPassword(req, phoneNumber, verifyCode, newPassword);
+            logger.info('Received forgot password request:', {
+                phoneNumber: req.body.phoneNumber,
+                verifyCode: req.body.verifyCode,
+                NewPassword: req.body.newPassword
+            });
 
             sendResponse(res, '1000', { message: 'Password has been reset successfully.' });
         } catch (error) {
