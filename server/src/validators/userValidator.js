@@ -448,10 +448,12 @@ const validateForgotPassword = (data) => {
         code: data.code,
         newPassword: data.newPassword // Don't sanitize password
     };
+    console.log("Debug - Phone number before sanitization:", data.phoneNumber);
+    console.log("Debug - Phone number after sanitization:", sanitizedData.phoneNumber);
     return forgotPasswordSchema.validate(sanitizedData, { abortEarly: false });
 };
 
-export default{
+export default {
     validateSignup,
     validateLogin,
     validateChangeInfoAfterSignup,
