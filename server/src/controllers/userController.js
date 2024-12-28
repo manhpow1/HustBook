@@ -150,7 +150,7 @@ class UserController {
             // Store verification code in temporary collection
             const verificationRef = db.collection('verificationCodes').doc(phoneNumber);
             await verificationRef.set({
-                verifyCode: verificationCode, 
+                verifyCode: verificationCode,
                 attempts: 0,
                 expiresAt: new Date(expirationTime),
                 createdAt: new Date()
@@ -266,7 +266,7 @@ class UserController {
             if (!password || !user.password) {
                 throw createError('1002', 'Password is required');
             }
-            
+
             const isPasswordCorrect = await comparePassword(password, user.password);
             if (!isPasswordCorrect) {
                 throw createError('1004', 'Incorrect password.');
@@ -575,7 +575,11 @@ class UserController {
 
             const { phoneNumber, verifyCode, newPassword } = value;
 
-            console.log('Reset password request:', { phoneNumber, verifyCode, newPassword: '***' });
+            console.log('Received forgot password request:', {
+                phoneNumber: req.body.phoneNumber,
+                hasVerifyCode: !!req.body.verifyCode,
+                hasNewPassword: !!req.body.newPassword
+            });
 
             const user = await userService.getUserByphoneNumber(phoneNumber);
             if (!user) {

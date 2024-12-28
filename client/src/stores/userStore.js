@@ -631,65 +631,44 @@ export const useUserStore = defineStore('user', () => {
 
     const forgotPassword = async ({ phoneNumber, code, newPassword }) => {
         try {
-            logger.debug("forgotPassword: Function called with params", { phoneNumber, code, newPassword });
             isLoading.value = true;
             error.value = null;
 
-            const payload = {
-                phoneNumber,
-                ...(code && { verifyCode: code }),
-                ...(newPassword && { newPassword })
-            };
+            // Log để debug
+            console.log('Store received:', { phoneNumber, code, newPassword: '***' });
 
-            logger.debug("forgotPassword: Payload constructed", payload);
+            const payload = { phoneNumber };
+
+            if (code && newPassword) {
+                payload.verifyCode = code;
+                payload.newPassword = newPassword;
+            }
+
+            console.log('Sending payload:', { ...payload, newPassword: '***' });
 
             const response = await apiService.forgotPassword(payload);
 
-            logger.debug("forgotPassword: API response received", response);
-
             if (response.data?.code === '1000') {
-                logger.debug("forgotPassword: Successful response code 1000");
-
                 if (!code && !newPassword) {
-                    // Step 1: Got verification code
-                    logger.debug("forgotPassword: Step 1 - Verification code sent");
-                    forgotPasswordPhone.value = phoneNumber;
-                    successMessage.value = 'Verification code sent successfully';
-                    showToast('success', successMessage.value);
-                    startCooldown();
-                    forgotPasswordStep.value = 2;
+                    // Bước 1: Lấy mã xác thực
                     return {
                         success: true,
                         verifyCode: response.data.data.verifyCode
                     };
-                } else {
-                    // Reset password complete
-                    logger.debug("forgotPassword: Step 2 - Password reset complete");
+                } else if (code && newPassword) {
+                    // Bước 2: Reset password
                     successMessage.value = 'Password reset successfully!';
                     showToast('success', successMessage.value);
-                    resetForgotPasswordState();
                     return { success: true };
                 }
             }
-
-            logger.warn("forgotPassword: Unexpected response code", response.data?.code);
             return { success: false };
         } catch (err) {
-            logger.error("forgotPassword: Error occurred", err);
             handleAuthError(err);
             return { success: false };
         } finally {
             isLoading.value = false;
-            logger.debug("forgotPassword: isLoading set to false");
         }
-    };
-
-    const resetForgotPasswordState = () => {
-        forgotPasswordStep.value = 1;
-        forgotPasswordPhone.value = '';
-        forgotPasswordCode.value = '';
-        error.value = null;
-        successMessage.value = '';
     };
 
     return {
@@ -735,10 +714,6 @@ export const useUserStore = defineStore('user', () => {
         startCooldown,
         fetchUserProfile,
         forgotPassword,
-        resetForgotPasswordState,
-        forgotPasswordStep,
-        forgotPasswordPhone,
-        forgotPasswordCode,
         verifyAuthState,
     };
 });

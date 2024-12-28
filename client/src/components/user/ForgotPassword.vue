@@ -225,6 +225,12 @@ const handleResetSubmit = async () => {
 
   if (errors.value.code || errors.value.newPassword || errors.value.confirmPassword) return;
 
+  console.log('Sending reset request with:', {
+    phoneNumber: phoneNumber.value,
+    code: code.value, // Kiểm tra giá trị này
+    newPassword: 'hidden'
+  });
+
   try {
     const response = await userStore.forgotPassword({
       phoneNumber: phoneNumber.value,
