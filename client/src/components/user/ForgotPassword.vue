@@ -211,6 +211,9 @@ const handlePhoneSubmit = async () => {
     const response = await userStore.forgotPassword({ phoneNumber: phoneNumber.value });
     if (response?.success) {
       verificationCode.value = response.verifyCode;
+      // Store verification code in localStorage for step 2
+      localStorage.setItem('resetVerificationCode', response.verifyCode);
+      localStorage.setItem('resetPhoneNumber', phoneNumber.value);
       showToast('Verification code generated successfully', 'success');
     }
   } catch (error) {
@@ -226,24 +229,37 @@ const handleResetSubmit = async () => {
 
   if (errors.value.code || errors.value.newPassword || errors.value.confirmPassword) return;
 
+  // Retrieve stored verification data
+  const storedCode = localStorage.getItem('resetVerificationCode');
+  const storedPhone = localStorage.getItem('resetPhoneNumber');
+
+  if (!storedPhone || !storedCode) {
+    showToast('Verification session expired. Please request a new code.', 'error');
+    step.value = 1;
+    return;
+  }
+
   if (!code.value || !newPassword.value) {
-    showToast('Both verification code and new password are required', 'error');
+    showToast('Verification code and new password are required', 'error');
     return;
   }
 
   logger.info('Sending reset request with:', {
-    phoneNumber: phoneNumber.value,
+    phoneNumber: storedPhone,
     code: code.value,
     newPassword: 'hidden'
   });
 
   try {
     const response = await userStore.forgotPassword({
-      phoneNumber: phoneNumber.value,
+      phoneNumber: storedPhone,
       code: code.value,
       newPassword: newPassword.value,
     });
     if (response?.success) {
+      // Clear stored verification data
+      localStorage.removeItem('resetVerificationCode');
+      localStorage.removeItem('resetPhoneNumber');
       showToast('Password reset successfully', 'success');
       router.push('/login');
     }
@@ -281,5 +297,8 @@ onBeforeUnmount(() => {
   if (cooldownTimer.value) {
     clearInterval(cooldownTimer.value);
   }
+  // Clean up stored verification data when component unmounts
+  localStorage.removeItem('resetVerificationCode');
+  localStorage.removeItem('resetPhoneNumber');
 });
 </script>
