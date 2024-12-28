@@ -384,13 +384,23 @@ export const useUserStore = defineStore('user', () => {
 
     // Verification Methods
     const startCooldown = () => {
+        const now = Date.now();
+        lastVerificationRequest.value = now;
         cooldownTime.value = VERIFICATION_CODE_COOLDOWN / 1000;
-        clearInterval(cooldownInterval.value);
+        
+        if (cooldownInterval.value) {
+            clearInterval(cooldownInterval.value);
+        }
+        
         cooldownInterval.value = setInterval(() => {
-            if (cooldownTime.value > 0) {
-                cooldownTime.value--;
-            } else {
+            const elapsed = Date.now() - now;
+            const remaining = Math.ceil((VERIFICATION_CODE_COOLDOWN - elapsed) / 1000);
+            
+            if (remaining <= 0) {
+                cooldownTime.value = 0;
                 clearInterval(cooldownInterval.value);
+            } else {
+                cooldownTime.value = remaining;
             }
         }, 1000);
     };
@@ -442,7 +452,17 @@ export const useUserStore = defineStore('user', () => {
     const verifyCode = async (phoneNumber, verifyCode) => {
         if (isLocked.value) {
             showToast('error', 'Account is temporarily locked. Please try again later.');
-            return false;
+            return { success: false };
+        }
+
+        if (verificationAttempts.value >= MAX_VERIFY_ATTEMPTS) {
+            isLocked.value = true;
+            setTimeout(() => {
+                isLocked.value = false;
+                verificationAttempts.value = 0;
+            }, LOCKOUT_DURATION);
+            showToast('error', 'Too many attempts. Please try again later.');
+            return { success: false };
         }
 
         try {
@@ -452,7 +472,7 @@ export const useUserStore = defineStore('user', () => {
 
             const response = await apiService.verifyCode({
                 phoneNumber,
-                code: verifyCode,  // Changed from verifyCode to code to match server expectation
+                code: verifyCode,
                 deviceId: deviceId.value
             });
 
@@ -463,6 +483,7 @@ export const useUserStore = defineStore('user', () => {
                     setAuthCookies(token);
                     user.value = { ...user.value, isVerified: true, id };
                     verificationAttempts.value = 0;
+                    isVerifyCodeExpired.value = false;
                     
                     const message = exists 
                         ? 'Verification successful!' 
@@ -479,6 +500,7 @@ export const useUserStore = defineStore('user', () => {
                 }
             }
 
+            verificationAttempts.value++;
             return { 
                 success: false, 
                 exists: false,
@@ -604,25 +626,40 @@ export const useUserStore = defineStore('user', () => {
         }
     }
 
-    const forgotPassword = async (phoneNumber, code = null, newPassword = null) => {
+    const forgotPassword = async (phoneNumber, verifyCode = null, newPassword = null) => {
         try {
             isLoading.value = true;
             error.value = null;
 
+            // Step 1: Request verification code
+            if (!verifyCode && !newPassword) {
+                const response = await apiService.forgotPassword({ phoneNumber });
+                if (response.data?.code === '1000') {
+                    const verificationCode = response.data.verificationCode;
+                    successMessage.value = `Verification code sent successfully: ${verificationCode}`;
+                    showToast('success', successMessage.value);
+                    startCooldown();
+                    return {
+                        success: true,
+                        verificationCode: verificationCode
+                    };
+                }
+                return { success: false };
+            }
+
+            // Step 2: Reset password with code
             const response = await apiService.forgotPassword({
                 phoneNumber,
-                code,
+                verifyCode,
                 newPassword
             });
 
             if (response.data?.code === '1000') {
-                successMessage.value = newPassword
-                    ? 'Password reset successfully!'
-                    : 'Verification code sent successfully!';
+                successMessage.value = 'Password reset successfully!';
                 showToast('success', successMessage.value);
-                return true;
+                return { success: true };
             }
-            return false;
+            return { success: false };
         } catch (err) {
             handleAuthError(err);
             return false;

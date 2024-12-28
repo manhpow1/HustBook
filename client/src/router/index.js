@@ -46,7 +46,7 @@ const routes = [
         path: '/forgot-password',
         name: 'ForgotPassword',
         component: () => import('../components/user/ForgotPassword.vue'),
-        meta: { requiresAuth: true }
+        meta: { allowWithoutAuth: true }
     },
     {
         path: '/get-verify-code',

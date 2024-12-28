@@ -75,8 +75,19 @@ const apiService = {
      * - If only phoneNumber is provided, request a reset code
      * - If phoneNumber, code, and newPassword are provided, finalize reset
      */
+    /**
+     * Forgot Password
+     * @param {Object} data
+     * @param {string} data.phoneNumber - Required for both steps
+     * @param {string} [data.verifyCode] - Required for reset step
+     * @param {string} [data.newPassword] - Required for reset step
+     */
     async forgotPassword(data) {
-        return axiosInstance.post(API_ENDPOINTS.FORGOT_PASSWORD, data);
+        return axiosInstance.post(API_ENDPOINTS.FORGOT_PASSWORD, {
+            phoneNumber: data.phoneNumber,
+            ...(data.code && { verifyCode: data.code }),
+            ...(data.newPassword && { newPassword: data.newPassword })
+        });
     },
 
     /**

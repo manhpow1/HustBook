@@ -7,6 +7,9 @@
         <div>
           <Input v-model="phoneNumber" type="tel" placeholder="Enter your phone number" :error="errors.phoneNumber"
             @input="validatePhoneNumber" />
+          <div v-if="verificationCode" class="mt-2 p-2 bg-blue-50 border border-blue-200 rounded">
+            <p class="text-sm text-blue-600">Verification Code: <span class="font-mono font-bold">{{ verificationCode }}</span></p>
+          </div>
         </div>
         <Button type="submit" :loading="isLoading" class="w-full">
           Send Verification Code
@@ -109,8 +112,8 @@ const handlePhoneSubmit = async () => {
   if (errors.value.phoneNumber) return;
 
   try {
-    const success = await userStore.forgotPassword(phoneNumber.value);
-    if (success) {
+    const response = await userStore.forgotPassword({ phoneNumber: phoneNumber.value });
+    if (response) {
       step.value = 2;
       startCooldown();
       showToast('Verification code sent successfully', 'success');
@@ -128,8 +131,12 @@ const handleResetSubmit = async () => {
   if (errors.value.code || errors.value.newPassword || errors.value.confirmPassword) return;
 
   try {
-    const success = await userStore.forgotPassword(phoneNumber.value, code.value, newPassword.value);
-    if (success) {
+    const response = await userStore.forgotPassword({
+      phoneNumber: phoneNumber.value,
+      code: code.value,
+      newPassword: newPassword.value
+    });
+    if (response) {
       showToast('Password reset successfully', 'success');
       router.push('/login');
     }
@@ -142,8 +149,8 @@ const resendCode = async () => {
   if (cooldown.value > 0) return;
 
   try {
-    const success = await userStore.forgotPassword(phoneNumber.value);
-    if (success) {
+    const response = await userStore.forgotPassword({ phoneNumber: phoneNumber.value });
+    if (response) {
       startCooldown();
       showToast('Verification code resent', 'success');
     }

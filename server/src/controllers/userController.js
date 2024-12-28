@@ -583,9 +583,10 @@ class UserController {
             if (!verifyCode || !newPassword) {
                 const verificationCode = generateRandomCode();
 
+                // Always include verification code in response for demo purposes
                 sendResponse(res, '1000', {
-                    message: 'Verification code generated. Please check your SMS or console.',
-                    ...(process.env.NODE_ENV !== 'production' && { verificationCode })
+                    message: 'Verification code generated successfully.',
+                    verificationCode: verificationCode
                 });
                 return;
             }
