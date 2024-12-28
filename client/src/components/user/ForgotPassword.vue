@@ -117,6 +117,7 @@ const { showToast } = useToast();
 const { isLoading } = storeToRefs(userStore);
 
 const step = ref(1);
+const verificationCode = ref('');
 const phoneNumber = ref('');
 const code = ref('');
 const newPassword = ref('');
