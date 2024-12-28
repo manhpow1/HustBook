@@ -589,10 +589,27 @@ class UserController {
             }
 
             // Step 1: Generate and send verification code
-            if (!verifyCode || !newPassword) {
+            if (!verifyCode && !newPassword) {
                 const generatedCode = generateRandomCode();
                 const verificationRef = db.collection('verificationCodes').doc(phoneNumber);
                 
+                // Check for existing verification attempt
+                const existingVerification = await verificationRef.get();
+                if (existingVerification.exists) {
+                    const data = existingVerification.data();
+                    if (Date.now() < data.expiresAt.toDate().getTime()) {
+                        logger.info('Using existing verification code', {
+                            phoneNumber,
+                            expires: data.expiresAt.toDate()
+                        });
+                        sendResponse(res, '1000', {
+                            message: 'Existing verification code is still valid',
+                            verifyCode: data.verifyCode
+                        });
+                        return;
+                    }
+                }
+
                 await verificationRef.set({
                     verifyCode: generatedCode,
                     attempts: 0,
@@ -601,30 +618,35 @@ class UserController {
                     type: 'password_reset'
                 });
 
-                logger.info('Verification code generated for password reset', {
+                logger.info('New verification code generated for password reset', {
                     phoneNumber,
                     expires: new Date(Date.now() + (5 * 60 * 1000))
                 });
 
                 sendResponse(res, '1000', {
                     message: 'Verification code sent successfully',
-                    verifyCode: generatedCode // Only in development
+                    verifyCode: generatedCode
                 });
                 return;
             }
 
             // Step 2: Verify code and reset password
-            logger.info('Attempting password reset', { phoneNumber });
-            await userService.resetPassword(req, phoneNumber, verifyCode, newPassword);
+            if (verifyCode && newPassword) {
+                logger.info('Proceeding with password reset verification', { phoneNumber });
 
-            await req.app.locals.auditLog.logAction(user.uid, null, 'password_reset', {
-                deviceId: req.get('Device-ID'),
-                ip: req.ip,
-                timestamp: new Date().toISOString()
-            });
+                // Step 2: Verify code and reset password
+                logger.info('Attempting password reset', { phoneNumber });
+                await userService.resetPassword(req, phoneNumber, verifyCode, newPassword);
 
-            logger.info('Password reset completed successfully', { phoneNumber });
-            sendResponse(res, '1000', { message: 'Password has been reset successfully' });
+                await req.app.locals.auditLog.logAction(user.uid, null, 'password_reset', {
+                    deviceId: req.get('Device-ID'),
+                    ip: req.ip,
+                    timestamp: new Date().toISOString()
+                });
+
+                logger.info('Password reset completed successfully', { phoneNumber });
+                sendResponse(res, '1000', { message: 'Password has been reset successfully' });
+            }
         } catch (error) {
             logger.error('Forgot Password Error:', error);
             next(error);
