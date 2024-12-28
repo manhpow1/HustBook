@@ -430,23 +430,23 @@ class UserService {
 
     async resetPassword(req, phoneNumber, code, newPassword) {
         try {
-            console.log('Starting password reset process', { phoneNumber });
+            logger.info('Starting password reset process', { phoneNumber });
 
             const user = await this.getUserByphoneNumber(phoneNumber);
-            console.log('User lookup result', { found: !!user });
+            logger.info('User lookup result', { found: !!user });
             if (!user) {
                 throw createError('9995', 'User not found');
             }
 
             const verificationRef = db.collection('verificationCodes').doc(phoneNumber);
             const verificationDoc = await verificationRef.get();
-            console.log('Verification document status', { exists: verificationDoc.exists });
+            logger.info('Verification document status', { exists: verificationDoc.exists });
             if (!verificationDoc.exists) {
                 throw createError('9993', 'Verification code has expired or does not exist');
             }
 
             const verificationData = verificationDoc.data();
-            console.log('Verifying code match', {
+            logger.info('Verifying code match', {
                 storedCode: verificationData.verifyCode,
                 receivedCode: code,
                 matches: verificationData.verifyCode === code
@@ -460,7 +460,7 @@ class UserService {
                 throw createError('9997', 'New password does not meet security requirements');
             }
 
-            console.log('Password validation passed, proceeding with update');
+            logger.info('Password validation passed, proceeding with update');
             const hashedPassword = await hashPassword(newPassword);
             user.password = hashedPassword;
             user.passwordHistory = [hashedPassword, ...user.passwordHistory].slice(0, PASSWORD_HISTORY_SIZE);
@@ -475,10 +475,10 @@ class UserService {
                 })
             ]);
 
-            console.log('Password reset completed successfully', { userId: user.uid });
+            logger.info('Password reset completed successfully', { userId: user.uid });
             return true;
         } catch (error) {
-            console.log('Password reset failed', {
+            logger.error('Password reset failed', {
                 error: error.message,
                 code: error.code,
                 stack: error.stack

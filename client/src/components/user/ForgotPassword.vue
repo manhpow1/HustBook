@@ -109,6 +109,7 @@ import { storeToRefs } from 'pinia';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import logger from '@/services/logging';
 
 const router = useRouter();
 const userStore = useUserStore();
@@ -225,9 +226,9 @@ const handleResetSubmit = async () => {
 
   if (errors.value.code || errors.value.newPassword || errors.value.confirmPassword) return;
 
-  console.log('Sending reset request with:', {
+  logger.info('Sending reset request with:', {
     phoneNumber: phoneNumber.value,
-    code: code.value, // Kiểm tra giá trị này
+    code: code.value,
     newPassword: 'hidden'
   });
 

@@ -634,8 +634,7 @@ export const useUserStore = defineStore('user', () => {
             isLoading.value = true;
             error.value = null;
 
-            // Log để debug
-            console.log('Store received:', { phoneNumber, code, newPassword: '***' });
+            logger.debug('Store received:', { phoneNumber, code, newPassword: '***' });
 
             const payload = { phoneNumber };
 
@@ -644,19 +643,19 @@ export const useUserStore = defineStore('user', () => {
                 payload.newPassword = newPassword;
             }
 
-            console.log('Sending payload:', { ...payload, newPassword: '***' });
+            logger.debug('Sending payload:', { ...payload, newPassword: '***' });
 
             const response = await apiService.forgotPassword(payload);
 
             if (response.data?.code === '1000') {
                 if (!code && !newPassword) {
-                    // Bước 1: Lấy mã xác thực
+                    // Step 1: Get verification code
                     return {
                         success: true,
                         verifyCode: response.data.data.verifyCode
                     };
                 } else if (code && newPassword) {
-                    // Bước 2: Reset password
+                    // Step 2: Reset password
                     successMessage.value = 'Password reset successfully!';
                     showToast('success', successMessage.value);
                     return { success: true };

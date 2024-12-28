@@ -575,7 +575,7 @@ class UserController {
 
             const { phoneNumber, verifyCode, newPassword } = value;
 
-            console.log('Received forgot password request:', {
+            logger.info('Received forgot password request:', {
                 phoneNumber: req.body.phoneNumber,
                 hasVerifyCode: !!req.body.verifyCode,
                 hasNewPassword: !!req.body.newPassword
