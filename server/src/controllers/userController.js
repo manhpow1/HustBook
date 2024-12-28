@@ -16,6 +16,8 @@ class UserController {
         this.refreshToken = this.refreshToken.bind(this);
         this.signup = this.signup.bind(this);
         this.login = this.login.bind(this);
+        this.forgotPassword = this.forgotPassword.bind(this);
+        this.VERIFICATION_CODE_EXPIRY = 5 * 60 * 1000; // 5 minutes in milliseconds
     }
 
     async checkAuth(req, res, next) {
@@ -611,14 +613,14 @@ class UserController {
                 await verificationRef.set({
                     verifyCode: generatedCode,
                     attempts: 0,
-                    expiresAt: new Date(Date.now() + VERIFICATION_CODE_EXPIRY),
+                    expiresAt: new Date(Date.now() + this.VERIFICATION_CODE_EXPIRY),
                     createdAt: new Date(),
                     type: 'password_reset'
                 });
 
                 logger.info('New verification code generated for password reset', {
                     phoneNumber,
-                    expires: new Date(Date.now() + VERIFICATION_CODE_EXPIRY)
+                    expires: new Date(Date.now() + this.VERIFICATION_CODE_EXPIRY)
                 });
 
                 return res.status(200).json({
