@@ -30,18 +30,8 @@ class Logger {
     }
 
     logToConsole(level, logEntry) {
-        const coloredLevel = this.getColoredLevel(level);
-        console[level](`${coloredLevel}: ${logEntry.message}`, logEntry);
-    }
-
-    getColoredLevel(level) {
-        const colors = {
-            error: '\x1b[31m', // Red
-            warn: '\x1b[33m',  // Yellow
-            info: '\x1b[36m',  // Cyan
-            debug: '\x1b[35m'  // Magenta
-        };
-        return `${colors[level]}${level.toUpperCase()}\x1b[0m`;
+        const formattedLevel = `[${level.toUpperCase()}]`;
+        console[level](`${formattedLevel}: ${logEntry.message}`, logEntry);
     }
 
     error(message, meta = {}) {
