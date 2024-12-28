@@ -2,17 +2,16 @@ const animate = require("tailwindcss-animate")
 
 /** @type {import('tailwindcss').Config} */
 module.exports = {
-  darkMode: ["class"],
   safelist: ["dark"],
   prefix: "",
-  
+
   content: [
     './pages/**/*.{js,jsx,vue}',
     './components/**/*.{js,jsx,vue}',
     './app/**/*.{js,jsx,vue}',
     './src/**/*.{js,jsx,vue}',
-	],
-  
+  ],
+
   theme: {
     container: {
       center: true,
@@ -23,6 +22,25 @@ module.exports = {
     },
     extend: {
       colors: {
+        gray: {
+          50: "#f9fafb",
+          300: "#d1d5db",
+          500: "#6b7280",
+          900: "#111827",
+        },
+        indigo: {
+          500: "#6366f1",
+          600: "#4f46e5",
+          700: "#4338ca",
+        },
+        red: {
+          600: "#dc2626",
+        },
+        green: {
+          50: "#f0fdf4",
+          400: "#4ade80",
+          800: "#065f46",
+        },
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
         ring: "hsl(var(--ring))",
