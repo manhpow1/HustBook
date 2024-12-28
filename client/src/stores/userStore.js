@@ -631,7 +631,7 @@ export const useUserStore = defineStore('user', () => {
 
     const forgotPassword = async ({ phoneNumber, code, newPassword }) => {
         try {
-            console.debug("forgotPassword: Function called with params", { phoneNumber, code, newPassword });
+            logger.debug("forgotPassword: Function called with params", { phoneNumber, code, newPassword });
             isLoading.value = true;
             error.value = null;
 
@@ -641,18 +641,18 @@ export const useUserStore = defineStore('user', () => {
                 ...(newPassword && { newPassword })
             };
 
-            console.debug("forgotPassword: Payload constructed", payload);
+            logger.debug("forgotPassword: Payload constructed", payload);
 
             const response = await apiService.forgotPassword(payload);
 
-            console.debug("forgotPassword: API response received", response);
+            logger.debug("forgotPassword: API response received", response);
 
             if (response.data?.code === '1000') {
-                console.debug("forgotPassword: Successful response code 1000");
+                logger.debug("forgotPassword: Successful response code 1000");
 
                 if (!code && !newPassword) {
                     // Step 1: Got verification code
-                    console.debug("forgotPassword: Step 1 - Verification code sent");
+                    logger.debug("forgotPassword: Step 1 - Verification code sent");
                     forgotPasswordPhone.value = phoneNumber;
                     successMessage.value = 'Verification code sent successfully';
                     showToast('success', successMessage.value);
@@ -664,7 +664,7 @@ export const useUserStore = defineStore('user', () => {
                     };
                 } else {
                     // Reset password complete
-                    console.debug("forgotPassword: Step 2 - Password reset complete");
+                    logger.debug("forgotPassword: Step 2 - Password reset complete");
                     successMessage.value = 'Password reset successfully!';
                     showToast('success', successMessage.value);
                     resetForgotPasswordState();
@@ -672,15 +672,15 @@ export const useUserStore = defineStore('user', () => {
                 }
             }
 
-            console.warn("forgotPassword: Unexpected response code", response.data?.code);
+            logger.warn("forgotPassword: Unexpected response code", response.data?.code);
             return { success: false };
         } catch (err) {
-            console.error("forgotPassword: Error occurred", err);
+            logger.error("forgotPassword: Error occurred", err);
             handleAuthError(err);
             return { success: false };
         } finally {
             isLoading.value = false;
-            console.debug("forgotPassword: isLoading set to false");
+            logger.debug("forgotPassword: isLoading set to false");
         }
     };
 
