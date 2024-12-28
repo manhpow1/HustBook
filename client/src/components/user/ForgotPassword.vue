@@ -8,7 +8,9 @@
           <Input v-model="phoneNumber" type="tel" placeholder="Enter your phone number" :error="errors.phoneNumber"
             @input="validatePhoneNumber" />
           <div v-if="verificationCode" class="mt-2 p-2 bg-blue-50 border border-blue-200 rounded">
-            <p class="text-sm text-blue-600">Verification Code: <span class="font-mono font-bold">{{ verificationCode }}</span></p>
+            <p class="text-sm text-blue-600">
+              Verification Code: <span class="font-mono font-bold">{{ verificationCode }}</span>
+            </p>
           </div>
         </div>
         <Button type="submit" :loading="isLoading" class="w-full">
@@ -51,7 +53,6 @@
 <script setup>
 import { ref, onBeforeUnmount } from 'vue';
 import { useRouter } from 'vue-router';
-import { useFormValidation } from '../../composables/useFormValidation';
 import { useUserStore } from '../../stores/userStore';
 import { useToast } from '../../composables/useToast';
 import { storeToRefs } from 'pinia';
@@ -61,7 +62,6 @@ import { Card } from '@/components/ui/card';
 
 const router = useRouter();
 const userStore = useUserStore();
-const { validateField } = useFormValidation();
 const { showToast } = useToast();
 
 const { isLoading } = storeToRefs(userStore);
@@ -81,34 +81,51 @@ const errors = ref({
   confirmPassword: '',
 });
 
-const validatePhoneNumber = async () => {
-  errors.value.phoneNumber = await validateField('phoneNumber', phoneNumber.value, [
-    value => !value && 'Phone number is required',
-    value => !/^0\d{9}$/.test(value) && 'Invalid phone number format'
-  ]);
+const validatePhoneNumber = () => {
+  const value = phoneNumber.value;
+  if (!value) {
+    errors.value.phoneNumber = 'Phone number is required';
+  } else if (!/^0\d{9}$/.test(value)) {
+    errors.value.phoneNumber = 'Invalid phone number format';
+  } else {
+    errors.value.phoneNumber = '';
+  }
 };
 
-const validateCode = async () => {
-  errors.value.code = await validateField('code', code.value, [
-    value => !value && 'Verification code is required',
-    value => !/^\d{6}$/.test(value) && 'Code must be 6 digits'
-  ]);
+const validateCode = () => {
+  const value = code.value;
+  if (!value) {
+    errors.value.code = 'Verification code is required';
+  } else if (!/^\d{6}$/.test(value)) {
+    errors.value.code = 'Code must be 6 digits';
+  } else {
+    errors.value.code = '';
+  }
 };
 
-const validatePassword = async () => {
-  errors.value.newPassword = await validateField('password', newPassword.value, [
-    value => !value && 'Password is required',
-    value => value.length < 6 && 'Password must be at least 6 characters',
-    value => value.length > 20 && 'Password must be less than 20 characters'
-  ]);
+const validatePassword = () => {
+  const value = newPassword.value;
+  if (!value) {
+    errors.value.newPassword = 'Password is required';
+  } else if (value.length < 8) {
+    errors.value.newPassword = 'Password must be at least 8 characters';
+  } else if (value.length > 30) {
+    errors.value.newPassword = 'Password must be less than 30 characters';
+  } else {
+    errors.value.newPassword = '';
+  }
 };
 
-const validateConfirmPassword = async () => {
-  errors.value.confirmPassword = newPassword.value !== confirmPassword.value ? 'Passwords do not match' : '';
+const validateConfirmPassword = () => {
+  if (newPassword.value !== confirmPassword.value) {
+    errors.value.confirmPassword = 'Passwords do not match';
+  } else {
+    errors.value.confirmPassword = '';
+  }
 };
 
 const handlePhoneSubmit = async () => {
-  await validatePhoneNumber();
+  validatePhoneNumber();
   if (errors.value.phoneNumber) return;
 
   try {
@@ -124,9 +141,9 @@ const handlePhoneSubmit = async () => {
 };
 
 const handleResetSubmit = async () => {
-  await validateCode();
-  await validatePassword();
-  await validateConfirmPassword();
+  validateCode();
+  validatePassword();
+  validateConfirmPassword();
 
   if (errors.value.code || errors.value.newPassword || errors.value.confirmPassword) return;
 
@@ -134,7 +151,7 @@ const handleResetSubmit = async () => {
     const response = await userStore.forgotPassword({
       phoneNumber: phoneNumber.value,
       code: code.value,
-      newPassword: newPassword.value
+      newPassword: newPassword.value,
     });
     if (response) {
       showToast('Password reset successfully', 'success');
