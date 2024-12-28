@@ -442,14 +442,15 @@ const validateGetUserInfo = (data) => {
 };
 
 const validateForgotPassword = (data) => {
+    // Kiểm tra và lấy giá trị phoneNumber
+    const phoneNumber = data.phoneNumber?.phoneNumber || data.phoneNumber;
+
     const sanitizedData = {
-        ...data,
-        phoneNumber: sanitizeInput(data.phoneNumber),
+        phoneNumber: sanitizeInput(phoneNumber),
         code: data.code,
-        newPassword: data.newPassword // Don't sanitize password
+        newPassword: data.newPassword
     };
-    console.log("Debug - Phone number before sanitization:", data.phoneNumber);
-    console.log("Debug - Phone number after sanitization:", sanitizedData.phoneNumber);
+
     return forgotPasswordSchema.validate(sanitizedData, { abortEarly: false });
 };
 
