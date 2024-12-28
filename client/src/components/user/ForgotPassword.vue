@@ -2,6 +2,15 @@
   <div class="flex flex-col items-center justify-center p-4 min-h-screen">
     <Card class="w-full max-w-md p-8">
       <h2 class="text-2xl font-bold mb-6 text-center">Reset Password</h2>
+      <Alert v-if="verificationCode" class="mb-4">
+        <AlertDescription class="flex items-center justify-between">
+          <span>Verification Code: <strong>{{ verificationCode }}</strong></span>
+          <Button variant="outline" size="sm" class="flex items-center gap-2" @click="copyCode">
+            <Copy class="h-4 w-4" />
+            Copy
+          </Button>
+        </AlertDescription>
+      </Alert>
 
       <!-- Step 1: Phone Number Form -->
       <form v-if="step === 1" @submit.prevent="handlePhoneSubmit" class="space-y-4">
@@ -40,7 +49,8 @@
           <div v-if="cooldown > 0" class="mt-2 text-sm text-gray-600">
             Resend code in {{ cooldown }}s
           </div>
-          <Button v-else type="button" @click="resendCode" class="mt-2 text-sm text-blue-600 hover:text-blue-800">
+          <Button v-else type="button" variant="ghost" @click="resendCode"
+            class="mt-2 text-sm text-blue-600 hover:text-blue-800">
             Resend verification code
           </Button>
         </div>
@@ -82,6 +92,8 @@ import { useToast } from '@/composables/useToast';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Copy } from 'lucide-vue-next';
 import logger from '@/services/logging';
 
 const router = useRouter();
@@ -98,6 +110,7 @@ const cooldown = ref(0);
 const cooldownTimer = ref(null);
 const submitted = ref(false);
 const remainingAttempts = ref(5);
+const verificationCode = ref('');
 
 const errors = ref({
   phoneNumber: '',
@@ -114,7 +127,38 @@ const isSubmitDisabled = computed(() => {
   return !code.value || !newPassword.value || !confirmPassword.value || userStore.isLoading;
 });
 
-// Validators
+// Methods
+const copyCode = async () => {
+  try {
+    await navigator.clipboard.writeText(verificationCode.value);
+    showToast('Code copied to clipboard', 'success');
+  } catch (error) {
+    showToast('Failed to copy code', 'error');
+    logger.error('Copy code error:', error);
+  }
+};
+
+const clearErrors = () => {
+  errors.value = {
+    phoneNumber: '',
+    code: '',
+    newPassword: '',
+    confirmPassword: ''
+  };
+  submitted.value = false;
+};
+
+const startCooldown = () => {
+  cooldown.value = 60;
+  cooldownTimer.value = setInterval(() => {
+    if (cooldown.value > 0) {
+      cooldown.value--;
+    } else {
+      clearInterval(cooldownTimer.value);
+    }
+  }, 1000);
+};
+
 const validatePhoneNumber = () => {
   const value = phoneNumber.value;
   if (!value) {
@@ -170,28 +214,6 @@ const validateConfirmPassword = () => {
   return true;
 };
 
-// Methods
-const clearErrors = () => {
-  errors.value = {
-    phoneNumber: '',
-    code: '',
-    newPassword: '',
-    confirmPassword: ''
-  };
-  submitted.value = false;
-};
-
-const startCooldown = () => {
-  cooldown.value = 60;
-  cooldownTimer.value = setInterval(() => {
-    if (cooldown.value > 0) {
-      cooldown.value--;
-    } else {
-      clearInterval(cooldownTimer.value);
-    }
-  }, 1000);
-};
-
 const handlePhoneSubmit = async () => {
   submitted.value = true;
   if (!validatePhoneNumber()) return;
@@ -199,6 +221,7 @@ const handlePhoneSubmit = async () => {
   try {
     const response = await userStore.forgotPassword({ phoneNumber: phoneNumber.value });
     if (response?.success) {
+      verificationCode.value = response.verifyCode;
       step.value = 2;
       startCooldown();
       showToast('Verification code sent successfully', 'success');
@@ -247,6 +270,7 @@ const resendCode = async () => {
   try {
     const response = await userStore.forgotPassword({ phoneNumber: phoneNumber.value });
     if (response?.success) {
+      verificationCode.value = response.verifyCode;
       startCooldown();
       showToast('Verification code resent', 'success');
     }
