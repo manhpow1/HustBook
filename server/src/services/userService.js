@@ -432,7 +432,7 @@ class UserService {
         try {
             logger.info('Starting password reset verification', { phoneNumber });
 
-            const user = await getUserByPhoneNumber(phoneNumber);
+            const user = await this.getUserByphoneNumber(phoneNumber);
             if (!user) {
                 logger.warn('User not found during password reset', { phoneNumber });
                 throw createError('9995', 'User not found');
