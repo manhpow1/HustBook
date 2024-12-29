@@ -1,29 +1,31 @@
 <template>
-  <div id="app" class="font-sans min-h-screen flex flex-col">
-    <!-- Global Error Boundary -->
-    <ErrorBoundary component-name="App">
-      <template #default>
-        <Layout>
-          <NewItemsNotification />
-          <!-- Router View with Keep-Alive for Specific Components -->
-          <router-view v-slot="{ Component }">
-            <KeepAlive :include="cachedComponents">
-              <component :is="Component" />
-            </KeepAlive>
-          </router-view>
-        </Layout>
-      </template>
-      <template #fallback>
-        <!-- Fallback Loading Indicator -->
-        <div class="loading flex items-center justify-center h-screen" role="status" aria-live="polite">
-          <Loader class="animate-spin h-10 w-10 text-indigo-600" aria-hidden="true" />
-          <p class="ml-2 text-lg font-medium text-gray-700">Loading...</p>
-        </div>
-      </template>
-    </ErrorBoundary>
-    <!-- Global Toast Notifications -->
-    <Toast />
-  </div>
+  <ToastProvider>
+    <div id="app" class="font-sans min-h-screen flex flex-col">
+      <!-- Global Error Boundary -->
+      <ErrorBoundary component-name="App">
+        <template #default>
+          <Layout>
+            <NewItemsNotification />
+            <!-- Router View with Keep-Alive for Specific Components -->
+            <router-view v-slot="{ Component }">
+              <KeepAlive :include="cachedComponents">
+                <component :is="Component" />
+              </KeepAlive>
+            </router-view>
+          </Layout>
+        </template>
+        <template #fallback>
+          <!-- Fallback Loading Indicator -->
+          <div class="loading flex items-center justify-center h-screen" role="status" aria-live="polite">
+            <Loader class="animate-spin h-10 w-10 text-indigo-600" aria-hidden="true" />
+            <p class="ml-2 text-lg font-medium text-gray-700">Loading...</p>
+          </div>
+        </template>
+      </ErrorBoundary>
+      <!-- Global Toast Notifications -->
+      <Toast />
+    </div>
+  </ToastProvider>
 </template>
 
 <script setup>
@@ -37,7 +39,7 @@ import { useUserStore } from './stores/userStore';
 import { useHead } from '@unhead/vue';
 import NewItemsNotification from './components/notification/NewItemsNotification.vue';
 import { useGlobalErrorHandler } from './composables/useGlobalErrorHandler';
-import { Toast } from './components/ui/toast';
+import { Toast, ToastProvider } from './components/ui/toast';
 
 // Initialize Global Error Handling
 logger.debug('Initializing global error handling...');
