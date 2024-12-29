@@ -74,8 +74,14 @@
         </form>
 
         <!-- Success and Error Messages -->
-        <Alert v-if="successMessage" type="success" title="Success" :message="successMessage" class="mt-4" />
-        <Alert v-if="errorMessage" type="error" title="Error" :message="errorMessage" class="mt-4" />
+        <Alert v-if="successMessage" variant="success">
+            <AlertTitle>Success</AlertTitle>
+            <AlertDescription>{{ successMessage }}</AlertDescription>
+        </Alert>
+        <Alert v-if="errorMessage" variant="destructive">
+            <AlertTitle>Error</AlertTitle>
+            <AlertDescription>{{ errorMessage }}</AlertDescription>
+        </Alert>
 
         <!-- Upload Progress -->
         <transition name="fade">
@@ -102,12 +108,12 @@ import { PencilIcon, LoaderIcon, SmileIcon } from 'lucide-vue-next';
 import FileUpload from '../shared/FileUpload.vue';
 import EmojiPicker from '../ui/EmojiPicker.vue';
 import { Button } from '@/components/ui/button';
-import { Alert } from '@/components/ui/alert';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import UnsavedChangesModal from '../shared/UnsavedChangesModal.vue';
 import { usePostStore } from '../../stores/postStore';
 import { useFormValidation } from '../../composables/useFormValidation';
 import { useErrorHandler } from '../../composables/useErrorHandler';
-import { debounce } from 'lodash-es'
+import { debounce } from 'lodash-es';
 import { sanitizeInput } from '../../utils/sanitize';
 import logger from '../../services/logging';
 
