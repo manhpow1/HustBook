@@ -41,15 +41,9 @@ class SearchController {
             if (error) {
                 throw createError('1002', error.details.map(detail => detail.message).join(', '));
             }
-
             const { index, count } = value;
             const userId = req.user.uid;
-
             const savedSearches = await searchService.getSavedSearches(userId, index, count);
-
-            if (savedSearches.length === 0) {
-                throw createError('9994', 'No data or end of list data');
-            }
 
             return sendResponse(res, '1000', {
                 data: savedSearches.map(search => ({

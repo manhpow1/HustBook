@@ -51,16 +51,15 @@ class SearchService {
         try {
             const query = queryDocuments(collections.savedSearches, 'userId', '==', userId);
             const savedSearches = await query;
-            
+
             // Return empty array if no saved searches found
-            if (!savedSearches || savedSearches.length === 0) {
+            if (!savedSearches) {
                 return [];
             }
 
             return savedSearches
                 .sort((a, b) => b.created - a.created)
                 .slice(index, index + count);
-
         } catch (error) {
             logger.error('Get saved searches service error:', error);
             throw createError('9999', 'Exception error');
