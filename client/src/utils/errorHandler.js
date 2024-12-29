@@ -32,7 +32,10 @@ class ErrorHandler {
     constructor() {
         this.criticalErrors = ['9998', '9999', '1008', '1009', '9995'];
         this.toast = useToast();
-        this.userStore = useUserStore();
+    }
+
+    get userStore() {
+        return useUserStore();
     }
 
     async handle(error) {
