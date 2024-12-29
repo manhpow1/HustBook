@@ -23,8 +23,8 @@ import {computed } from 'vue';
 import { XIcon } from 'lucide-vue-next';
 import { useNotificationStore } from '../../stores/notificationStore';
 import { formatNotificationTime } from '../../utils/helpers';
-import { useErrorHandler } from '../../composables/useErrorHandler';
-import { useToast } from '../../composables/useToast';
+import { useErrorHandler } from '@/utils/errorHandler';
+import { useToast } from '../ui/toast';
 
 const props = defineProps({
     notification: {

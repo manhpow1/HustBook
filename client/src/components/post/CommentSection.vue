@@ -69,7 +69,7 @@ import { ref, computed, onMounted, onBeforeUnmount } from 'vue';
 import { useRouter } from 'vue-router';
 import { useCommentStore } from '../../stores/commentStore';
 import { useNotificationStore } from '../../stores/notificationStore';
-import { useErrorHandler } from '../../composables/useErrorHandler';
+import { useErrorHandler } from '@/utils/errorHandler';
 import { useFormValidation } from '../../composables/useFormValidation';
 import {debounce} from 'lodash-es';
 import logger from '../../services/logging';

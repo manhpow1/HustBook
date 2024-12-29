@@ -118,7 +118,7 @@ import { Button} from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import ErrorBoundary from '../components/shared/ErrorBoundary.vue';
 import { sanitizeOutput } from '../utils/sanitize';
-import { handleError } from '../utils/errorHandler';
+import { useErrorHandler } from '@/utils/errorHandler';
 
 // Lazy Loaded Components
 const AddPost = defineAsyncComponent(() => import('../components/post/AddPost.vue'));
@@ -127,6 +127,7 @@ const PostSkeleton = defineAsyncComponent(() => import('../components/shared/Pos
 const router = useRouter();
 const postStore = usePostStore();
 const userStore = useUserStore();
+const { handleError } = useErrorHandler();
 
 const loadMorePosts = () => {
   console.log("Load more posts triggered");

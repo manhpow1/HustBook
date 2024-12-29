@@ -1,6 +1,6 @@
 import { io } from 'socket.io-client';
 import { useUserStore } from '../stores/userStore';
-import { useToast } from '../composables/useToast';
+import { useToast } from '@/components/ui/toast';
 import { useChatStore } from '../stores/chatStore';
 import logger from '../services/logging';
 

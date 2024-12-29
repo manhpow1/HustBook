@@ -1,11 +1,12 @@
 import { ref } from 'vue';
 import axios from 'axios';
-import { handleError } from '../utils/errorHandler';
+import { useErrorHandler } from '@/utils/errorHandler';
 
 export function useApi(onSuccess = () => { }) {
     const isLoading = ref(false);
     const data = ref(null);
     const error = ref(null);
+    const { handleError } = useErrorHandler();
     const request = async (config) => {
         isLoading.value = true;
         error.value = null;

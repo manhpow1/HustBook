@@ -1,121 +1,114 @@
 <template>
-    <div class="max-w-2xl mx-auto mt-8 p-6 bg-white rounded-lg shadow-xl" role="form"
-        aria-labelledby="create-post-heading">
-        <h2 id="create-post-heading" class="text-2xl font-bold mb-6 text-gray-800 flex items-center">
-            <PencilIcon class="w-6 h-6 mr-2 text-indigo-600" aria-hidden="true" />
-            Create a New Post
-        </h2>
-        <form @submit.prevent="submitPost" class="space-y-6">
-            <!-- Description Field -->
-            <div>
-                <label for="description" class="block text-sm font-medium text-gray-700 mb-2">
-                    Description
-                </label>
-                <textarea v-model="description" id="description" rows="3" :class="[
-                    'mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 transition duration-300 ease-in-out',
-                    { 'border-red-500': descriptionError }
-                ]" placeholder="What's on your mind?" aria-describedby="description-error" @input="onDescriptionInput"
-                    data-testid="description-textarea"></textarea>
-                <p v-if="descriptionError" id="description-error" class="mt-2 text-sm text-red-600">
-                    {{ descriptionError }}
-                </p>
-            </div>
+    <div class="max-w-2xl mx-auto mt-8 p-6" role="form">
+        <Card>
+            <CardHeader>
+                <CardTitle class="flex items-center">
+                    <PencilIcon class="w-6 h-6 mr-2 text-primary" />
+                    Create a New Post
+                </CardTitle>
+            </CardHeader>
+            <CardContent>
+                <form @submit.prevent="submitPost" class="space-y-6">
+                    <div class="space-y-2">
+                        <Label for="description">Description</Label>
+                        <Textarea v-model="description" id="description"
+                            :class="{ 'border-destructive': descriptionError }" placeholder="What's on your mind?"
+                            @input="onDescriptionInput" data-testid="description-textarea" />
+                        <p v-if="descriptionError" class="text-sm text-destructive">
+                            {{ descriptionError }}
+                        </p>
+                    </div>
 
-            <!-- Status Select Field -->
-            <div>
-                <label for="status-select" class="block text-sm font-medium text-gray-700 mb-2">
-                    How are you feeling?
-                </label>
-                <select v-model="status" id="status-select" :class="[
-                    'mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md',
-                    { 'border-red-500': statusError }
-                ]" aria-describedby="status-error" data-testid="status-select">
-                    <option value="">Select a status</option>
-                    <option v-for="option in statusOptions" :key="option.value" :value="option.value">
-                        {{ option.label }}
-                    </option>
-                </select>
-                <p v-if="statusError" id="status-error" class="mt-2 text-sm text-red-600">
-                    {{ statusError }}
-                </p>
-            </div>
+                    <div class="space-y-2">
+                        <Label for="status-select">How are you feeling?</Label>
+                        <Select v-model="status">
+                            <SelectTrigger :class="{ 'border-destructive': statusError }">
+                                <SelectValue placeholder="Select a status" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem v-for="option in statusOptions" :key="option.value" :value="option.value">
+                                    {{ option.label }}
+                                </SelectItem>
+                            </SelectContent>
+                        </Select>
+                        <p v-if="statusError" class="text-sm text-destructive">
+                            {{ statusError }}
+                        </p>
+                    </div>
 
-            <!-- File Upload Component -->
-            <div>
-                <label class="block text-sm font-medium text-gray-700 mb-2">
-                    Upload Images or Videos
-                </label>
-                <FileUpload v-model:files="files" :maxFiles="4" @upload-progress="handleUploadProgress"
-                    @upload-error="handleUploadError" aria-describedby="file-error" data-testid="file-upload" />
-                <p v-if="fileError" id="file-error" class="mt-2 text-sm text-red-600">
-                    {{ fileError }}
-                </p>
-            </div>
+                    <div class="space-y-2">
+                        <Label>Upload Images or Videos</Label>
+                        <FileUpload v-model:files="files" :maxFiles="4" @upload-progress="handleUploadProgress"
+                            @upload-error="handleUploadError" data-testid="file-upload" />
+                        <p v-if="fileError" class="text-sm text-destructive">
+                            {{ fileError }}
+                        </p>
+                    </div>
 
-            <!-- Emoji Picker -->
-            <div class="relative">
-                <Button type="button" @click="toggleEmojiPicker" variant="primary"
-                    class="inline-flex items-center px-4 py-2 text-sm font-medium rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2"
-                    aria-label="Toggle emoji picker" data-testid="toggle-emoji-picker-button">
-                    <SmileIcon class="w-5 h-5 mr-2" aria-hidden="true" />
-                    Add Emoji
-                </Button>
-                <EmojiPicker v-if="showEmojiPicker" @select="insertEmoji"
-                    class="absolute z-10 mt-2 w-48 bg-white border border-gray-200 rounded-lg shadow-lg p-2" />
-            </div>
+                    <div class="relative">
+                        <Button type="button" variant="outline" @click="toggleEmojiPicker"
+                            data-testid="toggle-emoji-picker-button">
+                            <SmileIcon class="w-5 h-5 mr-2" />
+                            Add Emoji
+                        </Button>
+                        <EmojiPicker v-if="showEmojiPicker" @select="insertEmoji" class="absolute z-10 mt-2" />
+                    </div>
 
-            <!-- Submit Button -->
-            <Button type="submit" :disabled="isLoading || !isFormValid" variant="primary"
-                class="w-full flex justify-center py-2 px-4 rounded-md shadow-sm text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed transition duration-300 ease-in-out"
-                :aria-busy="isLoading ? 'true' : 'false'" data-testid="submit-post-button">
-                <LoaderIcon v-if="isLoading" class="animate-spin -ml-1 mr-2 h-5 w-5 text-white" aria-hidden="true" />
-                {{ isLoading ? 'Posting...' : 'Create Post' }}
-            </Button>
-        </form>
+                    <Button type="submit" :disabled="isLoading || !isFormValid" class="w-full">
+                        <LoaderIcon v-if="isLoading" class="animate-spin mr-2" />
+                        {{ isLoading ? 'Posting...' : 'Create Post' }}
+                    </Button>
+                </form>
 
-        <!-- Success and Error Messages -->
-        <Alert v-if="successMessage" variant="success">
-            <AlertTitle>Success</AlertTitle>
-            <AlertDescription>{{ successMessage }}</AlertDescription>
-        </Alert>
-        <Alert v-if="errorMessage" variant="destructive">
-            <AlertTitle>Error</AlertTitle>
-            <AlertDescription>{{ errorMessage }}</AlertDescription>
-        </Alert>
+                <Toaster />
+                <ToastProvider>
+                    <ToastViewport />
+                </ToastProvider>
 
-        <!-- Upload Progress -->
-        <transition name="fade">
-            <div v-if="showUploadProgress" class="fixed top-4 right-4 bg-white p-4 rounded-lg shadow-md" role="status"
-                aria-live="polite" data-testid="upload-progress">
-                <p class="text-sm font-medium text-gray-700 mb-2">Uploading post...</p>
-                <div class="w-48 h-2 bg-gray-200 rounded-full">
-                    <div class="h-full bg-indigo-600 rounded-full transition-width duration-300"
-                        :style="{ width: `${uploadProgress}%` }"></div>
-                </div>
-            </div>
-        </transition>
+                <Progress v-if="showUploadProgress" :value="uploadProgress" class="w-48 fixed top-4 right-4" />
 
-        <!-- Unsaved Changes Modal -->
-        <UnsavedChangesModal v-model="showUnsavedChangesModal" @save="saveChanges" @discard="discardChanges"
-            @cancel="cancelNavigation" />
+                <Dialog v-model:open="showUnsavedChangesModal">
+                    <DialogContent>
+                        <DialogHeader>
+                            <DialogTitle>Unsaved Changes</DialogTitle>
+                            <DialogDescription>
+                                Do you want to save your changes before leaving?
+                            </DialogDescription>
+                        </DialogHeader>
+                        <DialogFooter>
+                            <Button variant="outline" @click="cancelNavigation">Cancel</Button>
+                            <Button variant="destructive" @click="discardChanges">Discard</Button>
+                            <Button @click="saveChanges">Save</Button>
+                        </DialogFooter>
+                    </DialogContent>
+                </Dialog>
+            </CardContent>
+        </Card>
     </div>
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onBeforeUnmount } from 'vue';
-import { useRouter } from 'vue-router';
-import { PencilIcon, LoaderIcon, SmileIcon } from 'lucide-vue-next';
-import FileUpload from '../shared/FileUpload.vue';
-import EmojiPicker from '../ui/EmojiPicker.vue';
-import { Button } from '@/components/ui/button';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import UnsavedChangesModal from '../shared/UnsavedChangesModal.vue';
-import { usePostStore } from '../../stores/postStore';
-import { useFormValidation } from '../../composables/useFormValidation';
-import { useErrorHandler } from '../../composables/useErrorHandler';
-import { debounce } from 'lodash-es';
-import { sanitizeInput } from '../../utils/sanitize';
-import logger from '../../services/logging';
+import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
+import { useRouter } from 'vue-router'
+import { useToast } from '@/components/ui/toast'
+import { PencilIcon, LoaderIcon, SmileIcon } from 'lucide-vue-next'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Toaster, ToastProvider, ToastViewport } from '@/components/ui/toast'
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { AlertDialog, AlertDialogAction, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Button } from '@/components/ui/button'
+import { Progress } from '@/components/ui/progress'
+import { Label } from '@/components/ui/label'
+import { Textarea } from '@/components/ui/textarea'
+import FileUpload from '../shared/FileUpload.vue'
+import EmojiPicker from '../ui/EmojiPicker.vue'
+import { usePostStore } from '../../stores/postStore'
+import { useFormValidation } from '../../composables/useFormValidation'
+import { useErrorHandler } from '@/utils/errorHandler'
+import { debounce } from 'lodash-es'
+import { sanitizeInput } from '../../utils/sanitize'
+import logger from '../../services/logging'
 
 const router = useRouter();
 const postStore = usePostStore();

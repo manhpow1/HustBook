@@ -45,7 +45,7 @@
 <script setup>
 import { ref, onMounted } from 'vue';
 import { useFriendStore } from '../../stores/friendStore';
-import { useToast } from '../../composables/useToast';
+import { useToast } from '../ui/toast';
 import FriendSuggestionSkeleton from './FriendSuggestionSkeleton.vue';
 import ConfirmDialog from '../ui/ConfirmDialog.vue';
 import defaultAvatar from '../../assets/avatar-default.svg';

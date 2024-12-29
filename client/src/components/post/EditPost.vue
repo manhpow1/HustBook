@@ -111,7 +111,7 @@ import { Button } from '@/components/ui/button';
 import UnsavedChangesModal from '../shared/UnsavedChangesModal.vue';
 import { usePostStore } from '../../stores/postStore';
 import { useFormValidation } from '../../composables/useFormValidation';
-import { useErrorHandler } from '../../composables/useErrorHandler';
+import { useErrorHandler } from '@/utils/errorHandler';
 import { debounce } from 'lodash-es';
 import { sanitizeInput } from '../../utils/sanitize';
 import logger from '../../services/logging';

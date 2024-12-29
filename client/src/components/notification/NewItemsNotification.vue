@@ -15,8 +15,8 @@ import { onMounted, onUnmounted } from 'vue';
 import { useNotificationStore } from '../../stores/notificationStore';
 import { usePostStore } from '../../stores/postStore';
 import { storeToRefs } from 'pinia';
-import { useErrorHandler } from '../../composables/useErrorHandler';
-import { useToast } from '../../composables/useToast';
+import { useErrorHandler } from '@/utils/errorHandler';
+import { useToast } from '../ui/toast';
 import { CirclePlus } from 'lucide-vue-next';
 import logger from '../../services/logging';
 

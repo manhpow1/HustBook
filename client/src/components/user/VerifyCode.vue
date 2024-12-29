@@ -88,7 +88,7 @@ import { ShieldCheck, RefreshCw, Loader2, XCircleIcon, AlertTriangle, ArrowLeft,
 import { useRouter, useRoute } from 'vue-router';
 import { useUserStore } from '../../stores/userStore';
 import { storeToRefs } from 'pinia';
-import { useToast } from '../../composables/useToast';
+import { useToast } from '../ui/toast';
 
 const router = useRouter();
 const route = useRoute();

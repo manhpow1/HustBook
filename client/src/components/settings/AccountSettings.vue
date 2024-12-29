@@ -69,7 +69,7 @@
 <script setup>
 import { ref } from 'vue';
 import { useSettingsStore } from '../../stores/settingsStore';
-import { useToast } from '../../composables/useToast';
+import { useToast } from '../ui/toast';
 import EditProfileForm from '../user/EditProfileForm.vue';
 
 const settingsStore = useSettingsStore();

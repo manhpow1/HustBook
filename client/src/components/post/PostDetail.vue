@@ -94,7 +94,7 @@ import { useUserStore } from '../../stores/userStore';
 import { AlertCircleIcon } from 'lucide-vue-next';
 import { formatNumber } from '../../utils/numberFormat';
 import { useConfirmDialog } from '@vueuse/core';
-import { useErrorHandler } from '../../composables/useErrorHandler';
+import { useErrorHandler } from '@/utils/errorHandler';
 
 // Asynchronously load components to reduce initial bundle size
 const DeletePost = defineAsyncComponent(() => import('./DeletePost.vue'));

@@ -95,7 +95,7 @@ import { UserPlusIcon, CheckCircleIcon, XCircleIcon, LoaderIcon } from 'lucide-v
 import { useFormValidation } from '../../composables/useFormValidation';
 import { useImageProcessing } from '../../composables/useImageProcessing';
 import { sanitizeInput } from '../../utils/sanitize';
-import { useToast } from '../../composables/useToast';
+import { useToast } from '../ui/toast';
 import { storeToRefs } from 'pinia';
 
 const router = useRouter();

@@ -54,7 +54,7 @@
 <script setup>
 import { ref, onMounted } from 'vue';
 import { usefriendStore } from '../../stores/friendStore';
-import { useToast } from '../../composables/useToast';
+import { useToast } from '../ui/toast';
 import ConfirmDialog from '../shared/ConfirmDialog.vue';
 
 const friendStore = usefriendStore();

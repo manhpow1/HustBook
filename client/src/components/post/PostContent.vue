@@ -24,7 +24,7 @@
 <script setup>
 import { computed } from 'vue';
 import { sanitizeOutput } from '../../utils/sanitize';
-import { useErrorHandler } from '../../composables/useErrorHandler';
+import { useErrorHandler } from '@/utils/errorHandler';
 import { useDebounce } from '../../composables/useDebounce';
 
 // Define component props

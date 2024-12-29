@@ -116,7 +116,7 @@ import { ShieldCheck, CheckCircleIcon, XCircleIcon, CopyIcon, CheckIcon, ArrowRi
 import { useRouter, useRoute } from 'vue-router';
 import { useUserStore } from '../../stores/userStore';
 import { useFormValidation } from '../../composables/useFormValidation';
-import { useToast } from '../../composables/useToast';
+import { useToast } from '../ui/toast';
 import { storeToRefs } from 'pinia';
 
 const router = useRouter();

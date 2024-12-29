@@ -65,7 +65,7 @@ import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue';
 import { LoaderIcon } from 'lucide-vue-next';
 import { useFormValidation } from '../../composables/useFormValidation';
 import { useApi } from '../../composables/useAPI';
-import { useToast } from '../../composables/useToast';
+import { useToast } from '../ui/toast';
 import { sanitizeInput } from '../../utils/sanitize';
 
 // Define component props

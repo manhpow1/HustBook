@@ -52,8 +52,8 @@
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue';
 import { XIcon, ChevronLeftIcon, ChevronRightIcon } from 'lucide-vue-next';
 import { useRateLimiter } from '../../composables/useRateLimiter';
-import { useErrorHandler } from '../../composables/useErrorHandler';
-import { useToast } from '../../composables/useToast';
+import { useErrorHandler } from '@/utils/errorHandler';
+import { useToast } from '../ui/toast';
 
 // Define component props
 const props = defineProps({

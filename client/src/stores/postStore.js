@@ -2,7 +2,7 @@ import { defineStore } from 'pinia';
 import { ref, computed } from 'vue';
 import apiService from '../services/api';
 import { formatNumber } from '../utils/numberFormat';
-import { useErrorHandler } from '../composables/useErrorHandler';
+import { useErrorHandler } from '@/utils/errorHandler';
 import inappropriateWords from '../words/inappropriateWords';
 
 export const usePostStore = defineStore('post', () => {

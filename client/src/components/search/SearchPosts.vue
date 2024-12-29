@@ -122,7 +122,7 @@ import { useDebounce } from '../../composables/useDebounce';
 import PostSkeleton from '../shared/PostSkeleton.vue';
 import { storeToRefs } from 'pinia';
 import { sanitizeInput } from '../../utils/sanitize';
-import { useToast } from '../../composables/useToast';
+import { useToast } from '../ui/toast';
 
 const searchStore = useSearchStore();
 const userStore = useUserStore();

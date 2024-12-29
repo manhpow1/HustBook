@@ -46,7 +46,7 @@
 <script setup>
 import { ref, onMounted } from 'vue';
 import { useFriendStore } from '../../stores/friendStore';
-import { useToast } from '../../composables/useToast';
+import { useToast } from '../ui/toast';
 
 const friendStore = useFriendStore();
 const { showToast } = useToast();

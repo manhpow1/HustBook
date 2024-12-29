@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia';
 import { ref } from 'vue';
 import apiService from '../services/api';
-import { handleError } from '../utils/errorHandler';
+import { useErrorHandler } from '@/utils/errorHandler';
 import router from '../router';
 
 export const useSearchStore = defineStore('search', () => {
@@ -10,6 +10,7 @@ export const useSearchStore = defineStore('search', () => {
     const isLoading = ref(false);
     const error = ref(null);
     const lastSearchParams = ref(null);
+    const { handleError } = useErrorHandler();
 
     const searchPosts = async ({ keyword, index = 0, count = 20 }) => {
         if (!keyword || keyword.trim() === '') {

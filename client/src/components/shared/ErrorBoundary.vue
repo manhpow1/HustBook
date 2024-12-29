@@ -28,7 +28,7 @@
 <script setup>
 import { ref, onErrorCaptured, provide } from 'vue';
 import { AlertCircleIcon } from 'lucide-vue-next';
-import { useErrorHandler } from '../../composables/useErrorHandler';
+import { useErrorHandler } from '@/utils/errorHandler';
 
 const props = defineProps({
     componentName: {

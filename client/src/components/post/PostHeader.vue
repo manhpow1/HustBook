@@ -48,7 +48,7 @@
 import { ref } from 'vue';
 import { MoreVerticalIcon } from 'lucide-vue-next';
 import { useConfirmDialog } from '@vueuse/core';
-import { useToast } from '../../composables/useToast';
+import { useToast } from '../ui/toast';
 import { usePostStore } from '../../stores/postStore';
 import { formatDate } from '../../utils/helpers';
 

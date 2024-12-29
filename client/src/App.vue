@@ -37,7 +37,7 @@ import { useUserStore } from './stores/userStore';
 import { useHead } from '@unhead/vue';
 import NewItemsNotification from './components/notification/NewItemsNotification.vue';
 import { useGlobalErrorHandler } from './composables/useGlobalErrorHandler';
-import Toast from './components/ui/Toast.vue';
+import { Toast } from './components/ui/toast';
 
 // Initialize Global Error Handling
 logger.debug('Initializing global error handling...');

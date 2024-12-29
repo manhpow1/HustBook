@@ -1,7 +1,7 @@
 import { ref, computed } from 'vue';
 import apiService from '../services/api';
-import { useErrorHandler } from './useErrorHandler';
-import { useToast } from './useToast';
+import { useErrorHandler } from '@/utils/errorHandler';
+import { useToast } from '@/components/ui/toast';
 
 export function useNotifications() {
     const notifications = ref([]);

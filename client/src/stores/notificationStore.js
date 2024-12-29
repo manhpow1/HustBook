@@ -1,9 +1,9 @@
 import { defineStore } from 'pinia';
 import { ref } from 'vue';
 import apiService from '../services/api';
-import { useErrorHandler } from '../composables/useErrorHandler';
+import { useErrorHandler } from '@/utils/errorHandler';
+import { useToast } from '@/components/ui/toast';
 import logger from '../services/logging';
-import { useToast } from '../composables/useToast';
 import { useNotifications } from '../composables/useNotification';
 
 export const useNotificationStore = defineStore('notification', () => {

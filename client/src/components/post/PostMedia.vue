@@ -107,8 +107,8 @@
 import { ref, computed } from 'vue';
 import { PlayIcon } from 'lucide-vue-next';
 import MediaViewer from '../shared/MediaViewer.vue';
-import { useErrorHandler } from '../../composables/useErrorHandler';
-import { useToast } from '../../composables/useToast';
+import { useErrorHandler } from '@/utils/errorHandler';
+import { useToast } from '../ui/toast';
 import { usePostStore } from '../../stores/postStore';
 
 // Define component props

@@ -4,8 +4,8 @@ import apiService from '../services/api';
 import Cookies from 'js-cookie';
 import { useRouter } from 'vue-router';
 import logger from '../services/logging';
-import { useErrorHandler } from '../composables/useErrorHandler';
-import { useToast } from '../composables/useToast';
+import { useErrorHandler } from '@/utils/errorHandler';
+import { useToast } from '@/components/ui/toast';
 import { initSocket } from '../services/socket';
 
 // Constants

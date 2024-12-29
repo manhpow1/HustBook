@@ -103,8 +103,8 @@ import { storeToRefs } from 'pinia';
 import Cookies from 'js-cookie';
 import { Lock, LoaderIcon, CheckCircleIcon, AlertCircleIcon, EyeIcon, EyeOffIcon } from 'lucide-vue-next';
 import { useUserStore } from '../../stores/userStore';
-import { useErrorHandler } from '../../composables/useErrorHandler';
-import { useToast } from '../../composables/useToast';
+import { useErrorHandler } from '@/utils/errorHandler';
+import { useToast } from '../ui/toast';
 
 const router = useRouter();
 const userStore = useUserStore();

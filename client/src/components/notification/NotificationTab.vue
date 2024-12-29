@@ -44,8 +44,8 @@ import { ref, computed, onMounted, onBeforeUnmount } from 'vue';
 import { useNotificationStore } from '../../stores/notificationStore';
 import { BellIcon } from 'lucide-vue-next';
 import NotificationGroup from './NotificationGroup.vue';
-import { useErrorHandler } from '../../composables/useErrorHandler';
-import { useToast } from '../../composables/useToast';
+import { useErrorHandler } from '@/utils/errorHandler';
+import { useToast } from '../ui/toast';
 import { storeToRefs } from 'pinia';
 
 const notificationStore = useNotificationStore();

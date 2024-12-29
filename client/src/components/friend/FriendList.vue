@@ -77,7 +77,7 @@
 import { ref, computed, onMounted, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import { useFriendStore } from '../../stores/friendStore';
-import { useToast } from '../../composables/useToast';
+import { useToast } from '../ui/toast';
 import { useDebounce } from '../../composables/useDebounce';
 import FriendSkeleton from './FriendSkeleton.vue';
 import ConfirmDialog from '../ui/ConfirmDialog.vue';

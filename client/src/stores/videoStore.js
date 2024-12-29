@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import apiService from '../services/api'
-import { handleError } from '../utils/errorHandler'
+import { useErrorHandler } from '@/utils/errorHandler'
 import router from '../router'
 
 export const useVideoStore = defineStore('video', () => {
@@ -10,6 +10,7 @@ export const useVideoStore = defineStore('video', () => {
     const error = ref(null)
     const hasMore = ref(true)
     const lastId = ref(null)
+    const { handleError } = useErrorHandler()
 
     const getListVideos = async (params = {}) => {
         if (!hasMore.value) return

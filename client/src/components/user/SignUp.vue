@@ -101,7 +101,7 @@
 import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useUserStore } from '../../stores/userStore'
-import { useToast } from '../../composables/useToast'
+import { useToast } from '../ui/toast'
 import { useFormValidation } from '../../composables/useFormValidation'
 import { storeToRefs } from 'pinia'
 import { CheckCircleIcon, Lock, LoaderIcon, Phone } from 'lucide-vue-next'

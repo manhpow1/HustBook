@@ -2,7 +2,7 @@ import { defineStore } from 'pinia';
 import { ref } from 'vue';
 import { openDB } from 'idb';
 import apiService from '../services/api';
-import { handleError } from '../utils/errorHandler';
+import { useErrorHandler } from '@/utils/errorHandler';
 import { db } from '../config/firebase';
 import { collection, addDoc, onSnapshot, query, orderBy, limit } from 'firebase/firestore';
 import logger from '../services/logging';
@@ -13,6 +13,7 @@ export const useCommentStore = defineStore('comment', () => {
     const commentError = ref(null);
     const hasMoreComments = ref(true);
     const pageIndex = ref(0);
+    const { handleError } = useErrorHandler();
 
     const dbPromise = openDB('comments-store', 1, {
         upgrade(db) {

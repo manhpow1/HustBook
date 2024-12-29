@@ -49,7 +49,7 @@ import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { usePostStore } from '../../stores/postStore';
 import { useRouter } from 'vue-router';
-import { useErrorHandler } from '../../composables/useErrorHandler';
+import { useErrorHandler } from '@/utils/errorHandler';
 import logger from '../../services/logging';
 
 const props = defineProps({

@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { handleError } from '../utils/errorHandler';
+import { useErrorHandler } from '@/utils/errorHandler';
 import { useUserStore } from '../stores/userStore';
 import Cookies from 'js-cookie';
 import logger from './logging';
@@ -10,6 +10,7 @@ const REFRESH_THRESHOLD = 5 * 60 * 1000; // 5 minutes in ms
 const MAX_RETRY_ATTEMPTS = 3;
 const REQUEST_TIMEOUT = 30000; // 30 seconds
 const router = useRouter();
+const { handleError } = useErrorHandler();
 
 const axiosInstance = axios.create({
     baseURL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000',

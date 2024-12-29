@@ -27,7 +27,7 @@
 <script setup>
 import { ref } from 'vue';
 import { useUserStore } from '../../stores/userStore';
-import { useToast } from '../../composables/useToast';
+import { useToast } from '../ui/toast';
 
 const userStore = useUserStore();
 const { showToast } = useToast();

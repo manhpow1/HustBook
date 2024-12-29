@@ -46,7 +46,7 @@
 <script setup>
 import { ref, onMounted, computed } from 'vue';
 import { useSettingsStore } from '../../stores/settingsStore';
-import { useToast } from '../../composables/useToast';
+import { useToast } from '../ui/toast';
 import ToggleSwitch from '../ui/ToggleSwitch.vue';
 import { LoaderIcon } from 'lucide-vue-next';
 

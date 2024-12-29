@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia';
 import apiService from '../services/api';
-import { useToast } from '../composables/useToast';
+import { useToast } from '@/components/ui/toast';
 import { useUserStore } from './userStore';
 
 export const useChatStore = defineStore('chat', {

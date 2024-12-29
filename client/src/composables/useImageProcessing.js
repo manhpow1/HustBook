@@ -1,5 +1,5 @@
 import { ref } from 'vue';
-import { useToast } from './useToast';
+import { useToast } from '@/components/ui/toast';
 
 export function useImageProcessing() {
     const { showToast } = useToast();

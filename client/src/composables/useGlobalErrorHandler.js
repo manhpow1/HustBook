@@ -1,4 +1,4 @@
-import { useErrorHandler } from "./useErrorHandler";
+import { useErrorHandler } from '@/utils/errorHandler';
 import { onMounted, onBeforeUnmount } from 'vue';
 
 export function useGlobalErrorHandler() {

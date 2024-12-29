@@ -1,8 +1,8 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import apiService from '../services/api'
-import { useErrorHandler } from '../composables/useErrorHandler'
-import { useToast } from '../composables/useToast'
+import { useErrorHandler } from '@/utils/errorHandler';
+import { useToast } from '@/components/ui/toast';
 
 export const useFriendStore = defineStore('friend', () => {
     const friends = ref([]);
