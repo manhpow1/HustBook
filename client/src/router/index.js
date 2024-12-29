@@ -7,7 +7,8 @@ const routes = [
     {
         path: '/',
         name: 'Home',
-        component: () => import('../views/Home.vue')
+        component: () => import('../views/Home.vue'),
+        meta: { allowWithoutAuth: true }
     },
     {
         path: '/profile',
@@ -35,12 +36,14 @@ const routes = [
     {
         path: '/signup',
         name: 'SignUp',
-        component: () => import('../components/user/SignUp.vue')
+        component: () => import('../components/user/SignUp.vue'),
+        meta: { allowWithoutAuth: true }
     },
     {
         path: '/login',
         name: 'Login',
-        component: () => import('../components/user/Login.vue')
+        component: () => import('../components/user/Login.vue'),
+        meta: { allowWithoutAuth: true }
     },
     {
         path: '/forgot-password',
@@ -143,36 +146,27 @@ const router = createRouter({
 
 // Global navigation guard
 router.beforeEach(async (to, from, next) => {
-    const publicPaths = ['/signup', '/login', '/', '/get-verify-code', '/forgot-password'];
-    const publicRoutes = ['Login', 'SignUp', 'GetVerifyCode', 'Home', 'ForgotPassword'];
-
-    console.log('Current route name:', to.name);
-    console.log('Current path:', to.path);
-    console.log('Public routes:', publicRoutes);
-    console.log('Public paths:', publicPaths);
-
-    // Check both name and path
-    if (publicRoutes.includes(to.name) || publicPaths.includes(to.path)) {
-        console.log('Allowing public route access');
+    // Simplify the public route check
+    if (to.meta.allowWithoutAuth || ['/login', '/', '/get-verify-code', '/forgot-password', '/signup', '/verify-code'].includes(to.path)) {
         next();
         return;
     }
 
     const userStore = useUserStore();
 
-    if (to.meta.requiresAuth) {
-        if (!userStore.isLoggedIn) {
-            try {
-                await userStore.checkAuth();
-            } catch (error) {
-                logger.error('Error during authentication check:', error);
-            }
+    if (to.meta.requiresAuth && !userStore.isLoggedIn) {
+        try {
+            await userStore.checkAuth();
+        } catch (error) {
+            logger.error('Error during authentication check:', error);
+        }
 
-            if (!userStore.isLoggedIn) {
-                console.log('Not authenticated, redirecting to login');
-                next({ name: 'Login', query: { redirect: to.fullPath } });
-                return;
-            }
+        if (!userStore.isLoggedIn) {
+            next({
+                name: 'Login',
+                query: { redirect: to.fullPath }
+            });
+            return;
         }
     }
 
