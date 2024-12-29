@@ -3,11 +3,13 @@ import { handleError } from '../utils/errorHandler';
 import { useUserStore } from '../stores/userStore';
 import Cookies from 'js-cookie';
 import logger from './logging';
+import { useRouter } from 'vue-router';
 
 // Constants
 const REFRESH_THRESHOLD = 5 * 60 * 1000; // 5 minutes in ms
 const MAX_RETRY_ATTEMPTS = 3;
 const REQUEST_TIMEOUT = 30000; // 30 seconds
+const router = useRouter();
 
 const axiosInstance = axios.create({
     baseURL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000',
@@ -249,7 +251,7 @@ axiosInstance.interceptors.response.use(
         if (error.response?.status === 401) {
             const userStore = useUserStore();
             await userStore.clearAuthState();
-            window.location.href = '/login';
+            router.push('/login');
             return Promise.reject(error);
         }
         return Promise.reject(error);

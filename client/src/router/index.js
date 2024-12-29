@@ -143,9 +143,17 @@ const router = createRouter({
 
 // Global navigation guard
 router.beforeEach(async (to, from, next) => {
+    const publicPaths = ['/signup', '/login', '/', '/get-verify-code', '/forgot-password'];
     const publicRoutes = ['Login', 'SignUp', 'GetVerifyCode', 'Home', 'ForgotPassword'];
 
-    if (publicRoutes.includes(to.name)) {
+    console.log('Current route name:', to.name);
+    console.log('Current path:', to.path);
+    console.log('Public routes:', publicRoutes);
+    console.log('Public paths:', publicPaths);
+
+    // Check both name and path
+    if (publicRoutes.includes(to.name) || publicPaths.includes(to.path)) {
+        console.log('Allowing public route access');
         next();
         return;
     }
@@ -161,6 +169,7 @@ router.beforeEach(async (to, from, next) => {
             }
 
             if (!userStore.isLoggedIn) {
+                console.log('Not authenticated, redirecting to login');
                 next({ name: 'Login', query: { redirect: to.fullPath } });
                 return;
             }
