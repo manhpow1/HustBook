@@ -145,12 +145,6 @@ import { Skeleton } from '@/components/ui/skeleton'
 const AddPost = defineAsyncComponent(() =>
   import('../components/post/AddPost.vue')
 )
-const MediaGrid = defineAsyncComponent(() =>
-  import('../components/post/MediaGrid.vue')
-)
-const PostsLoadingState = defineAsyncComponent(() =>
-  import('../components/shared/PostsLoadingState.vue')
-)
 
 // Utils
 import { sanitizeOutput } from '../utils/sanitize'
