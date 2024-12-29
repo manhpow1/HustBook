@@ -2,6 +2,28 @@ import { computed, ref, onUnmounted } from 'vue';
 
 const TOAST_LIMIT = 1;
 const TOAST_REMOVE_DELAY = 100000;
+const TOAST_TYPES = {
+  success: {
+    variant: 'success',
+    title: 'Success',
+    duration: 3000,
+  },
+  error: {
+    variant: 'destructive',
+    title: 'Error',
+    duration: 3000,
+  },
+  warning: {
+    variant: 'warning',
+    title: 'Warning',
+    duration: 3000,
+  },
+  info: {
+    variant: 'default',
+    title: 'Info',
+    duration: 3000,
+  }
+};
 
 const actionTypes = {
   ADD_TOAST: 'ADD_TOAST',
@@ -101,8 +123,23 @@ function useToast() {
   };
 }
 
-function toast(props) {
+function toast(options) {
   const id = genId();
+
+  let toastOptions;
+  if (typeof options === 'string') {
+    toastOptions = {
+      description: options,
+      ...TOAST_TYPES.default
+    };
+  } else {
+    const { type = 'default', message, ...rest } = options;
+    toastOptions = {
+      description: message,
+      ...TOAST_TYPES[type],
+      ...rest
+    };
+  }
 
   const update = (props) =>
     dispatch({
@@ -116,7 +153,7 @@ function toast(props) {
   dispatch({
     type: actionTypes.ADD_TOAST,
     toast: {
-      ...props,
+      ...toastOptions,
       id,
       open: true,
       onOpenChange: (open) => {
