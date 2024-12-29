@@ -117,25 +117,6 @@ export function useFormValidation() {
         return true;
     };
 
-    const validateField = (field, value, rules, context = {}, immediate = false) => {
-        if (!immediate && value === '') {
-            return '';
-        }
-        try {
-            for (const rule of rules) {
-                if (typeof rule === 'function') {
-                    const error = rule(value, context);
-                    if (error && typeof error === 'string') {
-                        return error;
-                    }
-                }
-            }
-        } catch (err) {
-            console.error('Validation error:', err);
-            return 'Validation error occurred';
-        }
-        return '';
-    };
 
     const clearErrors = (field) => {
         if (field) {
