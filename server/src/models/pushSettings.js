@@ -1,4 +1,4 @@
-import { initializeFirebase } from '../config/firebase.js';
+import { db } from '../config/firebase.js';
 import logger from '../utils/logger.js';
 
 export const DEFAULT_PUSH_SETTINGS = {
@@ -20,14 +20,14 @@ export class PushSettings {
         this.userId = userId;
     }
 
-    async getSettingsRef() {
-        let db = await initializeFirebase();
+    // Reference to the Firestore document for the user's push settings
+    getSettingsRef() {
         return db.collection('pushSettings').doc(this.userId);
     }
 
     async getSettings() {
         try {
-            const settingsRef = await this.getSettingsRef();
+            const settingsRef = this.getSettingsRef();
             const doc = await settingsRef.get();
             if (doc.exists) {
                 return doc.data();
@@ -44,10 +44,10 @@ export class PushSettings {
 
     async updateSettings(settings) {
         try {
-            const settingsRef = await this.getSettingsRef();
-            // Filter out invalid keys to prevent unwanted data insertion
+            const settingsRef = this.getSettingsRef();
             const allowedKeys = Object.keys(DEFAULT_PUSH_SETTINGS);
             const sanitizedSettings = {};
+
             allowedKeys.forEach((key) => {
                 if (settings.hasOwnProperty(key)) {
                     sanitizedSettings[key] = settings[key] === '0' ? '0' : '1'; // Ensure values are '0' or '1'
@@ -55,7 +55,7 @@ export class PushSettings {
             });
             // Merge the sanitized settings with existing settings
             await settingsRef.set(sanitizedSettings, { merge: true });
-            // Combine existing settings with the new settings for immediate feedback
+
             const updatedSettings = { ...DEFAULT_PUSH_SETTINGS, ...sanitizedSettings };
             return updatedSettings;
         } catch (error) {
