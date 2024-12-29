@@ -1,7 +1,7 @@
 import { computed, ref } from 'vue';
 
 const TOAST_LIMIT = 1;
-const TOAST_REMOVE_DELAY = 1000000;
+const TOAST_REMOVE_DELAY = 100000;
 
 const actionTypes = {
   ADD_TOAST: 'ADD_TOAST',
@@ -17,17 +17,16 @@ function genId() {
   return count.toString();
 }
 
-const toastTimeouts = new Map();
+const toastTimeouts = new WeakMap();
 
 function addToRemoveQueue(toastId) {
-  if (toastTimeouts.has(toastId)) return;
+  if (toastTimeouts.has(toastId)) {
+    clearTimeout(toastTimeouts.get(toastId));
+  }
 
   const timeout = setTimeout(() => {
     toastTimeouts.delete(toastId);
-    dispatch({
-      type: actionTypes.REMOVE_TOAST,
-      toastId,
-    });
+    dispatch({ type: actionTypes.REMOVE_TOAST, toastId });
   }, TOAST_REMOVE_DELAY);
 
   toastTimeouts.set(toastId, timeout);
@@ -66,9 +65,9 @@ function dispatch(action) {
       state.value.toasts = state.value.toasts.map((t) =>
         t.id === toastId || toastId === undefined
           ? {
-              ...t,
-              open: false,
-            }
+            ...t,
+            open: false,
+          }
           : t,
       );
       break;
@@ -86,11 +85,19 @@ function dispatch(action) {
 }
 
 function useToast() {
+  // Optimize with computed
+  const toasts = computed(() => state.value.toasts);
+
+  // Add cleanup
+  onUnmounted(() => {
+    toastTimeouts.forEach(clearTimeout);
+    state.value.toasts = [];
+  });
+
   return {
-    toasts: computed(() => state.value.toasts),
+    toasts,
     toast,
-    dismiss: (toastId) =>
-      dispatch({ type: actionTypes.DISMISS_TOAST, toastId }),
+    dismiss: (toastId) => dispatch({ type: actionTypes.DISMISS_TOAST, toastId }),
   };
 }
 

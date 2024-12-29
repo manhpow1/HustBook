@@ -10,7 +10,7 @@ const props = defineProps({
   onOpenChange: { type: Function, required: false, skipCheck: true },
   defaultOpen: { type: Boolean, required: false },
   forceMount: { type: Boolean, required: false },
-  type: { type: String, required: false },
+  type: { type: String, validator: (value) => ['foreground', 'background'].includes(value), required: false },
   open: { type: Boolean, required: false },
   duration: { type: Number, required: false },
   asChild: { type: Boolean, required: false },
@@ -38,11 +38,7 @@ const forwarded = useForwardPropsEmits(delegatedProps, emits);
 </script>
 
 <template>
-  <ToastRoot
-    v-bind="forwarded"
-    :class="cn(toastVariants({ variant }), props.class)"
-    @update:open="onOpenChange"
-  >
+  <ToastRoot v-bind="forwarded" :class="cn(toastVariants({ variant }), props.class)" @update:open="onOpenChange">
     <slot />
   </ToastRoot>
 </template>
