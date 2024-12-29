@@ -100,7 +100,7 @@ const props = defineProps({
 
 const router = useRouter();
 const friendStore = useFriendStore();
-const toast = useToast();
+const { toast } = useToast();
 
 const friends = ref([]);
 const loading = ref(true);
@@ -175,11 +175,11 @@ const blockConfirmed = async () => {
 
     try {
         await friendStore.setBlock(userToBlock.value, 0);
-        toast('User blocked successfully', 'success');
+        toast({ type: 'success', message: 'User blocked successfully' });
         friends.value = friends.value.filter(friend => friend.id !== userToBlock.value);
     } catch (err) {
         console.error(`Error blocking user with ID ${userToBlock.value}:`, err);
-        toast('Failed to block user', 'error');
+        toast({ type: 'error', message: 'Failed to block user' });
     } finally {
         isProcessing.value = false;
         confirmDialog.value = false;

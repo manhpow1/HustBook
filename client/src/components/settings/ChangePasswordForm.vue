@@ -30,7 +30,7 @@ import { useUserStore } from '../../stores/userStore';
 import { useToast } from '../ui/toast';
 
 const userStore = useUserStore();
-const toast = useToast();
+const { toast } = useToast();
 
 const currentPassword = ref('');
 const newPassword = ref('');
@@ -39,14 +39,14 @@ const isLoading = ref(false);
 
 const handleSubmit = async () => {
     if (newPassword.value !== confirmPassword.value) {
-        toast('New passwords do not match', 'error');
+        toast({ type: 'error', message: 'New passwords do not match' });
         return;
     }
 
     isLoading.value = true;
     try {
         await userStore.changePassword(currentPassword.value, newPassword.value);
-        toast('Password changed successfully', 'success');
+        toast({ type: 'success', message: 'Password changed successfully' });
         currentPassword.value = '';
         newPassword.value = '';
         confirmPassword.value = '';

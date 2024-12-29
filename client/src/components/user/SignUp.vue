@@ -183,23 +183,23 @@ const handleSignup = async () => {
   try {
     const success = await userStore.register(phoneNumber.value, password.value)
     if (success) {
-      toast('Registration successful', 'success')
+      toast({ type: 'success', message: 'Registration successful!' })
       router.push({ name: 'GetVerifyCode', query: { phoneNumber: phoneNumber.value } })
       // After navigating to GetVerifyCode, we will handle the verification process there
     }
   } catch (error) {
     console.error('Registration failed:', error)
-    toast(error.message || 'Registration failed', 'error')
+    toast({ type: 'error', message: error.message || 'Registration failed' });
   }
 }
 
 const handleVerificationSuccess = () => {
-  toast('Verification successful', 'success')
+  toast({ type: 'success', message: 'Verification successful!' })
   currentStep.value = 'complete'
 }
 
 const handleVerificationError = (error) => {
-  toast(error || 'Verification failed', 'error')
+  toast({ type: 'error', message: error.message || 'Verification failed' });
 }
 
 const passwordStrength = computed(() => {

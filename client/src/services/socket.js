@@ -11,7 +11,7 @@ const MAX_RECONNECT_DELAY = 10000; // 10 seconds
 
 export function initSocket() {
     const userStore = useUserStore();
-    const toast = useToast();
+    const { toast } = useToast();
 
     if (!userStore.isLoggedIn) {
         return null;
@@ -59,19 +59,19 @@ export function initSocket() {
 
     // Connection events with enhanced error handling
     socket.on('connect', () => {
-        logger.info('Socket connected:', socket.id);
-        reconnectAttempts = 0;
-        toast('Chat connected', 'success');
-    });
+    logger.info('Socket connected:', socket.id);
+    reconnectAttempts = 0;
+    toast({ type: 'success', message: 'Chat connected' });
+});
 
-    socket.on('connect_error', (error) => {
-        logger.error('Socket connection error:', error);
-        const errorMessage = error.message.includes('authentication failed') 
-            ? 'Authentication failed. Please log in again.'
-            : 'Chat connection failed';
-        toast(errorMessage, 'error');
-        handleReconnect();
-    });
+socket.on('connect_error', (error) => {
+    logger.error('Socket connection error:', error);
+    const errorMessage = error.message.includes('authentication failed') 
+        ? 'Authentication failed. Please log in again.'
+        : 'Chat connection failed';
+    toast({ type: 'error', message: errorMessage });
+    handleReconnect();
+});
 
     socket.on('disconnect', (reason) => {
         logger.warn('Socket disconnected:', reason);
@@ -85,30 +85,29 @@ export function initSocket() {
     });
 
     socket.on('reconnect_failed', () => {
-        logger.error('Socket reconnection failed after', MAX_RECONNECT_ATTEMPTS, 'attempts');
-        toast('Unable to connect to chat. Please refresh the page.', 'error');
-    });
+    logger.error('Socket reconnection failed after', MAX_RECONNECT_ATTEMPTS, 'attempts');
+    toast({ type: 'error', message: 'Unable to connect to chat. Please refresh the page.' });
+});
 
-    // Chat events with enhanced error handling
-    socket.on('onmessage', (data) => {
-        try {
-            const chatStore = useChatStore();
-            chatStore.addMessage(data.message);
-        } catch (error) {
-            logger.error('Error handling incoming message:', error);
-            toast('Error displaying new message', 'error');
-        }
-    });
+socket.on('onmessage', (data) => {
+    try {
+        const chatStore = useChatStore();
+        chatStore.addMessage(data.message);
+    } catch (error) {
+        logger.error('Error handling incoming message:', error);
+        toast({ type: 'error', message: 'Error displaying new message' });
+    }
+});
 
-    socket.on('deletemessage', (data) => {
-        try {
-            const chatStore = useChatStore();
-            chatStore.removeMessage(data.messageId);
-        } catch (error) {
-            logger.error('Error handling message deletion:', error);
-            toast('Error removing message', 'error');
-        }
-    });
+socket.on('deletemessage', (data) => {
+    try {
+        const chatStore = useChatStore();
+        chatStore.removeMessage(data.messageId);
+    } catch (error) {
+        logger.error('Error handling message deletion:', error);
+        toast({ type: 'error', message: 'Error removing message' });
+    }
+});
 
     // Keep socket connection alive with error handling
     const heartbeat = setInterval(() => {

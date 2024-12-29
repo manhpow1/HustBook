@@ -80,7 +80,7 @@ import { useToast } from '../ui/toast';
 
 const userStore = useUserStore();
 const { handleError } = useErrorHandler();
-const toast = useToast();
+const { toast } = useToast();
 
 const showConfirmation = ref(false);
 
@@ -91,13 +91,13 @@ const handleLogout = async () => {
     try {
         const success = await userStore.logout();
         if (success) {
-            toast('Logout successful!', 'success');
+            toast({ type: 'success', message: 'Logout successful!' });
         } else {
-            toast(userStore.error || 'Logout failed. Please try again.', 'error');
+            toast({ type: 'error', message: userStore.error || 'Logout failed. Please try again.' });
         }
     } catch (error) {
         handleError(error);
-        toast('An unexpected error occurred. Please try again.', 'error');
+        toast({ type: 'success', message: 'Login successful!' });
     }
 };
 

@@ -15,7 +15,7 @@ export const useChatStore = defineStore('chat', {
     actions: {
         async fetchConversations() {
             this.loadingConversations = true;
-            const toast = useToast();
+            const { toast } = useToast();
             try {
                 const response = await apiService.getConversations(); // GET /conversations
                 if (response.data.code === '1000') {
@@ -33,7 +33,7 @@ export const useChatStore = defineStore('chat', {
 
         async fetchMessages(conversationId, index = 0, count = 20) {
             this.loadingMessages = true;
-            const toast = useToast();
+            const { toast } = useToast();
             try {
                 this.selectedConversationId = conversationId;
                 const response = await apiService.getConversationMessages(conversationId, { index, count });
@@ -87,7 +87,7 @@ export const useChatStore = defineStore('chat', {
 
         async markAsRead() {
             if (!this.selectedConversationId) return;
-            const toast = useToast();
+            const { toast } = useToast();
             try {
                 const response = await apiService.setReadMessage(this.selectedConversationId);
                 if (response.data.code === '1000') {
@@ -103,7 +103,7 @@ export const useChatStore = defineStore('chat', {
 
         async deleteMessage(messageId) {
             if (!this.selectedConversationId) return;
-            const toast = useToast();
+            const { toast } = useToast();
             try {
                 const response = await apiService.deleteMessage(this.selectedConversationId, messageId);
                 if (response.data.code === '1000') {
@@ -118,7 +118,7 @@ export const useChatStore = defineStore('chat', {
 
         async deleteConversation() {
             if (!this.selectedConversationId) return;
-            const toast = useToast();
+            const { toast } = useToast();
             try {
                 const response = await apiService.deleteConversation(this.selectedConversationId);
                 if (response.data.code === '1000') {

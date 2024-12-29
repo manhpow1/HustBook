@@ -122,7 +122,7 @@ import { storeToRefs } from 'pinia';
 const router = useRouter();
 const route = useRoute();
 const userStore = useUserStore();
-const toast = useToast();
+const { toast } = useToast();
 const { errors, validatePhoneNumber, clearErrors } = useFormValidation();
 const { cooldownRemaining, isLoading, isLocked } = storeToRefs(userStore);
 
@@ -148,13 +148,13 @@ const copyToClipboard = async () => {
     try {
         await navigator.clipboard.writeText(verificationCode.value);
         copied.value = true;
-        toast('success', 'Verification code copied');
+        toast({ type: 'success', message: 'Verification code copied' });
         setTimeout(() => {
             copied.value = false;
         }, 2000);
         return true;
     } catch (err) {
-        toast('error', 'Unable to copy verification code');
+        toast({ type: 'error', message: 'Unable to copy verification code' });
         return false;
     }
 };
@@ -182,7 +182,7 @@ const handleSubmit = async () => {
     }
 
     if (isLocked.value) {
-        toast('error', 'Account temporarily locked. Please try again later.');
+        toast({ type: 'error', message: 'Account temporarily locked. Please try again later.' });
         return;
     }
 

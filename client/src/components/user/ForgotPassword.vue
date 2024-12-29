@@ -98,7 +98,7 @@ import logger from '@/services/logging';
 
 const router = useRouter();
 const userStore = useUserStore();
-const toast = useToast();
+const { toast } = useToast();
 
 // State
 const step = ref(1);
@@ -131,9 +131,9 @@ const isSubmitDisabled = computed(() => {
 const copyCode = async () => {
   try {
     await navigator.clipboard.writeText(verificationCode.value);
-    toast('Code copied to clipboard', 'success');
+    toast({ type: 'success', message: 'Code copied to clipboard' });
   } catch (error) {
-    toast('Failed to copy code', 'error');
+    toast({ type: 'error', message: 'Failed to copy code' });
     logger.error('Copy code error:', error);
   }
 };
@@ -224,7 +224,7 @@ const handlePhoneSubmit = async () => {
       verificationCode.value = response.verifyCode;
       step.value = 2;
       startCooldown();
-      toast('Verification code sent successfully', 'success');
+      toast({ type: 'success', message: 'Verification code sent successfully' });
 
       // Store verification code in localStorage for step 2
       localStorage.setItem('resetPhoneNumber', phoneNumber.value);
@@ -241,7 +241,7 @@ const handleResetSubmit = async () => {
 
   const storedPhone = localStorage.getItem('resetPhoneNumber');
   if (!storedPhone || !code.value || !newPassword.value) {
-    toast('Verification code and new password are required', 'error');
+    toast({ type: 'error', message: 'Verification code and new password are required' });
     return;
   }
 
@@ -254,7 +254,7 @@ const handleResetSubmit = async () => {
 
     if (response?.success) {
       localStorage.removeItem('resetPhoneNumber');
-      toast('Password reset successfully', 'success');
+      toast({ type: 'success', message: 'Password reset successful!' });
       router.push('/login');
     }
   } catch (error) {
@@ -272,7 +272,7 @@ const resendCode = async () => {
     if (response?.success) {
       verificationCode.value = response.verifyCode;
       startCooldown();
-      toast('Verification code resent', 'success');
+      toast({ type: 'success', message: 'Verification code resent successfully!' });
     }
   } catch (error) {
     toast(error.message, 'error');

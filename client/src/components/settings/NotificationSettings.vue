@@ -51,7 +51,7 @@ import ToggleSwitch from '../ui/ToggleSwitch.vue';
 import { LoaderIcon } from 'lucide-vue-next';
 
 const settingsStore = useSettingsStore();
-const toast = useToast();
+const { toast } = useToast();
 
 // Sound Customization State
 const selectedSound = ref('default'); // This can be further integrated with the server if needed
@@ -77,9 +77,9 @@ const formatSettingName = (key) => {
 const updateIndividualSetting = async (key, value) => {
     try {
         await settingsStore.updatePushSettings({ [key]: value ? '1' : '0' });
-        toast('Notification setting updated successfully', 'success');
+        toast({ type: 'success', message: 'Notification setting updated successfully!' });
     } catch (error) {
-        toast('Failed to update notification setting', 'error');
+        toast({ type: 'error', message: 'Failed to update notification setting' });
     }
 };
 
@@ -87,9 +87,9 @@ const updateIndividualSetting = async (key, value) => {
 const toggleDisableAllNotifications = async (value) => {
     try {
         await settingsStore.toggleDisableAllNotifications(value);
-        toast(`All notifications ${value ? 'disabled' : 'enabled'}`, 'success');
+        toast({ type: 'success', message: `All notifications ${value ? 'disabled' : 'enabled'}` });
     } catch (error) {
-        toast('Failed to update notification settings', 'error');
+        toast({ type: 'error', message: 'Failed to update notification settings' });
     }
 };
 

@@ -88,7 +88,7 @@ const emit = defineEmits(['close', 'like', 'comment']);
 
 // Composables and utilities
 const { handleError } = useErrorHandler();
-const toast = useToast();
+const { toast } = useToast();
 const rateLimiter = useRateLimiter(5, 1000); // Max 5 actions per second
 
 // Reactive state
@@ -123,7 +123,7 @@ const handleLike = async () => {
         await emit('like');
     } catch (error) {
         console.error('Error liking media:', error);
-        toast('Failed to like media. Please try again.', 'error');
+        toast({ type: 'error', message: 'Failed to like media. Please try again.' });
         await handleError(error);
     }
 };

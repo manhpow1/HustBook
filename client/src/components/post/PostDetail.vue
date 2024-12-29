@@ -225,11 +225,11 @@ const confirmDeletePost = async () => {
 const deletePost = async () => {
     try {
         await postStore.deletePost(post.value.id);
-        toast('Post deleted successfully.', 'success');
+        toast({ type: 'success', message: 'Post deleted successfully.' });
         router.push({ name: 'Home' });
     } catch (error) {
         console.error('Error deleting post:', error);
-        toast('Failed to delete post. Please try again.', 'error');
+        toast({ type: 'error', message: 'Failed to delete post. Please try again.' });
         await handleError(error);
     }
     showDeletePostModal.value = false;
@@ -244,7 +244,7 @@ const handleReportPost = () => {
 // Handle successful report submission
 const handleReportSubmitted = () => {
     showReportPostModal.value = false;
-    toast('Report submitted successfully.', 'success');
+    toast({ type: 'success', message: 'Report submitted successfully.' });
 };
 
 // Handle post removal (e.g., if the post no longer exists)
@@ -266,14 +266,14 @@ const sharePost = () => {
             text: post.value.described,
             url: window.location.href,
         }).then(() => {
-            toast('Post shared successfully.', 'success');
+            toast({ type: 'success', message: 'Post shared successfully.' });
         }).catch((error) => {
             console.error('Error sharing post:', error);
-            toast('Failed to share post.', 'error');
+            toast({ type: 'error', message: 'Failed to share post.' });
         });
     } else {
         // Fallback for browsers that do not support the Web Share API
-        toast('Sharing is not supported in your browser.', 'info');
+        toast({ type: 'info', message: 'Sharing is not supported in your browser.' });
     }
 };
 </script>

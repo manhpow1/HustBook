@@ -181,7 +181,7 @@ const userStore = useUserStore();
 const videoStore = useVideoStore();
 const postStore = usePostStore();
 const { handleError } = useErrorHandler();
-const toast = useToast();
+const { toast } = useToast();
 
 const userId = ref(route.params.id);
 const user = ref({});
@@ -310,28 +310,28 @@ function goToMessages() {
 }
 
 function blockOrUnblockUser() {
-  toast('Block/Unblock user not implemented', 'info');
+  toast({ type: 'info', message: 'Block/Unblock user not implemented' });
 }
 
 function openEllipsisMenu() {
-  toast('Ellipsis menu not implemented', 'info');
+  toast({ type: 'info', message: 'Ellipsis menu not implemented' });
 }
 
 // Upload Actions
 function uploadCoverPhoto() {
   // Implement cover photo upload logic
   // Possibly use FileUpload component or similar approach
-  toast('Cover photo upload not implemented', 'info');
+  toast({ type: 'info', message: 'Cover photo upload not implemented' });
 }
 
 function selectNewProfilePicture() {
   // Implement avatar selection logic
-  toast('Select new profile picture not implemented', 'info');
+  toast({ type: 'info', message: 'Select new profile picture not implemented' });
 }
 
 function viewFullScreen(imageUrl) {
   // Show image in a full-screen viewer (e.g. MediaViewer)
-  toast('Full-screen view not implemented', 'info');
+  toast({ type: 'info', message: 'Full-screen view not implemented' });
 }
 
 // Searching posts

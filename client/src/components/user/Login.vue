@@ -109,7 +109,7 @@ import { useToast } from '../ui/toast';
 const router = useRouter();
 const userStore = useUserStore();
 const { handleError } = useErrorHandler();
-const toast = useToast();
+const { toast } = useToast();
 
 const phoneNumber = ref('');
 const password = ref('');
@@ -161,7 +161,7 @@ const handleSubmit = async () => {
   try {
     const success = await userStore.login(phoneNumber.value, password.value, rememberMe.value);
     if (success) {
-      toast('Login successful!', 'success');
+      toast({ type: 'success', message: 'Login successful!' });
       // Server already verified the user, no need to fetch profile again
       router.push({ name: 'Home' });
     } else {
@@ -174,7 +174,7 @@ const handleSubmit = async () => {
     }
   } catch (err) {
     handleError(err);
-    toast('An unexpected error occurred. Please try again.', 'error');
+    toast({ type: 'error', message: 'An unexpected error occurred. Please try again.' });
   }
 };
 
@@ -182,7 +182,7 @@ const togglePasswordVisibility = () => showPassword.value = !showPassword.value;
 
 const showSessionTimeoutWarning = () => {
   showSessionWarning.value = true;
-  toast('Your session will expire soon. Please re-login.', 'warning');
+  toast({ type: 'warning', message: 'Your session will expire soon. Please re-login.' });
 };
 
 watch(
@@ -201,7 +201,7 @@ watch(
 
 onMounted(() => {
   if (isSessionExpired.value) {
-    toast('Your previous session has expired. Please login again.', 'warning');
+    toast({ type: 'warning', message: 'Your previous session has expired. Please login again.' });
   }
 
   const token = Cookies.get('accessToken');

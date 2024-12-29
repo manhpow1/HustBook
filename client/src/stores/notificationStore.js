@@ -11,7 +11,7 @@ export const useNotificationStore = defineStore('notification', () => {
     const { notifications, badge, lastUpdate, loading, error, unreadCount, fetchNotifications } = useNotifications();
     const newItemsCount = ref(0);
     // Initialize composables
-    const toast = useToast();
+    const { toast } = useToast();
     const { handleError } = useErrorHandler();
 
     async function checkNewItems(lastId, categoryId = '0') {
@@ -64,13 +64,13 @@ export const useNotificationStore = defineStore('notification', () => {
                     badge.value = response.data.data.Version.badge;
                     lastUpdate.value = response.data.data.Version.last_update;
                 }
-                toast('Notification marked as read.', 'success');
+                toast({ type: 'success', message: 'Notification marked as read' });
             } else {
                 throw new Error(response.data.message || 'Failed to set notification as read');
             }
         } catch (err) {
             await handleError(err);
-            toast('Failed to set notification as read.', 'error');
+            toast({ type: 'error', message: 'Failed to set notification as read' });
         }
     }
 
@@ -82,7 +82,7 @@ export const useNotificationStore = defineStore('notification', () => {
             if (response.data.code === '1000') {
                 notifications.value = notifications.value.map((n) => ({ ...n, read: true }));
                 logger.info('All notifications marked as read');
-                toast('All notifications marked as read.', 'success');
+                toast({ type: 'success', message: 'All notifications marked as read' });
             } else {
                 throw new Error(response.data.message || 'Failed to mark notifications as read');
             }
@@ -90,7 +90,7 @@ export const useNotificationStore = defineStore('notification', () => {
             logger.error('Error marking all notifications as read:', err);
             error.value = 'Failed to mark notifications as read';
             await handleError(err);
-            toast('Failed to mark notifications as read.', 'error');
+            toast({ type: 'error', message: 'Failed to mark notifications as read' });
         } finally {
             loading.value = false;
         }
@@ -100,10 +100,10 @@ export const useNotificationStore = defineStore('notification', () => {
         try {
             await apiService.deleteNotification(id);
             notifications.value = notifications.value.filter((n) => n.id !== id);
-            toast('Notification removed.', 'success');
+            toast({ type: 'success', message: 'Notification removed' });
         } catch (error) {
             logger.error(`Failed to remove notification with ID ${id}:`, error);
-            toast('Failed to remove notification.', 'error');
+            toast({ type: 'error', message: 'Failed to remove notification' });
         }
     }
 

@@ -19,7 +19,7 @@
 </template>
 
 <script setup>
-import {computed } from 'vue';
+import { computed } from 'vue';
 import { XIcon } from 'lucide-vue-next';
 import { useNotificationStore } from '../../stores/notificationStore';
 import { formatNotificationTime } from '../../utils/helpers';
@@ -35,17 +35,17 @@ const props = defineProps({
 
 const notificationStore = useNotificationStore();
 const { handleError } = useErrorHandler();
-const toast = useToast();
+const { toast } = useToast();
 
 const formattedTime = computed(() => formatNotificationTime(props.notification.created));
 
 const handleRemove = async () => {
     try {
         await notificationStore.removeNotification(props.notification.notificationId);
-        toast('Notification removed.', 'success');
+        toast({ type: 'success', message: 'Notification removed.' });
     } catch (error) {
         await handleError(error);
-        toast('Failed to remove notification.', 'error');
+        toast({ type: 'error', message: 'Failed to remove notification.' });
     }
 };
 

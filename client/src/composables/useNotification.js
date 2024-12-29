@@ -10,7 +10,7 @@ export function useNotifications() {
     const loading = ref(false);
     const error = ref(null);
     const { handleError } = useErrorHandler();
-    const toast = useToast();
+    const { toast } = useToast();
 
     // Fetch notifications using index and count for pagination
     async function fetchNotifications(index = 0, count = 20) {

@@ -82,7 +82,7 @@ const emit = defineEmits(['close', 'report-submitted', 'post-removed']);
 // Composables and utilities
 const { validateField, validators } = useFormValidation();
 const { request } = useApi(submitSuccess);
-const toast = useToast();
+const { toast } = useToast();
 
 // Reactive state for form fields
 const reason = ref('');
@@ -143,7 +143,7 @@ watch(details, (newVal) => {
 
 // Function to handle successful report submission
 function submitSuccess(responseData) {
-    toast('Report submitted successfully.', 'success');
+    toast({ type: 'success', message: 'Report submitted successfully!' });
     emit('report-submitted');
     closeModal();
 }

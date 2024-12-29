@@ -2,7 +2,7 @@ import { ref } from 'vue';
 import { useToast } from '@/components/ui/toast';
 
 export function useImageProcessing() {
-    const toast = useToast();
+    const { toast } = useToast();
     const isProcessing = ref(false);
 
     const compressImage = async (file, maxWidth = 1024, maxHeight = 1024, quality = 0.8) => {
@@ -11,14 +11,14 @@ export function useImageProcessing() {
 
             // Validate file type
             if (!file.type.startsWith('image/')) {
-                toast('Only image files are allowed', 'error');
+                toast({ type: 'error', message: 'Only image files are allowed' });
                 return null;
             }
 
             // Create image object
             const img = new Image();
             const imageUrl = URL.createObjectURL(file);
-            
+
             await new Promise((resolve, reject) => {
                 img.onload = resolve;
                 img.onerror = reject;
@@ -27,7 +27,7 @@ export function useImageProcessing() {
 
             // Check minimum dimensions
             if (img.width < 100 || img.height < 100) {
-                toast('Image dimensions too small. Minimum size is 100x100 pixels', 'error');
+                toast({ type: 'error', message: 'Image dimensions too small. Minimum size is 100x100 pixels' });
                 return null;
             }
 
@@ -69,14 +69,14 @@ export function useImageProcessing() {
 
             // Verify final file size
             if (compressedFile.size > 4 * 1024 * 1024) { // 4MB limit
-                toast('Image file size is too large even after compression', 'error');
+                toast({ type: 'error', message: 'Image file size is too large even after compression' });
                 return null;
             }
 
             return compressedFile;
         } catch (error) {
             console.error('Image compression error:', error);
-            toast('Error processing image', 'error');
+            toast({ type: 'error', message: 'Error processing image' });
             return null;
         } finally {
             isProcessing.value = false;
@@ -86,14 +86,14 @@ export function useImageProcessing() {
     const validateImage = (file) => {
         // Validate file size (4MB)
         if (file.size > 4 * 1024 * 1024) {
-            toast('File size too large. Maximum size is 4MB', 'error');
+            toast({ type: 'error', message: 'File size too large. Maximum size is 4MB' });
             return false;
         }
 
         // Validate file type
         const allowedTypes = ['image/jpeg', 'image/png', 'image/gif'];
         if (!allowedTypes.includes(file.type)) {
-            toast('Invalid file type. Only JPG, PNG and GIF are allowed', 'error');
+            toast({ type: 'error', message: 'Invalid file type. Only JPG, PNG and GIF are allowed' });
             return false;
         }
 

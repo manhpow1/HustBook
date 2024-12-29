@@ -100,7 +100,7 @@ import { storeToRefs } from 'pinia';
 
 const router = useRouter();
 const userStore = useUserStore();
-const toast = useToast();
+const { toast } = useToast();
 const { validateField } = useFormValidation();
 const { compressImage, validateImage, isProcessing: isCompressing } = useImageProcessing();
 
@@ -152,7 +152,7 @@ const handleFileChange = async (event) => {
         }
     } catch (error) {
         console.error('File handling error:', error);
-        toast('Error processing image', 'error');
+        toast({ type: 'error', message: 'Error processing image' });
         avatar.value = null;
         avatarPreview.value = '';
         event.target.value = '';
@@ -169,7 +169,7 @@ const removeAvatar = () => {
 
 const handleSubmit = async () => {
     if (isCompressing.value) {
-        toast('Please wait while the image is being processed', 'info');
+        toast({ type: 'info', message: 'Please wait while the image is being processed' });
         return;
     }
     if (userNameError.value) return;
@@ -179,10 +179,10 @@ const handleSubmit = async () => {
         await userStore.updateProfile(sanitizedUserName, avatar.value);
 
         if (user.value?.isBlocked) {
-            toast('Your account has been blocked.', 'error');
+            toast({ type: 'error', message: 'Your account has been blocked.' });
             router.push({ name: 'Login' });
         } else {
-            toast('Profile updated successfully.', 'success');
+            toast({ type: 'success', message: 'Profile updated successfully.' });
             setTimeout(() => {
                 router.push({ name: 'Home' });
             }, 2000);

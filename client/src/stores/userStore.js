@@ -21,7 +21,7 @@ export const useUserStore = defineStore('user', () => {
     const router = useRouter();
     const socket = initSocket();
     const { handleError } = useErrorHandler();
-    const toast = useToast();
+    const { toast } = useToast();
 
     // State
     const user = ref(null);
@@ -118,7 +118,7 @@ export const useUserStore = defineStore('user', () => {
 
     const handleInactivityTimeout = async () => {
         await logout(true);
-        toast('warning', 'Session expired due to inactivity');
+        toast({ type: 'warning', message: 'Session expired due to inactivity' });
         router.push({
             path: '/login',
             query: { redirect: router.currentRoute.value.fullPath }
@@ -199,7 +199,7 @@ export const useUserStore = defineStore('user', () => {
     const handleSessionExpired = async () => {
         await logout(true);
         error.value = 'Session expired. Please login again.';
-        toast('error', error.value);
+        toast({ type: 'error', message: error.value });
         router.push({
             path: '/login',
             query: { redirect: router.currentRoute.value.fullPath }
@@ -254,7 +254,7 @@ export const useUserStore = defineStore('user', () => {
     // Auth Methods
     const register = async (phoneNumber, password) => {
         if (isLocked.value) {
-            toast('error', 'Account is temporarily locked. Please try again later.');
+            toast({ type: 'error', message: 'Account is temporarily locked. Please try again later.' });
             return false;
         }
 
@@ -277,7 +277,7 @@ export const useUserStore = defineStore('user', () => {
                 setAuthCookies(token);
                 updateLastActivity();
                 successMessage.value = 'Registration successful! Please verify your account.';
-                toast('success', successMessage.value);
+                toast({ type: 'success', message: successMessage.value });
                 return true;
             }
             return false;
@@ -291,7 +291,7 @@ export const useUserStore = defineStore('user', () => {
 
     const login = async (phoneNumber, password, rememberMe = false) => {
         if (isLocked.value) {
-            toast('error', 'Account is temporarily locked. Please try again later.');
+            toast({ type: 'error', message: 'Account is temporarily locked. Please try again later.' });
             return false;
         }
 
@@ -382,7 +382,7 @@ export const useUserStore = defineStore('user', () => {
 
         error.value = errorMessage;
         handleError(err);
-        toast('error', errorMessage);
+        toast({ type: 'error', message: errorMessage });
     };
 
     // Verification Methods
@@ -410,7 +410,7 @@ export const useUserStore = defineStore('user', () => {
 
     const getVerifyCode = async (phoneNumber) => {
         if (isLocked.value) {
-            toast('error', 'Account is temporarily locked. Please try again later.');
+            toast({ type: 'error', message: 'Account is temporarily locked. Please try again later.' });
             return false;
         }
 
@@ -419,7 +419,7 @@ export const useUserStore = defineStore('user', () => {
             const remainingTime = Math.ceil(
                 (VERIFICATION_CODE_COOLDOWN - (now - lastVerificationRequest.value)) / 1000
             );
-            toast('error', `Please wait ${remainingTime} seconds before requesting a new code`);
+            toast({ type: 'error', message: `Please wait ${remainingTime} seconds before requesting a new code` });
             return false;
         }
 
@@ -435,7 +435,7 @@ export const useUserStore = defineStore('user', () => {
             if (response.data.code === '1000') {
                 lastVerificationRequest.value = now;
                 successMessage.value = 'Verification code sent successfully!';
-                toast('success', successMessage.value);
+                toast({ type: 'success', message: successMessage.value });
                 startCooldown();
                 return {
                     success: true,
@@ -454,7 +454,7 @@ export const useUserStore = defineStore('user', () => {
 
     const verifyCode = async (phoneNumber, verifyCode) => {
         if (isLocked.value) {
-            toast('error', 'Account is temporarily locked. Please try again later.');
+            toast({ type: 'error', message: 'Account is temporarily locked. Please try again later.' });
             return { success: false };
         }
 
@@ -464,7 +464,7 @@ export const useUserStore = defineStore('user', () => {
                 isLocked.value = false;
                 verificationAttempts.value = 0;
             }, LOCKOUT_DURATION);
-            toast('error', 'Too many attempts. Please try again later.');
+            toast({ type: 'error', message: 'Too many attempts. Please try again later.' });
             return { success: false };
         }
 
@@ -493,7 +493,7 @@ export const useUserStore = defineStore('user', () => {
                         : 'Verification successful. Please continue registration!';
 
                     successMessage.value = message;
-                    toast('success', message);
+                    toast({ type: 'success', message: 'Login successful!' });
 
                     return {
                         success: true,
@@ -559,7 +559,7 @@ export const useUserStore = defineStore('user', () => {
             if (response.data.code === '1000') {
                 user.value = { ...user.value, ...response.data.data };
                 successMessage.value = 'Profile updated successfully!';
-                toast('success', successMessage.value);
+                toast({ type: 'success', message: 'Login successful!' });
                 return true;
             }
             return false;
@@ -573,7 +573,7 @@ export const useUserStore = defineStore('user', () => {
 
     const changePassword = async (currentPassword, newPassword) => {
         if (isLocked.value) {
-            toast('error', 'Account is temporarily locked. Please try again later.');
+            toast({ type: 'error', message: 'Account is temporarily locked. Please try again later.' });
             return false;
         }
 
@@ -583,7 +583,7 @@ export const useUserStore = defineStore('user', () => {
 
             if (currentPassword === newPassword) {
                 error.value = 'New password must be different from current password';
-                toast('error', error.value);
+                toast({ type: 'success', message: 'Login successful!' });
                 return false;
             }
 
@@ -595,7 +595,7 @@ export const useUserStore = defineStore('user', () => {
 
             if (response.data.code === '1000') {
                 successMessage.value = 'Password changed successfully!';
-                toast('success', successMessage.value);
+                toast({ type: 'success', message: 'Login successful!' });
                 await logout(true);
                 router.push('/login');
                 return true;
@@ -603,7 +603,7 @@ export const useUserStore = defineStore('user', () => {
 
             if (response.data.code === '9992') {
                 error.value = 'Password has been used recently. Please choose a different password.';
-                toast('error', error.value);
+                toast({ type: 'error', message: error.value });
             }
 
             return false;
@@ -659,7 +659,7 @@ export const useUserStore = defineStore('user', () => {
                 } else {
                     // Step 2: Reset password
                     successMessage.value = 'Password reset successfully!';
-                    toast('success', successMessage.value);
+                    toast({ type: 'success', message: 'Login successful!' });
 
                     // Clear any stored verification data
                     localStorage.removeItem('resetVerificationCode');

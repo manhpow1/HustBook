@@ -50,7 +50,7 @@ const handleNotificationClick = async () => {
     try {
         await postStore.fetchPosts();
         notificationStore.resetNewItemsCount();
-        toast('Posts refreshed with new items.', 'success');
+        toast({ type: 'success', message: 'Posts refreshed with new items.' });
     } catch (error) {
         handleError(error);
     }
