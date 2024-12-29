@@ -143,40 +143,31 @@ const router = createRouter({
 
 // Global navigation guard
 router.beforeEach(async (to, from, next) => {
-    // List of public routes that don't require auth - thêm route gốc '/'
     const publicRoutes = ['Login', 'SignUp', 'GetVerifyCode', 'Home', 'ForgotPassword'];
 
-    logger.debug('Navigating from:', from.fullPath, 'to:', to.fullPath);
-
-    // If route is public or explicitly marked as allowWithoutAuth, allow direct access
-    if (publicRoutes.includes(to.name) || to.path === '/' || to.meta.allowWithoutAuth) {
-        logger.debug('Public route or explicitly allowed without auth:', to.name);
+    if (publicRoutes.includes(to.name)) {
         next();
         return;
     }
 
     const userStore = useUserStore();
 
-    logger.debug('Route requires authentication:', to.name);
+    if (to.meta.requiresAuth) {
+        if (!userStore.isLoggedIn) {
+            try {
+                await userStore.checkAuth();
+            } catch (error) {
+                logger.error('Error during authentication check:', error);
+            }
 
-    // For all other routes, check if authentication is required
-    if (!userStore.isLoggedIn) {
-        logger.debug('User not logged in, attempting to authenticate...');
-        try {
-            await userStore.checkAuth();
-            logger.debug('Authentication check completed. isLoggedIn:', userStore.isLoggedIn);
-        } catch (error) {
-            logger.error('Error during authentication check:', error);
+            if (!userStore.isLoggedIn) {
+                next({ name: 'Login', query: { redirect: to.fullPath } });
+                return;
+            }
         }
     }
 
-    if (userStore.isLoggedIn) {
-        logger.debug('User is authenticated. Proceeding to:', to.name);
-        next();
-    } else {
-        logger.warn('User is not authenticated. Redirecting to Login...');
-        next({ name: 'Login', query: { redirect: to.fullPath } });
-    }
+    next();
 });
 
 // Navigation guard for AddPost component
