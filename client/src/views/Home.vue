@@ -1,204 +1,232 @@
 <template>
   <ErrorBoundary component-name="Home">
-    <main class="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      <h1 class="text-3xl font-bold mb-6 text-gray-800">Welcome to HustBook</h1>
-      <div v-if="userStore.isLoggedIn">
-        <!-- Directly render AddPost (no Suspense) -->
-        <AddPost @post-created="handlePostCreated" />
+    <main class="container mx-auto p-4 md:p-6 lg:p-8">
+      <ScrollArea class="w-full">
+        <Card class="mb-6">
+          <CardHeader>
+            <CardTitle>Welcome to HustBook</CardTitle>
+          </CardHeader>
+        </Card>
 
-        <!-- Recent Posts Section -->
-        <section class="mt-12" aria-labelledby="recent-posts-heading">
-          <h2 id="recent-posts-heading" class="text-2xl font-semibold mb-4 text-gray-800">
-            Recent Posts
-          </h2>
-          <div v-if="postStore.loading && postStore.posts.length === 0" class="space-y-6">
-            <PostSkeleton v-for="i in 3" :key="i" />
-          </div>
-          <div v-else-if="postStore.error" class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg"
-            role="alert">
-            <strong class="font-bold">Error!</strong>
-            <span class="block sm:inline">{{ postStore.error }}</span>
-            <Button @click="retryFetchPosts" variant="outline" class="mt-2">Retry</Button>
-          </div>
-          <ul v-else-if="postStore.posts.length > 0" class="space-y-6">
-            <TransitionGroup name="post-list" tag="div">
+        <div v-if="userStore.isLoggedIn">
+          <AddPost @post-created="handlePostCreated" />
+
+          <section class="mt-8" aria-labelledby="recent-posts-heading">
+            <h2 id="recent-posts-heading" class="scroll-m-20 text-2xl font-semibold tracking-tight mb-4">
+              Recent Posts
+            </h2>
+
+            <!-- Loading State -->
+            <div v-if="postStore.loading && postStore.posts.length === 0">
+              <Skeleton v-for="i in 3" :key="i" class="w-full h-32 mb-4" />
+            </div>
+
+            <!-- Error State -->
+            <Alert v-else-if="postStore.error" variant="destructive">
+              <AlertCircleIcon class="h-4 w-4" />
+              <AlertTitle>Error</AlertTitle>
+              <AlertDescription>{{ postStore.error }}</AlertDescription>
+              <Button @click="retryFetchPosts" variant="outline" class="mt-2">
+                Retry
+              </Button>
+            </Alert>
+
+            <!-- Posts List -->
+            <TransitionGroup v-else-if="postStore.posts.length > 0" name="post-list" tag="ul" class="space-y-4">
               <li v-for="post in sortedSearchResults" :key="post.id">
                 <Card>
-                  <template #header>
-                    <div class="flex items-center">
-                      <img :src="sanitizeUrl(post.userAvatar) || '../assets/avatar-default.svg'"
-                        :alt="`${sanitizeText(post.userName)}'s avatar`" class="w-10 h-10 rounded-full mr-4"
-                        loading="lazy" />
-                      <div>
-                        <h3 class="font-semibold text-gray-800">
-                          {{ sanitizeText(post.userName) }}
-                        </h3>
-                        <time :datetime="post.created" class="text-sm text-gray-500">
+                  <CardHeader>
+                    <div class="flex items-center gap-4">
+                      <Avatar>
+                        <AvatarImage :src="sanitizeUrl(post.userAvatar)" />
+                        <AvatarFallback>{{ post.userName?.charAt(0) }}</AvatarFallback>
+                      </Avatar>
+                      <div class="space-y-1">
+                        <h3 class="font-semibold">{{ sanitizeText(post.userName) }}</h3>
+                        <time :datetime="post.created" class="text-sm text-muted-foreground">
                           {{ formatDate(post.created) }}
                         </time>
                       </div>
                     </div>
-                  </template>
+                  </CardHeader>
 
-                  <p class="mb-4 text-gray-700">{{ sanitizeText(post.described) }}</p>
-                  <!-- Media Section -->
-                  <div v-if="post.media && post.media.length > 0" class="mb-4 grid gap-2"
-                    :class="mediaGridClass(post.media.length)">
-                    <div v-for="(media, index) in post.media" :key="index" class="relative">
-                      <!-- Image -->
-                      <img v-if="isImage(media)" :src="sanitizeUrl(media)" :alt="`Post image ${index + 1}`"
-                        class="w-full h-48 object-cover rounded-lg" loading="lazy" />
-                      <!-- Video -->
-                      <div v-else @click="goToWatchPage(post.id, index)"
-                        class="relative w-full h-48 bg-black rounded-lg overflow-hidden cursor-pointer">
-                        <video :src="sanitizeUrl(media)" class="w-full h-full object-cover" preload="metadata">
-                          Your browser does not support the video tag.
-                        </video>
-                        <div class="absolute inset-0 flex items-center justify-center bg-black bg-opacity-50">
-                          <PlayIcon class="w-16 h-16 text-white" aria-hidden="true" />
-                          <span class="sr-only">Play video</span>
+                  <CardContent>
+                    <p class="text-card-foreground">{{ sanitizeText(post.described) }}</p>
+
+                    <!-- Media Grid -->
+                    <AspectRatio v-if="post.media?.length" :ratio="16 / 9" class="mt-4">
+                      <div class="grid gap-2" :class="mediaGridClass(post.media.length)">
+                        <div v-for="(media, index) in post.media" :key="index"
+                          class="relative rounded-lg overflow-hidden">
+                          <img v-if="isImage(media)" :src="sanitizeUrl(media)" :alt="`Post image ${index + 1}`"
+                            class="w-full h-full object-cover" loading="lazy" />
+
+                          <div v-else @click="goToWatchPage(post.id, index)" class="relative h-full cursor-pointer">
+                            <video :src="sanitizeUrl(media)" class="w-full h-full object-cover" preload="metadata">
+                            </video>
+                            <div class="absolute inset-0 flex items-center justify-center bg-black/50">
+                              <PlayIcon class="w-12 h-12 text-white" />
+                            </div>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  </div>
+                    </AspectRatio>
+                  </CardContent>
 
-                  <!-- Footer with Actions -->
-                  <template #footer>
-                    <div class="flex flex-wrap items-center justify-between gap-2">
-                      <Button @click="likePost(post)" variant="outline" :class="{ 'text-primary-600': post.isLiked }"
-                        aria-label="Like Post">
-                        <ThumbsUpIcon class="w-5 h-5 mr-1" aria-hidden="true" />
-                        {{ post.like }} {{ post.like === 1 ? 'Like' : 'Likes' }}
-                      </Button>
-                      <Button @click="showComments(post.id)" variant="outline" aria-label="View Comments">
-                        <MessageCircleIcon class="w-5 h-5 mr-1" aria-hidden="true" />
-                        {{ post.comment }} {{ post.comment === 1 ? 'Comment' : 'Comments' }}
-                      </Button>
-                      <router-link :to="{ name: 'PostDetail', params: { id: post.id } }" class="w-full sm:w-auto">
-                        <Button variant="primary" class="w-full sm:w-auto">View Full Post</Button>
-                      </router-link>
-                    </div>
-                  </template>
+                  <CardFooter class="flex flex-wrap gap-2">
+                    <Button @click="likePost(post)" variant="outline" :class="{ 'text-primary': post.isLiked }">
+                      <ThumbsUpIcon class="w-4 h-4 mr-2" />
+                      {{ post.like }} {{ post.like === 1 ? 'Like' : 'Likes' }}
+                    </Button>
+
+                    <Button @click="showComments(post.id)" variant="outline">
+                      <MessageCircleIcon class="w-4 h-4 mr-2" />
+                      {{ post.comment }} {{ post.comment === 1 ? 'Comment' : 'Comments' }}
+                    </Button>
+
+                    <RouterLink :to="{ name: 'PostDetail', params: { id: post.id } }" class="w-full sm:w-auto">
+                      <Button variant="default" class="w-full">View Full Post</Button>
+                    </RouterLink>
+                  </CardFooter>
                 </Card>
               </li>
             </TransitionGroup>
-          </ul>
-          <p v-else class="text-gray-500">
-            No posts to display yet. Be the first to create a post!
-          </p>
-        </section>
-        <!-- Load More Button -->
-        <div v-if="postStore.hasMorePosts && !postStore.loading" class="mt-4 text-center">
-          <Button @click="loadMorePosts" variant="outline">Load More</Button>
+
+            <!-- Empty State -->
+            <Alert v-else>
+              <AlertDescription>
+                No posts to display yet. Be the first to create a post!
+              </AlertDescription>
+            </Alert>
+          </section>
+
+          <!-- Load More -->
+          <div v-if="postStore.hasMorePosts && !postStore.loading" class="mt-6 text-center">
+            <Button @click="loadMorePosts" variant="outline">Load More</Button>
+          </div>
+
+          <div v-if="postStore.loading && postStore.posts.length > 0" class="mt-6 flex justify-center">
+            <div class="flex justify-center">
+              <div class="loading loading-spinner loading-md"></div>
+            </div>
+          </div>
         </div>
-        <div v-if="postStore.loading && postStore.posts.length > 0" class="mt-4 text-center" role="status"
-          aria-live="polite">
-          <span class="loading loading-spinner loading-md"></span>
-        </div>
-      </div>
-      <!-- Prompt to Log In -->
-      <div v-else class="text-center">
-        <p class="mb-4 text-gray-700">Please log in to view and create posts.</p>
-        <router-link to="/login">
-          <Button>Log In</Button>
-        </router-link>
-      </div>
+
+        <!-- Auth State -->
+        <Card v-else class="text-center p-6">
+          <CardContent class="space-y-4">
+            <p class="text-muted-foreground">Please log in to view and create posts.</p>
+            <RouterLink to="/login">
+              <Button>Log In</Button>
+            </RouterLink>
+          </CardContent>
+        </Card>
+      </ScrollArea>
     </main>
   </ErrorBoundary>
 </template>
 
 <script setup>
-import { onMounted, watch, defineAsyncComponent, computed } from 'vue';
-import { useRouter } from 'vue-router';
-import { usePostStore } from '../stores/postStore';
-import { useUserStore } from '../stores/userStore';
-import { ThumbsUpIcon, MessageCircleIcon, PlayIcon } from 'lucide-vue-next';
-import { formatDistanceToNow } from 'date-fns';
-import { Button} from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
-import ErrorBoundary from '../components/shared/ErrorBoundary.vue';
-import { sanitizeOutput } from '../utils/sanitize';
-import { useErrorHandler } from '@/utils/errorHandler';
+import { onMounted, watch, defineAsyncComponent } from 'vue'
+import { useRouter } from 'vue-router'
+import { AlertCircle, ThumbsUp, MessageCircle, PenBox } from 'lucide-vue-next'
+import { formatDistanceToNow } from 'date-fns'
+import { vi } from 'date-fns/locale'
+import { usePostStore } from '../stores/postStore'
+import { useUserStore } from '../stores/userStore'
+import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert'
+import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar'
+import { Button } from '@/components/ui/button'
+import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card'
+import { ScrollArea } from '@/components/ui/scroll-area'
+import { AspectRatio } from '@/components/ui/aspect-ratio'
+import { Skeleton } from '@/components/ui/skeleton'
+// Lazy Components
+const AddPost = defineAsyncComponent(() =>
+  import('../components/post/AddPost.vue')
+)
+const MediaGrid = defineAsyncComponent(() =>
+  import('../components/post/MediaGrid.vue')
+)
+const PostsLoadingState = defineAsyncComponent(() =>
+  import('../components/shared/PostsLoadingState.vue')
+)
 
-// Lazy Loaded Components
-const AddPost = defineAsyncComponent(() => import('../components/post/AddPost.vue'));
-const PostSkeleton = defineAsyncComponent(() => import('../components/shared/PostSkeleton.vue'));
+// Utils
+import { sanitizeOutput } from '../utils/sanitize'
+import { useErrorHandler } from '@/utils/errorHandler'
 
-const router = useRouter();
-const postStore = usePostStore();
-const userStore = useUserStore();
-const { handleError } = useErrorHandler();
+const router = useRouter()
+const postStore = usePostStore()
+const userStore = useUserStore()
+const { handleError } = useErrorHandler()
 
-const loadMorePosts = () => {
-  console.log("Load more posts triggered");
-  postStore.fetchPosts({}, router);
-};
+// Methods
+const loadMorePosts = () => postStore.fetchPosts({}, router);
 
 const retryFetchPosts = () => {
-  console.log("Retry fetching posts triggered");
   postStore.resetPosts();
   postStore.fetchPosts({}, router);
 };
 
-const handlePostCreated = (newPost) => {
-  postStore.posts.unshift(newPost);
-};
+const mediaGridClass = (count) => ({
+  'grid-cols-1': count === 1,
+  'grid-cols-2': count === 2,
+  'grid-cols-3': count >= 3,
+  'md:grid-cols-4': count >= 4
+});
 
-const isImage = (url) => {
-  return url.match(/\.(jpeg|jpg|gif|png)$/i) != null;
-};
+const handlePostCreated = (newPost) => {
+  postStore.posts.unshift(newPost)
+}
 
 const likePost = async (post) => {
-  console.log(`Like post triggered for post ID: ${post.id}`);
-  await postStore.toggleLike(post.id, router);
-};
+  await postStore.toggleLike(post.id, router)
+}
 
 const showComments = (postId) => {
-  console.log(`Show comments triggered for post ID: ${postId}`);
-};
+  router.push({
+    name: 'PostDetail',
+    params: { id: postId },
+    hash: '#comments'
+  })
+}
 
 const formatDate = (date) => {
-  return formatDistanceToNow(new Date(date), { addSuffix: true });
-};
+  return formatDistanceToNow(new Date(date), {
+    addSuffix: true,
+    locale: vi
+  })
+}
 
-const goToWatchPage = (postId, mediaIndex) => {
-  router.push({ name: 'Watch', params: { id: `${postId}-${mediaIndex}` } });
-};
+const getInitials = (name) => {
+  return name
+    .split(' ')
+    .map(word => word[0])
+    .join('')
+    .toUpperCase()
+    .slice(0, 2)
+}
 
-const mediaGridClass = (mediaCount) => {
-  if (mediaCount === 1) return 'grid-cols-1';
-  if (mediaCount === 2) return 'grid-cols-2';
-  if (mediaCount === 3) return 'grid-cols-2 sm:grid-cols-3';
-  return 'grid-cols-2 sm:grid-cols-3 md:grid-cols-4';
-};
+const sanitizeText = (text) => sanitizeOutput(text)
+const sanitizeUrl = (url) => sanitizeOutput(url)
 
-const sanitizeText = (text) => {
-  return sanitizeOutput(text);
-};
-
-const sanitizeUrl = (url) => {
-  return sanitizeOutput(url);
-};
-
+// Lifecycle
 onMounted(() => {
-  console.log("Mounted: Checking if user is logged in and fetching posts if necessary");
-  console.log("userStore.isLoggedIn:", userStore.isLoggedIn);
-  console.log("postStore.posts.length:", postStore.posts.length);
-
-  if (userStore.isLoggedIn && postStore.posts.length === 0) {
-    console.log("User is logged in, fetching posts...");
+  if (userStore.isLoggedIn && !postStore.posts.length) {
     postStore.fetchPosts({}, router);
-  } else {
-    console.log("User is not logged in or posts are already loaded.");
   }
 });
 
-watch(() => userStore.isLoggedIn, (newValue) => {
+watch(() => userStore.isLoggedIn, async (newValue) => {
   console.log("User login status changed:", newValue);
   if (newValue) {
     console.log("User logged in. Resetting and fetching posts.");
     postStore.resetPosts();
-    postStore.fetchPosts({}, router);
+    const response = await postStore.fetchPosts({}, router);
+    if (!response || (Array.isArray(postStore.posts) && postStore.posts.length === 0)) {
+      console.log("No posts available.");
+    }
   } else {
     console.log("User logged out. Resetting posts.");
     postStore.resetPosts();
@@ -206,34 +234,18 @@ watch(() => userStore.isLoggedIn, (newValue) => {
 });
 
 watch(() => postStore.error, (newError) => {
-  if (newError) {
-    handleError(newError);
-  }
+  if (newError) handleError(newError);
 });
 </script>
 
-<style scoped>
+<style>
 .post-list-enter-active,
 .post-list-leave-active {
-  transition: all 0.5s ease;
+  @apply transition-all duration-500;
 }
 
 .post-list-enter-from,
 .post-list-leave-to {
-  opacity: 0;
-  transform: translateY(30px);
-}
-
-/* Media Queries for Responsive Design */
-@media (max-width: 640px) {
-  /* Styles for mobile devices */
-}
-
-@media (min-width: 641px) and (max-width: 1024px) {
-  /* Styles for tablets */
-}
-
-@media (min-width: 1025px) {
-  /* Styles for desktops */
+  @apply opacity-0 translate-y-8;
 }
 </style>

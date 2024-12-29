@@ -18,7 +18,7 @@ export const usePostStore = defineStore('post', () => {
     const hasMorePosts = ref(true);
     const lastVisible = ref(null);
     const lastKnownCoordinates = ref(null);
-    const { handleError }= useErrorHandler();
+    const { handleError } = useErrorHandler();
 
     const formattedLikes = computed(() => formatNumber(currentPost.value?.likes || 0));
     const formattedComments = computed(() => formatNumber(currentPost.value?.comments || 0));
