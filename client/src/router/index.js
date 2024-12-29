@@ -146,27 +146,35 @@ const router = createRouter({
 
 // Global navigation guard
 router.beforeEach(async (to, from, next) => {
-    // Simplify the public route check
-    if (to.meta.allowWithoutAuth || ['/login', '/', '/get-verify-code', '/forgot-password', '/signup', '/verify-code'].includes(to.path)) {
+    const publicPaths = ['/signup', '/login', '/', '/get-verify-code', '/forgot-password'];
+    const publicRoutes = ['Login', 'SignUp', 'GetVerifyCode', 'Home', 'ForgotPassword'];
+
+    if (publicRoutes.includes(to.name) || publicPaths.includes(to.path)) {
         next();
         return;
     }
 
     const userStore = useUserStore();
 
-    if (to.meta.requiresAuth && !userStore.isLoggedIn) {
-        try {
-            await userStore.verifyAuthState;
-        } catch (error) {
-            logger.error('Error during authentication check:', error);
-        }
-
+    if (to.meta.requiresAuth) {
         if (!userStore.isLoggedIn) {
-            next({
-                name: 'Login',
-                query: { redirect: to.fullPath }
-            });
-            return;
+            try {
+                const isAuthenticated = await userStore.checkAuth();
+                if (!isAuthenticated) {
+                    next({
+                        name: 'Login',
+                        query: { redirect: to.fullPath }
+                    });
+                    return;
+                }
+            } catch (error) {
+                logger.error('Error during authentication check:', error);
+                next({
+                    name: 'Login',
+                    query: { redirect: to.fullPath }
+                });
+                return;
+            }
         }
     }
 
