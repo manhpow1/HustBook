@@ -17,7 +17,7 @@ function genId() {
   return count.toString();
 }
 
-const toastTimeouts = new WeakMap();
+const toastTimeouts = new Map();
 
 function addToRemoveQueue(toastId) {
   if (toastTimeouts.has(toastId)) {
