@@ -10,7 +10,7 @@ export function useNotifications() {
     const loading = ref(false);
     const error = ref(null);
     const { handleError } = useErrorHandler();
-    const { showToast } = useToast();
+    const toast = useToast();
 
     // Fetch notifications using index and count for pagination
     async function fetchNotifications(index = 0, count = 20) {
@@ -29,7 +29,7 @@ export function useNotifications() {
         } catch (err) {
             error.value = 'Failed to fetch notifications';
             await handleError(err);
-            showToast(error.value, 'error');
+            toast(error.value, 'error');
         } finally {
             loading.value = false;
         }

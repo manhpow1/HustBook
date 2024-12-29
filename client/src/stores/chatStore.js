@@ -15,7 +15,7 @@ export const useChatStore = defineStore('chat', {
     actions: {
         async fetchConversations() {
             this.loadingConversations = true;
-            const { showToast } = useToast();
+            const toast = useToast();
             try {
                 const response = await apiService.getConversations(); // GET /conversations
                 if (response.data.code === '1000') {
@@ -25,7 +25,7 @@ export const useChatStore = defineStore('chat', {
                     throw new Error(response.data.message || 'Failed to load conversations');
                 }
             } catch (error) {
-                showToast(error.message, 'error');
+                toast(error.message, 'error');
             } finally {
                 this.loadingConversations = false;
             }
@@ -33,7 +33,7 @@ export const useChatStore = defineStore('chat', {
 
         async fetchMessages(conversationId, index = 0, count = 20) {
             this.loadingMessages = true;
-            const { showToast } = useToast();
+            const toast = useToast();
             try {
                 this.selectedConversationId = conversationId;
                 const response = await apiService.getConversationMessages(conversationId, { index, count });
@@ -43,7 +43,7 @@ export const useChatStore = defineStore('chat', {
                     throw new Error(response.data.message || 'Failed to load messages');
                 }
             } catch (error) {
-                showToast(error.message, 'error');
+                toast(error.message, 'error');
             } finally {
                 this.loadingMessages = false;
             }
@@ -87,7 +87,7 @@ export const useChatStore = defineStore('chat', {
 
         async markAsRead() {
             if (!this.selectedConversationId) return;
-            const { showToast } = useToast();
+            const toast = useToast();
             try {
                 const response = await apiService.setReadMessage(this.selectedConversationId);
                 if (response.data.code === '1000') {
@@ -97,13 +97,13 @@ export const useChatStore = defineStore('chat', {
                     throw new Error(response.data.message || 'Failed to mark messages as read');
                 }
             } catch (error) {
-                showToast(error.message, 'error');
+                toast(error.message, 'error');
             }
         },
 
         async deleteMessage(messageId) {
             if (!this.selectedConversationId) return;
-            const { showToast } = useToast();
+            const toast = useToast();
             try {
                 const response = await apiService.deleteMessage(this.selectedConversationId, messageId);
                 if (response.data.code === '1000') {
@@ -112,13 +112,13 @@ export const useChatStore = defineStore('chat', {
                     throw new Error(response.data.message || 'Failed to delete message');
                 }
             } catch (error) {
-                showToast(error.message, 'error');
+                toast(error.message, 'error');
             }
         },
 
         async deleteConversation() {
             if (!this.selectedConversationId) return;
-            const { showToast } = useToast();
+            const toast = useToast();
             try {
                 const response = await apiService.deleteConversation(this.selectedConversationId);
                 if (response.data.code === '1000') {
@@ -130,7 +130,7 @@ export const useChatStore = defineStore('chat', {
                     throw new Error(response.data.message || 'Failed to delete conversation');
                 }
             } catch (error) {
-                showToast(error.message, 'error');
+                toast(error.message, 'error');
             }
         }
     }

@@ -51,7 +51,7 @@ import ConfirmDialog from '../ui/ConfirmDialog.vue';
 import defaultAvatar from '../../assets/avatar-default.svg';
 
 const friendStore = useFriendStore();
-const { showToast } = useToast();
+const toast = useToast();
 
 const friendSuggestions = ref([]);
 const loading = ref(true);
@@ -67,12 +67,12 @@ const sendFriendRequest = async (userId) => {
     processingSuggestions.value.add(userId);
     try {
         await friendStore.sendFriendRequest(userId);
-        showToast('Friend request sent', 'success');
+        toast('Friend request sent', 'success');
         // Optionally remove the user from suggestions after sending request
         friendSuggestions.value = friendSuggestions.value.filter(user => user.userId !== userId);
     } catch (err) {
         console.error(`Error sending friend request to user ID ${userId}:`, err);
-        showToast('Failed to send friend request', 'error');
+        toast('Failed to send friend request', 'error');
     } finally {
         processingSuggestions.value.delete(userId);
     }
@@ -89,12 +89,12 @@ const blockConfirmed = async () => {
 
     try {
         await friendStore.setBlock(userToBlock.value, 0); // type: 0 to block
-        showToast('User blocked successfully', 'success');
+        toast('User blocked successfully', 'success');
         // Remove the blocked user from suggestions
         friendSuggestions.value = friendSuggestions.value.filter(user => user.userId !== userToBlock.value);
     } catch (err) {
         console.error(`Error blocking user with ID ${userToBlock.value}:`, err);
-        showToast('Failed to block user', 'error');
+        toast('Failed to block user', 'error');
     } finally {
         isLoading.value = false;
         confirmDialog.value = false;

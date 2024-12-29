@@ -58,7 +58,7 @@ import { useToast } from '../ui/toast';
 import ConfirmDialog from '../shared/ConfirmDialog.vue';
 
 const friendStore = usefriendStore();
-const { showToast } = useToast();
+const toast = useToast();
 
 const blockedUsers = ref([]);
 const loading = ref(true);
@@ -81,7 +81,7 @@ const loadBlockedUsers = async () => {
         await friendStore.getBlockedUsers();
         blockedUsers.value = friendStore.blockedUsers;
     } catch (err) {
-        showToast('Failed to load blocked users', 'error');
+        toast('Failed to load blocked users', 'error');
     } finally {
         loading.value = false;
     }
@@ -101,11 +101,11 @@ const unblockConfirmed = async () => {
 
     try {
         await friendStore.unblockUser(userIdToUnblock.value);
-        showToast('User unblocked successfully', 'success');
+        toast('User unblocked successfully', 'success');
         blockedUsers.value = blockedUsers.value.filter(user => user.id !== userIdToUnblock.value);
     } catch (err) {
         console.error(`Error unblocking user with ID ${userIdToUnblock.value}:`, err);
-        showToast('Failed to unblock user', 'error');
+        toast('Failed to unblock user', 'error');
     } finally {
         isProcessing.value = false;
         confirmDialog.value = false;
@@ -123,7 +123,7 @@ const loadMore = async () => {
         await friendStore.getListBlocks();
         blockedUsers.value = friendStore.blockedUsers;
     } catch (err) {
-        showToast('Failed to load more blocked users', 'error');
+        toast('Failed to load more blocked users', 'error');
     }
 };
 </script>

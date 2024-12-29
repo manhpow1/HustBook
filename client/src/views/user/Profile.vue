@@ -181,7 +181,7 @@ const userStore = useUserStore();
 const videoStore = useVideoStore();
 const postStore = usePostStore();
 const { handleError } = useErrorHandler();
-const { showToast } = useToast();
+const toast = useToast();
 
 const userId = ref(route.params.id);
 const user = ref({});
@@ -310,35 +310,35 @@ function goToMessages() {
 }
 
 function blockOrUnblockUser() {
-  showToast('Block/Unblock user not implemented', 'info');
+  toast('Block/Unblock user not implemented', 'info');
 }
 
 function openEllipsisMenu() {
-  showToast('Ellipsis menu not implemented', 'info');
+  toast('Ellipsis menu not implemented', 'info');
 }
 
 // Upload Actions
 function uploadCoverPhoto() {
   // Implement cover photo upload logic
   // Possibly use FileUpload component or similar approach
-  showToast('Cover photo upload not implemented', 'info');
+  toast('Cover photo upload not implemented', 'info');
 }
 
 function selectNewProfilePicture() {
   // Implement avatar selection logic
-  showToast('Select new profile picture not implemented', 'info');
+  toast('Select new profile picture not implemented', 'info');
 }
 
 function viewFullScreen(imageUrl) {
   // Show image in a full-screen viewer (e.g. MediaViewer)
-  showToast('Full-screen view not implemented', 'info');
+  toast('Full-screen view not implemented', 'info');
 }
 
 // Searching posts
 function searchPosts() {
   // postSearchQuery is already bound, computed filteredPosts will reactively update
   // Just ensure that postSearchQuery is used in filteredPosts computation
-  showToast(`Searching posts for "${postSearchQuery.value}"`, 'info');
+  toast(`Searching posts for "${postSearchQuery.value}"`, 'info');
 }
 
 watch(() => route.params.id, (newId) => {

@@ -24,7 +24,7 @@ const notificationStore = useNotificationStore();
 const postStore = usePostStore();
 const { newItemsCount } = storeToRefs(notificationStore);
 const { handleError } = useErrorHandler();
-const { showToast } = useToast();
+const { toast } = useToast();
 
 const NEW_ITEMS_CHECK_INTERVAL = 60000; // 60 seconds
 let intervalId;
@@ -50,7 +50,7 @@ const handleNotificationClick = async () => {
     try {
         await postStore.fetchPosts();
         notificationStore.resetNewItemsCount();
-        showToast('Posts refreshed with new items.', 'success');
+        toast('Posts refreshed with new items.', 'success');
     } catch (error) {
         handleError(error);
     }

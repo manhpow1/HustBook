@@ -127,7 +127,7 @@ import { useToast } from '../ui/toast';
 const searchStore = useSearchStore();
 const userStore = useUserStore();
 const router = useRouter();
-const { showToast } = useToast();
+const toast = useToast();
 const searchRef = ref(null);
 
 // Destructure store refs
@@ -231,7 +231,7 @@ const deleteSavedSearch = async (searchId) => {
     try {
         await searchStore.deleteSavedSearch(searchId);
         await fetchSavedSearches();
-        showToast('Saved search deleted successfully', 'success');
+        toast('Saved search deleted successfully', 'success');
     } catch (error) {
         console.error('Error deleting saved search:', error);
     }
@@ -241,7 +241,7 @@ const deleteAllSavedSearches = async () => {
     try {
         await searchStore.deleteSavedSearch(null, true);
         await fetchSavedSearches();
-        showToast('All saved searches deleted successfully', 'success');
+        toast('All saved searches deleted successfully', 'success');
     } catch (error) {
         console.error('Error deleting all saved searches:', error);
     }

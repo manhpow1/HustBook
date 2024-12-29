@@ -73,7 +73,7 @@ import { useToast } from '../ui/toast';
 import EditProfileForm from '../user/EditProfileForm.vue';
 
 const settingsStore = useSettingsStore();
-const { showToast } = useToast();
+const toast = useToast();
 
 const personalInfo = ref({
     firstName: '',
@@ -90,24 +90,24 @@ const passwordChange = ref({
 const updatePersonalInfo = async () => {
     try {
         await settingsStore.updatePersonalInfo(personalInfo.value);
-        showToast('Personal information updated successfully', 'success');
+        toast('Personal information updated successfully', 'success');
     } catch (error) {
-        showToast('Failed to update personal information', 'error');
+        toast('Failed to update personal information', 'error');
     }
 };
 
 const updatePassword = async () => {
     if (passwordChange.value.newPassword !== passwordChange.value.confirmPassword) {
-        showToast('New passwords do not match', 'error');
+        toast('New passwords do not match', 'error');
         return;
     }
 
     try {
         await settingsStore.updatePassword(passwordChange.value);
-        showToast('Password updated successfully', 'success');
+        toast('Password updated successfully', 'success');
         passwordChange.value = { oldPassword: '', newPassword: '', confirmPassword: '' };
     } catch (error) {
-        showToast('Failed to update password', 'error');
+        toast('Failed to update password', 'error');
     }
 };
 </script>

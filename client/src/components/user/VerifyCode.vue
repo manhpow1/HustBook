@@ -93,7 +93,7 @@ import { useToast } from '../ui/toast';
 const router = useRouter();
 const route = useRoute();
 const userStore = useUserStore();
-const { showToast } = useToast();
+const toast = useToast();
 const { isLoading, cooldownRemaining, isLocked, remainingAttempts, verifyCodeError, isVerifyCodeExpired } = storeToRefs(userStore);
 
 const phoneNumber = ref(route.query.phoneNumber);
@@ -165,11 +165,11 @@ const handleSubmit = async () => {
 const handleResendCode = async () => {
     const response = await userStore.getVerifyCode(phoneNumber.value);
     if (response.success) {
-        showToast('success', 'New verification code sent successfully');
+        toast('success', 'New verification code sent successfully');
         codeDigits.value = Array(6).fill('');
         digitInputs.value[0]?.focus();
     } else {
-        showToast('error', 'Failed to send new verification code');
+        toast('error', 'Failed to send new verification code');
     }
 };
 

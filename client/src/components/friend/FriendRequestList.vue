@@ -42,7 +42,7 @@ import { useFriendStore } from '../../stores/friendStore';
 import { useToast } from '../ui/toast';
 
 const friendStore = useFriendStore();
-const { showToast } = useToast();
+const toast = useToast();
 
 const processingRequests = ref(new Set());
 
@@ -55,9 +55,9 @@ const acceptRequest = async (userId) => {
     try {
         const success = await friendStore.setAcceptFriend(userId, '1');
         if (success) {
-            showToast('Friend request accepted', 'success');
+            toast('Friend request accepted', 'success');
         } else {
-            showToast('Failed to accept friend request', 'error');
+            toast('Failed to accept friend request', 'error');
         }
     } finally {
         processingRequests.value.delete(userId);
@@ -71,9 +71,9 @@ const rejectRequest = async (userId) => {
     try {
         const success = await friendStore.setAcceptFriend(userId, '0');
         if (success) {
-            showToast('Friend request rejected', 'success');
+            toast('Friend request rejected', 'success');
         } else {
-            showToast('Failed to reject friend request', 'error');
+            toast('Failed to reject friend request', 'error');
         }
     } finally {
         processingRequests.value.delete(userId);

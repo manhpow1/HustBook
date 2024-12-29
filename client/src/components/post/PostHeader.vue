@@ -69,7 +69,7 @@ const emit = defineEmits(['editPost', 'deletePost', 'reportPost', 'sharePost']);
 
 // Composables
 const { confirm: confirmAction } = useConfirmDialog();
-const { showToast } = useToast();
+const toast = useToast();
 const postStore = usePostStore();
 
 // Reactive state for advanced options visibility
@@ -98,11 +98,11 @@ const confirmDeletePost = async () => {
     if (isConfirmed) {
         try {
             await postStore.deletePost(props.post.id);
-            showToast('Post deleted successfully.', 'success');
+            toast('Post deleted successfully.', 'success');
             emit('deletePost');
         } catch (error) {
             console.error('Error deleting post:', error);
-            showToast('Failed to delete post. Please try again.', 'error');
+            toast('Failed to delete post. Please try again.', 'error');
         }
     }
     showAdvancedOptions.value = false;

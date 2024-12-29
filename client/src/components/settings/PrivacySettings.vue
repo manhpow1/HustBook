@@ -49,7 +49,7 @@ import { useFriendStore } from '../../stores/friendStore';
 import { useToast } from '../ui/toast';
 
 const friendStore = useFriendStore();
-const { showToast } = useToast();
+const toast = useToast();
 
 const searchQuery = ref('');
 const searchResults = ref([]);
@@ -68,7 +68,7 @@ const loadBlockedUsers = async () => {
         await friendStore.getListBlocks();
         blockedUsers.value = friendStore.blockedUsers;
     } catch (error) {
-        showToast('Failed to load blocked users', 'error');
+        toast('Failed to load blocked users', 'error');
     }
 };
 
@@ -82,28 +82,28 @@ const searchUsers = async () => {
         // Assuming there's a searchUsers method in the friendStore or a separate settingsStore
         searchResults.value = await friendStore.searchUsers(searchQuery.value);
     } catch (error) {
-        showToast('Failed to search users', 'error');
+        toast('Failed to search users', 'error');
     }
 };
 
 const blockUser = async (userId) => {
     try {
         await friendStore.setBlock(userId, 0); // type: 0 to block
-        showToast('User blocked successfully', 'success');
+        toast('User blocked successfully', 'success');
         loadBlockedUsers(); // Refresh the blocked users list
         searchResults.value = searchResults.value.filter(user => user.id !== userId); // Remove from search results
     } catch (error) {
-        showToast('Failed to block user', 'error');
+        toast('Failed to block user', 'error');
     }
 };
 
 const unblockUser = async (userId) => {
     try {
         await friendStore.setBlock(userId, 1); // type: 1 to unblock
-        showToast('User unblocked successfully', 'success');
+        toast('User unblocked successfully', 'success');
         blockedUsers.value = blockedUsers.value.filter(user => user.id !== userId); // Remove from blocked list
     } catch (error) {
-        showToast('Failed to unblock user', 'error');
+        toast('Failed to unblock user', 'error');
     }
 };
 </script>

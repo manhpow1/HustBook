@@ -109,7 +109,7 @@ import VerifyCode from './VerifyCode.vue'
 
 const router = useRouter()
 const userStore = useUserStore()
-const { showToast } = useToast()
+const toast = useToast()
 const { errors, validatePassword, validatePhoneNumber, clearErrors } = useFormValidation()
 const { isLoading } = storeToRefs(userStore)
 
@@ -183,23 +183,23 @@ const handleSignup = async () => {
   try {
     const success = await userStore.register(phoneNumber.value, password.value)
     if (success) {
-      showToast('Registration successful', 'success')
+      toast('Registration successful', 'success')
       router.push({ name: 'GetVerifyCode', query: { phoneNumber: phoneNumber.value } })
       // After navigating to GetVerifyCode, we will handle the verification process there
     }
   } catch (error) {
     console.error('Registration failed:', error)
-    showToast(error.message || 'Registration failed', 'error')
+    toast(error.message || 'Registration failed', 'error')
   }
 }
 
 const handleVerificationSuccess = () => {
-  showToast('Verification successful', 'success')
+  toast('Verification successful', 'success')
   currentStep.value = 'complete'
 }
 
 const handleVerificationError = (error) => {
-  showToast(error || 'Verification failed', 'error')
+  toast(error || 'Verification failed', 'error')
 }
 
 const passwordStrength = computed(() => {

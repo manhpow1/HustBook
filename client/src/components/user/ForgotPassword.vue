@@ -98,7 +98,7 @@ import logger from '@/services/logging';
 
 const router = useRouter();
 const userStore = useUserStore();
-const { showToast } = useToast();
+const toast = useToast();
 
 // State
 const step = ref(1);
@@ -131,9 +131,9 @@ const isSubmitDisabled = computed(() => {
 const copyCode = async () => {
   try {
     await navigator.clipboard.writeText(verificationCode.value);
-    showToast('Code copied to clipboard', 'success');
+    toast('Code copied to clipboard', 'success');
   } catch (error) {
-    showToast('Failed to copy code', 'error');
+    toast('Failed to copy code', 'error');
     logger.error('Copy code error:', error);
   }
 };
@@ -224,13 +224,13 @@ const handlePhoneSubmit = async () => {
       verificationCode.value = response.verifyCode;
       step.value = 2;
       startCooldown();
-      showToast('Verification code sent successfully', 'success');
+      toast('Verification code sent successfully', 'success');
 
       // Store verification code in localStorage for step 2
       localStorage.setItem('resetPhoneNumber', phoneNumber.value);
     }
   } catch (error) {
-    showToast(error.message, 'error');
+    toast(error.message, 'error');
     logger.error('Phone submission error:', error);
   }
 };
@@ -241,7 +241,7 @@ const handleResetSubmit = async () => {
 
   const storedPhone = localStorage.getItem('resetPhoneNumber');
   if (!storedPhone || !code.value || !newPassword.value) {
-    showToast('Verification code and new password are required', 'error');
+    toast('Verification code and new password are required', 'error');
     return;
   }
 
@@ -254,12 +254,12 @@ const handleResetSubmit = async () => {
 
     if (response?.success) {
       localStorage.removeItem('resetPhoneNumber');
-      showToast('Password reset successfully', 'success');
+      toast('Password reset successfully', 'success');
       router.push('/login');
     }
   } catch (error) {
     remainingAttempts.value--;
-    showToast(error.message, 'error');
+    toast(error.message, 'error');
     logger.error('Reset submission error:', error);
   }
 };
@@ -272,10 +272,10 @@ const resendCode = async () => {
     if (response?.success) {
       verificationCode.value = response.verifyCode;
       startCooldown();
-      showToast('Verification code resent', 'success');
+      toast('Verification code resent', 'success');
     }
   } catch (error) {
-    showToast(error.message, 'error');
+    toast(error.message, 'error');
     logger.error('Resend code error:', error);
   }
 };

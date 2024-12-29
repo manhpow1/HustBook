@@ -18,7 +18,7 @@ export const useFriendStore = defineStore('friend', () => {
     const hasMoreBlockedUsers = ref(true);
     const blockedUsersIndex = ref(0);
     const blockedUsersCount = ref(20);
-    const { showToast } = useToast();
+    const toast = useToast();
     const { handleError } = useErrorHandler();
 
     const sortedFriends = computed(() => {
@@ -146,7 +146,7 @@ export const useFriendStore = defineStore('friend', () => {
             const data = response.data;
             if (data.code === '1000') {
                 // Optionally update UI or state
-                showToast('Friend request sent', 'success');
+                toast('Friend request sent', 'success');
                 return data.data;
             } else {
                 throw new Error(data.message || 'Failed to send friend request');
@@ -196,11 +196,11 @@ export const useFriendStore = defineStore('friend', () => {
                 if (type === 0) {
                     // Blocking the user
                     blockedUsers.value.push(data.data.user); // Assuming API returns the blocked user data
-                    showToast('User blocked successfully', 'success');
+                    toast('User blocked successfully', 'success');
                 } else if (type === 1) {
                     // Unblocking the user
                     blockedUsers.value = blockedUsers.value.filter(user => user.id !== userId);
-                    showToast('User unblocked successfully', 'success');
+                    toast('User unblocked successfully', 'success');
                 }
             } else {
                 throw new Error(data.message || (type === 0 ? 'Failed to block user' : 'Failed to unblock user'));

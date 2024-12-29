@@ -51,7 +51,7 @@ import { storeToRefs } from 'pinia';
 const notificationStore = useNotificationStore();
 const { notifications, loading, error, unreadCount } = storeToRefs(notificationStore);
 const { handleError } = useErrorHandler();
-const { showToast } = useToast();
+const toast = useToast();
 
 const showNotifications = ref(false);
 
@@ -85,10 +85,10 @@ const fetchNotifications = async () => {
 const markAllAsRead = async () => {
     try {
         await notificationStore.markAllAsRead();
-        showToast('All notifications marked as read.', 'success');
+        toast('All notifications marked as read.', 'success');
     } catch (err) {
         handleError(err);
-        showToast('Failed to mark all as read.', 'error');
+        toast('Failed to mark all as read.', 'error');
     }
 };
 

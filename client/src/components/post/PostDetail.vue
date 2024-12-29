@@ -225,11 +225,11 @@ const confirmDeletePost = async () => {
 const deletePost = async () => {
     try {
         await postStore.deletePost(post.value.id);
-        showToast('Post deleted successfully.', 'success');
+        toast('Post deleted successfully.', 'success');
         router.push({ name: 'Home' });
     } catch (error) {
         console.error('Error deleting post:', error);
-        showToast('Failed to delete post. Please try again.', 'error');
+        toast('Failed to delete post. Please try again.', 'error');
         await handleError(error);
     }
     showDeletePostModal.value = false;
@@ -244,7 +244,7 @@ const handleReportPost = () => {
 // Handle successful report submission
 const handleReportSubmitted = () => {
     showReportPostModal.value = false;
-    showToast('Report submitted successfully.', 'success');
+    toast('Report submitted successfully.', 'success');
 };
 
 // Handle post removal (e.g., if the post no longer exists)
@@ -266,14 +266,14 @@ const sharePost = () => {
             text: post.value.described,
             url: window.location.href,
         }).then(() => {
-            showToast('Post shared successfully.', 'success');
+            toast('Post shared successfully.', 'success');
         }).catch((error) => {
             console.error('Error sharing post:', error);
-            showToast('Failed to share post.', 'error');
+            toast('Failed to share post.', 'error');
         });
     } else {
         // Fallback for browsers that do not support the Web Share API
-        showToast('Sharing is not supported in your browser.', 'info');
+        toast('Sharing is not supported in your browser.', 'info');
     }
 };
 </script>

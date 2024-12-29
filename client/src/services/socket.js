@@ -11,7 +11,7 @@ const MAX_RECONNECT_DELAY = 10000; // 10 seconds
 
 export function initSocket() {
     const userStore = useUserStore();
-    const { showToast } = useToast();
+    const toast = useToast();
 
     if (!userStore.isLoggedIn) {
         return null;
@@ -61,7 +61,7 @@ export function initSocket() {
     socket.on('connect', () => {
         logger.info('Socket connected:', socket.id);
         reconnectAttempts = 0;
-        showToast('Chat connected', 'success');
+        toast('Chat connected', 'success');
     });
 
     socket.on('connect_error', (error) => {
@@ -69,7 +69,7 @@ export function initSocket() {
         const errorMessage = error.message.includes('authentication failed') 
             ? 'Authentication failed. Please log in again.'
             : 'Chat connection failed';
-        showToast(errorMessage, 'error');
+        toast(errorMessage, 'error');
         handleReconnect();
     });
 
@@ -86,7 +86,7 @@ export function initSocket() {
 
     socket.on('reconnect_failed', () => {
         logger.error('Socket reconnection failed after', MAX_RECONNECT_ATTEMPTS, 'attempts');
-        showToast('Unable to connect to chat. Please refresh the page.', 'error');
+        toast('Unable to connect to chat. Please refresh the page.', 'error');
     });
 
     // Chat events with enhanced error handling
@@ -96,7 +96,7 @@ export function initSocket() {
             chatStore.addMessage(data.message);
         } catch (error) {
             logger.error('Error handling incoming message:', error);
-            showToast('Error displaying new message', 'error');
+            toast('Error displaying new message', 'error');
         }
     });
 
@@ -106,7 +106,7 @@ export function initSocket() {
             chatStore.removeMessage(data.messageId);
         } catch (error) {
             logger.error('Error handling message deletion:', error);
-            showToast('Error removing message', 'error');
+            toast('Error removing message', 'error');
         }
     });
 

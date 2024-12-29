@@ -2,7 +2,7 @@ import { ref } from 'vue';
 import { useToast } from '@/components/ui/toast';
 
 export function useImageProcessing() {
-    const { showToast } = useToast();
+    const toast = useToast();
     const isProcessing = ref(false);
 
     const compressImage = async (file, maxWidth = 1024, maxHeight = 1024, quality = 0.8) => {
@@ -11,7 +11,7 @@ export function useImageProcessing() {
 
             // Validate file type
             if (!file.type.startsWith('image/')) {
-                showToast('Only image files are allowed', 'error');
+                toast('Only image files are allowed', 'error');
                 return null;
             }
 
@@ -27,7 +27,7 @@ export function useImageProcessing() {
 
             // Check minimum dimensions
             if (img.width < 100 || img.height < 100) {
-                showToast('Image dimensions too small. Minimum size is 100x100 pixels', 'error');
+                toast('Image dimensions too small. Minimum size is 100x100 pixels', 'error');
                 return null;
             }
 
@@ -69,14 +69,14 @@ export function useImageProcessing() {
 
             // Verify final file size
             if (compressedFile.size > 4 * 1024 * 1024) { // 4MB limit
-                showToast('Image file size is too large even after compression', 'error');
+                toast('Image file size is too large even after compression', 'error');
                 return null;
             }
 
             return compressedFile;
         } catch (error) {
             console.error('Image compression error:', error);
-            showToast('Error processing image', 'error');
+            toast('Error processing image', 'error');
             return null;
         } finally {
             isProcessing.value = false;
@@ -86,14 +86,14 @@ export function useImageProcessing() {
     const validateImage = (file) => {
         // Validate file size (4MB)
         if (file.size > 4 * 1024 * 1024) {
-            showToast('File size too large. Maximum size is 4MB', 'error');
+            toast('File size too large. Maximum size is 4MB', 'error');
             return false;
         }
 
         // Validate file type
         const allowedTypes = ['image/jpeg', 'image/png', 'image/gif'];
         if (!allowedTypes.includes(file.type)) {
-            showToast('Invalid file type. Only JPG, PNG and GIF are allowed', 'error');
+            toast('Invalid file type. Only JPG, PNG and GIF are allowed', 'error');
             return false;
         }
 

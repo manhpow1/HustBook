@@ -124,7 +124,7 @@ const emit = defineEmits(['uncoverMedia', 'like', 'comment']);
 
 // Composables and utilities
 const { handleError } = useErrorHandler();
-const { showToast } = useToast();
+const toast = useToast();
 const postStore = usePostStore();
 
 // Reactive state for media viewer
@@ -179,11 +179,11 @@ const closeLightbox = () => {
 const uncoverMedia = async (mediaId) => {
     try {
         await postStore.uncoverMedia(props.post.id, mediaId);
-        showToast('Media uncovered successfully.', 'success');
+        toast('Media uncovered successfully.', 'success');
         emit('uncoverMedia', mediaId);
     } catch (error) {
         console.error('Failed to uncover media:', error);
-        showToast('Failed to uncover media. Please try again.', 'error');
+        toast('Failed to uncover media. Please try again.', 'error');
         await handleError(error);
     }
 };
@@ -194,7 +194,7 @@ const handleLike = async () => {
         await postStore.toggleLike(props.post.id);
     } catch (error) {
         console.error('Failed to like post:', error);
-        showToast('Failed to like post. Please try again.', 'error');
+        toast('Failed to like post. Please try again.', 'error');
         await handleError(error);
     }
 };

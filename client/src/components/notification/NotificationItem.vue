@@ -35,17 +35,17 @@ const props = defineProps({
 
 const notificationStore = useNotificationStore();
 const { handleError } = useErrorHandler();
-const { showToast } = useToast();
+const toast = useToast();
 
 const formattedTime = computed(() => formatNotificationTime(props.notification.created));
 
 const handleRemove = async () => {
     try {
         await notificationStore.removeNotification(props.notification.notificationId);
-        showToast('Notification removed.', 'success');
+        toast('Notification removed.', 'success');
     } catch (error) {
         await handleError(error);
-        showToast('Failed to remove notification.', 'error');
+        toast('Failed to remove notification.', 'error');
     }
 };
 
