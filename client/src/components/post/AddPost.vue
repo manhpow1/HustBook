@@ -21,8 +21,8 @@
 
                     <div class="space-y-2">
                         <Label for="status-select">How are you feeling?</Label>
-                        <Select v-model="status">
-                            <SelectTrigger :class="{ 'border-destructive': statusError }">
+                        <Select v-model="status" id="status-select" :options="statusOptions">
+                            <SelectTrigger :id="id" :class="{ 'border-destructive': statusError }">
                                 <SelectValue placeholder="Select a status" />
                             </SelectTrigger>
                             <SelectContent>
