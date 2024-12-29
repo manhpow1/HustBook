@@ -156,7 +156,7 @@ router.beforeEach(async (to, from, next) => {
 
     if (to.meta.requiresAuth && !userStore.isLoggedIn) {
         try {
-            await userStore.checkAuth();
+            await userStore.verifyAuthState;
         } catch (error) {
             logger.error('Error during authentication check:', error);
         }
