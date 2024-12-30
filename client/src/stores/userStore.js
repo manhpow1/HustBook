@@ -96,12 +96,22 @@ export const useUserStore = defineStore('user', () => {
     const verifyAuthState = async () => {
         try {
             const token = Cookies.get('accessToken');
-            if (!token) return false;
+            if (!token) {
+                user.value = null;
+                return false;
+            }
 
             const response = await apiService.authCheck();
-            return response.data?.code === '1000';
+            if (response.data?.code === '1000') {
+                user.value = response.data.user;
+                return true;
+            }
+
+            user.value = null;
+            return false;
         } catch (err) {
             logger.error('Auth verification failed:', err);
+            user.value = null;
             return false;
         }
     }
@@ -679,37 +689,6 @@ export const useUserStore = defineStore('user', () => {
         }
     };
 
-    const checkAuth = async () => {
-        try {
-            isLoading.value = true;
-            error.value = null;
-
-            const response = await apiService.authCheck();
-
-            if (response.data?.code === '1000') {
-                const userData = response.data.data;
-
-                // Update user state with returned data
-                user.value = {
-                    ...user.value,
-                    uid: userData.user.id,
-                    userName: userData.user.userName,
-                    phoneNumber: userData.user.phoneNumber,
-                    avatar_url: userData.user.avatar_url
-                };
-
-                return true;
-            }
-
-            return false;
-        } catch (err) {
-            await handleError(err);
-            return false;
-        } finally {
-            isLoading.value = false;
-        }
-    }
-
     return {
         // State
         user,
@@ -754,6 +733,5 @@ export const useUserStore = defineStore('user', () => {
         fetchUserProfile,
         forgotPassword,
         verifyAuthState,
-        checkAuth,
     };
 });

@@ -146,20 +146,15 @@ const router = createRouter({
 
 // Global navigation guard
 router.beforeEach(async (to, from, next) => {
-    const publicPaths = ['/signup', '/login', '/', '/get-verify-code', '/forgot-password'];
-    const publicRoutes = ['Login', 'SignUp', 'GetVerifyCode', 'Home', 'ForgotPassword'];
-
-    if (publicRoutes.includes(to.name) || publicPaths.includes(to.path)) {
+    if (to.meta.allowWithoutAuth) {
         next();
         return;
     }
-
     const userStore = useUserStore();
 
-    if (to.meta.requiresAuth) {
-        if (!userStore.isLoggedIn) {
+    if (to.meta.requiresAuth && !userStore.isLoggedIn) {
             try {
-                const isAuthenticated = await userStore.checkAuth();
+                const isAuthenticated = await userStore.verifyAuthState();
                 if (!isAuthenticated) {
                     next({
                         name: 'Login',
@@ -174,8 +169,7 @@ router.beforeEach(async (to, from, next) => {
                     query: { redirect: to.fullPath }
                 });
                 return;
-            }
-        }
+            }        
     }
 
     next();

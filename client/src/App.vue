@@ -94,21 +94,15 @@ const userStore = useUserStore();
 onMounted(async () => {
   logger.debug('App mounted. Initializing user state...');
   try {
-    if (userStore.isLoggedIn) {
-      logger.debug('Checking auth state...');
+    // Chỉ verify khi có token
+    const token = Cookies.get('accessToken');
+    if (token) {
+      logger.debug('Found token, checking auth state...');
       const isValid = await userStore.verifyAuthState();
       if (!isValid) {
         logger.debug('Auth state invalid, clearing...');
         userStore.clearAuthState();
-        return;
       }
-      logger.debug('Fetching user profile...');
-      await userStore.fetchUserProfile().catch((error) => {
-        logger.error('Error fetching user profile:', error);
-        userStore.clearAuthState();
-      });
-    } else {
-      logger.debug('User not logged in.');
     }
   } catch (error) {
     logger.error('Error during app initialization:', error);
