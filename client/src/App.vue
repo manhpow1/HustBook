@@ -42,6 +42,7 @@ import { useGlobalErrorHandler } from './composables/useGlobalErrorHandler';
 import { Toast, ToastProvider } from './components/ui/toast';
 
 // Initialize Global Error Handling
+const userStore = useUserStore();
 logger.debug('Initializing global error handling...');
 useGlobalErrorHandler();
 
@@ -87,8 +88,6 @@ useHead({
     },
   ],
 });
-
-const userStore = useUserStore();
 
 // Initialize auth state
 onMounted(async () => {
