@@ -146,15 +146,25 @@ const router = createRouter({
 
 // Global navigation guard
 router.beforeEach(async (to, from, next) => {
+    logger.debug(`Router guard triggered: ${from.path} -> ${to.path}`);
+    logger.debug(`Route meta: `, to.meta);
+
     if (to.meta.allowWithoutAuth) {
+        logger.debug('Route allows access without auth');
         next();
         return;
     }
 
     const userStore = useUserStore();
+    logger.debug(`Current login status: ${userStore.isLoggedIn}`);
+
     if (to.meta.requiresAuth && !userStore.isLoggedIn) {
+        logger.debug('Route requires auth and user not logged in');
         const isAuthenticated = await userStore.verifyAuthState();
+        logger.debug(`Auth verification result: ${isAuthenticated}`);
+
         if (!isAuthenticated) {
+            logger.debug(`Redirecting to login with redirect=${to.fullPath}`);
             next({
                 name: 'Login',
                 query: { redirect: to.fullPath }
@@ -163,8 +173,10 @@ router.beforeEach(async (to, from, next) => {
         }
     }
 
+    logger.debug('Navigation allowed');
     next();
 });
+
 // Navigation guard for AddPost component
 router.beforeResolve((to, from, next) => {
     logger.debug(`Resolving navigation from ${from.name} to ${to.name}`);

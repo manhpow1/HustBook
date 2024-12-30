@@ -3,14 +3,14 @@ import { useErrorHandler } from '@/utils/errorHandler';
 import { useUserStore } from '../stores/userStore';
 import Cookies from 'js-cookie';
 import logger from './logging';
-import { useRouter } from 'vue-router';
+import router from '@/router';
 
 // Constants
 const REFRESH_THRESHOLD = 5 * 60 * 1000; // 5 minutes in ms
 const MAX_RETRY_ATTEMPTS = 3;
 const REQUEST_TIMEOUT = 30000; // 30 seconds
-const router = useRouter();
 const { handleError } = useErrorHandler();
+const userStore = useUserStore();
 
 const axiosInstance = axios.create({
     baseURL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000',
@@ -88,7 +88,6 @@ axiosInstance.interceptors.request.use(
         // Handle token refresh if needed
         if (shouldRefreshToken() && !config.url.includes('refresh-token')) {
             try {
-                const userStore = useUserStore();
                 await userStore.refreshToken();
                 const newToken = Cookies.get('accessToken');
                 if (newToken) {
@@ -121,7 +120,6 @@ axiosInstance.interceptors.response.use(
     },
     async error => {
         const originalRequest = error.config;
-        const userStore = useUserStore();
 
         // Handle CSRF token errors first
         if (error.response?.data?.code === '9998' &&
@@ -250,7 +248,6 @@ axiosInstance.interceptors.response.use(
     response => response,
     async error => {
         if (error.response?.status === 401) {
-            const userStore = useUserStore();
             await userStore.clearAuthState();
             router.push('/login');
             return Promise.reject(error);

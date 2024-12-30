@@ -107,14 +107,18 @@ function dispatch(action) {
 }
 
 function useToast() {
-  // Optimize with computed
   const toasts = computed(() => state.value.toasts);
 
-  // Add cleanup
-  onUnmounted(() => {
-    toastTimeouts.forEach(clearTimeout);
-    state.value.toasts = [];
-  });
+  try {
+    onUnmounted(() => {
+      toastTimeouts.forEach(clearTimeout);
+      state.value.toasts = [];
+    });
+  } catch (e) {
+    console.warn(
+      "onUnmounted should be used within the setup() function. Lifecycle hooks might not work properly outside of setup()."
+    );
+  }
 
   return {
     toasts,

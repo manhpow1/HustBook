@@ -94,21 +94,31 @@ export const useUserStore = defineStore('user', () => {
     };
 
     const verifyAuthState = async () => {
+        logger.debug('Starting auth verification');
         try {
             const token = Cookies.get('accessToken');
+            logger.debug(`Token exists: ${!!token}`);
+
             if (!token) {
+                logger.debug('No token found, clearing auth state');
                 clearAuthState();
                 return false;
             }
 
+            logger.debug('Performing auth check API call');
             const response = await apiService.authCheck();
+            logger.debug(`Auth check response code: ${response.data?.code}`);
+
             if (response.data?.code === '1000') {
+                logger.debug('Auth check successful');
                 user.value = response.data.user;
                 return true;
             }
 
+            logger.debug('Auth check failed, clearing state');
             clearAuthState();
             return false;
+
         } catch (err) {
             logger.error('Auth verification failed:', err);
             clearAuthState();
