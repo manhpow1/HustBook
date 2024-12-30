@@ -97,7 +97,7 @@ export const useUserStore = defineStore('user', () => {
         try {
             const token = Cookies.get('accessToken');
             if (!token) {
-                user.value = null;
+                clearAuthState();
                 return false;
             }
 
@@ -107,11 +107,11 @@ export const useUserStore = defineStore('user', () => {
                 return true;
             }
 
-            user.value = null;
+            clearAuthState();
             return false;
         } catch (err) {
             logger.error('Auth verification failed:', err);
-            user.value = null;
+            clearAuthState();
             return false;
         }
     };
