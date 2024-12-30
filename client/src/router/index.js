@@ -150,31 +150,30 @@ router.beforeEach(async (to, from, next) => {
         next();
         return;
     }
-    const userStore = useUserStore();
 
+    const userStore = useUserStore();
     if (to.meta.requiresAuth && !userStore.isLoggedIn) {
-            try {
-                const isAuthenticated = await userStore.verifyAuthState();
-                if (!isAuthenticated) {
-                    next({
-                        name: 'Login',
-                        query: { redirect: to.fullPath }
-                    });
-                    return;
-                }
-            } catch (error) {
-                logger.error('Error during authentication check:', error);
+        try {
+            const isAuthenticated = await userStore.verifyAuthState();
+            if (!isAuthenticated) {
                 next({
                     name: 'Login',
                     query: { redirect: to.fullPath }
                 });
                 return;
-            }        
+            }
+        } catch (error) {
+            logger.error('Error during authentication check:', error);
+            next({
+                name: 'Login',
+                query: { redirect: to.fullPath }
+            });
+            return;
+        }
     }
 
     next();
 });
-
 // Navigation guard for AddPost component
 router.beforeResolve((to, from, next) => {
     logger.debug(`Resolving navigation from ${from.name} to ${to.name}`);
