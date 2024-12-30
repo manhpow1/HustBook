@@ -1,6 +1,5 @@
 import axios from 'axios';
 import { useErrorHandler } from '@/utils/errorHandler';
-import { useUserStore } from '../stores/userStore';
 import Cookies from 'js-cookie';
 import logger from './logging';
 import router from '@/router';
@@ -10,17 +9,16 @@ const REFRESH_THRESHOLD = 5 * 60 * 1000; // 5 minutes in ms
 const MAX_RETRY_ATTEMPTS = 3;
 const REQUEST_TIMEOUT = 30000; // 30 seconds
 const { handleError } = useErrorHandler();
-const userStore = useUserStore();
 
 const axiosInstance = axios.create({
     baseURL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000',
     timeout: REQUEST_TIMEOUT,
     headers: {
         'Content-Type': 'application/json',
-        'X-Requested-With': 'XMLHttpRequest'
+        'X-Requested-With': 'XMLHttpRequest',
     },
     xsrfCookieName: 'XSRF-TOKEN',
-    xsrfHeaderName: 'X-CSRF-Token'
+    xsrfHeaderName: 'X-CSRF-Token',
 });
 
 // Token refresh state
@@ -67,15 +65,16 @@ const shouldRefreshToken = () => {
 // Request interceptor
 axiosInstance.interceptors.request.use(
     async config => {
+        const { useUserStore } = await import('@/stores/userStore'); // Lazy import
+        const userStore = useUserStore();
+
         const accessToken = Cookies.get('accessToken');
         if (accessToken) {
             config.headers['Authorization'] = `Bearer ${accessToken}`;
         }
 
-        // Handle CSRF token for mutating requests
         if (['post', 'put', 'delete', 'patch'].includes(config.method?.toLowerCase())) {
             try {
-                // Get new CSRF token if we don't have one
                 if (!csrfToken) {
                     csrfToken = await getCsrfToken();
                 }
@@ -85,7 +84,6 @@ axiosInstance.interceptors.request.use(
             }
         }
 
-        // Handle token refresh if needed
         if (shouldRefreshToken() && !config.url.includes('refresh-token')) {
             try {
                 await userStore.refreshToken();
@@ -106,11 +104,8 @@ axiosInstance.interceptors.request.use(
     }
 );
 
-// Response interceptor
-// Response interceptors
 axiosInstance.interceptors.response.use(
     response => {
-        // Capture CSRF token from response headers
         const newCsrfToken = response.headers['x-csrf-token'];
         if (newCsrfToken) {
             csrfToken = newCsrfToken;
@@ -120,11 +115,14 @@ axiosInstance.interceptors.response.use(
     },
     async error => {
         const originalRequest = error.config;
+        const { useUserStore } = await import('@/stores/userStore'); // Lazy import
+        const userStore = useUserStore();
 
-        // Handle CSRF token errors first
-        if (error.response?.data?.code === '9998' &&
+        if (
+            error.response?.data?.code === '9998' &&
             error.response?.data?.message?.includes('CSRF') &&
-            !originalRequest._csrfRetry) {
+            !originalRequest._csrfRetry
+        ) {
             try {
                 originalRequest._csrfRetry = true;
                 csrfToken = await getCsrfToken();
@@ -136,16 +134,16 @@ axiosInstance.interceptors.response.use(
             }
         }
 
-        // If error is not due to authentication or already retried, reject
-        if (!error.response ||
+        if (
+            !error.response ||
             error.response.status !== 401 ||
             originalRequest._retry ||
-            retryCount >= MAX_RETRY_ATTEMPTS) {
+            retryCount >= MAX_RETRY_ATTEMPTS
+        ) {
             handleError(error);
             return Promise.reject(error);
         }
 
-        // If already refreshing token, queue the request
         if (isRefreshing) {
             return new Promise((resolve, reject) => {
                 failedQueue.push({ resolve, reject });
@@ -170,44 +168,39 @@ axiosInstance.interceptors.response.use(
                 throw new Error('No refresh token available');
             }
 
-            // Get new CSRF token before refreshing
             const newCsrfToken = await getCsrfToken();
-            csrfToken = newCsrfToken; // Update the global CSRF token
+            csrfToken = newCsrfToken;
 
-            // Attempt to refresh token
             const response = await axios.post(
                 `${axiosInstance.defaults.baseURL}/api/auth/refresh-token`,
                 { refreshToken },
                 {
                     headers: {
                         'Content-Type': 'application/json',
-                        'X-CSRF-Token': newCsrfToken
-                    }
+                        'X-CSRF-Token': newCsrfToken,
+                    },
                 }
             );
 
             if (response.data.code === '1000') {
                 const { token: newAccessToken, refreshToken: newRefreshToken } = response.data.data;
 
-                // Update cookies and headers
                 Cookies.set('accessToken', newAccessToken, {
                     secure: true,
                     sameSite: 'strict',
-                    expires: 1 / 96 // 15 minutes
+                    expires: 1 / 96,
                 });
 
                 Cookies.set('refreshToken', newRefreshToken, {
                     secure: true,
                     sameSite: 'strict',
-                    expires: 7 // 7 days
+                    expires: 7,
                 });
 
                 axiosInstance.defaults.headers.common['Authorization'] = `Bearer ${newAccessToken}`;
 
-                // Process queued requests
                 processQueue(null, newAccessToken);
 
-                // Update headers for original request
                 originalRequest.headers['Authorization'] = `Bearer ${newAccessToken}`;
                 originalRequest.headers['X-CSRF-Token'] = newCsrfToken;
 
