@@ -31,7 +31,31 @@ class Logger {
 
     logToConsole(level, logEntry) {
         const formattedLevel = `[${level.toUpperCase()}]`;
-        console[level](`${formattedLevel}: ${logEntry.message}`, logEntry);
+
+        const consoleMethod = console[level] ? level : 'log';
+
+        console[consoleMethod](
+            `%c${formattedLevel}%c: ${logEntry.message}`,
+            this.getStyleForLevel(level),
+            '',
+            logEntry
+        );
+    }
+
+    getStyleForLevel(level) {
+        // Add custom styles for different log levels
+        switch (level) {
+            case logLevels.ERROR:
+                return 'color: red; font-weight: bold;';
+            case logLevels.WARN:
+                return 'color: orange; font-weight: bold;';
+            case logLevels.INFO:
+                return 'color: blue; font-weight: bold;';
+            case logLevels.DEBUG:
+                return 'color: gray; font-style: italic;';
+            default:
+                return 'color: black;';
+        }
     }
 
     error(message, meta = {}) {
