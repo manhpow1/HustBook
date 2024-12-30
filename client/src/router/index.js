@@ -153,17 +153,8 @@ router.beforeEach(async (to, from, next) => {
 
     const userStore = useUserStore();
     if (to.meta.requiresAuth && !userStore.isLoggedIn) {
-        try {
-            const isAuthenticated = await userStore.verifyAuthState();
-            if (!isAuthenticated) {
-                next({
-                    name: 'Login',
-                    query: { redirect: to.fullPath }
-                });
-                return;
-            }
-        } catch (error) {
-            logger.error('Error during authentication check:', error);
+        const isAuthenticated = await userStore.verifyAuthState();
+        if (!isAuthenticated) {
             next({
                 name: 'Login',
                 query: { redirect: to.fullPath }

@@ -114,7 +114,7 @@ export const useUserStore = defineStore('user', () => {
             user.value = null;
             return false;
         }
-    }
+    };
 
     const setupInactivityTimer = () => {
         clearInterval(inactivityTimer.value);
