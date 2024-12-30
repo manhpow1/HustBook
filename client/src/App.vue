@@ -40,6 +40,7 @@ import { useHead } from '@unhead/vue';
 import NewItemsNotification from './components/notification/NewItemsNotification.vue';
 import { useGlobalErrorHandler } from './composables/useGlobalErrorHandler';
 import { Toast, ToastProvider } from './components/ui/toast';
+import Cookies from 'js-cookie';
 
 // Initialize Global Error Handling
 const userStore = useUserStore();
