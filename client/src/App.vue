@@ -93,7 +93,7 @@ useHead({
 onMounted(async () => {
   logger.debug('App mounted. Initializing user state...');
   try {
-    // Chỉ verify khi có token
+    await init(); // Thêm await ở đây
     const token = Cookies.get('accessToken');
     if (token) {
       logger.debug('Found token, checking auth state...');
