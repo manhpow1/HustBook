@@ -1,153 +1,196 @@
 <template>
-    <div class="video-player relative">
-        <video ref="videoRef" :src="video.url" class="w-full" @click="togglePlay" @dblclick="toggleFullscreen"
-            @loadedmetadata="onVideoLoaded" @timeupdate="onTimeUpdate" @volumechange="onVolumeChange"></video>
-        <div class="video-controls absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black to-transparent p-4">
-            <div class="flex justify-between items-center">
-                <div class="flex items-center">
-                    <button @click="togglePlay" class="text-white mr-2">
-                        <PlayIcon v-if="!isPlaying" class="w-6 h-6" />
-                        <PauseIcon v-else class="w-6 h-6" />
-                    </button>
-                    <input type="range" min="0" max="1" step="0.1" v-model="volume" @input="setVolume" class="w-24" />
+    <div class="video-player relative w-full" ref="playerContainer">
+        <div v-if="loading" class="absolute inset-0 flex items-center justify-center bg-black/50">
+            <Loader2Icon class="h-8 w-8 animate-spin text-white" />
+        </div>
+
+        <video ref="videoRef" class="w-full rounded-lg" :src="video.url" @loadedmetadata="onVideoLoaded"
+            @timeupdate="onTimeUpdate" @ended="onVideoEnded" @error="onVideoError" :poster="video.thumbnail"
+            :aria-label="video.title" preload="metadata">
+            <track v-if="video.captions" kind="captions" :src="video.captions" />
+            Your browser does not support the video tag.
+        </video>
+
+        <div class="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 p-4">
+            <div class="flex items-center gap-4">
+                <Button variant="ghost" size="icon" @click="togglePlay" :aria-label="isPlaying ? 'Pause' : 'Play'">
+                    <PlayIcon v-if="!isPlaying" class="h-6 w-6 text-white" />
+                    <PauseIcon v-else class="h-6 w-6 text-white" />
+                </Button>
+
+                <div class="flex-1">
+                    <Slider v-model="progress" @change="onProgressChange" :max="100" :step="0.1" class="w-full" />
+                    <p class="mt-1 text-sm text-white">
+                        {{ formatTime(currentTime) }} / {{ formatTime(duration) }}
+                    </p>
                 </div>
-                <div class="flex items-center">
-                    <button @click="togglePictureInPicture" class="text-white mr-2">
-                        <MinimizeIcon class="w-6 h-6" />
-                    </button>
-                    <button @click="openVideoMenu" class="text-white">
-                        <MoreVerticalIcon class="w-6 h-6" />
-                    </button>
+
+                <div class="flex items-center gap-2">
+                    <Button variant="ghost" size="icon" @click="toggleMute" :aria-label="isMuted ? 'Unmute' : 'Mute'">
+                        <VolumeXIcon v-if="isMuted" class="h-6 w-6 text-white" />
+                        <Volume2Icon v-else class="h-6 w-6 text-white" />
+                    </Button>
+
+                    <Select v-model="playbackRate">
+                        <SelectTrigger class="w-20 text-white">
+                            <SelectValue :placeholder="playbackRate + 'x'" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem v-for="rate in [0.5, 1, 1.5, 2]" :key="rate" :value="rate">
+                                {{ rate }}x
+                            </SelectItem>
+                        </SelectContent>
+                    </Select>
+
+                    <Button variant="ghost" size="icon" @click="toggleFullscreen"
+                        :aria-label="isFullscreen ? 'Exit fullscreen' : 'Enter fullscreen'">
+                        <MaximizeIcon v-if="!isFullscreen" class="h-6 w-6 text-white" />
+                        <MinimizeIcon v-else class="h-6 w-6 text-white" />
+                    </Button>
                 </div>
-            </div>
-            <div class="mt-2">
-                <progress :value="progress" max="100" class="w-full"></progress>
             </div>
         </div>
-        <VideoMenu v-if="isMenuOpen" :video="video" @close="closeVideoMenu" @report="reportVideo"
-            @add-friend="addFriend" @block="blockUploader" />
+
+        <Alert v-if="error" variant="destructive" class="absolute top-4 right-4">
+            <AlertCircleIcon class="h-4 w-4" />
+            <AlertTitle>Error</AlertTitle>
+            <AlertDescription>{{ error }}</AlertDescription>
+        </Alert>
     </div>
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted } from 'vue';
-import { PlayIcon, PauseIcon, MinimizeIcon, MoreVerticalIcon } from 'lucide-vue-next';
-import VideoMenu from './VideoMenu.vue';
-import { useVideoStore } from '../../stores/videoStore';
+import { ref, onMounted, onBeforeUnmount } from 'vue'
+import { Loader2Icon, PlayIcon, PauseIcon, VolumeXIcon, Volume2Icon, MaximizeIcon, MinimizeIcon, AlertCircleIcon } from 'lucide-vue-next'
+import { Button } from '@/components/ui/button'
+import { Slider } from '@/components/ui/slider'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert'
+import { useLocalStorage } from '@vueuse/core'
 
 const props = defineProps({
     video: {
         type: Object,
         required: true
     }
-});
+})
 
-const videoStore = useVideoStore();
-const videoRef = ref(null);
-const isPlaying = ref(false);
-const volume = ref(0);
-const progress = ref(0);
-const isMenuOpen = ref(false);
+const emit = defineEmits(['error', 'ended'])
 
-let autoplayTimeout;
+// States
+const videoRef = ref(null)
+const playerContainer = ref(null)
+const loading = ref(true)
+const error = ref(null)
+const isPlaying = ref(false)
+const isMuted = ref(false)
+const progress = ref(0)
+const currentTime = ref(0)
+const duration = ref(0)
+const playbackRate = useLocalStorage('video-playback-rate', 1)
+const isFullscreen = ref(false)
 
-const togglePlay = () => {
-    if (videoRef.value.paused) {
-        videoRef.value.play();
-        isPlaying.value = true;
-    } else {
-        videoRef.value.pause();
-        isPlaying.value = false;
-    }
-};
-
-const toggleFullscreen = () => {
-    if (!document.fullscreenElement) {
-        videoRef.value.requestFullscreen();
-    } else {
-        document.exitFullscreen();
-    }
-};
-
-const setVolume = () => {
-    videoRef.value.volume = volume.value;
-};
-
-const togglePictureInPicture = async () => {
-    try {
-        if (document.pictureInPictureElement) {
-            await document.exitPictureInPicture();
-        } else {
-            await videoRef.value.requestPictureInPicture();
-        }
-    } catch (error) {
-        console.error('Failed to enter/exit picture-in-picture mode:', error);
-    }
-};
-
-const openVideoMenu = () => {
-    isMenuOpen.value = true;
-};
-
-const closeVideoMenu = () => {
-    isMenuOpen.value = false;
-};
-
-const reportVideo = () => {
-    // TODO: Implement report video functionality
-    console.log('Report video:', props.video.id);
-    closeVideoMenu();
-};
-
-const addFriend = () => {
-    // TODO: Implement add friend functionality
-    console.log('Add friend:', props.video.uploader.id);
-    closeVideoMenu();
-};
-
-const blockUploader = () => {
-    // TODO: Implement block uploader functionality
-    console.log('Block uploader:', props.video.uploader.id);
-    closeVideoMenu();
-};
-
+// Video event handlers
 const onVideoLoaded = () => {
-    videoRef.value.muted = true;
-};
+    loading.value = false
+    duration.value = videoRef.value.duration
+}
 
 const onTimeUpdate = () => {
-    progress.value = (videoRef.value.currentTime / videoRef.value.duration) * 100;
-};
+    currentTime.value = videoRef.value.currentTime
+    progress.value = (currentTime.value / duration.value) * 100
+}
 
-const onVolumeChange = () => {
-    volume.value = videoRef.value.volume;
-};
+const onVideoEnded = () => {
+    isPlaying.value = false
+    emit('ended')
+}
 
-const startAutoplayTimeout = () => {
-    clearTimeout(autoplayTimeout);
-    autoplayTimeout = setTimeout(() => {
-        if (videoRef.value.paused) {
-            videoRef.value.play();
-            isPlaying.value = true;
-        }
-    }, 3000);
-};
+const onVideoError = (e) => {
+    loading.value = false
+    error.value = 'Failed to load video'
+    emit('error', e)
+}
+
+// Controls
+const togglePlay = () => {
+    if (videoRef.value.paused) {
+        videoRef.value.play()
+        isPlaying.value = true
+    } else {
+        videoRef.value.pause()
+        isPlaying.value = false
+    }
+}
+
+const toggleMute = () => {
+    videoRef.value.muted = !videoRef.value.muted
+    isMuted.value = videoRef.value.muted
+}
+
+const onProgressChange = (value) => {
+    const time = (value / 100) * duration.value
+    videoRef.value.currentTime = time
+    currentTime.value = time
+}
+
+const toggleFullscreen = async () => {
+    if (!document.fullscreenElement) {
+        await playerContainer.value.requestFullscreen()
+        isFullscreen.value = true
+    } else {
+        await document.exitFullscreen()
+        isFullscreen.value = false
+    }
+}
+
+watch(playbackRate, (rate) => {
+    if (videoRef.value) {
+        videoRef.value.playbackRate = rate
+    }
+})
+
+// Format time 
+const formatTime = (seconds) => {
+    const mins = Math.floor(seconds / 60)
+    const secs = Math.floor(seconds % 60)
+    return `${mins}:${secs.toString().padStart(2, '0')}`
+}
+
+// Keyboard controls
+const handleKeydown = (e) => {
+    switch (e.key.toLowerCase()) {
+        case ' ':
+        case 'k':
+            e.preventDefault()
+            togglePlay()
+            break
+        case 'm':
+            toggleMute()
+            break
+        case 'f':
+            toggleFullscreen()
+            break
+        case 'arrowleft':
+            videoRef.value.currentTime -= 5
+            break
+        case 'arrowright':
+            videoRef.value.currentTime += 5
+            break
+    }
+}
 
 onMounted(() => {
-    videoRef.value.addEventListener('pause', startAutoplayTimeout);
-});
+    window.addEventListener('keydown', handleKeydown)
+})
 
-onUnmounted(() => {
-    clearTimeout(autoplayTimeout);
-    if (videoRef.value) {
-        videoRef.value.removeEventListener('pause', startAutoplayTimeout);
-    }
-});
+onBeforeUnmount(() => {
+    window.removeEventListener('keydown', handleKeydown)
+})
 </script>
 
 <style scoped>
 .video-player {
-    /* Add any additional styling here */
-    position: relative;
+    aspect-ratio: 16 / 9;
 }
 </style>

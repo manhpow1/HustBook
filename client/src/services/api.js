@@ -178,6 +178,14 @@ const apiService = {
         });
     },
 
+    getTrendingHashtags: async (count = 10) => {
+        return axiosInstance.get('/trending-hashtags', { params: { count } });
+    },
+
+    saveSearch: async (searchData) => {
+        return axiosInstance.post('/save-search', searchData);
+    },
+
     // ─────────────────────────────────────────────────────────
     // FRIEND APIs
     // ─────────────────────────────────────────────────────────
