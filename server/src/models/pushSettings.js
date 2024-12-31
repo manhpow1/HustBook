@@ -49,7 +49,7 @@ export class PushSettings {
             const sanitizedSettings = {};
 
             allowedKeys.forEach((key) => {
-                if (settings.hasOwnProperty(key)) {
+                if (Object.prototype.hasOwnProperty.call(settings, key)) {
                     sanitizedSettings[key] = settings[key] === '0' ? '0' : '1'; // Ensure values are '0' or '1'
                 }
             });

@@ -6,7 +6,7 @@ export function useLoginSubmit(login, router) {
     const loginSuccess = ref(false)
     const errorMessage = ref("")
 
-    const submitLogin = async (phoneNumber, password, rememberMe) => {
+    const submitLogin = async (phoneNumber, password, rememberMe, deviceId) => {
         isLoading.value = true
         loginSuccess.value = false
         errorMessage.value = ""

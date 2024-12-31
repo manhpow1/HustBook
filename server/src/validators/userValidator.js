@@ -270,7 +270,7 @@ const sanitizeInput = (value) => {
         // Remove potential script tags that might have survived
         .replace(/<\/?[^>]+(>|$)/g, '')
         // Remove unicode control characters
-        .replace(/[\u0000-\u001F\u007F-\u009F]/g, '')
+        .replace(/[^\x20-\x7E]/g, '')
         // Normalize whitespace
         .trim();
 
