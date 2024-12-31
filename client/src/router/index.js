@@ -96,12 +96,6 @@ const routes = [
         meta: { requiresAuth: true }
     },
     {
-        path: '/hashtag/:hashtag',
-        name: 'Hashtag',
-        component: () => import('../views/post/HashtagView.vue'),
-        meta: { requiresAuth: true }
-    },
-    {
         path: '/watch/:id',
         name: 'Watch',
         component: () => import('../views/Watch.vue'),
