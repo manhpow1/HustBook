@@ -1,19 +1,26 @@
 <template>
     <div @click="handleMarkAsRead"
-        :class="['flex items-center p-2 rounded-md cursor-pointer', { 'bg-blue-50': notification.read === '0' }]">
-        <div class="flex-shrink-0">
-            <img :src="notification.avatar" alt="Notification Avatar" class="h-10 w-10 rounded-full object-cover" />
-        </div>
-        <div class="ml-3 flex-1">
-            <p class="text-sm font-medium text-gray-900">{{ notification.title }}</p>
-            <p class="mt-1 text-xs text-gray-500">{{ formattedTime }}</p>
-        </div>
-        <div class="ml-4 flex-shrink-0">
-            <button @click.stop="handleRemove"
-                class="rounded-md bg-white text-gray-400 hover:text-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
-                aria-label="Remove Notification">
-                <XIcon class="h-5 w-5" aria-hidden="true" />
-            </button>
+        class="group flex items-center space-x-4 rounded-md p-4 hover:bg-accent transition-colors"
+        :class="{ 'bg-accent': !notification.read }" role="listitem">
+        <Avatar>
+            <AvatarImage :src="notification.avatar" :alt="notification.title" />
+            <AvatarFallback>
+                {{ getInitials(notification.title) }}
+            </AvatarFallback>
+        </Avatar>
+
+        <div class="flex-1 space-y-1">
+            <div class="flex items-center justify-between">
+                <p class="text-sm font-medium">{{ notification.title }}</p>
+                <Button variant="ghost" size="icon" @click.stop="handleRemove"
+                    class="opacity-0 group-hover:opacity-100 transition-opacity">
+                    <XIcon class="h-4 w-4" />
+                    <span class="sr-only">Remove notification</span>
+                </Button>
+            </div>
+            <p class="text-xs text-muted-foreground">
+                {{ formattedTime }}
+            </p>
         </div>
     </div>
 </template>
@@ -21,31 +28,55 @@
 <script setup>
 import { computed } from 'vue';
 import { XIcon } from 'lucide-vue-next';
-import { useNotificationStore } from '../../stores/notificationStore';
-import { formatNotificationTime } from '../../utils/helpers';
-import { useErrorHandler } from '@/utils/errorHandler';
-import { useToast } from '../ui/toast';
+import { Button } from '@/components/ui/button';
+import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
+import { formatDistanceToNow } from 'date-fns';
+import { useToast } from '@/components/ui/toast';
+import { useNotificationStore } from '@/stores/notificationStore';
 
 const props = defineProps({
     notification: {
         type: Object,
-        required: true
+        required: true,
+        validator(notification) {
+            return ['notificationId', 'title', 'created', 'read'].every(
+                prop => prop in notification
+            );
+        }
     }
 });
 
 const notificationStore = useNotificationStore();
-const { handleError } = useErrorHandler();
 const { toast } = useToast();
 
-const formattedTime = computed(() => formatNotificationTime(props.notification.created));
+const formattedTime = computed(() => {
+    return formatDistanceToNow(new Date(props.notification.created), {
+        addSuffix: true
+    });
+});
+
+const getInitials = (name) => {
+    return name
+        .split(' ')
+        .map(word => word[0])
+        .join('')
+        .toUpperCase()
+        .slice(0, 2);
+};
 
 const handleRemove = async () => {
     try {
         await notificationStore.removeNotification(props.notification.notificationId);
-        toast({ type: 'success', message: 'Notification removed.' });
+        toast({
+            title: "Success",
+            description: "Notification removed successfully",
+        });
     } catch (error) {
-        await handleError(error);
-        toast({ type: 'error', message: 'Failed to remove notification.' });
+        toast({
+            title: "Error",
+            description: "Failed to remove notification",
+            variant: "destructive",
+        });
     }
 };
 
@@ -54,7 +85,11 @@ const handleMarkAsRead = async () => {
         try {
             await notificationStore.markNotificationAsRead(props.notification.notificationId);
         } catch (error) {
-            await handleError(error);
+            toast({
+                title: "Error",
+                description: "Failed to mark notification as read",
+                variant: "destructive",
+            });
         }
     }
 };
