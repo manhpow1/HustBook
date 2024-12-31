@@ -117,7 +117,7 @@ import defaultAvatar from '@/assets/avatar-default.svg';
 import { useFriendStore } from '@/stores/friendStore';
 import { useToast } from '@/components/ui/toast';
 import { SearchIcon, Loader2Icon } from 'lucide-vue-next';
-import BlockedUsersList from './BlockedUsersList.vue';
+import BlockedUsersList from '@/components/user/BlockedUsersList.vue';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
