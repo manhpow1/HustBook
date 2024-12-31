@@ -1,7 +1,7 @@
 /**
  * @swagger
  * tags:
- *   name: User
+ *   name: Users
  *   description: User account and profile management endpoints
  */
 import { Router } from 'express';
@@ -12,7 +12,7 @@ import { setBlockLimiter } from '../middleware/rateLimiter.js';
 const router = Router();
 /**
  * @swagger
- * /user/get_user_info/{id}:
+ * /users/get_user_info/{id}:
  *   get:
  *     summary: Get user information by ID
  *     tags: [User]
@@ -79,7 +79,7 @@ router.get('/get_user_info/:id?', authenticateToken, userController.getUserInfo)
 
 /**
  * @swagger
- * /user/set_user_info:
+ * /users/set_user_info:
  *   put:
  *     summary: Update user information
  *     tags: [User]
@@ -142,7 +142,7 @@ router.put('/set_user_info', authenticateToken, userController.setUserInfo);
 
 /**
  * @swagger
- * /user/change_password:
+ * /users/change_password:
  *   put:
  *     summary: Change the authenticated user's password
  *     tags: [User]
@@ -189,7 +189,7 @@ router.put('/change_password', authenticateToken, userController.changePassword)
 
 /**
  * @swagger
- * /user/set_block:
+ * /users/set_block:
  *   put:
  *     summary: Block or unblock a user
  *     tags: [User]
@@ -241,7 +241,7 @@ router.put('/set_block', authenticateToken, setBlockLimiter, userController.setB
 
 /**
  * @swagger
- * /user/status:
+ * /users/status:
  *   get:
  *     summary: Check the authenticated user's status
  *     tags: [User]
