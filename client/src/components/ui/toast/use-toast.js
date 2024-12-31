@@ -139,7 +139,7 @@ function toast(options) {
   } else {
     const { type = 'info', message, ...rest } = options;
 
-    const validType = TOAST_TYPES.hasOwnProperty(type) ? type : 'info';
+    const validType = Object.prototype.hasOwnProperty.call(TOAST_TYPES, type) ? type : 'info';
 
     toastOptions = {
       description: message,
