@@ -141,16 +141,29 @@ export const usePostStore = defineStore('post', () => {
         loading.value = true;
         error.value = null;
         try {
-            const response = await apiService.updatePost(postId, postData);
+            // Validate and sanitize `postData`
+            if (!postData || typeof postData !== 'object') {
+                throw new Error('Invalid post data');
+            }
+
+            const allowedKeys = ['content', 'images', 'likes', 'comments', 'isLiked', 'video'];
+            const sanitizedData = Object.keys(postData).reduce((acc, key) => {
+                if (allowedKeys.includes(key)) {
+                    acc[key] = postData[key];
+                }
+                return acc;
+            }, {});
+
+            const response = await apiService.updatePost(postId, sanitizedData);
             const data = response.data;
 
             if (data.code === '1000') {
                 const index = posts.value.findIndex((post) => post.id === postId);
                 if (index !== -1) {
-                    posts.value[index] = { ...posts.value[index], ...postData };
+                    posts.value[index] = { ...posts.value[index], ...sanitizedData };
                 }
                 if (currentPost.value && currentPost.value.id === postId) {
-                    currentPost.value = { ...currentPost.value, ...postData };
+                    currentPost.value = { ...currentPost.value, ...sanitizedData };
                 }
                 return data;
             } else {

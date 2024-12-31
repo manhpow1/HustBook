@@ -35,8 +35,10 @@ export const errorCodes = {
 };
 
 export const createError = (code, customMessage) => {
-    const error = errorCodes[code] || errorCodes['1005']; // Default to 'Unknown error' if code not found
-    return new CustomError(code, customMessage || error.message, error.statusCode);
+    const safeCode = Object.prototype.hasOwnProperty.call(errorCodes, code) ? code : '1005';
+    const error = errorCodes[safeCode];
+
+    return new CustomError(safeCode, customMessage || error.message, error.statusCode);
 };
 
 export default { CustomError, createError, errorCodes  };

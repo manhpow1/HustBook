@@ -28,12 +28,13 @@ class Logger {
     }
 
     logToConsole(level, logEntry) {
-        const formattedLevel = `[${level.toUpperCase()}]`;
+        const validLevels = Object.values(logLevels);
+        const isValidLevel = validLevels.includes(level);
 
-        const consoleMethod = console[level] ? level : 'log';
+        const consoleMethod = isValidLevel ? level : 'log';
 
         console[consoleMethod](
-            `%c${formattedLevel}%c: ${logEntry.message}`,
+            `%c[${level.toUpperCase()}]%c: ${logEntry.message}`,
             this.getStyleForLevel(level),
             '',
             logEntry

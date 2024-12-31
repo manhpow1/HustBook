@@ -54,10 +54,13 @@ export const useNotificationStore = defineStore('notification', () => {
         try {
             const response = await apiService.setReadNotification(notificationId);
             if (response.data.code === '1000') {
-                // Update the local state
+                // Find and sanitize the notification object
                 const idx = notifications.value.findIndex((n) => n.notificationId === notificationId);
                 if (idx !== -1) {
-                    notifications.value[idx].read = '1';
+                    const notification = notifications.value[idx];
+                    if (notification && typeof notification === 'object' && Object.prototype.hasOwnProperty.call(notification, 'read')) {
+                        notifications.value[idx] = { ...notification, read: '1' };
+                    }
                 }
                 // Update badge and last_update
                 if (response.data.data?.Version) {

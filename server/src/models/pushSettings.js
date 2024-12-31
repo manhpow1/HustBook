@@ -20,7 +20,6 @@ export class PushSettings {
         this.userId = userId;
     }
 
-    // Reference to the Firestore document for the user's push settings
     getSettingsRef() {
         return db.collection('pushSettings').doc(this.userId);
     }
@@ -32,7 +31,6 @@ export class PushSettings {
             if (doc.exists) {
                 return doc.data();
             } else {
-                // Initialize with default settings if none exist
                 await settingsRef.set(DEFAULT_PUSH_SETTINGS);
                 return DEFAULT_PUSH_SETTINGS;
             }
@@ -44,6 +42,10 @@ export class PushSettings {
 
     async updateSettings(settings) {
         try {
+            if (!settings || typeof settings !== 'object' || Array.isArray(settings)) {
+                throw new Error('Invalid settings object provided.');
+            }
+
             const settingsRef = this.getSettingsRef();
             const allowedKeys = Object.keys(DEFAULT_PUSH_SETTINGS);
             const sanitizedSettings = {};
@@ -53,10 +55,15 @@ export class PushSettings {
                     sanitizedSettings[key] = settings[key] === '0' ? '0' : '1'; // Ensure values are '0' or '1'
                 }
             });
-            // Merge the sanitized settings with existing settings
-            await settingsRef.set(sanitizedSettings, { merge: true });
 
-            const updatedSettings = { ...DEFAULT_PUSH_SETTINGS, ...sanitizedSettings };
+            const updatedSettings = { ...DEFAULT_PUSH_SETTINGS };
+            allowedKeys.forEach((key) => {
+                if (sanitizedSettings[key] !== undefined) {
+                    updatedSettings[key] = sanitizedSettings[key];
+                }
+            });
+
+            await settingsRef.set(sanitizedSettings, { merge: true });
             return updatedSettings;
         } catch (error) {
             logger.error(`Failed to update push settings for user ${this.userId}:`, error);

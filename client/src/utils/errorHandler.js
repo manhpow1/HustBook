@@ -42,8 +42,10 @@ class ErrorHandler {
         let message = 'An error occurred. Please try again.';
         const code = error.response?.data?.code;
 
-        if (code) {
-            message = errorMessages[code] || error.response.data.message || message;
+        if (code && Object.prototype.hasOwnProperty.call(errorMessages, code)) {
+            message = errorMessages[code];
+        } else if (error.response?.data?.message) {
+            message = error.response.data.message;
         } else if (error.message) {
             message = error.message.includes('Network Error') ? 'Cannot connect to the Internet.' : error.message;
         }
@@ -77,6 +79,6 @@ export const errorHandler = new ErrorHandler();
 
 export function useErrorHandler() {
     return {
-        handleError: errorHandler.handle.bind(errorHandler)
+        handleError: errorHandler.handle.bind(errorHandler),
     };
 }

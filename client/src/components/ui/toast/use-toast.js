@@ -134,14 +134,17 @@ function toast(options) {
   if (typeof options === 'string') {
     toastOptions = {
       description: options,
-      ...TOAST_TYPES.default
+      ...TOAST_TYPES.info, // Use a default safe type for string messages
     };
   } else {
-    const { type = 'default', message, ...rest } = options;
+    const { type = 'info', message, ...rest } = options;
+
+    const validType = TOAST_TYPES.hasOwnProperty(type) ? type : 'info';
+
     toastOptions = {
       description: message,
-      ...TOAST_TYPES[type],
-      ...rest
+      ...TOAST_TYPES[validType],
+      ...rest,
     };
   }
 

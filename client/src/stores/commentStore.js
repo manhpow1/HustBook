@@ -115,11 +115,13 @@ export const useCommentStore = defineStore('comment', () => {
         try {
             const response = await apiService.updateComment(postId, commentId, content);
             const updatedComment = response.data;
+            // Validate and sanitize the updated comment
+            const sanitizedComment = sanitizeComment(updatedComment);
             const index = comments.value.findIndex(c => c.id === commentId);
             if (index !== -1) {
-                comments.value[index] = updatedComment;
+                comments.value[index] = sanitizedComment;
             }
-            return updatedComment;
+            return sanitizedComment;
         } catch (error) {
             console.error('Failed to update comment:', error);
             throw error;
@@ -156,15 +158,16 @@ export const useCommentStore = defineStore('comment', () => {
             try {
                 const response = await apiService.addComment(comment.postId, comment.content);
                 const syncedComment = response.data;
+                const sanitizedComment = sanitizeComment(syncedComment);
                 await idb.delete('offline-comments', comment.tempId);
-                await idb.add('comments', syncedComment);
+                await idb.add('comments', sanitizedComment);
 
                 const index = comments.value.findIndex(c => c.tempId === comment.tempId);
                 if (index !== -1) {
-                    comments.value[index] = syncedComment;
+                    comments.value[index] = sanitizedComment; // Safely update the synced comment
                 }
                 // Add synced comment to Firestore
-                await addDoc(collection(db, 'comments', comment.postId, 'commentList'), syncedComment);
+                await addDoc(collection(db, 'comments', comment.postId, 'commentList'), sanitizedComment);
             } catch (error) {
                 console.error('Failed to sync comment:', error);
             }
@@ -189,6 +192,16 @@ export const useCommentStore = defineStore('comment', () => {
         });
         return unsubscribe;
     };
+
+    function sanitizeComment(comment) {
+        const allowedKeys = ['id', 'postId', 'content', 'createdAt', 'userId', 'isOffline'];
+        return Object.keys(comment).reduce((sanitized, key) => {
+            if (allowedKeys.includes(key)) {
+                sanitized[key] = comment[key];
+            }
+            return sanitized;
+        }, {});
+    }
 
     return {
         comments,

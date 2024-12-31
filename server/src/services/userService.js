@@ -310,27 +310,43 @@ class UserService {
 
     async clearUserDeviceToken(userId, deviceId) {
         try {
+            if (!userId || typeof userId !== 'string') {
+                throw createError('1004', 'Invalid userId parameter');
+            }
+            if (!deviceId || typeof deviceId !== 'string') {
+                throw createError('1004', 'Invalid deviceId parameter');
+            }
+
             const user = await this.getUserById(userId);
             if (!user) {
                 throw createError('9995', 'User not found');
             }
 
+            if (!Array.isArray(user.deviceDetails)) {
+                throw createError('1004', 'Invalid deviceDetails structure for user');
+            }
+
             const deviceIndex = user.deviceDetails.findIndex(d => d.id === deviceId);
             if (deviceIndex === -1) {
+                logger.warn(`Device ${deviceId} not found for user ${userId}`);
                 return;
             }
 
-            user.deviceDetails[deviceIndex] = {
+            const updatedDevice = {
                 ...user.deviceDetails[deviceIndex],
                 token: null,
                 refreshToken: null,
-                lastUsed: new Date().toISOString()
+                lastUsed: new Date().toISOString(),
             };
 
-            user.deviceTokens = user.deviceDetails
+            const updatedDeviceDetails = [...user.deviceDetails];
+            updatedDeviceDetails[deviceIndex] = updatedDevice;
+
+            user.deviceDetails = updatedDeviceDetails;
+
+            user.deviceTokens = updatedDeviceDetails
                 .map(d => d.token)
                 .filter(Boolean);
-
             await user.save();
             logger.info(`Cleared device token for user ${userId}, device ${deviceId}`);
         } catch (error) {

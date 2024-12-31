@@ -119,11 +119,18 @@ export function useFormValidation() {
 
 
     const clearErrors = (field) => {
+        const allowedFields = ['phoneNumber', 'description', 'status', 'files', 'newPassword', 'currentPassword', 'confirmPassword', 'username', 'password'];
+
         if (field) {
+            if (!allowedFields.includes(field)) {
+                console.warn(`Invalid field: ${field}`);
+                return;
+            }
             errors.value[field] = [];
         } else {
             errors.value = {};
         }
+
         if (!field || field === 'description') descriptionError.value = '';
         if (!field || field === 'status') statusError.value = '';
         if (!field || field === 'files') fileError.value = '';

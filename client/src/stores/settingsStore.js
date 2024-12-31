@@ -54,10 +54,18 @@ export const useSettingsStore = defineStore('settings', () => {
     };
 
     const toggleDisableAllNotifications = async (value) => {
+        if (!notificationSettings.value || typeof notificationSettings.value !== 'object') {
+            throw new Error('Invalid notification settings object');
+        }
+
         const newSettings = {};
-        Object.keys(notificationSettings.value).forEach(key => {
-            newSettings[key] = value ? '0' : '1';
+
+        Object.keys(notificationSettings.value).forEach((key) => {
+            if (Object.prototype.hasOwnProperty.call(notificationSettings.value, key)) {
+                newSettings[key] = value ? '0' : '1';
+            }
         });
+
         await updatePushSettings(newSettings);
     };
 
