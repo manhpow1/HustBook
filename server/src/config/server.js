@@ -16,11 +16,11 @@ export default {
         allowedHeaders: [
             'Content-Type', 
             'Authorization',
-            'X-Requested-With',
+            // 'X-Requested-With',
             'Accept',
-            'X-CSRF-Token'
+            // 'X-CSRF-Token'
         ],
-        exposedHeaders: ['X-CSRF-Token'],
+        // exposedHeaders: ['X-CSRF-Token'],
         credentials: true,
         maxAge: 86400 // 24 hours
     },

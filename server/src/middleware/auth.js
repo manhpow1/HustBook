@@ -9,54 +9,54 @@ import logger from '../utils/logger.js';
 const { cache } = redis;
 
 // Common security headers
-const securityHeaders = {
-    'X-Content-Type-Options': 'nosniff',
-    'X-Frame-Options': 'DENY',
-    'X-XSS-Protection': '1; mode=block',
-    'Strict-Transport-Security': 'max-age=31536000; includeSubDomains',
-    'Content-Security-Policy': "default-src 'self'; img-src 'self' data: https:; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline';",
-    'Referrer-Policy': 'strict-origin-when-cross-origin',
-    'X-CSRF-Token': null
-};
+//const securityHeaders = {
+//    'X-Content-Type-Options': 'nosniff',
+//    'X-Frame-Options': 'DENY',
+//    'X-XSS-Protection': '1; mode=block',
+//    'Strict-Transport-Security': 'max-age=31536000; includeSubDomains',
+//    'Content-Security-Policy': "default-src 'self'; img-src 'self' data: https:; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline';",
+//    'Referrer-Policy': 'strict-origin-when-cross-origin',
+//   'X-CSRF-Token': null
+//};
 
 // Generate CSRF token
-const generateCsrfToken = () => {
-    return crypto.randomBytes(32).toString('hex');
-};
+//const generateCsrfToken = () => {
+//    return crypto.randomBytes(32).toString('hex');
+//};
 
 // Store CSRF tokens with short expiry
-const csrfTokens = new Map();
+//const csrfTokens = new Map();
 
 const authenticateToken = async (req, res, next) => {
     try {
         // Add security headers
-        Object.entries(securityHeaders).forEach(([header, value]) => {
-            if (value !== null && header !== 'X-CSRF-Token') {
-                res.setHeader(header, value);
-            }
-        });
+//        Object.entries(securityHeaders).forEach(([header, value]) => {
+//            if (value !== null && header !== 'X-CSRF-Token') {
+//                res.setHeader(header, value);
+//            }
+//        });
 
-        // Special handling for CSRF token endpoint
-        if (req.path === '/api/auth/csrf-token' && req.method === 'GET') {
-            const newToken = generateCsrfToken();
-            csrfTokens.set(newToken, Date.now() + 300000); // 5 minutes expiry
-            res.json({ csrfToken: newToken });
-            return;
-        }
+//        // Special handling for CSRF token endpoint
+//        if (req.path === '/api/auth/csrf-token' && req.method === 'GET') {
+//            const newToken = generateCsrfToken();
+//            csrfTokens.set(newToken, Date.now() + 300000); // 5 minutes expiry
+//            res.json({ csrfToken: newToken });
+//            return;
+//        }
 
-        // For sensitive operations, verify CSRF token
-        if (['POST', 'PUT', 'DELETE', 'PATCH'].includes(req.method)) {
-            const requestToken = req.headers['x-csrf-token'];
-            const tokenExpiry = csrfTokens.get(requestToken);
-            
-            if (!requestToken || !tokenExpiry || Date.now() > tokenExpiry) {
-                csrfTokens.delete(requestToken); // Clean up expired token
-                throw createError('9998', 'Invalid or expired CSRF token');
-            }
-            
-            // Token is valid, clean it up as it's single-use
-            csrfTokens.delete(requestToken);
-        }
+//        // For sensitive operations, verify CSRF token
+//        if (['POST', 'PUT', 'DELETE', 'PATCH'].includes(req.method)) {
+//            const requestToken = req.headers['x-csrf-token'];
+//            const tokenExpiry = csrfTokens.get(requestToken);
+//            
+//            if (!requestToken || !tokenExpiry || Date.now() > tokenExpiry) {
+//                csrfTokens.delete(requestToken); // Clean up expired token
+//                throw createError('9998', 'Invalid or expired CSRF token');
+//            }
+//            
+           // Token is valid, clean it up as it's single-use
+//            csrfTokens.delete(requestToken);
+//        }
 
         const authHeader = req.headers.authorization;
 

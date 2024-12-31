@@ -34,10 +34,10 @@ const MAX_RANDOM_VALUE = 1_000_000_000;
  *                   type: string
  *                   example: "abc123..."
  */
-router.get('/csrf-token', (req, res) => {
-    const token = crypto.randomBytes(32).toString('hex');
-    res.json({ csrfToken: token });
-});
+// router.get('/csrf-token', (req, res) => {
+//     const token = crypto.randomBytes(32).toString('hex');
+//     res.json({ csrfToken: token });
+// });
 
 const storage = multer.diskStorage({
     destination: (req, file, cb) => {
