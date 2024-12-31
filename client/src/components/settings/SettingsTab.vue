@@ -91,7 +91,6 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
-import { Link } from '@/components/ui/link';
 import AccountSettings from './AccountSettings.vue';
 import PrivacySettings from './PrivacySettings.vue';
 import NotificationSettings from './NotificationSettings.vue';
