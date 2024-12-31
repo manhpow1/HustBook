@@ -20,7 +20,7 @@ import { useFriendStore } from '../../stores/friendStore'
 import { useToast } from '@/components/ui/toast'
 import { Button } from '@/components/ui/button'
 import { Loader2Icon, UserPlusIcon } from 'lucide-vue-next'
-import { useErrorHandler } from '!@/composables/useErrorHandler'
+import { useErrorHandler } from '@/utils/errorHandler'
 
 const props = defineProps({
     userId: {
