@@ -1,15 +1,26 @@
 <template>
-    <div class="bg-white shadow rounded-lg p-4 animate-pulse">
-        <div class="flex items-center mb-4">
-            <div class="w-12 h-12 bg-gray-300 rounded-full mr-4"></div>
-            <div>
-                <div class="h-4 bg-gray-300 rounded w-24 mb-2"></div>
-                <div class="h-3 bg-gray-200 rounded w-32"></div>
+    <Card>
+        <CardContent class="p-4">
+            <!-- User Info Section -->
+            <div class="flex items-center space-x-4">
+                <!-- Avatar Skeleton -->
+                <Skeleton class="h-12 w-12 rounded-full" />
+                <!-- Name and Mutual Friends Skeleton -->
+                <div class="space-y-2 flex-1">
+                    <Skeleton class="h-4 w-24" />
+                    <Skeleton class="h-3 w-32" />
+                </div>
             </div>
-        </div>
-        <div class="flex justify-between">
-            <div class="h-8 bg-gray-300 rounded w-20"></div>
-            <div class="h-8 bg-gray-300 rounded w-20"></div>
-        </div>
-    </div>
+            <!-- Action Buttons Skeleton -->
+            <div class="mt-4 flex justify-between space-x-2">
+                <Skeleton class="h-10 flex-1" />
+                <Skeleton class="h-10 flex-1" />
+            </div>
+        </CardContent>
+    </Card>
 </template>
+
+<script setup>
+import { Card, CardContent } from '@/components/ui/card'
+import { Skeleton } from '@/components/ui/skeleton'
+</script>

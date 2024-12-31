@@ -1,87 +1,139 @@
 <template>
-    <div>
-        <div class="mb-4 flex justify-between items-center">
-            <!-- Search Input -->
-            <div class="relative">
-                <input v-model="searchQuery" type="text" placeholder="Search friends"
-                    class="pl-8 pr-2 py-2 border rounded-md" aria-label="Search friends" />
-                <SearchIcon class="absolute left-2 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4"
-                    aria-hidden="true" />
-            </div>
-
-            <!-- Sort Select -->
-            <select v-model="sortByInternal" class="border rounded-md px-2 py-2" aria-label="Sort friends">
-                <option value="name">Sort by Name</option>
-                <option value="recent">Sort by Recent</option>
-                <option value="mutual">Sort by Mutual Friends</option>
-            </select>
-        </div>
-
-        <!-- Loading State -->
-        <div v-if="loading" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            <FriendSkeleton v-for="i in limit" :key="i" />
-        </div>
-
-        <!-- Error State -->
-        <div v-else-if="error" class="text-red-500 py-4">
-            {{ error }}
-        </div>
-
-        <!-- Empty State -->
-        <div v-else-if="limitedFriends.length === 0" class="text-gray-500 py-4">
-            No friends found.
-        </div>
-
-        <!-- Friends List -->
-        <ul v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            <li v-for="friend in limitedFriends" :key="friend.id" class="bg-white shadow rounded-lg p-4">
-                <div class="flex items-center mb-4">
-                    <img :src="friend.avatar || '../../assets/avatar-default.svg'" :alt="friend.userName"
-                        class="w-12 h-12 rounded-full mr-4" />
-                    <div>
-                        <h3 class="font-semibold">{{ friend.userName }}</h3>
-                        <p class="text-sm text-gray-500">{{ friend.mutualFriends }} mutual friends</p>
+    <div class="space-y-6">
+        <Card class="p-4">
+            <CardHeader>
+                <CardTitle>Friends</CardTitle>
+                <CardDescription>Manage your friends and connections</CardDescription>
+            </CardHeader>
+            <CardContent>
+                <div class="flex flex-col md:flex-row gap-4 mb-6">
+                    <div class="relative flex-1">
+                        <Input v-model="searchQuery" placeholder="Search friends" class="w-full" :disabled="loading">
+                        <template #prefix>
+                            <SearchIcon class="w-4 h-4 text-muted-foreground" />
+                        </template>
+                        </Input>
                     </div>
-                </div>
-                <div class="flex justify-between">
-                    <button @click="viewProfile(friend.id)" class="text-primary-600 hover:underline">
-                        View Profile
-                    </button>
-                    <div class="relative">
-                        <button @click="toggleDropdown(friend.id)" class="text-gray-500 hover:text-gray-700"
-                            aria-haspopup="true" :aria-expanded="activeDropdown === friend.id">
-                            <MoreVerticalIcon class="w-5 h-5" aria-hidden="true" />
-                            <span class="sr-only">More options for {{ friend.userName }}</span>
-                        </button>
-                        <div v-if="activeDropdown === friend.id"
-                            class="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg z-10">
-                            <a @click="confirmBlock(friend.id)"
-                                class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100" role="menuitem">
-                                Block User
-                            </a>
-                        </div>
-                    </div>
-                </div>
-            </li>
-        </ul>
 
-        <!-- Confirm Dialog for Blocking -->
-        <ConfirmDialog v-model="confirmDialog" :title="'Block User'"
-            :message="'Are you sure you want to block this user? They will no longer be able to send you messages or friend requests.'"
-            confirmText="Block" cancelText="Cancel" :isLoading="isProcessing" loadingText="Blocking..."
-            @confirm="blockConfirmed" @cancel="cancelBlock" />
+                    <Select v-model="sortByInternal" :disabled="loading">
+                        <SelectTrigger class="w-full md:w-[180px]">
+                            <SelectValue placeholder="Sort by..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="name">Sort by Name</SelectItem>
+                            <SelectItem value="recent">Sort by Recent</SelectItem>
+                            <SelectItem value="mutual">Sort by Mutual Friends</SelectItem>
+                        </SelectContent>
+                    </Select>
+                </div>
+
+                <!-- Loading State -->
+                <div v-if="loading" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <Skeleton v-for="i in limit" :key="i" class="h-[120px] w-full" />
+                </div>
+
+                <!-- Error State -->
+                <Alert v-else-if="error" variant="destructive">
+                    <AlertCircleIcon class="h-4 w-4" />
+                    <AlertTitle>Error</AlertTitle>
+                    <AlertDescription>{{ error }}</AlertDescription>
+                </Alert>
+
+                <!-- Empty State -->
+                <Alert v-else-if="limitedFriends.length === 0" variant="default">
+                    <AlertTitle>No friends found</AlertTitle>
+                    <AlertDescription>
+                        Try adjusting your search or connect with new people.
+                    </AlertDescription>
+                </Alert>
+
+                <!-- Friend List -->
+                <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <Card v-for="friend in limitedFriends" :key="friend.id" class="relative">
+                        <CardContent class="pt-6">
+                            <div class="flex items-center gap-4 mb-4">
+                                <Avatar class="h-10 w-10">
+                                    <AvatarImage :src="friend.avatar || '/avatar-default.svg'" :alt="friend.userName" />
+                                    <AvatarFallback>{{ friend.userName.charAt(0) }}</AvatarFallback>
+                                </Avatar>
+                                <div class="flex-1 min-w-0">
+                                    <h3 class="font-semibold truncate">{{ friend.userName }}</h3>
+                                    <p class="text-sm text-muted-foreground">
+                                        {{ friend.mutualFriends }} mutual friends
+                                    </p>
+                                </div>
+                                <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                        <Button variant="ghost" size="icon">
+                                            <MoreVerticalIcon class="h-4 w-4" />
+                                            <span class="sr-only">Open menu</span>
+                                        </Button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent align="end">
+                                        <DropdownMenuItem @click="viewProfile(friend.id)">
+                                            <UserIcon class="mr-2 h-4 w-4" />
+                                            View Profile
+                                        </DropdownMenuItem>
+                                        <DropdownMenuSeparator />
+                                        <DropdownMenuItem @click="confirmBlock(friend.id)" class="text-red-600">
+                                            <ShieldIcon class="mr-2 h-4 w-4" />
+                                            Block User
+                                        </DropdownMenuItem>
+                                    </DropdownMenuContent>
+                                </DropdownMenu>
+                            </div>
+                            <div class="flex justify-between">
+                                <Button variant="outline" size="sm" @click="viewProfile(friend.id)">
+                                    View Profile
+                                </Button>
+                                <Button variant="secondary" size="sm" @click="sendMessage(friend.id)">
+                                    Message
+                                </Button>
+                            </div>
+                        </CardContent>
+                    </Card>
+                </div>
+            </CardContent>
+        </Card>
+
+        <AlertDialog :open="!!confirmDialog">
+            <AlertDialogContent>
+                <AlertDialogHeader>
+                    <AlertDialogTitle>Block User</AlertDialogTitle>
+                    <AlertDialogDescription>
+                        Are you sure you want to block this user? They will no longer be able to send you messages or
+                        friend
+                        requests.
+                    </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                    <AlertDialogCancel @click="cancelBlock">Cancel</AlertDialogCancel>
+                    <AlertDialogAction @click="blockConfirmed" :disabled="isProcessing">
+                        <Loader2Icon v-if="isProcessing" class="mr-2 h-4 w-4 animate-spin" />
+                        {{ isProcessing ? 'Blocking...' : 'Block' }}
+                    </AlertDialogAction>
+                </AlertDialogFooter>
+            </AlertDialogContent>
+        </AlertDialog>
     </div>
 </template>
 
 <script setup>
 import { ref, computed, onMounted, watch } from 'vue';
 import { useRouter } from 'vue-router';
-import { useFriendStore } from '../../stores/friendStore';
-import { useToast } from '../ui/toast';
-import { useDebounce } from '../../composables/useDebounce';
-import FriendSkeleton from './FriendSkeleton.vue';
-import ConfirmDialog from '../ui/ConfirmDialog.vue';
-import { SearchIcon, MoreVerticalIcon } from 'lucide-vue-next';
+import { useToast } from '@/components/ui/toast';
+import { useFriendStore } from '@/stores/friendStore';
+import { useDebounce } from '@/composables/useDebounce';
+import { AlertCircleIcon, Loader2Icon, MoreVerticalIcon, SearchIcon, ShieldIcon, UserIcon } from 'lucide-vue-next';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, } from '@/components/ui/alert-dialog';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Skeleton } from '@/components/ui/skeleton';
 
 const props = defineProps({
     userId: {
@@ -94,7 +146,7 @@ const props = defineProps({
     },
     sortBy: {
         type: String,
-        default: 'recent' // 'name', 'recent', or 'mutual'
+        default: 'recent'
     }
 });
 
@@ -102,51 +154,44 @@ const router = useRouter();
 const friendStore = useFriendStore();
 const { toast } = useToast();
 
+// State
 const friends = ref([]);
 const loading = ref(true);
 const error = ref(null);
 const searchQuery = ref('');
 const sortByInternal = ref(props.sortBy);
-const activeDropdown = ref(null);
 const confirmDialog = ref(false);
 const userToBlock = ref(null);
 const isProcessing = ref(false);
 
-// Debounce Setup
+// Debounced search
 const debouncedSearch = ref('');
 const doSearch = () => {
     debouncedSearch.value = searchQuery.value;
 };
 const debouncedSearchFn = useDebounce(doSearch, 300);
 
+// Watchers
 watch(searchQuery, () => {
     debouncedSearchFn();
 });
 
-const fetchFriends = async () => {
-    try {
-        loading.value = true;
-        await friendStore.getUserFriends({ userId: props.userId, count: 50 }); // get enough to sort and limit
-        friends.value = friendStore.friends;
-        loading.value = false;
-    } catch (err) {
-        error.value = 'Failed to load friends';
-        loading.value = false;
-    }
-};
-
+// Computed
 const filteredFriends = computed(() => {
     let result = friends.value.filter(friend =>
         friend.userName.toLowerCase().includes(debouncedSearch.value.toLowerCase())
     );
 
-    if (sortByInternal.value === 'name') {
-        result.sort((a, b) => a.userName.localeCompare(b.userName));
-    } else if (sortByInternal.value === 'recent') {
-        // Assuming friend.friendshipDate is a timestamp or date string
-        result.sort((a, b) => new Date(b.friendshipDate) - new Date(a.friendshipDate));
-    } else if (sortByInternal.value === 'mutual') {
-        result.sort((a, b) => b.mutualFriends - a.mutualFriends);
+    switch (sortByInternal.value) {
+        case 'name':
+            result.sort((a, b) => a.userName.localeCompare(b.userName));
+            break;
+        case 'recent':
+            result.sort((a, b) => new Date(b.friendshipDate) - new Date(a.friendshipDate));
+            break;
+        case 'mutual':
+            result.sort((a, b) => b.mutualFriends - a.mutualFriends);
+            break;
     }
 
     return result;
@@ -156,12 +201,27 @@ const limitedFriends = computed(() => {
     return filteredFriends.value.slice(0, props.limit);
 });
 
+// Methods
+const fetchFriends = async () => {
+    try {
+        loading.value = true;
+        error.value = null;
+        await friendStore.getUserFriends({ userId: props.userId, count: 50 });
+        friends.value = friendStore.friends;
+    } catch (err) {
+        error.value = 'Failed to load friends';
+        console.error('Error fetching friends:', err);
+    } finally {
+        loading.value = false;
+    }
+};
+
 const viewProfile = (userId) => {
     router.push({ name: 'Profile', params: { id: userId } });
 };
 
-const toggleDropdown = (friendId) => {
-    activeDropdown.value = activeDropdown.value === friendId ? null : friendId;
+const sendMessage = (userId) => {
+    router.push({ name: 'Messages', query: { userId } });
 };
 
 const confirmBlock = (userId) => {
@@ -171,15 +231,22 @@ const confirmBlock = (userId) => {
 
 const blockConfirmed = async () => {
     if (!userToBlock.value) return;
-    isProcessing.value = true;
 
+    isProcessing.value = true;
     try {
         await friendStore.setBlock(userToBlock.value, 0);
-        toast({ type: 'success', message: 'User blocked successfully' });
+        toast({
+            title: "Success",
+            description: "User blocked successfully",
+        });
         friends.value = friends.value.filter(friend => friend.id !== userToBlock.value);
     } catch (err) {
         console.error(`Error blocking user with ID ${userToBlock.value}:`, err);
-        toast({ type: 'error', message: 'Failed to block user' });
+        toast({
+            title: "Error",
+            description: "Failed to block user",
+            variant: "destructive",
+        });
     } finally {
         isProcessing.value = false;
         confirmDialog.value = false;
@@ -192,6 +259,7 @@ const cancelBlock = () => {
     userToBlock.value = null;
 };
 
+// Lifecycle
 onMounted(() => {
     fetchFriends();
 });
