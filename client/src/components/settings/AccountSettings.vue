@@ -1,113 +1,311 @@
 <template>
-    <div>
-        <h2 class="text-xl font-semibold mb-4">Account Settings</h2>
+    <div class="space-y-6">
+        <Card>
+            <CardHeader>
+                <CardTitle>Account Settings</CardTitle>
+                <CardDescription>
+                    Manage your account settings and preferences
+                </CardDescription>
+            </CardHeader>
+            <CardContent>
+                <Tabs defaultValue="personal" class="w-full">
+                    <TabsList class="grid w-full grid-cols-3">
+                        <TabsTrigger value="personal">Personal Info</TabsTrigger>
+                        <TabsTrigger value="security">Security</TabsTrigger>
+                        <TabsTrigger value="preferences">Preferences</TabsTrigger>
+                    </TabsList>
 
-        <div class="space-y-6">
-            <!-- Personal Information Form -->
-            <div>
-                <h3 class="text-lg font-medium mb-2">Personal Information</h3>
-                <form @submit.prevent="updatePersonalInfo" class="space-y-4">
-                    <div>
-                        <label for="firstName" class="block text-sm font-medium text-gray-700">First Name</label>
-                        <input type="text" id="firstName" v-model="personalInfo.firstName"
-                            class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50">
-                    </div>
-                    <div>
-                        <label for="middleName" class="block text-sm font-medium text-gray-700">Middle Name</label>
-                        <input type="text" id="middleName" v-model="personalInfo.middleName"
-                            class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50">
-                    </div>
-                    <div>
-                        <label for="lastName" class="block text-sm font-medium text-gray-700">Last Name</label>
-                        <input type="text" id="lastName" v-model="personalInfo.lastName"
-                            class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50">
-                    </div>
-                    <button type="submit"
-                        class="bg-blue-500 text-white py-2 px-4 rounded hover:bg-blue-600 transition duration-300">
-                        Update Personal Information
-                    </button>
-                </form>
-                <p class="mt-2 text-sm text-gray-500">Please note that changes to your name may take up to 24 hours to
-                    reflect across the platform.</p>
-            </div>
-            <!-- Edit Profile Form for set_user_info endpoint -->
-            <div>
-                <h3 class="text-lg font-medium mb-2">Edit Profile</h3>
-                <EditProfileForm />
-            </div>
-            <!-- Security (Change Password) Form -->
-            <div>
-                <h3 class="text-lg font-medium mb-2">Security</h3>
-                <form @submit.prevent="updatePassword" class="space-y-4">
-                    <div>
-                        <label for="oldPassword" class="block text-sm font-medium text-gray-700">Current
-                            Password</label>
-                        <input type="password" id="oldPassword" v-model="passwordChange.oldPassword"
-                            class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50">
-                    </div>
-                    <div>
-                        <label for="newPassword" class="block text-sm font-medium text-gray-700">New Password</label>
-                        <input type="password" id="newPassword" v-model="passwordChange.newPassword"
-                            class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50">
-                    </div>
-                    <div>
-                        <label for="confirmPassword" class="block text-sm font-medium text-gray-700">Confirm New
-                            Password</label>
-                        <input type="password" id="confirmPassword" v-model="passwordChange.confirmPassword"
-                            class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50">
-                    </div>
-                    <button type="submit"
-                        class="bg-blue-500 text-white py-2 px-4 rounded hover:bg-blue-600 transition duration-300">
-                        Update Password
-                    </button>
-                </form>
-            </div>
-        </div>
+                    <TabsContent value="personal">
+                        <Card>
+                            <CardHeader>
+                                <CardTitle>Personal Information</CardTitle>
+                                <CardDescription>
+                                    Update your personal details
+                                </CardDescription>
+                            </CardHeader>
+                            <CardContent>
+                                <form @submit.prevent="updatePersonalInfo" class="space-y-4">
+                                    <div class="grid grid-cols-2 gap-4">
+                                        <div class="space-y-2">
+                                            <Label for="firstName">First Name</Label>
+                                            <Input id="firstName" v-model="personalInfo.firstName" :disabled="isLoading"
+                                                placeholder="Enter first name" />
+                                        </div>
+                                        <div class="space-y-2">
+                                            <Label for="lastName">Last Name</Label>
+                                            <Input id="lastName" v-model="personalInfo.lastName" :disabled="isLoading"
+                                                placeholder="Enter last name" />
+                                        </div>
+                                    </div>
+
+                                    <div class="space-y-2">
+                                        <Label for="email">Email</Label>
+                                        <Input id="email" v-model="personalInfo.email" type="email"
+                                            :disabled="isLoading" placeholder="Enter email address" />
+                                    </div>
+
+                                    <div class="space-y-2">
+                                        <Label for="phone">Phone Number</Label>
+                                        <Input id="phone" v-model="personalInfo.phone" type="tel" :disabled="isLoading"
+                                            placeholder="Enter phone number" />
+                                    </div>
+
+                                    <Alert v-if="personalInfoError" variant="destructive">
+                                        <AlertCircle class="h-4 w-4" />
+                                        <AlertTitle>Error</AlertTitle>
+                                        <AlertDescription>{{ personalInfoError }}</AlertDescription>
+                                    </Alert>
+
+                                    <Button type="submit" :disabled="isLoading">
+                                        <Loader2Icon v-if="isLoading" class="mr-2 h-4 w-4 animate-spin" />
+                                        {{ isLoading ? 'Saving...' : 'Save Changes' }}
+                                    </Button>
+                                </form>
+                            </CardContent>
+                        </Card>
+                    </TabsContent>
+
+                    <TabsContent value="security">
+                        <Card>
+                            <CardHeader>
+                                <CardTitle>Security Settings</CardTitle>
+                                <CardDescription>
+                                    Manage your password and security preferences
+                                </CardDescription>
+                            </CardHeader>
+                            <CardContent>
+                                <form @submit.prevent="updatePassword" class="space-y-4">
+                                    <div class="space-y-2">
+                                        <Label for="currentPassword">Current Password</Label>
+                                        <Input id="currentPassword" v-model="passwordChange.currentPassword"
+                                            type="password" :disabled="isLoading"
+                                            placeholder="Enter current password" />
+                                    </div>
+
+                                    <div class="space-y-2">
+                                        <Label for="newPassword">New Password</Label>
+                                        <Input id="newPassword" v-model="passwordChange.newPassword" type="password"
+                                            :disabled="isLoading" placeholder="Enter new password" />
+                                    </div>
+
+                                    <div class="space-y-2">
+                                        <Label for="confirmPassword">Confirm Password</Label>
+                                        <Input id="confirmPassword" v-model="passwordChange.confirmPassword"
+                                            type="password" :disabled="isLoading" placeholder="Confirm new password" />
+                                    </div>
+
+                                    <Alert v-if="passwordError" variant="destructive">
+                                        <AlertCircle class="h-4 w-4" />
+                                        <AlertTitle>Error</AlertTitle>
+                                        <AlertDescription>{{ passwordError }}</AlertDescription>
+                                    </Alert>
+
+                                    <Button type="submit" :disabled="isLoading || !isPasswordValid">
+                                        <Loader2Icon v-if="isLoading" class="mr-2 h-4 w-4 animate-spin" />
+                                        {{ isLoading ? 'Updating...' : 'Update Password' }}
+                                    </Button>
+                                </form>
+                            </CardContent>
+                        </Card>
+                    </TabsContent>
+                </Tabs>
+            </CardContent>
+        </Card>
     </div>
 </template>
 
 <script setup>
-import { ref } from 'vue';
-import { useSettingsStore } from '../../stores/settingsStore';
-import { useToast } from '../ui/toast';
-import EditProfileForm from '../user/EditProfileForm.vue';
+import { ref, computed } from 'vue'
+import { useToast } from '@/components/ui/toast'
+import { useSettingsStore } from '@/stores/settingsStore'
+import { useUserStore } from '@/stores/userStore'
+import { AlertCircle, Loader2Icon } from 'lucide-vue-next'
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card'
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
+import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Button } from '@/components/ui/button'
+import { Switch } from '@/components/ui/switch'
+import { Separator } from '@/components/ui/separator'
+import logger from '@/services/logging'
 
-const settingsStore = useSettingsStore();
-const { toast } = useToast();
+// Initialize stores and composables
+const settingsStore = useSettingsStore()
+const userStore = useUserStore()
+const { toast } = useToast()
+
+// State
+const isLoading = ref(false)
+const personalInfoError = ref(null)
+const passwordError = ref(null)
 
 const personalInfo = ref({
     firstName: '',
-    middleName: '',
-    lastName: ''
-});
+    lastName: '',
+    email: '',
+    phone: ''
+})
 
 const passwordChange = ref({
-    oldPassword: '',
+    currentPassword: '',
     newPassword: '',
     confirmPassword: ''
-});
+})
 
+const preferences = ref({
+    emailNotifications: false,
+    twoFactorEnabled: false
+})
+
+// Computed
+const isPasswordValid = computed(() => {
+    return (
+        passwordChange.value.newPassword &&
+        passwordChange.value.confirmPassword &&
+        passwordChange.value.newPassword === passwordChange.value.confirmPassword &&
+        passwordChange.value.newPassword.length >= 8
+    )
+})
+
+// Methods
 const updatePersonalInfo = async () => {
     try {
-        await settingsStore.updatePersonalInfo(personalInfo.value);
-        toast({ type: 'success', message: 'Personal information updated successfully' });
-    } catch (error) {
-        toast({ type: 'error', message: 'Failed to update personal information' });
+        isLoading.value = true
+        personalInfoError.value = null
+
+        logger.debug('Updating personal information', { data: personalInfo.value })
+
+        const success = await userStore.updateUserProfile({
+            firstName: personalInfo.value.firstName,
+            lastName: personalInfo.value.lastName,
+            email: personalInfo.value.email,
+            phone: personalInfo.value.phone
+        })
+
+        if (success) {
+            toast({
+                title: 'Success',
+                description: 'Personal information updated successfully'
+            })
+            logger.info('Personal information updated successfully')
+        } else {
+            throw new Error('Failed to update personal information')
+        }
+    } catch (err) {
+        personalInfoError.value = err.message || 'An error occurred while updating'
+        logger.error('Personal information update failed', { error: err })
+        toast({
+            title: 'Error',
+            description: personalInfoError.value,
+            variant: 'destructive'
+        })
+    } finally {
+        isLoading.value = false
     }
-};
+}
 
 const updatePassword = async () => {
-    if (passwordChange.value.newPassword !== passwordChange.value.confirmPassword) {
-        toast({ type: 'error', message: 'New passwords do not match' });
-        return;
-    }
-
     try {
-        await settingsStore.updatePassword(passwordChange.value);
-        toast({ type: 'success', message: 'Password updated successfully' });
-        passwordChange.value = { oldPassword: '', newPassword: '', confirmPassword: '' };
-    } catch (error) {
-        toast({ type: 'error', message: 'Failed to update password' });
+        if (!isPasswordValid.value) {
+            throw new Error('Please check your password inputs')
+        }
+
+        isLoading.value = true
+        passwordError.value = null
+
+        logger.debug('Updating password')
+
+        const success = await userStore.changePassword(
+            passwordChange.value.currentPassword,
+            passwordChange.value.newPassword
+        )
+
+        if (success) {
+            toast({
+                title: 'Success',
+                description: 'Password updated successfully'
+            })
+            logger.info('Password updated successfully')
+
+            // Reset password fields
+            passwordChange.value = {
+                currentPassword: '',
+                newPassword: '',
+                confirmPassword: ''
+            }
+        } else {
+            throw new Error('Failed to update password')
+        }
+    } catch (err) {
+        passwordError.value = err.message || 'An error occurred while updating password'
+        logger.error('Password update failed', { error: err })
+        toast({
+            title: 'Error',
+            description: passwordError.value,
+            variant: 'destructive'
+        })
+    } finally {
+        isLoading.value = false
     }
-};
+}
+
+const updatePreferences = async () => {
+    try {
+        isLoading.value = true
+        logger.debug('Updating preferences', { preferences: preferences.value })
+
+        await settingsStore.updatePreferences(preferences.value)
+
+        toast({
+            title: 'Success',
+            description: 'Preferences updated successfully'
+        })
+        logger.info('Preferences updated successfully')
+    } catch (err) {
+        logger.error('Preferences update failed', { error: err })
+        toast({
+            title: 'Error',
+            description: 'Failed to update preferences',
+            variant: 'destructive'
+        })
+    } finally {
+        isLoading.value = false
+    }
+}
+
+// Load initial data
+const loadUserData = async () => {
+    try {
+        const userData = await userStore.fetchUserProfile()
+        if (userData) {
+            personalInfo.value = {
+                firstName: userData.firstName || '',
+                lastName: userData.lastName || '',
+                email: userData.email || '',
+                phone: userData.phone || ''
+            }
+        }
+
+        const userPreferences = await settingsStore.getPreferences()
+        if (userPreferences) {
+            preferences.value = {
+                emailNotifications: userPreferences.emailNotifications || false,
+                twoFactorEnabled: userPreferences.twoFactorEnabled || false
+            }
+        }
+    } catch (err) {
+        logger.error('Failed to load user data', { error: err })
+        toast({
+            title: 'Error',
+            description: 'Failed to load user data',
+            variant: 'destructive'
+        })
+    }
+}
+
+// Lifecycle hooks
+onMounted(async () => {
+    await loadUserData()
+})
 </script>

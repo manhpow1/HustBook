@@ -1,51 +1,233 @@
-<!-- src/components/user/EditProfileForm.vue -->
 <template>
-    <div class="bg-white shadow rounded-lg p-6">
-        <h2 class="text-xl font-semibold mb-4">Edit Profile</h2>
-        <form @submit.prevent="submitForm" class="space-y-4">
-            <Input v-model="form.userName" label="userName" placeholder="Enter your userName" />
-            <Input v-model="form.description" label="Description" placeholder="Short bio or description" />
-            <Input v-model="form.address" label="Address" placeholder="Your address" />
-            <Input v-model="form.city" label="City" placeholder="Your city" />
-            <Input v-model="form.country" label="Country" placeholder="Your country" />
-            <Input v-model="form.cover_image" label="Cover Image URL" placeholder="Link to cover image" />
-            <Input v-model="form.link" label="External Link" placeholder="Link to your website or profile" />
+    <Card>
+        <CardHeader>
+            <CardTitle>Edit Profile</CardTitle>
+            <CardDescription>Update your profile information</CardDescription>
+        </CardHeader>
+        <CardContent>
+            <form @submit.prevent="handleSubmit" class="space-y-4">
+                <div class="space-y-2">
+                    <Label for="userName">Username</Label>
+                    <Input id="userName" v-model="form.userName" :disabled="isLoading" placeholder="Enter your username"
+                        :error="errors.userName" />
+                    <p v-if="errors.userName" class="text-sm text-destructive">{{ errors.userName }}</p>
+                </div>
 
-            <Button type="submit" :disabled="isLoading">
-                {{ isLoading ? 'Updating...' : 'Update Profile' }}
-            </Button>
-        </form>
-        <p v-if="successMessage" class="text-green-600 mt-2">{{ successMessage }}</p>
-        <p v-if="error" class="text-red-600 mt-2">{{ error }}</p>
-    </div>
+                <div class="space-y-2">
+                    <Label for="description">Bio</Label>
+                    <Textarea id="description" v-model="form.description" :disabled="isLoading"
+                        placeholder="Tell us about yourself" :error="errors.description" />
+                    <p v-if="errors.description" class="text-sm text-destructive">{{ errors.description }}</p>
+                </div>
+
+                <div class="space-y-2">
+                    <Label for="address">Address</Label>
+                    <Input id="address" v-model="form.address" :disabled="isLoading" placeholder="Enter your address"
+                        :error="errors.address" />
+                    <p v-if="errors.address" class="text-sm text-destructive">{{ errors.address }}</p>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="space-y-2">
+                        <Label for="city">City</Label>
+                        <Input id="city" v-model="form.city" :disabled="isLoading" placeholder="Enter your city"
+                            :error="errors.city" />
+                        <p v-if="errors.city" class="text-sm text-destructive">{{ errors.city }}</p>
+                    </div>
+
+                    <div class="space-y-2">
+                        <Label for="country">Country</Label>
+                        <Input id="country" v-model="form.country" :disabled="isLoading"
+                            placeholder="Enter your country" :error="errors.country" />
+                        <p v-if="errors.country" class="text-sm text-destructive">{{ errors.country }}</p>
+                    </div>
+                </div>
+
+                <div class="space-y-2">
+                    <Label for="link">Website</Label>
+                    <Input id="link" v-model="form.link" :disabled="isLoading" placeholder="Enter your website URL"
+                        :error="errors.link" />
+                    <p v-if="errors.link" class="text-sm text-destructive">{{ errors.link }}</p>
+                </div>
+
+                <div class="space-y-2">
+                    <Label for="coverImage">Cover Image URL</Label>
+                    <Input id="coverImage" v-model="form.cover_image" :disabled="isLoading"
+                        placeholder="Enter cover image URL" :error="errors.cover_image" />
+                    <p v-if="errors.cover_image" class="text-sm text-destructive">{{ errors.cover_image }}</p>
+                </div>
+
+                <Alert v-if="error" variant="destructive" class="mt-4">
+                    <AlertCircle class="h-4 w-4" />
+                    <AlertTitle>Error</AlertTitle>
+                    <AlertDescription>{{ error }}</AlertDescription>
+                </Alert>
+
+                <div class="flex justify-end space-x-4 mt-6">
+                    <Button type="button" variant="outline" :disabled="isLoading" @click="resetForm">
+                        Cancel
+                    </Button>
+                    <Button type="submit" :disabled="isLoading || !isFormValid">
+                        <Loader2Icon v-if="isLoading" class="mr-2 h-4 w-4 animate-spin" />
+                        {{ isLoading ? 'Saving...' : 'Save Changes' }}
+                    </Button>
+                </div>
+            </form>
+        </CardContent>
+    </Card>
 </template>
 
 <script setup>
-import { ref, computed } from 'vue';
-import { useUserStore } from '../../stores/userStore';
-import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
+import { ref, computed, onMounted } from 'vue'
+import { useUserStore } from '@/stores/userStore'
+import { useToast } from '@/components/ui/toast'
+import { AlertCircle, Loader2Icon } from 'lucide-vue-next'
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
+import { Button } from '@/components/ui/button'
+import { Label } from '@/components/ui/label'
+import { Textarea } from '@/components/ui/textarea'
+import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert'
+import { useRouter } from 'vue-router'
+import logger from '@/services/logging'
 
-const userStore = useUserStore();
+// Initialize stores and composables
+const userStore = useUserStore()
+const { toast } = useToast()
+const router = useRouter()
 
+// Form state
 const form = ref({
     userName: '',
     description: '',
     address: '',
     city: '',
     country: '',
-    cover_image: '',
-    link: ''
-});
+    link: '',
+    cover_image: ''
+})
 
-const isLoading = computed(() => userStore.isLoading);
-const successMessage = computed(() => userStore.successMessage);
-const error = computed(() => userStore.error);
+const initialForm = { ...form.value }
+const errors = ref({})
+const isLoading = ref(false)
+const error = ref(null)
 
-const submitForm = async () => {
-    const result = await userStore.updateUserInfo({ ...form.value });
-    if (result) {
-        // Optionally reset form or show a success toast
+// Validation rules
+const validators = {
+    userName: (value) => {
+        if (!value?.trim()) return 'Username is required'
+        if (value.length < 3) return 'Username must be at least 3 characters'
+        if (value.length > 30) return 'Username must be less than 30 characters'
+        return null
+    },
+    link: (value) => {
+        if (!value) return null
+        try {
+            new URL(value)
+            return null
+        } catch {
+            return 'Please enter a valid URL'
+        }
     }
-};
+}
+
+// Validate form fields
+const validateField = (field, value) => {
+    if (validators[field]) {
+        errors.value[field] = validators[field](value)
+    }
+}
+
+// Watch for form changes and validate
+watch(form, (newValues) => {
+    Object.keys(newValues).forEach(field => {
+        validateField(field, newValues[field])
+    })
+}, { deep: true })
+
+// Computed values
+const isFormValid = computed(() => {
+    return !Object.values(errors.value).some(error => error) &&
+        form.value.userName?.trim().length >= 3
+})
+
+// Methods
+const resetForm = () => {
+    form.value = { ...initialForm }
+    errors.value = {}
+    error.value = null
+}
+
+const handleSubmit = async () => {
+    try {
+        isLoading.value = true
+        error.value = null
+
+        logger.debug('Submitting profile update', { formData: form.value })
+
+        const success = await userStore.updateUserProfile(form.value)
+
+        if (success) {
+            toast({
+                title: 'Success',
+                description: 'Profile updated successfully',
+            })
+            logger.info('Profile updated successfully')
+        } else {
+            throw new Error('Failed to update profile')
+        }
+    } catch (err) {
+        error.value = err.message || 'An error occurred while updating your profile'
+        logger.error('Profile update failed', { error: err })
+        toast({
+            title: 'Error',
+            description: error.value,
+            variant: 'destructive',
+        })
+    } finally {
+        isLoading.value = false
+    }
+}
+
+// Load initial data
+const loadUserData = async () => {
+    try {
+        isLoading.value = true
+        const userData = await userStore.getUserProfile()
+        if (userData) {
+            form.value = {
+                userName: userData.userName || '',
+                description: userData.description || '',
+                address: userData.address || '',
+                city: userData.city || '',
+                country: userData.country || '',
+                link: userData.link || '',
+                cover_image: userData.cover_image || ''
+            }
+            initialForm = { ...form.value }
+        }
+    } catch (err) {
+        logger.error('Failed to load user data', { error: err })
+        error.value = 'Failed to load user data'
+    } finally {
+        isLoading.value = false
+    }
+}
+
+// Lifecycle hooks
+onMounted(async () => {
+    await loadUserData()
+})
+
+// Handle unsaved changes
+onBeforeRouteLeave((to, from, next) => {
+    const hasChanges = JSON.stringify(form.value) !== JSON.stringify(initialForm)
+
+    if (hasChanges && !isLoading.value) {
+        const confirmed = window.confirm('You have unsaved changes. Are you sure you want to leave?')
+        next(confirmed)
+    } else {
+        next()
+    }
+})
 </script>
