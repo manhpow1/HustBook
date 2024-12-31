@@ -240,6 +240,8 @@ axiosInstance.interceptors.response.use(
 axiosInstance.interceptors.response.use(
     response => response,
     async error => {
+        const { useUserStore } = await import('@/stores/userStore'); // Lazy import
+        const userStore = useUserStore();
         if (error.response?.status === 401) {
             await userStore.clearAuthState();
             router.push('/login');

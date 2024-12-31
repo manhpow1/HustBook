@@ -65,13 +65,21 @@ export function formatTimeAgo(dateString) {
     const now = new Date();
     const seconds = Math.floor((now - date) / 1000);
 
+    // Dynamically calculate intervals
+    const yearInSeconds = 365 * 24 * 60 * 60; // Approximate for simplicity
+    const monthInSeconds = (365 / 12) * 24 * 60 * 60; // Average month length
+    const weekInSeconds = 7 * 24 * 60 * 60;
+    const dayInSeconds = 24 * 60 * 60;
+    const hourInSeconds = 60 * 60;
+    const minuteInSeconds = 60;
+
     const intervals = [
-        { label: 'year', seconds: 31536000 },
-        { label: 'month', seconds: 2592000 },
-        { label: 'week', seconds: 604800 },
-        { label: 'day', seconds: 86400 },
-        { label: 'hour', seconds: 3600 },
-        { label: 'minute', seconds: 60 },
+        { label: 'year', seconds: yearInSeconds },
+        { label: 'month', seconds: monthInSeconds },
+        { label: 'week', seconds: weekInSeconds },
+        { label: 'day', seconds: dayInSeconds },
+        { label: 'hour', seconds: hourInSeconds },
+        { label: 'minute', seconds: minuteInSeconds },
         { label: 'second', seconds: 1 },
     ];
 
@@ -83,4 +91,4 @@ export function formatTimeAgo(dateString) {
     }
 
     return 'just now';
-};
+}

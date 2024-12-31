@@ -17,8 +17,10 @@ const COVER_DIR = path.join(UPLOAD_DIR, 'covers');
 const validatePath = (filePath, baseDir) => {
     const resolvedPath = path.resolve(filePath);
     if (!resolvedPath.startsWith(baseDir)) {
+        logger.error(`Invalid file path: ${filePath}. Resolved path: ${resolvedPath}`);
         throw createError('1001', 'Invalid file path');
     }
+    logger.info(`Validated file path: ${resolvedPath}`);
     return resolvedPath;
 };
 
@@ -26,17 +28,26 @@ const safeUnlink = async (filePath, baseDir) => {
     try {
         const resolvedPath = validatePath(filePath, baseDir);
         await fs.unlink(resolvedPath);
+        logger.info(`Successfully deleted file: ${resolvedPath}`);
     } catch (err) {
-        if (err.code !== 'ENOENT') {
-            logger.error(`Error deleting file ${filePath}:`, err);
+        if (err.code !== 'ENOENT') { // Ignore "file not found" errors
+            logger.error(`Error deleting file at ${filePath}:`, err);
+        } else {
+            logger.warn(`File not found, skipping deletion: ${filePath}`);
         }
     }
 };
 
 const safeRename = async (oldPath, newPath, baseDir) => {
-    const resolvedOldPath = validatePath(oldPath, baseDir);
-    const resolvedNewPath = validatePath(newPath, baseDir);
-    await fs.rename(resolvedOldPath, resolvedNewPath);
+    try {
+        const resolvedOldPath = validatePath(oldPath, baseDir);
+        const resolvedNewPath = validatePath(newPath, baseDir);
+        await fs.rename(resolvedOldPath, resolvedNewPath);
+        logger.info(`Successfully renamed file from ${resolvedOldPath} to ${resolvedNewPath}`);
+    } catch (err) {
+        logger.error(`Error renaming file from ${oldPath} to ${newPath}:`, err);
+        throw err;
+    }
 };
 
 const generateAvatarUrl = (filename) => {

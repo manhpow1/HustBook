@@ -113,11 +113,6 @@ export const generateRefreshToken = (user) => {
  */
 export const verifyRefreshToken = async (token) => {
     try {
-        // First check if token is blacklisted
-        if (await isTokenBlacklisted(token)) {
-            throw new Error('Token has been revoked');
-        }
-
         return jwt.verify(token, config.get('jwt.refreshSecret'), {
             algorithms: ['HS256'],
             audience: config.get('app.domain'),

@@ -1,5 +1,3 @@
-import axios from 'axios';
-
 const logLevels = {
     ERROR: 'error',
     WARN: 'warn',

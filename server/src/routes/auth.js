@@ -14,6 +14,7 @@ import { verifyCodeLimiterMiddleware, checkVerifyCodeLimiterMiddleware } from '.
 import rateLimit from 'express-rate-limit';
 
 const router = express.Router();
+const MAX_RANDOM_VALUE = 1_000_000_000;
 
 /**
  * @swagger
@@ -44,7 +45,7 @@ const storage = multer.diskStorage({
     },
     filename: (req, file, cb) => {
         // Generate unique filename with original extension
-        const uniqueSuffix = `${Date.now()}-${Math.round(Math.random() * 1E9)}`;
+        const uniqueSuffix = `${Date.now()}-${Math.round(Math.random() * MAX_RANDOM_VALUE)}`;
         const ext = file.originalname.split('.').pop();
         cb(null, `avatar-${uniqueSuffix}.${ext}`);
     }
