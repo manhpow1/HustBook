@@ -1,129 +1,179 @@
 <template>
-    <div class="blocked-users-list">
-        <h2 class="text-2xl font-bold mb-4">Blocked Users</h2>
-
-        <!-- Loading Indicator -->
-        <div v-if="loading" class="text-center py-4" role="status" aria-live="polite">
-            <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mx-auto" aria-hidden="true"></div>
-        </div>
-
-        <!-- Error Message -->
-        <div v-else-if="error" class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative"
-            role="alert">
-            <strong class="font-bold">Error!</strong>
-            <span class="block sm:inline">{{ error }}</span>
-        </div>
-
-        <!-- Blocked Users List -->
-        <ul v-else-if="blockedUsers.length > 0" class="space-y-4">
-            <li v-for="user in blockedUsers" :key="user.id"
-                class="flex items-center justify-between bg-white p-4 rounded-lg shadow">
-                <div class="flex items-center">
-                    <img :src="user.avatar || '../../assets/avatar-default.svg'" :alt="user.name"
-                        class="w-10 h-10 rounded-full mr-4" />
-                    <span class="font-medium">{{ user.userName }}</span>
+    <div>
+        <Card>
+            <CardHeader>
+                <CardTitle>Blocked Users</CardTitle>
+                <CardDescription>Manage your blocked users list</CardDescription>
+            </CardHeader>
+            <CardContent>
+                <div v-if="loading" class="space-y-4">
+                    <Skeleton v-for="i in 3" :key="i" class="h-20 w-full" />
                 </div>
-                <button @click="confirmUnblock(user.id)"
-                    class="text-blue-500 hover:underline bg-transparent border border-blue-500 rounded px-2 py-1 transition duration-300"
-                    aria-label="Unblock User">
-                    Unblock
-                </button>
-            </li>
-        </ul>
 
-        <!-- No Blocked Users Message -->
-        <p v-else class="text-gray-500 text-center py-4">You haven't blocked any users.</p>
+                <Alert v-else-if="error" variant="destructive">
+                    <AlertCircleIcon class="h-4 w-4" />
+                    <AlertTitle>Error</AlertTitle>
+                    <AlertDescription>{{ error }}</AlertDescription>
+                </Alert>
 
-        <!-- Load More Button -->
-        <div v-if="hasMoreBlockedUsers" class="text-center mt-4">
-            <button @click="loadMore"
-                class="bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded transition duration-300"
-                :disabled="loading" :aria-disabled="loading">
-                Load More
-            </button>
-        </div>
+                <Alert v-else-if="blockedUsers.length === 0">
+                    <AlertTitle>No blocked users</AlertTitle>
+                    <AlertDescription>
+                        Your blocked users list is empty
+                    </AlertDescription>
+                </Alert>
 
-        <!-- Confirm Dialog for Unblocking -->
-        <ConfirmDialog v-model="confirmDialog" :title="'Unblock User'"
-            :message="'Are you sure you want to unblock this user? They will be able to send you messages and friend requests again.'"
-            confirmText="Unblock" cancelText="Cancel" :isLoading="isProcessing" loadingText="Processing..."
-            @confirm="unblockConfirmed" @cancel="cancelUnblock" />
+                <ScrollArea v-else className="h-[400px] rounded-md border p-4">
+                    <div class="space-y-4">
+                        <Card v-for="user in blockedUsers" :key="user.id">
+                            <CardContent class="p-4">
+                                <div class="flex items-center justify-between">
+                                    <div class="flex items-center space-x-4">
+                                        <Avatar>
+                                            <AvatarImage :src="user.avatar || defaultAvatar" :alt="user.userName" />
+                                            <AvatarFallback>{{ getInitials(user.userName) }}</AvatarFallback>
+                                        </Avatar>
+                                        <div>
+                                            <h3 class="font-semibold">{{ user.userName }}</h3>
+                                            <p class="text-sm text-muted-foreground">Blocked since {{
+                                                formatDate(user.blockedAt) }}</p>
+                                        </div>
+                                    </div>
+                                    <Button variant="outline" :disabled="processingIds.has(user.id)"
+                                        @click="confirmUnblock(user.id)">
+                                        <Loader2Icon v-if="processingIds.has(user.id)"
+                                            class="mr-2 h-4 w-4 animate-spin" />
+                                        {{ processingIds.has(user.id) ? 'Processing...' : 'Unblock' }}
+                                    </Button>
+                                </div>
+                            </CardContent>
+                        </Card>
+                    </div>
+                </ScrollArea>
+
+                <div v-if="hasMore && !loading" class="mt-4 text-center">
+                    <Button variant="outline" @click="loadMore" :disabled="isLoadingMore">
+                        {{ isLoadingMore ? 'Loading...' : 'Load more' }}
+                    </Button>
+                </div>
+            </CardContent>
+        </Card>
+
+        <AlertDialog :open="!!userIdToUnblock" @update:open="userIdToUnblock = null">
+            <AlertDialogContent>
+                <AlertDialogHeader>
+                    <AlertDialogTitle>Unblock User</AlertDialogTitle>
+                    <AlertDialogDescription>
+                        Are you sure you want to unblock this user? They will be able to contact you again.
+                    </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                    <AlertDialogCancel @click="userIdToUnblock = null">Cancel</AlertDialogCancel>
+                    <AlertDialogAction @click="unblockConfirmed">
+                        <Loader2Icon v-if="isProcessing" class="mr-2 h-4 w-4 animate-spin" />
+                        {{ isProcessing ? 'Processing...' : 'Unblock' }}
+                    </AlertDialogAction>
+                </AlertDialogFooter>
+            </AlertDialogContent>
+        </AlertDialog>
     </div>
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue';
-import { usefriendStore } from '../../stores/friendStore';
-import { useToast } from '../ui/toast';
-import ConfirmDialog from '../shared/ConfirmDialog.vue';
+import { ref, computed, onMounted } from 'vue';
+import { useFriendStore } from '@/stores/friendStore';
+import { useToast } from '@/components/ui/toast';
+import defaultAvatar from '@/assets/avatar-default.svg';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
+import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
+import { Button } from '@/components/ui/button';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Skeleton } from '@/components/ui/skeleton';
+import { AlertCircleIcon, Loader2Icon } from 'lucide-vue-next';
 
-const friendStore = usefriendStore();
+const friendStore = useFriendStore();
 const { toast } = useToast();
 
-const blockedUsers = ref([]);
 const loading = ref(true);
 const error = ref(null);
-
-// Confirmation Dialog State
-const confirmDialog = ref(false);
-const dialogTitle = ref('');
-const dialogMessage = ref('');
-const userIdToUnblock = ref('');
+const isLoadingMore = ref(false);
 const isProcessing = ref(false);
+const processingIds = ref(new Set());
+const userIdToUnblock = ref(null);
 
-onMounted(async () => {
-    await loadBlockedUsers();
-});
+const blockedUsers = computed(() => friendStore.blockedUsers);
+const hasMore = computed(() => friendStore.hasMoreBlockedUsers);
 
 const loadBlockedUsers = async () => {
     try {
         loading.value = true;
-        await friendStore.getBlockedUsers();
-        blockedUsers.value = friendStore.blockedUsers;
+        error.value = null;
+        await friendStore.getListBlocks();
     } catch (err) {
-        toast({ type: 'error', message: 'Failed to load blocked users' });
+        error.value = 'Unable to load blocked users list';
     } finally {
         loading.value = false;
     }
 };
 
+const loadMore = async () => {
+    if (isLoadingMore.value) return;
+    isLoadingMore.value = true;
+    try {
+        await friendStore.getListBlocks();
+    } catch (err) {
+        toast({
+            title: "Error",
+            description: "Unable to load more data",
+            variant: "destructive",
+        });
+    } finally {
+        isLoadingMore.value = false;
+    }
+};
+
 const confirmUnblock = (userId) => {
     userIdToUnblock.value = userId;
-    dialogTitle.value = 'Unblock User';
-    dialogMessage.value = 'Are you sure you want to unblock this user? They will be able to send you messages and friend requests again.';
-    confirmDialog.value = true;
 };
 
 const unblockConfirmed = async () => {
     if (!userIdToUnblock.value) return;
-
     isProcessing.value = true;
-
+    processingIds.value.add(userIdToUnblock.value);
     try {
-        await friendStore.unblockUser(userIdToUnblock.value);
-        toast({ type: 'success', message: 'User unblocked successfully' });
-        blockedUsers.value = blockedUsers.value.filter(user => user.id !== userIdToUnblock.value);
+        await friendStore.setBlock(userIdToUnblock.value, 1);
+        toast({
+            title: "Success",
+            description: "User has been unblocked",
+        });
     } catch (err) {
-        console.error(`Error unblocking user with ID ${userIdToUnblock.value}:`, err);
-        toast({ type: 'error', message: 'Failed to unblock user' });
+        toast({
+            title: "Error",
+            description: "Unable to unblock user",
+            variant: "destructive",
+        });
     } finally {
         isProcessing.value = false;
-        confirmDialog.value = false;
-        userIdToUnblock.value = '';
+        processingIds.value.delete(userIdToUnblock.value);
+        userIdToUnblock.value = null;
     }
 };
 
-const cancelUnblock = () => {
-    confirmDialog.value = false;
-    userIdToUnblock.value = '';
+const getInitials = (name) => {
+    return name
+        ?.split(' ')
+        .map(word => word[0])
+        .join('')
+        .toUpperCase()
+        .slice(0, 2) || '??';
 };
 
-const loadMore = async () => {
-    try {
-        await friendStore.getListBlocks();
-        blockedUsers.value = friendStore.blockedUsers;
-    } catch (err) {
-        toast({ type: 'error', message: 'Failed to load more blocked users' });
-    }
+const formatDate = (date) => {
+    if (!date) return '';
+    return new Date(date).toLocaleDateString('vi-VN');
 };
+
+onMounted(loadBlockedUsers);
 </script>

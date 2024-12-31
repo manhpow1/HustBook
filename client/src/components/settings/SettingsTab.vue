@@ -1,56 +1,137 @@
 <template>
-    <div class="bg-white shadow-md rounded-lg p-6">
-        <h1 class="text-2xl font-bold mb-6">Settings</h1>
+    <div class="container space-y-6">
+        <Tabs defaultValue="account" class="w-full">
+            <TabsList class="grid w-full grid-cols-4">
+                <TabsTrigger value="account">
+                    <UserIcon class="mr-2 h-4 w-4" />
+                    Account
+                </TabsTrigger>
+                <TabsTrigger value="privacy">
+                    <ShieldIcon class="mr-2 h-4 w-4" />
+                    Privacy
+                </TabsTrigger>
+                <TabsTrigger value="notifications">
+                    <BellIcon class="mr-2 h-4 w-4" />
+                    Notifications
+                </TabsTrigger>
+                <TabsTrigger value="help">
+                    <HelpCircleIcon class="mr-2 h-4 w-4" />
+                    Help
+                </TabsTrigger>
+            </TabsList>
 
-        <div class="space-y-8">
-            <AccountSettings />
-            <PrivacySettings />
-            <NotificationSettings />
+            <TabsContent value="account" class="space-y-4">
+                <Card>
+                    <CardHeader>
+                        <CardTitle>Account Settings</CardTitle>
+                        <CardDescription>
+                            Manage your account preferences and personal information
+                        </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <AccountSettings />
+                    </CardContent>
+                </Card>
+            </TabsContent>
 
-            <div class="border-t pt-6">
-                <h2 class="text-xl font-semibold mb-4">Change Password</h2>
-                <ChangePasswordForm />
-            </div>
+            <TabsContent value="privacy" class="space-y-4">
+                <PrivacySettings />
+            </TabsContent>
 
-            <div class="border-t pt-6">
-                <h2 class="text-xl font-semibold mb-4">Help & Support</h2>
-                <router-link to="/terms-and-policies" class="text-blue-600 hover:underline">
-                    Terms & Policies
-                </router-link>
-            </div>
+            <TabsContent value="notifications" class="space-y-4">
+                <NotificationSettings />
+            </TabsContent>
+        </Tabs>
 
-            <div class="border-t pt-6 space-y-4">
-                <button @click="logout"
-                    class="w-full bg-red-500 text-white py-2 px-4 rounded hover:bg-red-600 transition duration-300">
-                    Logout
-                </button>
-                <button @click="exit"
-                    class="w-full bg-gray-300 text-gray-800 py-2 px-4 rounded hover:bg-gray-400 transition duration-300">
-                    Exit
-                </button>
-            </div>
-        </div>
+        <Dialog v-model:open="showLogoutDialog">
+            <DialogContent>
+                <DialogHeader>
+                    <DialogTitle>Log Out</DialogTitle>
+                    <DialogDescription>
+                        Are you sure you want to log out of your account?
+                    </DialogDescription>
+                </DialogHeader>
+                <DialogFooter>
+                    <Button variant="outline" @click="showLogoutDialog = false">
+                        Cancel
+                    </Button>
+                    <Button variant="destructive" @click="handleLogout" :disabled="isLoggingOut">
+                        <Loader2Icon v-if="isLoggingOut" class="mr-2 h-4 w-4 animate-spin" />
+                        {{ isLoggingOut ? 'Logging out...' : 'Log Out' }}
+                    </Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+
+        <AlertDialog v-model:open="showExitDialog">
+            <AlertDialogContent>
+                <AlertDialogHeader>
+                    <AlertDialogTitle>Exit Settings</AlertDialogTitle>
+                    <AlertDialogDescription>
+                        Are you sure you want to exit? Any unsaved changes will be lost.
+                    </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction @click="handleExit">Exit</AlertDialogAction>
+                </AlertDialogFooter>
+            </AlertDialogContent>
+        </AlertDialog>
     </div>
 </template>
 
 <script setup>
+import { ref } from 'vue';
 import { useRouter } from 'vue-router';
-import { useUserStore } from '../../stores/userStore';
+import { useUserStore } from '@/stores/userStore';
+import { useToast } from '@/components/ui/toast';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Separator } from '@/components/ui/separator';
+import { Link } from '@/components/ui/link';
 import AccountSettings from './AccountSettings.vue';
 import PrivacySettings from './PrivacySettings.vue';
 import NotificationSettings from './NotificationSettings.vue';
-import ChangePasswordForm from './ChangePasswordForm.vue';
+import { UserIcon, ShieldIcon, BellIcon, HelpCircleIcon, MailIcon, Loader2Icon, } from 'lucide-vue-next';
 
 const router = useRouter();
 const userStore = useUserStore();
+const { toast } = useToast();
 
-const logout = async () => {
-    await userStore.logout();
-    router.push('/login');
+const showLogoutDialog = ref(false);
+const showExitDialog = ref(false);
+const isLoggingOut = ref(false);
+
+const handleLogout = async () => {
+    isLoggingOut.value = true;
+    try {
+        await userStore.logout();
+        toast({
+            title: 'Success',
+            description: 'You have been logged out successfully',
+        });
+        router.push('/login');
+    } catch (error) {
+        toast({
+            title: 'Error',
+            description: 'Failed to log out. Please try again.',
+            variant: 'destructive',
+        });
+    } finally {
+        isLoggingOut.value = false;
+        showLogoutDialog.value = false;
+    }
 };
 
-const exit = () => {
-    // Implement exit functionality (e.g., clear session, redirect to homepage)
+const handleExit = () => {
+    showExitDialog.value = false;
     router.push('/');
+};
+
+const contactSupport = () => {
+    window.location.href = 'mailto:support@example.com';
 };
 </script>

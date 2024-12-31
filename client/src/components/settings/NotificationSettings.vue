@@ -1,101 +1,202 @@
 <template>
-    <div>
-        <h2 class="text-xl font-semibold mb-4">Notification Settings</h2>
+    <Card>
+        <CardHeader>
+            <CardTitle>Notification Settings</CardTitle>
+            <CardDescription>Manage how you receive notifications</CardDescription>
+        </CardHeader>
 
-        <!-- Loading State -->
-        <div v-if="loading" class="flex items-center space-x-2">
-            <LoaderIcon class="animate-spin h-6 w-6 text-gray-500" />
-            <span class="text-gray-500">Loading settings...</span>
-        </div>
-
-        <!-- Error State -->
-        <div v-else-if="error" class="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mb-4" role="alert">
-            <p class="font-bold">Error</p>
-            <p>{{ error }}</p>
-        </div>
-
-        <!-- Notification Settings -->
-        <div v-else class="space-y-4">
-            <!-- Disable All Notifications Toggle -->
+        <CardContent class="space-y-6">
             <div class="flex items-center justify-between">
-                <span>Disable All Push Notifications</span>
-                <ToggleSwitch :modelValue="disableAllNotifications"
-                    @update:modelValue="toggleDisableAllNotifications" />
+                <div class="space-y-0.5">
+                    <Label>Disable All Notifications</Label>
+                    <p class="text-sm text-muted-foreground">
+                        Temporarily disable all push notifications
+                    </p>
+                </div>
+                <Switch :model-value="disableAllNotifications" @update:model-value="toggleDisableAllNotifications" />
             </div>
 
-            <!-- Individual Notification Toggles -->
-            <div v-for="(setting, key) in notificationSettings" :key="key" class="flex items-center justify-between">
-                <span>{{ formatSettingName(key) }}</span>
-                <ToggleSwitch :modelValue="setting === '1'" @update:modelValue="updateIndividualSetting(key, $event)"
-                    :disabled="disableAllNotifications" />
+            <Separator />
+
+            <div class="space-y-4">
+                <div v-for="(enabled, key) in notificationSettings" :key="key"
+                    class="flex items-center justify-between">
+                    <div class="space-y-0.5">
+                        <Label>{{ formatSettingName(key) }}</Label>
+                        <p class="text-sm text-muted-foreground">
+                            {{ getSettingDescription(key) }}
+                        </p>
+                    </div>
+                    <Switch :model-value="enabled === '1'"
+                        @update:model-value="value => updateIndividualSetting(key, value)"
+                        :disabled="disableAllNotifications" />
+                </div>
             </div>
 
-            <!-- Optional: Sound Customization -->
-            <div class="mt-6">
-                <h3 class="text-lg font-medium mb-2">Notification Sound</h3>
-                <select v-model="selectedSound" @change="previewSound"
-                    class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
-                    <option value="custom">Custom Voice Recording</option>
-                    <option value="default">Default SMS Sound</option>
-                </select>
+            <Separator />
+
+            <div class="space-y-4">
+                <h3 class="text-lg font-medium">Notification Sound</h3>
+                <Select v-model="selectedSound">
+                    <SelectTrigger class="w-[200px]">
+                        <SelectValue placeholder="Select sound" />
+                    </SelectTrigger>
+                    <SelectContent>
+                        <SelectItem value="default">Default</SelectItem>
+                        <SelectItem value="none">None</SelectItem>
+                        <SelectItem value="custom">Custom</SelectItem>
+                    </SelectContent>
+                </Select>
+
+                <div v-if="selectedSound === 'custom'" class="space-y-2">
+                    <Input type="file" accept="audio/*" @change="handleSoundUpload" />
+                    <Button variant="outline" size="sm" @click="previewSound">
+                        <SpeakerIcon class="mr-2 h-4 w-4" />
+                        Preview Sound
+                    </Button>
+                </div>
             </div>
-        </div>
-    </div>
+
+            <Alert v-if="error" variant="destructive">
+                <AlertCircleIcon class="h-4 w-4" />
+                <AlertTitle>Error</AlertTitle>
+                <AlertDescription>{{ error }}</AlertDescription>
+            </Alert>
+
+            <div class="flex justify-end">
+                <Button :disabled="isSaving" @click="saveSettings">
+                    <Loader2Icon v-if="isSaving" class="mr-2 h-4 w-4 animate-spin" />
+                    {{ isSaving ? 'Saving...' : 'Save Changes' }}
+                </Button>
+            </div>
+        </CardContent>
+    </Card>
 </template>
 
 <script setup>
-import { ref, onMounted, computed } from 'vue';
-import { useSettingsStore } from '../../stores/settingsStore';
-import { useToast } from '../ui/toast';
-import ToggleSwitch from '../ui/ToggleSwitch.vue';
-import { LoaderIcon } from 'lucide-vue-next';
+import { ref, computed } from 'vue';
+import { useSettingsStore } from '@/stores/settingsStore';
+import { useToast } from '@/components/ui/toast';
+import { AlertCircleIcon, Loader2Icon, SpeakerIcon } from 'lucide-vue-next';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Label } from '@/components/ui/label';
+import { Switch } from '@/components/ui/switch';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Separator } from '@/components/ui/separator';
+import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 
 const settingsStore = useSettingsStore();
 const { toast } = useToast();
 
-// Sound Customization State
-const selectedSound = ref('default'); // This can be further integrated with the server if needed
+const isSaving = ref(false);
+const error = ref(null);
+const selectedSound = ref('default');
+const customSound = ref(null);
 
-// Fetch settings on component mount
-onMounted(async () => {
-    await settingsStore.getPushSettings();
-});
-
-// Computed Properties
 const notificationSettings = computed(() => settingsStore.notificationSettings);
-const loading = computed(() => settingsStore.loading);
-const error = computed(() => settingsStore.error);
 const disableAllNotifications = computed(() => settingsStore.disableAllNotifications);
 
-// Helper Method to Format Setting Names
+const settingDescriptions = {
+    likes: 'Get notified when someone likes your post',
+    comments: 'Get notified when someone comments on your posts',
+    mentions: 'Get notified when someone mentions you',
+    friend_requests: 'Get notified for new friend requests',
+    messages: 'Get notified for new messages',
+    security_alerts: 'Get notified about security events',
+};
+
 const formatSettingName = (key) => {
-    // Convert snake_case to Title Case
     return key.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
 };
 
-// Update Individual Setting
-const updateIndividualSetting = async (key, value) => {
-    try {
-        await settingsStore.updatePushSettings({ [key]: value ? '1' : '0' });
-        toast({ type: 'success', message: 'Notification setting updated successfully!' });
-    } catch (error) {
-        toast({ type: 'error', message: 'Failed to update notification setting' });
-    }
+const getSettingDescription = (key) => {
+    return settingDescriptions[key] || '';
 };
 
-// Toggle All Notifications
 const toggleDisableAllNotifications = async (value) => {
     try {
         await settingsStore.toggleDisableAllNotifications(value);
-        toast({ type: 'success', message: `All notifications ${value ? 'disabled' : 'enabled'}` });
-    } catch (error) {
-        toast({ type: 'error', message: 'Failed to update notification settings' });
+        toast({
+            title: 'Success',
+            description: value ? 'All notifications disabled' : 'All notifications enabled',
+        });
+    } catch (err) {
+        error.value = err.message;
+        toast({
+            title: 'Error',
+            description: 'Failed to update notification settings',
+            variant: 'destructive',
+        });
     }
 };
 
-// Preview Sound (Placeholder)
-const previewSound = () => {
-    // Implement actual sound preview logic here
-    console.log('Preview sound:', selectedSound.value);
+const updateIndividualSetting = async (key, value) => {
+    try {
+        await settingsStore.updatePushSettings({
+            [key]: value ? '1' : '0'
+        });
+        toast({
+            title: 'Success',
+            description: 'Setting updated successfully',
+        });
+    } catch (err) {
+        error.value = err.message;
+        toast({
+            title: 'Error',
+            description: 'Failed to update setting',
+            variant: 'destructive',
+        });
+    }
+};
+
+const handleSoundUpload = (event) => {
+    const file = event.target.files[0];
+    if (file && file.type.startsWith('audio/')) {
+        customSound.value = file;
+    } else {
+        toast({
+            title: 'Error',
+            description: 'Please select a valid audio file',
+            variant: 'destructive',
+        });
+    }
+};
+
+const previewSound = async () => {
+    if (selectedSound.value === 'custom' && customSound.value) {
+        const audio = new Audio(URL.createObjectURL(customSound.value));
+        await audio.play();
+    } else {
+        const audio = new Audio('/notification.mp3');
+        await audio.play();
+    }
+};
+
+const saveSettings = async () => {
+    isSaving.value = true;
+    try {
+        // Save notification sound preference
+        const settings = {
+            sound: selectedSound.value,
+            ...(customSound.value && { customSound: customSound.value })
+        };
+
+        await settingsStore.updateSettings(settings);
+        toast({
+            title: 'Success',
+            description: 'Settings saved successfully'
+        });
+    } catch (err) {
+        error.value = err.message;
+        toast({
+            title: 'Error',
+            description: 'Failed to save settings',
+            variant: 'destructive'
+        });
+    } finally {
+        isSaving.value = false;
+    }
 };
 </script>
