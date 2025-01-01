@@ -115,9 +115,10 @@
 </template>
 
 <script setup>
-import { ref, reactive } from 'vue';
+import { ref, reactive, onMounted } from 'vue';
 import defaultAvatar from '@/assets/avatar-default.svg';
 import { useFriendStore } from '@/stores/friendStore';
+import { useSettingsStore } from '@/stores/settingsStore';
 import { useToast } from '@/components/ui/toast';
 import { SearchIcon, Loader2Icon } from 'lucide-vue-next';
 import BlockedUsersList from '@/components/user/BlockedUsersList.vue';
@@ -134,6 +135,7 @@ import { storeToRefs } from 'pinia';
 
 const friendStore = useFriendStore();
 const searchStore = useSearchStore();
+const settingsStore = useSettingsStore();
 const { toast } = useToast();
 const searchQuery = ref('');
 const searchResults = ref([]);
@@ -206,8 +208,7 @@ const blockUser = async (userId) => {
 const saveSettings = async () => {
     isSaving.value = true;
     try {
-        // API call to save privacy settings
-        await new Promise(resolve => setTimeout(resolve, 1000)); // Simulated API call
+        await settingsStore.updatePushSettings(privacySettings);
         toast({
             title: "Success",
             description: "Privacy settings updated successfully",
@@ -215,7 +216,7 @@ const saveSettings = async () => {
     } catch (error) {
         toast({
             title: "Error",
-            description: "Failed to save settings",
+            description: error.message || "Failed to save settings",
             variant: "destructive",
         });
     } finally {

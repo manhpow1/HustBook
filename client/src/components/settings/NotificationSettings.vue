@@ -4,7 +4,6 @@
             <CardTitle>Notification Settings</CardTitle>
             <CardDescription>Manage how you receive notifications</CardDescription>
         </CardHeader>
-
         <CardContent class="space-y-6">
             <div class="flex items-center justify-between">
                 <div class="space-y-0.5">
@@ -13,11 +12,20 @@
                         Temporarily disable all push notifications
                     </p>
                 </div>
-                <Switch :model-value="disableAllNotifications" @update:model-value="toggleDisableAllNotifications" />
+                <Switch :model-value="disableAllNotifications" @update:model-value="toggleDisableAllNotifications"
+                    :disabled="loading" />
             </div>
+
+            <!-- Error alert -->
+            <Alert v-if="error" variant="destructive">
+                <AlertCircleIcon class="h-4 w-4" />
+                <AlertTitle>Error</AlertTitle>
+                <AlertDescription>{{ error }}</AlertDescription>
+            </Alert>
 
             <Separator />
 
+            <!-- Individual notification settings -->
             <div class="space-y-4">
                 <div v-for="(enabled, key) in notificationSettings" :key="key"
                     class="flex items-center justify-between">
@@ -28,16 +36,17 @@
                         </p>
                     </div>
                     <Switch :model-value="enabled === '1'"
-                        @update:model-value="value => updateIndividualSetting(key, value)"
-                        :disabled="disableAllNotifications" />
+                        @update:model-value="value => handleUpdateSetting(key, value)"
+                        :disabled="loading || disableAllNotifications" />
                 </div>
             </div>
 
             <Separator />
 
+            <!-- Sound settings -->
             <div class="space-y-4">
                 <h3 class="text-lg font-medium">Notification Sound</h3>
-                <Select v-model="selectedSound">
+                <Select v-model="selectedSound" :disabled="loading">
                     <SelectTrigger class="w-[200px]">
                         <SelectValue placeholder="Select sound" />
                     </SelectTrigger>
@@ -49,24 +58,19 @@
                 </Select>
 
                 <div v-if="selectedSound === 'custom'" class="space-y-2">
-                    <Input type="file" accept="audio/*" @change="handleSoundUpload" />
-                    <Button variant="outline" size="sm" @click="previewSound">
+                    <Input type="file" accept="audio/*" @change="handleSoundUpload" :disabled="loading" />
+                    <Button variant="outline" size="sm" @click="previewSound" :disabled="loading">
                         <SpeakerIcon class="mr-2 h-4 w-4" />
                         Preview Sound
                     </Button>
                 </div>
             </div>
 
-            <Alert v-if="error" variant="destructive">
-                <AlertCircleIcon class="h-4 w-4" />
-                <AlertTitle>Error</AlertTitle>
-                <AlertDescription>{{ error }}</AlertDescription>
-            </Alert>
-
+            <!-- Save button -->
             <div class="flex justify-end">
-                <Button :disabled="isSaving" @click="saveSettings">
-                    <Loader2Icon v-if="isSaving" class="mr-2 h-4 w-4 animate-spin" />
-                    {{ isSaving ? 'Saving...' : 'Save Changes' }}
+                <Button :disabled="loading" @click="saveSettings">
+                    <Loader2Icon v-if="loading" class="mr-2 h-4 w-4 animate-spin" />
+                    {{ loading ? 'Saving...' : 'Save Changes' }}
                 </Button>
             </div>
         </CardContent>
@@ -90,14 +94,17 @@ import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 const settingsStore = useSettingsStore();
 const { toast } = useToast();
 
-const isSaving = ref(false);
-const error = ref(null);
+// State
 const selectedSound = ref('default');
 const customSound = ref(null);
 
+// Computed
 const notificationSettings = computed(() => settingsStore.notificationSettings);
 const disableAllNotifications = computed(() => settingsStore.disableAllNotifications);
+const loading = computed(() => settingsStore.loading);
+const error = computed(() => settingsStore.error);
 
+// Setting descriptions
 const settingDescriptions = {
     likes: 'Get notified when someone likes your post',
     comments: 'Get notified when someone comments on your posts',
@@ -107,12 +114,33 @@ const settingDescriptions = {
     security_alerts: 'Get notified about security events',
 };
 
+// Methods
 const formatSettingName = (key) => {
-    return key.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
+    return key.split('_')
+        .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+        .join(' ');
 };
 
 const getSettingDescription = (key) => {
     return settingDescriptions[key] || '';
+};
+
+const handleUpdateSetting = async (key, value) => {
+    try {
+        await settingsStore.updatePushSettings({
+            [key]: value ? '1' : '0'
+        });
+        toast({
+            title: 'Success',
+            description: 'Setting updated successfully',
+        });
+    } catch (error) {
+        toast({
+            title: 'Error',
+            description: 'Failed to update setting',
+            variant: 'destructive',
+        });
+    }
 };
 
 const toggleDisableAllNotifications = async (value) => {
@@ -122,30 +150,10 @@ const toggleDisableAllNotifications = async (value) => {
             title: 'Success',
             description: value ? 'All notifications disabled' : 'All notifications enabled',
         });
-    } catch (err) {
-        error.value = err.message;
+    } catch (error) {
         toast({
             title: 'Error',
             description: 'Failed to update notification settings',
-            variant: 'destructive',
-        });
-    }
-};
-
-const updateIndividualSetting = async (key, value) => {
-    try {
-        await settingsStore.updatePushSettings({
-            [key]: value ? '1' : '0'
-        });
-        toast({
-            title: 'Success',
-            description: 'Setting updated successfully',
-        });
-    } catch (err) {
-        error.value = err.message;
-        toast({
-            title: 'Error',
-            description: 'Failed to update setting',
             variant: 'destructive',
         });
     }
@@ -165,38 +173,40 @@ const handleSoundUpload = (event) => {
 };
 
 const previewSound = async () => {
-    if (selectedSound.value === 'custom' && customSound.value) {
-        const audio = new Audio(URL.createObjectURL(customSound.value));
-        await audio.play();
-    } else {
-        const audio = new Audio('/notification.mp3');
-        await audio.play();
+    try {
+        if (selectedSound.value === 'custom' && customSound.value) {
+            const audio = new Audio(URL.createObjectURL(customSound.value));
+            await audio.play();
+        } else {
+            const audio = new Audio('/notification.mp3');
+            await audio.play();
+        }
+    } catch (error) {
+        toast({
+            title: 'Error',
+            description: 'Failed to play notification sound',
+            variant: 'destructive',
+        });
     }
 };
 
 const saveSettings = async () => {
-    isSaving.value = true;
     try {
-        // Save notification sound preference
         const settings = {
             sound: selectedSound.value,
             ...(customSound.value && { customSound: customSound.value })
         };
-
-        await settingsStore.updateSettings(settings);
+        await settingsStore.updatePushSettings(settings);
         toast({
             title: 'Success',
             description: 'Settings saved successfully'
         });
-    } catch (err) {
-        error.value = err.message;
+    } catch (error) {
         toast({
             title: 'Error',
             description: 'Failed to save settings',
             variant: 'destructive'
         });
-    } finally {
-        isSaving.value = false;
     }
 };
 </script>
