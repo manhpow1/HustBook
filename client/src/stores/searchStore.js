@@ -10,6 +10,9 @@ export const useSearchStore = defineStore('search', () => {
     const isLoading = ref(false);
     const error = ref(null);
     const lastSearchParams = ref(null);
+    const userSearchResults = ref([]);
+    const hasMoreUsers = ref(true);
+    const userSearchParams = ref(null);
     const { handleError } = useErrorHandler();
 
     const searchPosts = async ({ keyword, index = 0, count = 20 }) => {
@@ -23,7 +26,7 @@ export const useSearchStore = defineStore('search', () => {
         lastSearchParams.value = { keyword, index, count };
 
         try {
-            const response = await apiService.search(keyword, index, count)
+            const response = await apiService.searchPosts(keyword, index, count)
             const data = response.data
 
             if (data.code === '1000') {
@@ -37,11 +40,77 @@ export const useSearchStore = defineStore('search', () => {
             }
         } catch (err) {
             error.value = 'Failed to perform search'
-            await handleError(err, router)
+            await handleError(err)
         } finally {
             isLoading.value = false
         }
     }
+
+    const searchUsers = async ({ keyword, index = 0, count = 20 }) => {
+        if (!keyword?.trim()) {
+            userSearchResults.value = [];
+            return [];
+        }
+
+        isLoading.value = true;
+        error.value = null;
+        userSearchParams.value = { keyword, index, count };
+
+        try {
+            const response = await apiService.searchUsers(keyword, index, count);
+
+            const data = response.data;
+            if (data.code === '1000') {
+                // For initial search, replace results
+                if (index === 0) {
+                    userSearchResults.value = data.data;
+                } else {
+                    // For pagination, append results
+                    userSearchResults.value = [...userSearchResults.value, ...data.data];
+                }
+
+                hasMoreUsers.value = data.data.length === count;
+                return data.data;
+            } else if (data.code === '9994') {
+                if (index === 0) {
+                    userSearchResults.value = [];
+                }
+                hasMoreUsers.value = false;
+                return [];
+            } else {
+                throw new Error(data.message || 'Failed to search users');
+            }
+        } catch (err) {
+            error.value = 'Failed to search users';
+            await handleError(err);
+            return [];
+        } finally {
+            isLoading.value = false;
+        }
+    };
+
+    const resetUserSearch = () => {
+        userSearchResults.value = [];
+        hasMoreUsers.value = true;
+        userSearchParams.value = null;
+        error.value = null;
+    };
+
+    const retryUserSearch = async () => {
+        if (userSearchParams.value) {
+            await searchUsers(userSearchParams.value);
+        }
+    };
+
+    const loadMoreUsers = async () => {
+        if (!hasMoreUsers.value || !userSearchParams.value) return;
+        
+        const nextIndex = userSearchResults.value.length;
+        await searchUsers({
+            ...userSearchParams.value,
+            index: nextIndex
+        });
+    };
 
     const resetSearch = () => {
         searchResults.value = []
@@ -73,7 +142,7 @@ export const useSearchStore = defineStore('search', () => {
             }
         } catch (err) {
             error.value = 'Failed to fetch saved searches'
-            await handleError(err, router)
+            await handleError(err)
             return []
         } finally {
             isLoading.value = false
@@ -98,7 +167,7 @@ export const useSearchStore = defineStore('search', () => {
             }
         } catch (err) {
             error.value = 'Failed to delete saved search'
-            await handleError(err, router)
+            await handleError(err)
         } finally {
             isLoading.value = false
         }
@@ -114,5 +183,11 @@ export const useSearchStore = defineStore('search', () => {
         retryLastSearch,
         getSavedSearches,
         deleteSavedSearch,
+        userSearchResults,
+        hasMoreUsers,
+        searchUsers,
+        resetUserSearch,
+        retryUserSearch,
+        loadMoreUsers,
     }
 })

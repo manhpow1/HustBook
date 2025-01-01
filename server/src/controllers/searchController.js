@@ -4,14 +4,14 @@ import searchService from '../services/searchService.js';
 import { createError } from '../utils/customError.js';
 
 class SearchController {
-    async search(req, res, next) {
+    async searchPosts(req, res, next) {
         try {
             const { ...cleanQuery } = req.query;
             if (!cleanQuery.keyword) {
                 return sendResponse(res, '1000', []);
             }
 
-            const { error, value } = searchValidator.validateSearch({
+            const { error, value } = searchValidator.validateSearchPosts({
                 ...cleanQuery,
                 index: parseInt(cleanQuery.index || '0'),
                 count: parseInt(cleanQuery.count || '20')
@@ -30,6 +30,33 @@ class SearchController {
             }
 
             sendResponse(res, '1000', matchingPosts);
+        } catch (error) {
+            next(error);
+        }
+    }
+
+    async searchUsers(req, res, next) {
+        try {
+            const { error, value } = searchValidator.validateSearchUsers({
+                ...req.query,
+                index: parseInt(req.query.index || '0'),
+                count: parseInt(req.query.count || '20')
+            });
+    
+            if (error) {
+                throw createError('1002', error.details.map(detail => detail.message).join(', '));
+            }
+    
+            const { keyword, index, count } = value;
+            const userId = req.user.uid;
+            
+            const users = await searchService.searchUsers(userId, keyword, index, count);
+            
+            if (users.length === 0) {
+                throw createError('9994', 'No data or end of list data');
+            }
+    
+            sendResponse(res, '1000', users);
         } catch (error) {
             next(error);
         }

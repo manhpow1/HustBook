@@ -167,6 +167,7 @@ import { ref, computed, onMounted, nextTick, watch } from 'vue';
 import { storeToRefs } from 'pinia';
 import { formatDistanceToNow } from 'date-fns';
 import { useChatStore } from '@/stores/chatStore';
+import { useSearchStore } from '@/stores/searchStore';
 import { useUserStore } from '@/stores/userStore';
 import { useDebounce } from '@/composables/useDebounce';
 import { PlusCircleIcon, ArrowLeftIcon, SendIcon, Loader2Icon } from 'lucide-vue-next';
@@ -181,6 +182,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 
 const chatStore = useChatStore();
 const userStore = useUserStore();
+const searchStore = useSearchStore();
 
 // Local state
 const messageContent = ref('');

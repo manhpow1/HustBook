@@ -75,13 +75,6 @@ const apiService = {
      * - If only phoneNumber is provided, request a reset code
      * - If phoneNumber, code, and newPassword are provided, finalize reset
      */
-    /**
-     * Forgot Password
-     * @param {Object} data
-     * @param {string} data.phoneNumber - Required for both steps
-     * @param {string} [data.verifyCode] - Required for reset step
-     * @param {string} [data.newPassword] - Required for reset step
-     */
     async forgotPassword(data) {
         return axiosInstance.post(API_ENDPOINTS.FORGOT_PASSWORD, data);
     },
@@ -164,8 +157,12 @@ const apiService = {
     // ─────────────────────────────────────────────────────────
     // SEARCH APIs
     // ─────────────────────────────────────────────────────────
-    async search(keyword, index = 0, count = 20) {
-        return axiosInstance.post(API_ENDPOINTS.SEARCH, { keyword, index, count });
+    async searchPosts(keyword, index = 0, count = 20) {
+        return axiosInstance.get(API_ENDPOINTS.SEARCH_POSTS, { keyword, index, count });
+    },
+
+    async searchUsers(keyword, index = 0, count = 20) {
+        return axiosInstance.get(API_ENDPOINTS.SEARCH_USERS, { params: { keyword, index, count } });
     },
 
     async getSavedSearches(params = {}) {

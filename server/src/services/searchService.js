@@ -47,6 +47,57 @@ class SearchService {
         }
     }
 
+    async searchUsers(currentUserId, keyword, index, count) {
+        try {
+            const normalizedKeyword = keyword.trim().toLowerCase();
+
+            // Get blocked users list for current user
+            const blockedUsersSnapshot = await db.collection(collections.blocks)
+                .where('userId', '==', currentUserId)
+                .get();
+
+            const blockedUserIds = new Set(
+                blockedUsersSnapshot.docs.map(doc => doc.data().blockedUserId)
+            );
+
+            // Query users
+            const usersSnapshot = await db.collection(collections.users)
+                .orderBy('userName')
+                .offset(index)
+                .limit(count)
+                .get();
+
+            const matchingUsers = [];
+
+            for (const doc of usersSnapshot.docs) {
+                const userData = doc.data();
+                const userId = doc.id;
+
+                // Skip if user is blocked or is current user
+                if (blockedUserIds.has(userId) || userId === currentUserId) {
+                    continue;
+                }
+
+                // Check if username matches search
+                const userName = userData.userName?.toLowerCase() || '';
+                if (userName.includes(normalizedKeyword)) {
+                    matchingUsers.push({
+                        id: userId,
+                        userName: userData.userName || '',
+                        avatar: userData.avatar || '',
+                        same_friends: userData.mutualFriendsCount || 0
+                    });
+                }
+            }
+
+            return matchingUsers;
+
+        } catch (error) {
+            logger.error('Search users service error:', error);
+            throw createError('9999', 'Exception error');
+        }
+    }
+
     async getSavedSearches(userId, index, count) {
         try {
             const query = queryDocuments(collections.savedSearches, 'userId', '==', userId);

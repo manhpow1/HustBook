@@ -11,7 +11,7 @@ const router = Router();
 
 /**
  * @swagger
- * /search/search:
+ * /search/posts:
  *   get:
  *     summary: Search posts by keyword
  *     tags: [Search]
@@ -89,7 +89,7 @@ const router = Router();
  *       404:
  *         description: No data or end of list
  */
-router.get('/search', authenticateToken, searchController.search);
+router.get('/posts', authenticateToken, searchController.searchPosts);
 
 /**
  * @swagger
@@ -172,5 +172,134 @@ router.get('/get_saved_search', authenticateToken, searchController.getSavedSear
  *         description: Saved search not found or no saved searches to delete
  */
 router.delete('/del_saved_search/:searchId', authenticateToken, searchController.deleteSavedSearches);
+
+/**
+ * @swagger
+ * /search/users:
+ *   get:
+ *     summary: Search users by keyword
+ *     description: Search for users by their username. Results exclude blocked users and the current user.
+ *     tags:
+ *       - Search
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: keyword
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Search keyword for username
+ *         example: "john"
+ *       - in: query
+ *         name: index
+ *         schema:
+ *           type: integer
+ *           minimum: 0
+ *           default: 0
+ *         description: Starting index for pagination
+ *         example: 0
+ *       - in: query
+ *         name: count
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           maximum: 100
+ *           default: 20
+ *         description: Number of results per page
+ *         example: 20
+ *     responses:
+ *       200:
+ *         description: List of users matching the search criteria
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 code:
+ *                   type: string
+ *                   example: "1000"
+ *                 message:
+ *                   type: string
+ *                   example: "OK"
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       id:
+ *                         type: string
+ *                         description: User ID
+ *                         example: "user123"
+ *                       userName:
+ *                         type: string
+ *                         description: Username
+ *                         example: "john_doe"
+ *                       avatar:
+ *                         type: string
+ *                         description: URL to user's avatar
+ *                         example: "https://example.com/avatar.jpg"
+ *                       email:
+ *                         type: string
+ *                         description: User's email address
+ *                         example: "john@example.com"
+ *                       same_friends:
+ *                         type: integer
+ *                         description: Number of mutual friends
+ *                         example: 5
+ *       400:
+ *         description: Invalid request parameters
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 code:
+ *                   type: string
+ *                   example: "1002"
+ *                 message:
+ *                   type: string
+ *                   example: "Parameter is not enough"
+ *       401:
+ *         description: Unauthorized - Invalid or missing authentication token
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 code:
+ *                   type: string
+ *                   example: "9998"
+ *                 message:
+ *                   type: string
+ *                   example: "Token is invalid"
+ *       404:
+ *         description: No users found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 code:
+ *                   type: string
+ *                   example: "9994"
+ *                 message:
+ *                   type: string
+ *                   example: "No data or end of list data"
+ *       500:
+ *         description: Server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 code:
+ *                   type: string
+ *                   example: "9999"
+ *                 message:
+ *                   type: string
+ *                   example: "Exception error"
+ */
+router.get('/users', authenticateToken, searchController.searchUsers);
 
 export default router;

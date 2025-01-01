@@ -126,8 +126,10 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { Separator } from '@/components/ui/separator';
+import { useSearchStore } from '@/stores/searchStore';
 
 const friendStore = useFriendStore();
+const searchStore = useSearchStore();
 const { toast } = useToast();
 
 const loading = ref(false);
@@ -151,7 +153,7 @@ const searchUsers = async () => {
 
     loading.value = true;
     try {
-        const results = await friendStore.searchUsers(searchQuery.value);
+        const results = await searchStore.searchUsers(searchQuery.value);
         searchResults.value = results;
     } catch (error) {
         toast({

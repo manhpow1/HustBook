@@ -35,7 +35,8 @@ export const API_ENDPOINTS = {
     SET_READ_NOTIFICATION: (notificationId) => `${API_BASE_URL}/api/notifications/${notificationId}/read`,
     DELETE_NOTIFICATION: (notificationId) => `${API_BASE_URL}/api/notifications/${notificationId}`,
     // Search Endpoints
-    SEARCH: `${API_BASE_URL}/api/search/search`,
+    SEARCH_POSTS: `${API_BASE_URL}/api/search/posts`,
+    SEARCH_USERS: `${API_BASE_URL}/api/search/users`,
     GET_SAVED_SEARCH: `${API_BASE_URL}/api/search/get_saved_search`,
     DELETE_SAVED_SEARCH: (searchId) => `${API_BASE_URL}/api/search/del_saved_search/${searchId}`,
     // Friend Endpoints
