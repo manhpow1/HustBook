@@ -224,7 +224,7 @@ const confirmDeletePost = async () => {
 // Handle the actual deletion of the post
 const deletePost = async () => {
     try {
-        await postStore.deletePost(post.value.id);
+        await postStore.removePost(post.value.id);
         toast({ type: 'success', message: 'Post deleted successfully.' });
         router.push({ name: 'Home' });
     } catch (error) {

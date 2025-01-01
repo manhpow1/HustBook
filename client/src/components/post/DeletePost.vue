@@ -100,7 +100,7 @@ const confirmDelete = async () => {
     successMessage.value = '';
 
     try {
-        const response = await postStore.deletePost(props.postId);
+        const response = await postStore.removePost(props.postId);
 
         if (response.code === '1000') {
             successMessage.value = 'Post deleted successfully.';

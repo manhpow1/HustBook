@@ -97,7 +97,7 @@ const confirmDeletePost = async () => {
     const isConfirmed = await confirmAction('Are you sure you want to delete this post? This action cannot be undone.');
     if (isConfirmed) {
         try {
-            await postStore.deletePost(props.post.id);
+            await postStore.removePost(props.post.id);
             toast({ type: 'success', message: 'Post deleted successfully!' });
             emit('deletePost');
         } catch (error) {
