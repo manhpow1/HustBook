@@ -10,16 +10,22 @@
             <div>
                 <h3 class="text-lg font-medium mb-4">Block New Users</h3>
                 <div class="relative flex-1">
-                    <Input v-model="searchQuery" placeholder="Search users to block" :disabled="loading" class="w-full">
+                    <Input v-model="searchQuery" placeholder="Search users to block" :disabled="searchLoading"
+                        class="w-full">
                     <template #prefix>
                         <SearchIcon class="w-4 h-4 text-muted-foreground" />
                     </template>
                     </Input>
                 </div>
-
                 <div v-if="searchResults.length > 0" class="mt-4">
                     <h4 class="text-sm font-medium mb-2">Search Results</h4>
-                    <div class="space-y-2">
+                    <div v-if="searchLoading" class="space-y-2">
+                        <Skeleton v-for="i in 3" :key="i" class="h-[68px] w-full" />
+                    </div>
+                    <div v-else-if="searchError" class="p-4 text-sm text-destructive">
+                        {{ searchError }}
+                    </div>
+                    <div v-else class="space-y-2">
                         <Card v-for="user in searchResults" :key="user.id">
                             <CardContent class="p-3 flex items-center justify-between">
                                 <div class="flex items-center space-x-3">
@@ -40,18 +46,19 @@
                             </CardContent>
                         </Card>
                     </div>
+                    <Button v-if="searchStore.hasMoreUsers" variant="outline" size="sm" class="w-full mt-2"
+                        :disabled="searchLoading" @click="loadMore">
+                        <Loader2Icon v-if="searchLoading" class="mr-2 h-4 w-4 animate-spin" />
+                        Load More
+                    </Button>
                 </div>
             </div>
-
             <Separator />
-
             <div>
                 <h3 class="text-lg font-medium mb-4">Blocked Users</h3>
                 <BlockedUsersList />
             </div>
-
             <Separator />
-
             <div>
                 <h3 class="text-lg font-medium mb-4">Privacy Options</h3>
                 <div class="space-y-4">
@@ -71,7 +78,6 @@
                             </SelectContent>
                         </Select>
                     </div>
-
                     <div class="flex items-center justify-between">
                         <div>
                             <Label htmlFor="message-settings">Message Settings</Label>
@@ -88,19 +94,16 @@
                             </SelectContent>
                         </Select>
                     </div>
-
                     <div class="flex items-center space-x-2">
                         <Switch id="show-online-status" v-model="privacySettings.showOnlineStatus" />
                         <Label htmlFor="show-online-status">Show Online Status</Label>
                     </div>
-
                     <div class="flex items-center space-x-2">
                         <Switch id="allow-friend-requests" v-model="privacySettings.allowFriendRequests" />
                         <Label htmlFor="allow-friend-requests">Allow Friend Requests</Label>
                     </div>
                 </div>
             </div>
-
             <div class="flex justify-end">
                 <Button :disabled="isSaving" @click="saveSettings">
                     <Loader2Icon v-if="isSaving" class="mr-2 h-4 w-4 animate-spin" />
@@ -127,16 +130,16 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Switch } from '@/components/ui/switch';
 import { Separator } from '@/components/ui/separator';
 import { useSearchStore } from '@/stores/searchStore';
+import { storeToRefs } from 'pinia';
 
 const friendStore = useFriendStore();
 const searchStore = useSearchStore();
 const { toast } = useToast();
-
-const loading = ref(false);
 const searchQuery = ref('');
 const searchResults = ref([]);
 const blockingUsers = ref(new Set());
 const isSaving = ref(false);
+const { isLoading: searchLoading, error: searchError } = storeToRefs(searchStore);
 
 const privacySettings = reactive({
     profileVisibility: 'friends',
@@ -151,9 +154,12 @@ const searchUsers = async () => {
         return;
     }
 
-    loading.value = true;
     try {
-        const results = await searchStore.searchUsers(searchQuery.value);
+        const results = await searchStore.searchUsers({
+            keyword: searchQuery.value,
+            index: 0,
+            count: 20
+        });
         searchResults.value = results;
     } catch (error) {
         toast({
@@ -163,6 +169,17 @@ const searchUsers = async () => {
         });
     } finally {
         loading.value = false;
+    }
+};
+
+const loadMore = async () => {
+    if (!searchStore.hasMoreUsers) return;
+
+    try {
+        await searchStore.loadMoreUsers();
+        searchResults.value = [...searchResults.value, ...searchStore.userSearchResults];
+    } catch (error) {
+        console.error('Failed to load more users:', error);
     }
 };
 

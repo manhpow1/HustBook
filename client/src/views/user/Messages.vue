@@ -134,13 +134,22 @@
           </DialogDescription>
         </DialogHeader>
         <div class="space-y-4 py-4">
-          <Input v-model="searchQuery" placeholder="Search users..." @input="searchUsers" />
+          <Input v-model="searchQuery" placeholder="Search users..." @input="searchUsers" :disabled="searchLoading" />
           <ScrollArea class="h-[300px]">
             <div v-if="searchLoading" class="space-y-4">
               <div v-for="i in 3" :key="i" class="flex items-center space-x-4">
                 <Skeleton class="h-10 w-10 rounded-full" />
-                <Skeleton class="h-4 w-[200px]" />
+                <div class="space-y-2">
+                  <Skeleton class="h-4 w-[200px]" />
+                  <Skeleton class="h-4 w-[100px]" />
+                </div>
               </div>
+            </div>
+            <div v-else-if="searchError" class="text-center text-destructive p-4">
+              {{ searchError }}
+              <Button variant="outline" size="sm" class="mt-2" @click="searchUsers">
+                Retry
+              </Button>
             </div>
             <div v-else-if="!searchResults.length" class="text-center text-muted-foreground">
               No users found
@@ -152,8 +161,13 @@
                   <AvatarImage :src="user.avatar" :alt="user.userName" />
                   <AvatarFallback>{{ getInitials(user.userName) }}</AvatarFallback>
                 </Avatar>
-                <span>{{ user.userName }}</span>
+                <span class="flex-1 text-left">{{ user.userName }}</span>
               </button>
+              <Button v-if="searchStore.hasMoreUsers" variant="outline" size="sm" class="w-full"
+                :disabled="searchLoading" @click="loadMore">
+                <Loader2Icon v-if="searchLoading" class="mr-2 h-4 w-4 animate-spin" />
+                Load More Results
+              </Button>
             </div>
           </ScrollArea>
         </div>
@@ -179,6 +193,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
+import logger from '@/services/logging';
 
 const chatStore = useChatStore();
 const userStore = useUserStore();
@@ -190,7 +205,7 @@ const messagesScroll = ref(null);
 const showNewMessageDialog = ref(false);
 const searchQuery = ref('');
 const searchResults = ref([]);
-const searchLoading = ref(false);
+const { isLoading: searchLoading, error: searchError } = storeToRefs(searchStore);
 
 // Computed
 const selectedConversation = computed(() => {
@@ -240,7 +255,7 @@ const sendMessage = async () => {
     messageContent.value = '';
     scrollToBottom();
   } catch (error) {
-    console.error('Failed to send message:', error);
+    logger.error('Failed to send message:', error);
   }
 };
 
@@ -257,13 +272,14 @@ const searchUsers = useDebounce(async () => {
   }
 
   try {
-    searchLoading.value = true;
-    const results = await chatStore.searchUsers(searchQuery.value);
+    const results = await searchStore.searchUsers({
+      keyword: searchQuery.value,
+      index: 0,
+      count: 20
+    });
     searchResults.value = results.filter(user => user.id !== userStore.user?.id);
   } catch (error) {
-    console.error('Failed to search users:', error);
-  } finally {
-    searchLoading.value = false;
+    logger.error('Failed to search users:', error);
   }
 }, 300);
 
@@ -273,7 +289,7 @@ const startConversation = async (user) => {
     showNewMessageDialog.value = false;
     await selectConversation(conversationId);
   } catch (error) {
-    console.error('Failed to start conversation:', error);
+    logger.error('Failed to start conversation:', error);
   }
 };
 
