@@ -105,7 +105,7 @@ import { ref, computed, onMounted, onBeforeUnmount } from 'vue';
 import { useRouter } from 'vue-router';
 import { EditIcon, LoaderIcon, SmileIcon } from 'lucide-vue-next';
 import FileUpload from '../shared/FileUpload.vue';
-import EmojiPicker from '../ui/EmojiPicker.vue';
+import EmojiPicker from '../shared/EmojiPicker.vue';
 import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import UnsavedChangesModal from '../shared/UnsavedChangesModal.vue';

@@ -1,182 +1,287 @@
 <template>
-  <div class="flex h-full">
-    <!-- Left Side: Conversations List -->
-    <aside class="w-1/3 border-r border-gray-200 overflow-y-auto">
-      <div class="flex justify-between items-center p-4">
-        <h2 class="text-lg font-bold">Messages</h2>
-        <button @click="createNewMessage" class="text-blue-600 hover:text-blue-800 transition">
-          Create New Message
-        </button>
-      </div>
-      <div v-if="chatStore.loadingConversations" class="p-4 text-center text-gray-600">
-        Loading conversations...
-      </div>
-      <ul v-else class="divide-y divide-gray-200">
-        <li v-for="convo in chatStore.conversations" :key="convo.id" @click="selectConversation(convo.id)"
-          :class="['p-4 cursor-pointer hover:bg-gray-100', { 'bg-gray-200': chatStore.selectedConversationId === convo.id }]"
-          :aria-selected="chatStore.selectedConversationId === convo.id">
-          <div class="flex items-center space-x-3">
-            <img :src="convo.Partner.avatar || '/default-avatar.png'" alt="Avatar" class="h-8 w-8 rounded-full" />
-            <div class="flex-1">
-              <p class="font-medium text-gray-900">{{ convo.Partner.userName || 'User' }}</p>
-              <p class="text-sm text-gray-500 truncate">
-                {{ convo.LastMessage.message || 'No messages yet' }}
-              </p>
-            </div>
-            <span v-if="convo.LastMessage.unread === '1'" class="inline-block w-2 h-2 bg-red-500 rounded-full"></span>
-          </div>
-        </li>
-      </ul>
-    </aside>
-
-    <!-- Right Side: Selected Conversation -->
-    <section class="flex-1 flex flex-col">
-      <div v-if="!chatStore.selectedConversationId" class="flex-1 flex items-center justify-center text-gray-500">
-        Select a conversation or create a new one.
-      </div>
-      <div v-else class="flex-1 flex flex-col">
-        <!-- Messages header -->
-        <header class="border-b border-gray-200 p-4 flex items-center space-x-4">
-          <button @click="showProfile = !showProfile" class="text-gray-700 hover:text-gray-900">
-            i
-          </button>
-          <h2 class="text-lg font-bold">Chat</h2>
-          <div class="ml-auto">
-            <!-- Add a button to quickly scroll down if messages are long -->
-            <button @click="scrollToBottom" class="text-gray-700 hover:text-gray-900">↓</button>
-          </div>
-        </header>
-
-        <!-- Messages list -->
-        <div ref="messageList" class="flex-1 overflow-y-auto p-4 space-y-4">
-          <div v-if="chatStore.loadingMessages" class="text-center text-gray-500">Loading messages...</div>
-          <template v-else>
-            <div v-if="chatStore.messages.length === 0" class="text-center text-gray-500">
-              No messages yet. Start the conversation!
-            </div>
-            <div v-for="msg in chatStore.messages" :key="msg.messageId" :class="messageClasses(msg)">
-              <div class="inline-block px-3 py-2 rounded-lg max-w-xs break-words"
-                :class="msg.sender.id === userStore.uid ? 'bg-blue-100 text-blue-900' : 'bg-gray-100 text-gray-900'">
-                <span v-html="formatMessageContent(msg.message)"></span>
-                <span v-if="isMessagePending(msg)" class="ml-1 text-xs text-gray-500 italic">(sending...)</span>
-              </div>
-              <div class="text-xs text-gray-500 mt-1">
-                {{ formatDate(msg.created) }}
+  <div class="container mx-auto p-4">
+    <div class="flex flex-col lg:flex-row h-[80vh] gap-4">
+      <!-- Conversations Sidebar -->
+      <Card class="lg:w-1/3 h-full">
+        <CardHeader>
+          <CardTitle class="flex items-center justify-between">
+            <span>Messages</span>
+            <Button variant="outline" size="sm" @click="createNewMessage">
+              <PlusCircleIcon class="h-4 w-4 mr-2" />
+              New Message
+            </Button>
+          </CardTitle>
+        </CardHeader>
+        <CardContent class="p-0 h-[calc(100%-4rem)]">
+          <ScrollArea class="h-full">
+            <div v-if="chatStore.loadingConversations" class="p-4">
+              <div v-for="i in 5" :key="i" class="flex items-center space-x-4 mb-4">
+                <Skeleton class="h-12 w-12 rounded-full" />
+                <div class="space-y-2">
+                  <Skeleton class="h-4 w-[200px]" />
+                  <Skeleton class="h-4 w-[160px]" />
+                </div>
               </div>
             </div>
-          </template>
+            <div v-else-if="!chatStore.conversations.length" class="p-4 text-center text-muted-foreground">
+              No conversations yet
+            </div>
+            <div v-else class="divide-y">
+              <button v-for="conversation in chatStore.conversations" :key="conversation.id"
+                @click="selectConversation(conversation.id)"
+                class="w-full p-4 hover:bg-accent text-left transition-colors"
+                :class="{ 'bg-accent': chatStore.selectedConversationId === conversation.id }">
+                <div class="flex items-center space-x-4">
+                  <Avatar>
+                    <AvatarImage :src="conversation.Partner.avatar" :alt="conversation.Partner.userName" />
+                    <AvatarFallback>{{ getInitials(conversation.Partner.userName) }}</AvatarFallback>
+                  </Avatar>
+                  <div class="flex-1 min-w-0">
+                    <div class="flex items-center justify-between">
+                      <p class="font-medium truncate">{{ conversation.Partner.userName }}</p>
+                      <span v-if="conversation.LastMessage" class="text-xs text-muted-foreground">
+                        {{ formatDate(conversation.LastMessage.created) }}
+                      </span>
+                    </div>
+                    <p class="text-sm text-muted-foreground truncate">
+                      {{ conversation.LastMessage?.message || 'No messages yet' }}
+                    </p>
+                  </div>
+                  <Badge v-if="conversation.unreadCount" variant="secondary">
+                    {{ conversation.unreadCount }}
+                  </Badge>
+                </div>
+              </button>
+            </div>
+          </ScrollArea>
+        </CardContent>
+      </Card>
+
+      <!-- Chat Area -->
+      <Card class="flex-1 h-full">
+        <div v-if="!chatStore.selectedConversationId"
+          class="h-full flex items-center justify-center text-muted-foreground">
+          Select a conversation or start a new one
         </div>
+        <div v-else class="h-full flex flex-col">
+          <CardHeader class="border-b">
+            <CardTitle class="flex items-center space-x-4">
+              <Button variant="ghost" size="icon" class="lg:hidden" @click="chatStore.selectedConversationId = null">
+                <ArrowLeftIcon class="h-4 w-4" />
+              </Button>
+              <Avatar>
+                <AvatarImage :src="selectedConversation?.Partner.avatar"
+                  :alt="selectedConversation?.Partner.userName" />
+                <AvatarFallback>
+                  {{ getInitials(selectedConversation?.Partner.userName) }}
+                </AvatarFallback>
+              </Avatar>
+              <span>{{ selectedConversation?.Partner.userName }}</span>
+            </CardTitle>
+          </CardHeader>
 
-        <!-- Input box -->
-        <footer class="border-t border-gray-200 p-4 flex items-center space-x-2">
-          <input v-model="messageContent" @keyup.enter="sendMessage" type="text" placeholder="Type your message..."
-            class="flex-1 border border-gray-300 rounded p-2 focus:ring focus:border-blue-500" />
-          <button @click="sendMessage" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">Send</button>
-        </footer>
-      </div>
-    </section>
+          <ScrollArea ref="messagesScroll" class="flex-1 p-4">
+            <div v-if="chatStore.loadingMessages" class="space-y-4">
+              <div v-for="i in 5" :key="i" class="flex items-start space-x-4">
+                <Skeleton class="h-10 w-10 rounded-full" />
+                <div class="space-y-2">
+                  <Skeleton class="h-4 w-[200px]" />
+                  <Skeleton class="h-4 w-[160px]" />
+                </div>
+              </div>
+            </div>
+            <div v-else-if="!chatStore.messages.length" class="text-center text-muted-foreground">
+              No messages yet
+            </div>
+            <div v-else class="space-y-4">
+              <div v-for="message in chatStore.messages" :key="message.messageId" class="flex items-start space-x-4"
+                :class="{ 'justify-end': message.sender.id === userStore.user?.id }">
+                <Avatar v-if="message.sender.id !== userStore.user?.id">
+                  <AvatarImage :src="message.sender.avatar" :alt="message.sender.userName" />
+                  <AvatarFallback>{{ getInitials(message.sender.userName) }}</AvatarFallback>
+                </Avatar>
+                <div class="rounded-lg p-4 max-w-[70%]" :class="[
+                  message.sender.id === userStore.user?.id
+                    ? 'bg-primary text-primary-foreground'
+                    : 'bg-muted'
+                ]">
+                  <p class="whitespace-pre-wrap break-words">{{ message.message }}</p>
+                  <span class="text-xs opacity-70">{{ formatDate(message.created) }}</span>
+                </div>
+              </div>
+            </div>
+          </ScrollArea>
 
-    <!-- Profile Sidebar -->
-    <aside v-if="showProfile" class="absolute right-0 top-0 bottom-0 w-64 bg-white border-l border-gray-200 p-4 z-40">
-      <h3 class="font-bold text-lg">Profile</h3>
-      <p class="text-sm text-gray-600 mt-2">Profile details and block option</p>
-      <hr class="my-4" />
-      <button @click="blockUser" class="text-red-600 hover:text-red-800">Block User</button>
-    </aside>
+          <CardFooter class="border-t p-4">
+            <form @submit.prevent="sendMessage" class="flex space-x-2 w-full">
+              <Input v-model="messageContent" placeholder="Type your message..." :disabled="chatStore.sendingMessage" />
+              <Button type="submit" :disabled="!messageContent.trim() || chatStore.sendingMessage">
+                <SendIcon v-if="!chatStore.sendingMessage" class="h-4 w-4" />
+                <Loader2Icon v-else class="h-4 w-4 animate-spin" />
+              </Button>
+            </form>
+          </CardFooter>
+        </div>
+      </Card>
+    </div>
+
+    <Dialog v-model:open="showNewMessageDialog">
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>New Message</DialogTitle>
+          <DialogDescription>
+            Select a user to start a conversation with
+          </DialogDescription>
+        </DialogHeader>
+        <div class="space-y-4 py-4">
+          <Input v-model="searchQuery" placeholder="Search users..." @input="searchUsers" />
+          <ScrollArea class="h-[300px]">
+            <div v-if="searchLoading" class="space-y-4">
+              <div v-for="i in 3" :key="i" class="flex items-center space-x-4">
+                <Skeleton class="h-10 w-10 rounded-full" />
+                <Skeleton class="h-4 w-[200px]" />
+              </div>
+            </div>
+            <div v-else-if="!searchResults.length" class="text-center text-muted-foreground">
+              No users found
+            </div>
+            <div v-else class="space-y-2">
+              <button v-for="user in searchResults" :key="user.id" @click="startConversation(user)"
+                class="w-full p-2 flex items-center space-x-4 hover:bg-accent rounded-md transition-colors">
+                <Avatar>
+                  <AvatarImage :src="user.avatar" :alt="user.userName" />
+                  <AvatarFallback>{{ getInitials(user.userName) }}</AvatarFallback>
+                </Avatar>
+                <span>{{ user.userName }}</span>
+              </button>
+            </div>
+          </ScrollArea>
+        </div>
+      </DialogContent>
+    </Dialog>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted, nextTick } from 'vue';
-import { useChatStore } from '../../stores/chatStore';
-import { useUserStore } from '../../stores/userStore';
-import { formatDate } from '../../utils/helpers';
-import { sanitizeOutput } from '../../utils/sanitize';
+import { ref, computed, onMounted, nextTick, watch } from 'vue';
+import { storeToRefs } from 'pinia';
+import { formatDistanceToNow } from 'date-fns';
+import { useChatStore } from '@/stores/chatStore';
+import { useUserStore } from '@/stores/userStore';
+import { useDebounce } from '@/composables/useDebounce';
+import { PlusCircleIcon, ArrowLeftIcon, SendIcon, Loader2Icon } from 'lucide-vue-next';
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Badge } from '@/components/ui/badge';
+import { Skeleton } from '@/components/ui/skeleton';
 
-// UI State
-const showProfile = ref(false);
-const messageContent = ref('');
-
-// Access stores
 const chatStore = useChatStore();
 const userStore = useUserStore();
 
-// On mount, fetch conversations
-onMounted(async () => {
-  await chatStore.fetchConversations();
+// Local state
+const messageContent = ref('');
+const messagesScroll = ref(null);
+const showNewMessageDialog = ref(false);
+const searchQuery = ref('');
+const searchResults = ref([]);
+const searchLoading = ref(false);
+
+// Computed
+const selectedConversation = computed(() => {
+  return chatStore.conversations.find(c => c.id === chatStore.selectedConversationId);
 });
 
-// Select a conversation and load messages
+// Methods
+const getInitials = (name) => {
+  if (!name) return '';
+  return name
+    .split(' ')
+    .map(word => word[0])
+    .join('')
+    .toUpperCase()
+    .slice(0, 2);
+};
+
+const formatDate = (date) => {
+  if (!date) return '';
+  return formatDistanceToNow(new Date(date), { addSuffix: true });
+};
+
 const selectConversation = async (conversationId) => {
+  chatStore.selectedConversationId = conversationId;
   await chatStore.fetchMessages(conversationId);
-  // Mark as read after loading messages
   await chatStore.markAsRead();
   scrollToBottom();
 };
 
-// Create a new message action (redirect to contacts page or open a modal)
-const createNewMessage = () => {
-  // Implementation depends on your UX design
-  // E.g., router.push('/select-contact')
-};
-
-// Send message via store action
-const sendMessage = async () => {
-  if (!messageContent.value.trim()) return;
-  await chatStore.sendMessage(messageContent.value.trim());
-  messageContent.value = '';
-  nextTick(() => {
-    scrollToBottom();
-  });
-};
-
-// Scroll to bottom of message list
-const messageList = ref(null);
 const scrollToBottom = () => {
   nextTick(() => {
-    if (messageList.value) {
-      messageList.value.scrollTop = messageList.value.scrollHeight;
+    if (messagesScroll.value) {
+      const scrollContainer = messagesScroll.value.$el;
+      scrollContainer.scrollTop = scrollContainer.scrollHeight;
     }
   });
 };
 
-// Determine if message is still pending (temp message)
-const isMessagePending = (msg) => msg.messageId.startsWith('temp_');
+const sendMessage = async () => {
+  if (!messageContent.value.trim() || !chatStore.selectedConversationId) return;
 
-// Format message content: 
-// - Replace emoticons with images
-// - Linkify URLs and phone numbers
-function formatMessageContent(content) {
-  // Example: Replace ':)' with an emoji image
-  const replaced = content
-    .replace(/:\)/g, '😀')
-    .replace(/=b/g, '👍');
-  // Linkify URLs
-  const urlified = replaced.replace(
-    /(https?:\/\/[^\s]+)/g,
-    '<a href="$1" target="_blank" rel="noopener noreferrer" class="text-blue-600 underline">$1</a>'
-  );
-  // Detect phone numbers (simple regex for demonstration)
-  const phoneified = urlified.replace(
-    /\b0\d{9}\b/g,
-    '<a href="tel:$&" class="text-green-600 underline">$&</a>'
-  );
-  return sanitizeOutput(phoneified);
-}
-
-// Apply conditional classes to messages (align right if from current user)
-const messageClasses = (msg) => {
-  const isCurrentUser = msg.sender && msg.sender.id === userStore.uid;
-  return [
-    'flex flex-col',
-    isCurrentUser ? 'items-end' : 'items-start'
-  ];
+  try {
+    await chatStore.sendMessage({
+      conversationId: chatStore.selectedConversationId,
+      message: messageContent.value.trim()
+    });
+    messageContent.value = '';
+    scrollToBottom();
+  } catch (error) {
+    console.error('Failed to send message:', error);
+  }
 };
 
-// Block user action
-const blockUser = async () => {
-  // This would call setBlock endpoint with type = 0 (block)
-  // After blocking, maybe close the sidebar or refresh conversation list
-  console.log('Blocking user functionality here');
+const createNewMessage = () => {
+  showNewMessageDialog.value = true;
+  searchQuery.value = '';
+  searchResults.value = [];
 };
+
+const searchUsers = useDebounce(async () => {
+  if (!searchQuery.value.trim()) {
+    searchResults.value = [];
+    return;
+  }
+
+  try {
+    searchLoading.value = true;
+    const results = await chatStore.searchUsers(searchQuery.value);
+    searchResults.value = results.filter(user => user.id !== userStore.user?.id);
+  } catch (error) {
+    console.error('Failed to search users:', error);
+  } finally {
+    searchLoading.value = false;
+  }
+}, 300);
+
+const startConversation = async (user) => {
+  try {
+    const conversationId = await chatStore.createConversation(user.id);
+    showNewMessageDialog.value = false;
+    await selectConversation(conversationId);
+  } catch (error) {
+    console.error('Failed to start conversation:', error);
+  }
+};
+
+// Watchers
+watch(() => chatStore.messages, () => {
+  scrollToBottom();
+}, { deep: true });
+
+// Lifecycle
+onMounted(async () => {
+  await chatStore.fetchConversations();
+});
 </script>

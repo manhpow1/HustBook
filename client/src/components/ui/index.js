@@ -1,6 +1,0 @@
-export { default as ConfirmDialog } from './ConfirmDialog.vue' 
-export { default as ErrorMessage } from './ErrorMessage.vue' 
-export { default as EmojiPicker } from './EmojiPicker.vue'
-export { default as ToggleSwitch } from './ToggleSwitch.vue'
-export { default as ToolbarButton } from './ToolbarButton.vue'
-export { default as CopyLinkButton } from './CopyLinkButton.vue'

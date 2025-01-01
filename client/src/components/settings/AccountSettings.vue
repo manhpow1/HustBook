@@ -250,30 +250,6 @@ const updatePassword = async () => {
     }
 }
 
-const updatePreferences = async () => {
-    try {
-        isLoading.value = true
-        logger.debug('Updating preferences', { preferences: preferences.value })
-
-        await settingsStore.updatePreferences(preferences.value)
-
-        toast({
-            title: 'Success',
-            description: 'Preferences updated successfully'
-        })
-        logger.info('Preferences updated successfully')
-    } catch (err) {
-        logger.error('Preferences update failed', { error: err })
-        toast({
-            title: 'Error',
-            description: 'Failed to update preferences',
-            variant: 'destructive'
-        })
-    } finally {
-        isLoading.value = false
-    }
-}
-
 // Load initial data
 const loadUserData = async () => {
     try {
@@ -284,14 +260,6 @@ const loadUserData = async () => {
                 lastName: userData.lastName || '',
                 email: userData.email || '',
                 phone: userData.phone || ''
-            }
-        }
-
-        const userPreferences = await settingsStore.getPreferences()
-        if (userPreferences) {
-            preferences.value = {
-                emailNotifications: userPreferences.emailNotifications || false,
-                twoFactorEnabled: userPreferences.twoFactorEnabled || false
             }
         }
     } catch (err) {

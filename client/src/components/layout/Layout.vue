@@ -33,7 +33,7 @@
                 <Avatar>
                   <AvatarImage :src="user?.avatar" />
                   <AvatarFallback>
-                    <UserIcon class="h-4 w-4" />
+                    <User class="h-4 w-4" />
                   </AvatarFallback>
                 </Avatar>
               </DropdownMenuTrigger>
@@ -68,7 +68,7 @@
         <Sheet>
           <SheetTrigger class="md:hidden">
             <Button variant="ghost" size="icon">
-              <MenuIcon class="h-6 w-6" />
+              <Menu class="h-6 w-6" />
             </Button>
           </SheetTrigger>
           <SheetContent side="right" class="w-72">
@@ -130,17 +130,17 @@
             <div class="flex space-x-4">
               <Button variant="ghost" size="icon" asChild>
                 <a href="https://facebook.com/hustbook" target="_blank" rel="noopener noreferrer">
-                  <FacebookIcon class="h-5 w-5" />
+                  <Facebook class="h-5 w-5" />
                 </a>
               </Button>
               <Button variant="ghost" size="icon" asChild>
                 <a href="https://twitter.com/hustbook" target="_blank" rel="noopener noreferrer">
-                  <TwitterIcon class="h-5 w-5" />
+                  <Twitter class="h-5 w-5" />
                 </a>
               </Button>
               <Button variant="ghost" size="icon" asChild>
                 <a href="https://instagram.com/hustbook" target="_blank" rel="noopener noreferrer">
-                  <InstagramIcon class="h-5 w-5" />
+                  <Instagram class="h-5 w-5" />
                 </a>
               </Button>
             </div>
@@ -168,25 +168,9 @@ import { Button } from '@/components/ui/button'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar'
 // Icons
-import {
-  Home as HomeIcon,
-  User as UserIcon,
-  Users as UsersIcon,
-  MessageCircle as MessageCircleIcon,
-  Settings as SettingsIcon,
-  Facebook as FacebookIcon,
-  Twitter as TwitterIcon,
-  Instagram as InstagramIcon,
-  Menu as MenuIcon,
-} from 'lucide-vue-next'
+import { Home, User, Users, MessageCircle, Settings, Facebook, Twitter, Instagram, Menu } from 'lucide-vue-next'
 
-const iconComponents = {
-  HomeIcon,
-  UserIcon,
-  UsersIcon,
-  MessageCircleIcon,
-  SettingsIcon,
-}
+const iconComponents = { Home, User, Users, MessageCircle, Settings };
 
 const userStore = useUserStore()
 const { isLoggedIn, user } = storeToRefs(userStore)

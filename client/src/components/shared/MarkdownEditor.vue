@@ -1,83 +1,91 @@
 <template>
     <div class="markdown-editor" :class="{ 'fullscreen': isFullscreen }">
-        <!-- Toolbar -->
-        <div class="mb-2 flex flex-wrap gap-2 items-center">
-            <ToolbarButton v-for="action in actions" :key="action.label" :icon="action.icon" :label="action.label"
-                :shortcut="action.shortcut" @click="insertMarkdown(action.syntax)" data-testid="toolbar-button" />
-            <Button @click="togglePreview" variant="secondary" class="px-2 py-1"
-                :aria-label="showPreview ? 'Switch to edit mode' : 'Switch to preview mode'"
-                data-testid="toggle-preview-button">
-                {{ showPreview ? 'Edit' : 'Preview' }}
-            </Button>
-            <Button @click="undo" :disabled="!canUndo" variant="outline" class="px-2 py-1" aria-label="Undo (Ctrl+Z)"
-                data-testid="undo-button">
-                <UndoIcon class="w-4 h-4" />
-            </Button>
-            <Button @click="redo" :disabled="!canRedo" variant="outline" class="px-2 py-1" aria-label="Redo (Ctrl+Y)"
-                data-testid="redo-button">
-                <RedoIcon class="w-4 h-4" />
-            </Button>
-            <Button @click="toggleEmojiPicker" variant="outline" class="px-2 py-1" aria-label="Insert Emoji"
-                data-testid="insert-emoji-button">
-                <SmileIcon class="w-4 h-4" />
-            </Button>
-            <Button @click="toggleFullscreen" variant="outline" class="px-2 py-1"
-                :aria-label="isFullscreen ? 'Exit Fullscreen' : 'Enter Fullscreen'"
-                data-testid="toggle-fullscreen-button">
-                <component :is="isFullscreen ? MinimizeIcon : MaximizeIcon" class="w-4 h-4" />
-            </Button>
-            <Button @click="triggerFileUpload" variant="outline" class="px-2 py-1" aria-label="Insert Image"
-                data-testid="insert-image-button">
-                <ImageIcon class="w-4 h-4" />
-            </Button>
+        <div class="space-y-2">
+            <div class="flex flex-wrap gap-2 items-center border-b pb-2">
+                <Tooltip v-for="action in actions" :key="action.label" :delayDuration="0">
+                    <TooltipTrigger asChild>
+                        <Button variant="ghost" size="sm" @click="insertMarkdown(action.syntax)"
+                            :aria-label="action.label" class="h-8 w-8 p-0" data-testid="toolbar-button">
+                            <component :is="action.icon" class="h-4 w-4" />
+                        </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                        <p>{{ action.label }}</p>
+                        <p v-if="action.shortcut" class="text-xs text-muted-foreground">{{ action.shortcut }}</p>
+                    </TooltipContent>
+                </Tooltip>
+
+                <Separator orientation="vertical" class="h-6" />
+
+                <Button variant="ghost" size="sm" @click="togglePreview" class="gap-2">
+                    <component :is="showPreview ? PencilIcon : EyeIcon" class="h-4 w-4" />
+                    {{ showPreview ? 'Edit' : 'Preview' }}
+                </Button>
+
+                <Separator orientation="vertical" class="h-6" />
+
+                <Button variant="ghost" size="sm" @click="toggleFullscreen" class="gap-2"
+                    :aria-label="isFullscreen ? 'Exit fullscreen' : 'Enter fullscreen'">
+                    <component :is="isFullscreen ? MinimizeIcon : MaximizeIcon" class="h-4 w-4" />
+                </Button>
+
+                <Button variant="ghost" size="sm" @click="toggleEmojiPicker" class="gap-2" aria-label="Insert emoji">
+                    <SmileIcon class="h-4 w-4" />
+                </Button>
+
+                <Button variant="ghost" size="sm" @click="triggerFileUpload" class="gap-2" aria-label="Insert image">
+                    <ImageIcon class="h-4 w-4" />
+                </Button>
+            </div>
+
+            <div v-if="!showPreview" class="relative">
+                <Textarea v-model="localContent" :rows="rows" :placeholder="placeholder" @input="onInput"
+                    @keydown="handleKeyDown" ref="textarea" :maxLength="maxLength" class="resize-none w-full rounded-md"
+                    :class="{
+                        'h-[60vh]': isFullscreen,
+                        'min-h-[100px]': !isFullscreen
+                    }" data-testid="markdown-textarea" />
+
+                <EmojiPicker v-if="showEmojiPicker" @select="insertEmoji" class="absolute bottom-full left-0 mb-2" />
+            </div>
+
+            <div v-else class="prose prose-sm max-w-none" :class="{
+                'h-[60vh] overflow-auto': isFullscreen,
+                'min-h-[100px]': !isFullscreen
+            }" v-html="renderedContent" />
+
             <input type="file" ref="fileInput" @change="handleFileUpload" accept="image/*" class="hidden"
                 aria-hidden="true" />
-        </div>
 
-        <!-- Editor Area -->
-        <div v-if="!showPreview" class="relative">
-            <textarea v-model="localContent" @input="updateContent" @keydown="handleKeyDown"
-                class="w-full p-2 border rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                :placeholder="placeholder" :rows="rows" ref="textarea" aria-label="Markdown editor"
-                data-testid="markdown-textarea"></textarea>
-            <!-- Emoji Picker -->
-            <EmojiPicker v-if="showEmojiPicker" @select="insertEmoji"
-                class="absolute bottom-full left-0 mb-2 bg-white border rounded shadow-lg p-2" />
-        </div>
+            <div class="flex items-center justify-between text-xs text-muted-foreground">
+                <div>
+                    {{ localContent.length }}/{{ maxLength }} characters
+                </div>
+                <div>
+                    Markdown supported
+                </div>
+            </div>
 
-        <!-- Preview Area -->
-        <div v-else class="markdown-preview p-2 border rounded bg-gray-50" aria-live="polite">
-            <div v-html="renderedContent"></div>
-        </div>
-
-        <!-- Additional Information -->
-        <div class="mt-2 text-sm text-gray-500">
-            Markdown supported. You can use **bold**, *italic*, `code`, and more.
-        </div>
-
-        <!-- Autosave Status -->
-        <div v-if="autosaveStatus" class="mt-2 text-sm text-green-500" aria-live="polite">
-            {{ autosaveStatus }}
+            <div v-if="autosaveStatus" class="text-xs text-success" role="status" aria-live="polite">
+                {{ autosaveStatus }}
+            </div>
         </div>
     </div>
 </template>
 
 <script setup>
 import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue';
-import {
-    BoldIcon, ItalicIcon, CodeIcon, ListIcon, LinkIcon, ImageIcon, QuoteIcon,
-    UndoIcon, RedoIcon, SmileIcon, MaximizeIcon, MinimizeIcon
-} from 'lucide-vue-next';
+import { BoldIcon, ItalicIcon, CodeIcon, ListIcon, LinkIcon, ImageIcon, QuoteIcon, UndoIcon, RedoIcon, SmileIcon, MaximizeIcon, MinimizeIcon, EyeIcon, PencilIcon } from 'lucide-vue-next';
+import { Button } from '@/components/ui/button';
+import { Textarea } from '@/components/ui/textarea';
+import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
+import { Separator } from '@/components/ui/separator';
+import EmojiPicker from './EmojiPicker.vue';
 import { useUndoRedo } from '../../composables/useUndoRedo';
 import { renderMarkdown } from '../../utils/markdown';
 import { debounce } from 'lodash-es';
+import logger from '../../services/logging';
 
-// Components
-import ToolbarButton from '../ui/ToolbarButton.vue';
-import { Button } from '@/components/ui/button';
-import EmojiPicker from '../ui/EmojiPicker.vue';
-
-// Props
 const props = defineProps({
     modelValue: {
         type: String,
@@ -85,18 +93,21 @@ const props = defineProps({
     },
     placeholder: {
         type: String,
-        default: 'Write your comment here...',
+        default: 'Write your content here...',
     },
     rows: {
         type: Number,
         default: 5,
     },
+    maxLength: {
+        type: Number,
+        default: 1000,
+    },
 });
 
-// Emits
 const emit = defineEmits(['update:modelValue']);
 
-// Reactive References
+// State
 const localContent = ref(props.modelValue);
 const showPreview = ref(false);
 const isFullscreen = ref(false);
@@ -105,9 +116,6 @@ const fileInput = ref(null);
 const textarea = ref(null);
 const autosaveStatus = ref('');
 
-// Undo/Redo Composable
-const { undo, redo, canUndo, canRedo, addToHistory } = useUndoRedo(localContent);
-
 // Toolbar Actions
 const actions = [
     { label: 'Bold', syntax: '**', icon: BoldIcon, shortcut: 'Ctrl+B' },
@@ -115,18 +123,20 @@ const actions = [
     { label: 'Code', syntax: '`', icon: CodeIcon, shortcut: 'Ctrl+`' },
     { label: 'List', syntax: '- ', icon: ListIcon },
     { label: 'Link', syntax: '[](url)', icon: LinkIcon, shortcut: 'Ctrl+K' },
-    { label: 'Image', syntax: '![](url)', icon: ImageIcon, shortcut: 'Ctrl+Shift+I' },
     { label: 'Quote', syntax: '> ', icon: QuoteIcon },
 ];
 
-// Computed Properties
+// Undo/Redo
+const { undo, redo, canUndo, canRedo, addToHistory } = useUndoRedo(localContent);
+
+// Computed
 const renderedContent = computed(() => renderMarkdown(localContent.value));
 
 // Methods
-const updateContent = () => {
+const onInput = () => {
     emit('update:modelValue', localContent.value);
     addToHistory(localContent.value);
-    autosave();
+    debouncedSaveDraft();
 };
 
 const insertMarkdown = (syntax) => {
@@ -137,12 +147,11 @@ const insertMarkdown = (syntax) => {
     const before = text.substring(0, start);
     const selection = text.substring(start, end);
     const after = text.substring(end);
-
     let insertText;
     let newSelectionStart;
     let newSelectionEnd;
 
-    if (syntax === '[](url)' || syntax === '![](url)') {
+    if (syntax === '[](url)') {
         insertText = syntax.replace('url', selection || 'https://');
         newSelectionStart = start + syntax.indexOf('url');
         newSelectionEnd = end + syntax.indexOf('url') + (selection ? selection.length : 8);
@@ -153,10 +162,11 @@ const insertMarkdown = (syntax) => {
     }
 
     localContent.value = before + insertText + after;
-    textareaEl.focus();
-    textareaEl.setSelectionRange(newSelectionStart, newSelectionEnd);
-
-    updateContent();
+    nextTick(() => {
+        textareaEl.focus();
+        textareaEl.setSelectionRange(newSelectionStart, newSelectionEnd);
+    });
+    onInput();
 };
 
 const togglePreview = () => {
@@ -185,10 +195,11 @@ const insertEmoji = (emoji) => {
     const after = text.substring(end);
 
     localContent.value = before + emoji + after;
-    textareaEl.focus();
-    textareaEl.setSelectionRange(start + emoji.length, start + emoji.length);
-
-    updateContent();
+    nextTick(() => {
+        textareaEl.focus();
+        textareaEl.setSelectionRange(start + emoji.length, start + emoji.length);
+    });
+    onInput();
     showEmojiPicker.value = false;
 };
 
@@ -196,9 +207,15 @@ const triggerFileUpload = () => {
     fileInput.value.click();
 };
 
-const handleFileUpload = (event) => {
+const handleFileUpload = async (event) => {
     const file = event.target.files[0];
-    if (file) {
+    if (!file) return;
+
+    try {
+        if (file.size > 5 * 1024 * 1024) {
+            throw new Error('File size must not exceed 5MB');
+        }
+
         const reader = new FileReader();
         reader.onload = (e) => {
             const img = new Image();
@@ -225,17 +242,18 @@ const handleFileUpload = (event) => {
                 canvas.width = width;
                 canvas.height = height;
                 ctx.drawImage(img, 0, 0, width, height);
-
                 const dataUrl = canvas.toDataURL('image/jpeg');
                 insertMarkdown(`![](${dataUrl})`);
             };
             img.src = e.target.result;
         };
         reader.readAsDataURL(file);
+    } catch (error) {
+        logger.error('File upload error:', error);
+        event.target.value = '';
     }
 };
 
-// Keyboard Shortcuts
 const handleKeyDown = (event) => {
     if (event.ctrlKey) {
         switch (event.key.toLowerCase()) {
@@ -265,15 +283,15 @@ const handleKeyDown = (event) => {
                 break;
         }
     }
-
     if (event.ctrlKey && event.shiftKey && event.key.toLowerCase() === 'i') {
         event.preventDefault();
         triggerFileUpload();
     }
 };
 
-// Autosave Functionality
-const autosave = debounce(() => {
+// Autosave
+const debouncedSaveDraft = debounce(() => {
+    localStorage.setItem('markdown-editor-content', localContent.value);
     localStorage.setItem('markdown-editor-content', localContent.value);
     autosaveStatus.value = `Autosaved at ${new Date().toLocaleTimeString()}`;
     setTimeout(() => {
@@ -288,75 +306,47 @@ watch(() => props.modelValue, (newValue) => {
     }
 });
 
-// Lifecycle Hooks
+// Lifecycle
 onMounted(() => {
     const savedContent = localStorage.getItem('markdown-editor-content');
     if (savedContent) {
         localContent.value = savedContent;
     }
-    window.addEventListener('beforeunload', autosave);
 });
 
 onBeforeUnmount(() => {
-    window.removeEventListener('beforeunload', autosave);
+    if (isFullscreen.value) {
+        document.body.style.overflow = '';
+    }
 });
 </script>
 
-<style scoped>
+<style>
 .markdown-editor {
     @apply transition-all duration-300 ease-in-out;
 }
 
 .markdown-editor.fullscreen {
-    @apply fixed inset-0 z-50 bg-white p-4 overflow-auto;
+    @apply fixed inset-0 z-50 bg-background p-4 overflow-auto;
 }
 
-.markdown-preview :deep(h1) {
-    @apply text-2xl font-bold mb-2;
+.prose img {
+    @apply rounded-md;
 }
 
-.markdown-preview :deep(h2) {
-    @apply text-xl font-bold mb-2;
+.prose pre {
+    @apply bg-muted p-4 rounded-md overflow-x-auto;
 }
 
-.markdown-preview :deep(h3) {
-    @apply text-lg font-bold mb-2;
+.prose code {
+    @apply bg-muted px-1.5 py-0.5 rounded-sm text-sm;
 }
 
-.markdown-preview :deep(p) {
-    @apply mb-2;
+.prose blockquote {
+    @apply border-l-4 border-muted pl-4 italic;
 }
 
-.markdown-preview :deep(ul),
-.markdown-preview :deep(ol) {
-    @apply pl-5 mb-2;
-}
-
-.markdown-preview :deep(li) {
-    @apply mb-1;
-}
-
-.markdown-preview :deep(code) {
-    @apply bg-gray-100 rounded px-1;
-}
-
-.markdown-preview :deep(pre) {
-    @apply bg-gray-100 rounded p-2 mb-2 overflow-x-auto;
-}
-
-.markdown-preview :deep(blockquote) {
-    @apply border-l-4 border-gray-300 pl-4 italic mb-2;
-}
-
-.markdown-preview :deep(a) {
-    @apply text-blue-500 hover:underline;
-}
-
-.markdown-preview :deep(img) {
-    @apply max-w-full h-auto;
-}
-
-.loader {
-    @apply ml-1 animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full;
+.prose a {
+    @apply text-primary hover:underline;
 }
 </style>

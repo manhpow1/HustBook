@@ -1,288 +1,254 @@
 <template>
-    <div v-if="comment" class="comment-item">
-        <div class="comment-content">
-            <img :src="comment.user.avatar" :alt="`${comment.user.name}'s avatar`" class="user-avatar" />
-            <div class="comment-details">
-                <div class="comment-header">
-                    <h4 class="user-name">{{ comment.user.name }}</h4>
-                    <time :datetime="comment.created" class="comment-date">{{ formattedDate }}</time>
-                </div>
-                <div v-if="!isEditing" class="comment-text" v-html="renderedContent"></div>
-                <div v-else class="edit-area">
-                    <label for="edit-comment" class="sr-only">Edit Comment</label>
-                    <textarea id="edit-comment" v-model="editedContent" class="edit-textarea" rows="3"
-                        placeholder="Edit your comment here..." aria-label="Edit Comment"></textarea>
-                    <p v-if="commentError" class="text-red-500 text-sm mt-1">{{ commentError }}</p>
-                </div>
-                <div class="comment-actions">
-                    <Button @click="toggleLike" :variant="comment.isLiked ? 'primary' : 'outline'"
-                        class="action-button" :disabled="isLikeLoading" aria-label="Like" data-testid="like-button">
-                        <ThumbsUpIcon class="action-icon" />
-                        <span>{{ comment.like }} {{ comment.like === 1 ? 'Like' : 'Likes' }}</span>
-                        <span v-if="isLikeLoading" class="loader" aria-live="polite">Loading...</span>
-                    </Button>
-                    <Button v-if="canEditDelete" @click="toggleEdit" variant="secondary" class="action-button"
-                        aria-label="Edit" data-testid="edit-button">
-                        {{ isEditing ? 'Cancel' : 'Edit' }}
-                    </Button>
-                    <Button v-if="canEditDelete && !isEditing" @click="openDeleteDialog" variant="danger"
-                        class="action-button delete-button" aria-label="Delete" data-testid="delete-button">
-                        Delete
-                    </Button>
+    <Card class="comment-item">
+        <CardContent class="p-4">
+            <div class="flex space-x-4">
+                <Avatar>
+                    <AvatarImage :src="comment.user.avatar" :alt="comment.user.name" />
+                    <AvatarFallback>
+                        {{ getInitials(comment.user.name) }}
+                    </AvatarFallback>
+                </Avatar>
+
+                <div class="flex-1 space-y-2">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center space-x-2">
+                            <h4 class="font-semibold">{{ comment.user.name }}</h4>
+                            <span class="text-sm text-muted-foreground">
+                                {{ formattedDate }}
+                            </span>
+                        </div>
+
+                        <DropdownMenu v-if="canEditDelete">
+                            <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="sm">
+                                    <MoreVerticalIcon class="h-4 w-4" />
+                                    <span class="sr-only">More options</span>
+                                </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                                <DropdownMenuItem @click="toggleEdit">
+                                    <PencilIcon class="h-4 w-4 mr-2" />
+                                    Edit
+                                </DropdownMenuItem>
+                                <DropdownMenuItem @click="openDeleteDialog" class="text-destructive">
+                                    <TrashIcon class="h-4 w-4 mr-2" />
+                                    Delete
+                                </DropdownMenuItem>
+                            </DropdownMenuContent>
+                        </DropdownMenu>
+                    </div>
+
+                    <div v-if="!isEditing" class="text-sm prose prose-sm max-w-none" v-html="renderedContent" />
+
+                    <div v-else class="space-y-2">
+                        <Textarea v-model="editedContent" :rows="3" placeholder="Edit your comment..."
+                            class="w-full resize-none" />
+                        <p v-if="commentError" class="text-sm text-destructive">
+                            {{ commentError }}
+                        </p>
+                        <div class="flex justify-end space-x-2">
+                            <Button variant="outline" size="sm" @click="cancelEdit">
+                                Cancel
+                            </Button>
+                            <Button size="sm" :disabled="isSaveLoading" @click="saveEdit">
+                                <Loader2Icon v-if="isSaveLoading" class="mr-2 h-4 w-4 animate-spin" />
+                                {{ isSaveLoading ? 'Saving...' : 'Save' }}
+                            </Button>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center space-x-4 pt-2">
+                        <Button variant="ghost" size="sm" :class="{ 'text-primary': comment.isLiked }"
+                            @click="toggleLike" :disabled="isLikeLoading">
+                            <ThumbsUpIcon class="h-4 w-4 mr-2" :class="{ 'fill-current': comment.isLiked }" />
+                            <span>{{ comment.like }} {{ comment.like === 1 ? 'Like' : 'Likes' }}</span>
+                            <Loader2Icon v-if="isLikeLoading" class="ml-2 h-4 w-4 animate-spin" />
+                        </Button>
+                        <Button variant="ghost" size="sm" @click="toggleReply">
+                            <ReplyIcon class="h-4 w-4 mr-2" />
+                            Reply
+                        </Button>
+                    </div>
                 </div>
             </div>
-        </div>
+        </CardContent>
 
-        <!-- Edit Actions -->
-        <div v-if="isEditing" class="edit-actions">
-            <Button @click="debouncedSaveEdit" :disabled="isSaveLoading" variant="primary" class="save-button"
-                aria-label="Save Comment" data-testid="save-comment-button">
-                <span v-if="isSaveLoading">Saving...</span>
-                <span v-else>Save</span>
-            </Button>
-            <Button @click="cancelEdit" variant="secondary" class="cancel-button" aria-label="Cancel Edit"
-                data-testid="cancel-edit-button">
-                Cancel
-            </Button>
-        </div>
-
-        <!-- Confirm Delete Dialog -->
-        <ConfirmDialog v-if="showDeleteDialog" title="Confirm Delete"
-            message="Are you sure you want to delete this comment?" @confirm="debouncedConfirmDelete"
-            @cancel="closeDeleteDialog" :isLoading="isDeleteLoading" />
-    </div>
+        <AlertDialog :open="showDeleteDialog">
+            <AlertDialogContent>
+                <AlertDialogHeader>
+                    <AlertDialogTitle>Delete Comment</AlertDialogTitle>
+                    <AlertDialogDescription>
+                        Are you sure you want to delete this comment? This action cannot be undone.
+                    </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                    <AlertDialogCancel @click="closeDeleteDialog">Cancel</AlertDialogCancel>
+                    <AlertDialogAction @click="confirmDelete" :disabled="isDeleteLoading"
+                        class="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                        <Loader2Icon v-if="isDeleteLoading" class="mr-2 h-4 w-4 animate-spin" />
+                        {{ isDeleteLoading ? 'Deleting...' : 'Delete' }}
+                    </AlertDialogAction>
+                </AlertDialogFooter>
+            </AlertDialogContent>
+        </AlertDialog>
+    </Card>
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted } from 'vue';
-import { ThumbsUpIcon } from 'lucide-vue-next';
-import { useUserStore } from '../../stores/userStore';
-import { useNotificationStore } from '../../stores/notificationStore';
-import { useFormValidation } from '../../composables/useFormValidation';
-import { formatDate } from '../../utils/helpers';
-import { renderMarkdown } from '../../utils/markdown';
-import { debounce } from 'lodash-es';
-import logger from '../../services/logging';
+import { ref, computed } from 'vue'
+import { useUserStore } from '@/stores/userStore'
+import { renderMarkdown } from '@/utils/markdown'
+import { formatDistanceToNow } from 'date-fns'
+import { Card, CardContent } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
+import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar'
+import { Textarea } from '@/components/ui/textarea'
+import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '@/components/ui/dropdown-menu'
+import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogAction } from '@/components/ui/alert-dialog'
+import { MoreVerticalIcon, PencilIcon, TrashIcon, ThumbsUpIcon, ReplyIcon, Loader2Icon } from 'lucide-vue-next'
 
-// Components
-import ConfirmDialog from '../ui/ConfirmDialog.vue';
-import { Button } from '../ui/button';
-
-// Props
 const props = defineProps({
     comment: {
         type: Object,
         required: true,
-    },
-});
-
-// Emits
-const emit = defineEmits(['update', 'delete']);
-
-// Stores
-const userStore = useUserStore();
-const notificationStore = useNotificationStore();
-
-// Reactive References
-const isEditing = ref(false);
-const editedContent = ref(props.comment.content);
-const showDeleteDialog = ref(false);
-const isLikeLoading = ref(false);
-const isSaveLoading = ref(false);
-const isDeleteLoading = ref(false);
-
-// Form Validation
-const { commentError, validateComment } = useFormValidation();
-
-// Computed Properties
-const canEditDelete = computed(() => userStore.userId === props.comment.user.id);
-const renderedContent = computed(() => renderMarkdown(props.comment.content));
-const formattedDate = computed(() => formatDate(props.comment.created));
-
-// Debounced Functions
-const debouncedSaveEdit = debounce(async () => {
-    const trimmedContent = editedContent.value.trim();
-    const isValid = validateComment(trimmedContent);
-    if (!isValid) {
-        notificationStore.showNotification(commentError.value, 'error');
-        return;
-    }
-
-    if (trimmedContent !== props.comment.content) {
-        isSaveLoading.value = true;
-        try {
-            await emit('update', {
-                id: props.comment.id,
-                content: trimmedContent,
-            });
-            isEditing.value = false;
-            notificationStore.showNotification('Comment updated successfully.', 'success');
-            logger.info('Comment updated successfully', { commentId: props.comment.id });
-        } catch (error) {
-            notificationStore.showNotification('Failed to save comment edit.', 'error');
-            logger.error('Error updating comment', error);
-        } finally {
-            isSaveLoading.value = false;
+        validator(comment) {
+            return ['id', 'content', 'user', 'created'].every(
+                prop => prop in comment
+            )
         }
-    } else {
-        isEditing.value = false;
     }
-}, 300);
+})
 
-const debouncedConfirmDelete = debounce(async () => {
-    isDeleteLoading.value = true;
+const emit = defineEmits(['update', 'delete'])
+const userStore = useUserStore()
+
+const isEditing = ref(false)
+const editedContent = ref(props.comment.content)
+const commentError = ref('')
+const isSaveLoading = ref(false)
+const isDeleteLoading = ref(false)
+const isLikeLoading = ref(false)
+const showDeleteDialog = ref(false)
+
+// Computed
+const canEditDelete = computed(() =>
+    userStore.user?.id === props.comment.user.id
+)
+
+const formattedDate = computed(() =>
+    formatDistanceToNow(new Date(props.comment.created), { addSuffix: true })
+)
+
+const renderedContent = computed(() =>
+    renderMarkdown(props.comment.content)
+)
+
+// Methods
+const getInitials = (name) => {
+    return name
+        .split(' ')
+        .map(word => word[0])
+        .join('')
+        .toUpperCase()
+        .slice(0, 2)
+}
+
+const toggleEdit = () => {
+    isEditing.value = !isEditing.value
+    if (isEditing.value) {
+        editedContent.value = props.comment.content
+        commentError.value = ''
+    }
+}
+
+const cancelEdit = () => {
+    isEditing.value = false
+    editedContent.value = props.comment.content
+    commentError.value = ''
+}
+
+const saveEdit = async () => {
+    if (editedContent.value.trim() === '') {
+        commentError.value = 'Comment cannot be empty'
+        return
+    }
+
+    if (editedContent.value === props.comment.content) {
+        isEditing.value = false
+        return
+    }
+
     try {
-        await emit('delete', props.comment.id);
-        closeDeleteDialog();
-        notificationStore.showNotification('Comment deleted successfully.', 'success');
-        logger.info('Comment deleted successfully', { commentId: props.comment.id });
+        isSaveLoading.value = true
+        await emit('update', {
+            id: props.comment.id,
+            content: editedContent.value.trim()
+        })
+        isEditing.value = false
     } catch (error) {
-        notificationStore.showNotification('Failed to delete comment.', 'error');
-        logger.error('Error deleting comment', error);
+        commentError.value = 'Failed to update comment'
     } finally {
-        isDeleteLoading.value = false;
+        isSaveLoading.value = false
     }
-}, 300);
+}
 
-const debouncedToggleLike = debounce(async () => {
-    isLikeLoading.value = true;
+const openDeleteDialog = () => {
+    showDeleteDialog.value = true
+}
+
+const closeDeleteDialog = () => {
+    showDeleteDialog.value = false
+}
+
+const confirmDelete = async () => {
+    try {
+        isDeleteLoading.value = true
+        await emit('delete', props.comment.id)
+        showDeleteDialog.value = false
+    } catch (error) {
+        console.error('Error deleting comment:', error)
+    } finally {
+        isDeleteLoading.value = false
+    }
+}
+
+const toggleLike = async () => {
+    if (isLikeLoading.value) return
+
+    isLikeLoading.value = true
     try {
         await emit('update', {
             id: props.comment.id,
             isLiked: !props.comment.isLiked,
-            like: props.comment.like + (props.comment.isLiked ? -1 : 1),
-        });
-        logger.info('Comment like toggled', { commentId: props.comment.id });
+            like: props.comment.like + (props.comment.isLiked ? -1 : 1)
+        })
     } catch (error) {
-        notificationStore.showNotification('Failed to like comment.', 'error');
-        logger.error('Error toggling like on comment', error);
+        console.error('Error toggling like:', error)
     } finally {
-        isLikeLoading.value = false;
+        isLikeLoading.value = false
     }
-}, 300);
+}
 
-// Methods
-const toggleEdit = () => {
-    isEditing.value = !isEditing.value;
-    if (isEditing.value) {
-        editedContent.value = props.comment.content;
-        commentError.value = '';
-    }
-};
-
-
-const cancelEdit = () => {
-    isEditing.value = false;
-    editedContent.value = props.comment.content;
-    commentError.value = '';
-};
-
-const openDeleteDialog = () => {
-    showDeleteDialog.value = true;
-};
-
-const closeDeleteDialog = () => {
-    showDeleteDialog.value = false;
-};
-
-const toggleLike = () => {
-    debouncedToggleLike();
-};
-
-const handleKeyDown = (event) => {
-    if (event.key === 'Escape') {
-        if (isEditing.value) {
-            cancelEdit();
-        } else if (showDeleteDialog.value) {
-            closeDeleteDialog();
-        }
-    }
-};
-
-// Lifecycle Hooks
-onMounted(() => {
-    document.addEventListener('keydown', handleKeyDown);
-});
-
-onUnmounted(() => {
-    document.removeEventListener('keydown', handleKeyDown);
-});
+const toggleReply = () => {
+    // Implement reply functionality
+    console.log('Reply clicked')
+}
 </script>
 
 <style scoped>
-.comment-item {
-    @apply mb-4 p-4 bg-gray-50 rounded-lg shadow-sm hover:shadow-md transition-shadow duration-200;
+:deep(.prose) {
+    @apply text-foreground;
 }
 
-.comment-content {
-    @apply flex items-start;
+:deep(.prose p) {
+    @apply mb-0;
 }
 
-.user-avatar {
-    @apply w-10 h-10 rounded-full mr-3;
+:deep(.prose a) {
+    @apply text-primary hover:text-primary/80;
 }
 
-.comment-details {
-    @apply flex-grow;
-}
-
-.comment-header {
-    @apply flex items-center justify-between mb-1;
-}
-
-.user-name {
-    @apply font-semibold text-gray-800;
-}
-
-.comment-date {
-    @apply text-xs text-gray-500;
-}
-
-.comment-text {
-    @apply text-gray-700 whitespace-pre-wrap break-words;
-}
-
-.edit-area {
-    @apply mt-2;
-}
-
-.edit-textarea {
-    @apply w-full p-2 border rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent;
-}
-
-.comment-actions {
-    @apply mt-2 flex items-center space-x-4;
-}
-
-.action-button {
-    @apply text-sm flex items-center text-gray-500 hover:text-blue-500 transition-colors duration-200;
-}
-
-.action-button.liked {
-    @apply text-blue-500;
-}
-
-.action-icon {
-    @apply w-4 h-4 mr-1;
-}
-
-.delete-button {
-    @apply hover:text-red-500;
-}
-
-.edit-actions {
-    @apply mt-2 flex justify-end space-x-2;
-}
-
-.save-button {
-    @apply px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors duration-200;
-}
-
-.cancel-button {
-    @apply px-3 py-1 bg-gray-300 text-gray-700 rounded hover:bg-gray-400 transition-colors duration-200;
-}
-
-.loader {
-    @apply ml-1 animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full;
+:deep(.prose code) {
+    @apply bg-muted px-1 py-0.5 rounded;
 }
 </style>

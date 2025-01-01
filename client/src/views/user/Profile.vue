@@ -259,6 +259,7 @@
 import { ref, computed, onMounted, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useUserStore } from '@/stores/userStore';
+import { useFriendStore } from '@/stores/friendStore';
 import { useVideoStore } from '@/stores/videoStore';
 import { usePostStore } from '@/stores/postStore';
 import { useToast } from '@/components/ui/toast';
@@ -281,6 +282,7 @@ const route = useRoute();
 const router = useRouter();
 const userStore = useUserStore();
 const videoStore = useVideoStore();
+const friendStore = useFriendStore();
 const postStore = usePostStore();
 const { toast } = useToast();
 
@@ -341,7 +343,7 @@ const fetchUserData = async () => {
     }
 
     user.value = userData;
-    friends.value = await userStore.getUserFriends(route.params.id);
+    friends.value = await friendStore.getUserFriends(route.params.id);
     userVideos.value = await videoStore.getUserVideos(route.params.id);
     await fetchPostsForUser();
   } catch (err) {
@@ -378,14 +380,14 @@ const handleFriendAction = async () => {
   try {
     if (isFriend.value) {
       // Implement unfriend logic
-      await userStore.removeFriend(route.params.id);
+      await friendStore.removeFriend(route.params.id);
       toast({
         title: "Friend Removed",
         description: "User has been removed from your friends list",
       });
     } else {
       // Implement add friend logic
-      await userStore.sendFriendRequest(route.params.id);
+      await friendStore.sendFriendRequest(route.params.id);
       toast({
         title: "Friend Request Sent",
         description: "Friend request has been sent successfully",
