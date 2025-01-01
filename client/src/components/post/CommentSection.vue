@@ -94,7 +94,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import MarkdownEditor from '@/components/shared/MarkdownEditor.vue'
-import CommentItem from './CommentItem.vue'
+import CommentItem from '../shared/CommentItem.vue'
 
 // Icons
 import {
