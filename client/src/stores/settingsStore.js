@@ -2,6 +2,7 @@ import { defineStore } from 'pinia';
 import { ref, computed } from 'vue';
 import apiService from '../services/api';
 import { useErrorHandler } from '@/utils/errorHandler';
+import logger from '../services/logging';
 
 export const useSettingsStore = defineStore('settings', () => {
     const notificationSettings = ref({});

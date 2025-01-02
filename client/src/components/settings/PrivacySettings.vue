@@ -3,15 +3,14 @@
         <CardHeader>
             <CardTitle>Privacy Settings</CardTitle>
             <CardDescription>
-                Manage your account privacy and blocked users
+                Manage your blocked users and privacy
             </CardDescription>
         </CardHeader>
         <CardContent class="space-y-6">
             <div>
                 <h3 class="text-lg font-medium mb-4">Block New Users</h3>
                 <div class="relative flex-1">
-                    <Input v-model="searchQuery" placeholder="Search users to block" :disabled="searchLoading"
-                        class="w-full">
+                    <Input v-model="searchQuery" placeholder="Search users to block" :disabled="loading" class="w-full">
                     <template #prefix>
                         <SearchIcon class="w-4 h-4 text-muted-foreground" />
                     </template>
@@ -19,13 +18,7 @@
                 </div>
                 <div v-if="searchResults.length > 0" class="mt-4">
                     <h4 class="text-sm font-medium mb-2">Search Results</h4>
-                    <div v-if="searchLoading" class="space-y-2">
-                        <Skeleton v-for="i in 3" :key="i" class="h-[68px] w-full" />
-                    </div>
-                    <div v-else-if="searchError" class="p-4 text-sm text-destructive">
-                        {{ searchError }}
-                    </div>
-                    <div v-else class="space-y-2">
+                    <div class="space-y-2">
                         <Card v-for="user in searchResults" :key="user.id">
                             <CardContent class="p-3 flex items-center justify-between">
                                 <div class="flex items-center space-x-3">
@@ -46,11 +39,6 @@
                             </CardContent>
                         </Card>
                     </div>
-                    <Button v-if="searchStore.hasMoreUsers" variant="outline" size="sm" class="w-full mt-2"
-                        :disabled="searchLoading" @click="loadMore">
-                        <Loader2Icon v-if="searchLoading" class="mr-2 h-4 w-4 animate-spin" />
-                        Load More
-                    </Button>
                 </div>
             </div>
             <Separator />
@@ -58,186 +46,127 @@
                 <h3 class="text-lg font-medium mb-4">Blocked Users</h3>
                 <BlockedUsersList />
             </div>
-            <Separator />
-            <div>
-                <h3 class="text-lg font-medium mb-4">Privacy Options</h3>
-                <div class="space-y-4">
-                    <div class="flex items-center justify-between">
-                        <div>
-                            <Label htmlFor="profile-visibility">Profile Visibility</Label>
-                            <p class="text-sm text-muted-foreground">Control who can see your profile</p>
-                        </div>
-                        <Select v-model="privacySettings.profileVisibility">
-                            <SelectTrigger id="profile-visibility" class="w-[180px]">
-                                <SelectValue placeholder="Select visibility" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="public">Public</SelectItem>
-                                <SelectItem value="friends">Friends Only</SelectItem>
-                                <SelectItem value="private">Private</SelectItem>
-                            </SelectContent>
-                        </Select>
-                    </div>
-                    <div class="flex items-center justify-between">
-                        <div>
-                            <Label htmlFor="message-settings">Message Settings</Label>
-                            <p class="text-sm text-muted-foreground">Who can send you messages</p>
-                        </div>
-                        <Select v-model="privacySettings.messageSettings">
-                            <SelectTrigger id="message-settings" class="w-[180px]">
-                                <SelectValue placeholder="Select setting" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="everyone">Everyone</SelectItem>
-                                <SelectItem value="friends">Friends Only</SelectItem>
-                                <SelectItem value="none">No One</SelectItem>
-                            </SelectContent>
-                        </Select>
-                    </div>
-                    <div class="flex items-center space-x-2">
-                        <Switch id="show-online-status" v-model="privacySettings.showOnlineStatus" />
-                        <Label htmlFor="show-online-status">Show Online Status</Label>
-                    </div>
-                    <div class="flex items-center space-x-2">
-                        <Switch id="allow-friend-requests" v-model="privacySettings.allowFriendRequests" />
-                        <Label htmlFor="allow-friend-requests">Allow Friend Requests</Label>
-                    </div>
-                </div>
-            </div>
-            <div class="flex justify-end">
-                <Button :disabled="isSaving" @click="saveSettings">
-                    <Loader2Icon v-if="isSaving" class="mr-2 h-4 w-4 animate-spin" />
-                    {{ isSaving ? 'Saving...' : 'Save Changes' }}
-                </Button>
-            </div>
         </CardContent>
     </Card>
+
+    <AlertDialog :open="!!userIdToBlock">
+        <AlertDialogContent>
+            <AlertDialogHeader>
+                <AlertDialogTitle>Block User</AlertDialogTitle>
+                <AlertDialogDescription>
+                    Are you sure you want to block this user? They won't be able to interact with you.
+                </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+                <AlertDialogCancel @click="userIdToBlock = null">Cancel</AlertDialogCancel>
+                <AlertDialogAction @click="confirmBlock" :disabled="isProcessing">
+                    <Loader2Icon v-if="isProcessing" class="mr-2 h-4 w-4 animate-spin" />
+                    {{ isProcessing ? 'Processing...' : 'Block' }}
+                </AlertDialogAction>
+            </AlertDialogFooter>
+        </AlertDialogContent>
+    </AlertDialog>
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue';
-import defaultAvatar from '@/assets/avatar-default.svg';
+import { ref, computed } from 'vue';
+import { useSearchStore } from '@/stores/searchStore';
 import { useFriendStore } from '@/stores/friendStore';
-import { useSettingsStore } from '@/stores/settingsStore';
 import { useToast } from '@/components/ui/toast';
+import defaultAvatar from '@/assets/avatar-default.svg';
 import { SearchIcon, Loader2Icon } from 'lucide-vue-next';
 import BlockedUsersList from '@/components/user/BlockedUsersList.vue';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
-import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Switch } from '@/components/ui/switch';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Separator } from '@/components/ui/separator';
-import { useSearchStore } from '@/stores/searchStore';
-import { storeToRefs } from 'pinia';
 
-const friendStore = useFriendStore();
 const searchStore = useSearchStore();
-const settingsStore = useSettingsStore();
+const friendStore = useFriendStore();
 const { toast } = useToast();
+
 const searchQuery = ref('');
-const searchResults = ref([]);
+const loading = ref(false);
 const blockingUsers = ref(new Set());
-const isSaving = ref(false);
-const { isLoading: searchLoading, error: searchError } = storeToRefs(searchStore);
+const userIdToBlock = ref(null);
+const isProcessing = ref(false);
 
-const privacySettings = reactive({
-    profileVisibility: 'friends',
-    messageSettings: 'friends',
-    showOnlineStatus: true,
-    allowFriendRequests: true
-});
+// Using searchStore's existing search functionality
+const searchResults = computed(() => searchStore.userSearchResults);
 
-const searchUsers = async () => {
+const getInitials = (name) => {
+    return name
+        ?.split(' ')
+        .map(word => word[0])
+        .join('')
+        .toUpperCase()
+        .slice(0, 2) || '??';
+};
+
+// Using searchStore's existing search method
+const handleSearch = async () => {
     if (!searchQuery.value.trim()) {
-        searchResults.value = [];
         return;
     }
 
+    loading.value = true;
     try {
-        const results = await searchStore.searchUsers({
+        await searchStore.searchUsers({
             keyword: searchQuery.value,
             index: 0,
             count: 20
         });
-        searchResults.value = results;
-    } catch (error) {
+    } catch (err) {
         toast({
             title: "Error",
             description: "Failed to search users",
-            variant: "destructive",
+            variant: "destructive"
         });
     } finally {
         loading.value = false;
     }
 };
 
-const loadMore = async () => {
-    if (!searchStore.hasMoreUsers) return;
+// Watch for search query changes with debounce
+watch(searchQuery, useDebounce(() => {
+    handleSearch();
+}, 300));
 
-    try {
-        await searchStore.loadMoreUsers();
-        searchResults.value = [...searchResults.value, ...searchStore.userSearchResults];
-    } catch (error) {
-        console.error('Failed to load more users:', error);
-    }
+const blockUser = (userId) => {
+    userIdToBlock.value = userId;
 };
 
-const blockUser = async (userId) => {
-    blockingUsers.value.add(userId);
+// Using friendStore's existing block functionality
+const confirmBlock = async () => {
+    if (!userIdToBlock.value) return;
+
+    isProcessing.value = true;
+    blockingUsers.value.add(userIdToBlock.value);
+
     try {
-        await friendStore.setBlock(userId, 0);
-        searchResults.value = searchResults.value.filter(user => user.id !== userId);
+        await friendStore.setBlock(userIdToBlock.value, 0);
         toast({
             title: "Success",
-            description: "User blocked successfully",
+            description: "User blocked successfully"
         });
-    } catch (error) {
+        searchStore.resetUserSearch();
+    } catch (err) {
         toast({
             title: "Error",
             description: "Failed to block user",
-            variant: "destructive",
+            variant: "destructive"
         });
     } finally {
-        blockingUsers.value.delete(userId);
+        isProcessing.value = false;
+        blockingUsers.value.delete(userIdToBlock.value);
+        userIdToBlock.value = null;
     }
 };
 
-const saveSettings = async () => {
-    isSaving.value = true;
-    try {
-        await settingsStore.updatePushSettings(privacySettings);
-        toast({
-            title: "Success",
-            description: "Privacy settings updated successfully",
-        });
-    } catch (error) {
-        toast({
-            title: "Error",
-            description: error.message || "Failed to save settings",
-            variant: "destructive",
-        });
-    } finally {
-        isSaving.value = false;
-    }
-};
-
-const getInitials = (name) => {
-    return name
-        .split(' ')
-        .map(word => word[0])
-        .join('')
-        .toUpperCase()
-        .slice(0, 2);
-};
-
-// Debounced search
-watch(
-    () => searchQuery.value,
-    useDebounce(() => {
-        searchUsers();
-    }, 300)
-);
+// Cleanup on component unmount
+onUnmounted(() => {
+    searchStore.resetUserSearch();
+});
 </script>
