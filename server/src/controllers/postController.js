@@ -5,6 +5,7 @@ import { createError } from '../utils/customError.js';
 import { collections } from '../config/database.js';
 import { db } from '../config/firebase.js';
 import Post from '../models/Post.js';
+import { cleanupFiles } from '../utils/helpers.js';
 
 class PostController {
     async createPost(req, res, next) {
@@ -16,16 +17,26 @@ class PostController {
 
             const { content } = req.body;
             const userId = req.user.uid;
+            const files = req.files;
 
-            const postId = await postService.createPost(
-                userId,
-                content,
-                req.files || []
-            );
+            // Validate file count
+            if (files && files.length > Post.MAX_IMAGES) {
+                throw createError('1008', `Maximum ${Post.MAX_IMAGES} images allowed`);
+            }
+
+            const postId = await postService.createPost(userId, content, files);
+
+            // Clean up temporary files after successful upload
+            if (files) {
+                await cleanupFiles(files);
+            }
 
             sendResponse(res, '1000', { postId });
-
         } catch (error) {
+            // Clean up files on error
+            if (req.files) {
+                await cleanupFiles(req.files);
+            }
             next(error);
         }
     }

@@ -11,57 +11,33 @@ import { handleImageUpload } from '../utils/helpers.js';
 class PostService {
     async createPost(userId, content, imageFiles) {
         try {
-            // Process images if they exist
             let processedImageUrls = [];
+
             if (imageFiles && imageFiles.length > 0) {
-                processedImageUrls = await this.processImages(imageFiles);
+                const uploadPromises = imageFiles.map(file =>
+                    handleImageUpload(file, `posts/${userId}`)
+                );
+                processedImageUrls = await Promise.all(uploadPromises);
             }
 
-            // Create post
             const postData = new Post({
                 userId,
                 content,
                 images: processedImageUrls,
-                createdAt: new Date()
+                createdAt: new Date(),
+                likes: 0,
+                comments: 0
             }).toJSON();
 
             const postId = await createDocument(collections.posts, postData);
-            return postId;
 
+            // Cache invalidation
+            await redis.del(`user:${userId}:posts`);
+
+            return postId;
         } catch (error) {
             logger.error('Error in createPost service:', error);
             throw error.code ? error : createError('9999', 'Exception error');
-        }
-    }
-
-    async processImages(files) {
-        try {
-            if (!Array.isArray(files)) {
-                throw createError('1002', 'Invalid files array');
-            }
-
-            if (files.length > 4) {
-                throw createError('1008', 'Maximum 4 images allowed');
-            }
-
-            // Process each image in parallel
-            const processedUrls = await Promise.all(
-                files.map(async (file) => {
-                    try {
-                        const imageUrl = await handleImageUpload(file, 'posts');
-                        return imageUrl;
-                    } catch (error) {
-                        logger.error(`Error processing image ${file.originalname}:`, error);
-                        throw createError('1007', 'Failed to process image');
-                    }
-                })
-            );
-
-            return processedUrls;
-
-        } catch (error) {
-            logger.error('Error in processImages:', error);
-            throw error.code ? error : createError('9999', 'Failed to process images');
         }
     }
 

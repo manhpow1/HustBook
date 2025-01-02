@@ -1,6 +1,7 @@
 import sharp from 'sharp';
 import { createError } from './customError.js';
 import logger from './logger.js';
+import admin from 'firebase-admin';
 
 // Constants
 const MAX_IMAGE_SIZE = 5 * 1024 * 1024; // 5MB
@@ -14,10 +15,13 @@ const IMAGE_QUALITY = 80;
  * @param {string} filename - The filename of the avatar.
  * @returns {string|null} - The URL of the avatar or null if filename is not provided.
  */
-const generateAvatarUrl = (filename) => {
+const generateAvatarUrl = (filename, userId) => {
     if (!filename) return null;
-    const baseUrl = process.env.BASE_URL || 'http://localhost:3000';
-    return `${baseUrl}/uploads/avatars/${filename}`;
+
+    const storageBaseUrl = process.env.FIREBASE_STORAGE_URL || 'https://storage.googleapis.com';
+    const bucketName = process.env.FIREBASE_STORAGE_BUCKET;
+
+    return `${storageBaseUrl}/${bucketName}/avatars/${userId}/${filename}`;
 };
 
 /**
@@ -25,10 +29,13 @@ const generateAvatarUrl = (filename) => {
  * @param {string} filename - The filename of the cover photo.
  * @returns {string|null} - The URL of the cover photo or null if filename is not provided.
  */
-const generateCoverPhotoUrl = (filename) => {
+const generateCoverPhotoUrl = (filename, userId) => {
     if (!filename) return null;
-    const baseUrl = process.env.BASE_URL || 'http://localhost:3000';
-    return `${baseUrl}/uploads/covers/${filename}`;
+
+    const storageBaseUrl = process.env.FIREBASE_STORAGE_URL || 'https://storage.googleapis.com';
+    const bucketName = process.env.FIREBASE_STORAGE_BUCKET;
+
+    return `${storageBaseUrl}/${bucketName}/covers/${userId}/${filename}`;
 };
 
 /**
@@ -42,16 +49,10 @@ export async function handleCoverPhotoUpload(file, oldCoverUrl = null) {
         if (!file) return null;
 
         const imageUrl = await handleImageUpload(file, 'covers');
-
-        // Delete old cover photo if it exists
-        if (oldCoverUrl) {
-            await deleteFileFromStorage(oldCoverUrl).catch(err =>
-                logger.error('Error deleting old cover photo:', err)
-            );
-        }
-
+        await cleanupFiles(file);
         return imageUrl;
     } catch (error) {
+        await cleanupFiles(file);
         logger.error('Cover photo upload error:', error);
         throw createError('9999', 'Failed to process cover photo upload');
     }
@@ -68,16 +69,10 @@ export async function handleAvatarUpload(file, oldAvatarUrl = null) {
         if (!file) return null;
 
         const imageUrl = await handleImageUpload(file, 'avatars');
-
-        // Delete old avatar if it exists
-        if (oldAvatarUrl) {
-            await deleteFileFromStorage(oldAvatarUrl).catch(err =>
-                logger.error('Error deleting old avatar:', err)
-            );
-        }
-
+        await cleanupFiles(file);
         return imageUrl;
     } catch (error) {
+        await cleanupFiles(file);
         logger.error('Avatar upload error:', error);
         throw createError('9999', 'Failed to process avatar upload');
     }
@@ -115,22 +110,55 @@ export async function handleImageUpload(file, folder = 'general') {
         // Optimize based on format
         let processedBuffer;
         let fileExtension;
+
+        // First resize the image while maintaining aspect ratio
+        const resizedImage = await image
+            .resize(1920, 1080, {
+                fit: 'inside',
+                withoutEnlargement: true
+            })
+            .rotate(); // Auto-rotate based on EXIF
+
         switch (metadata.format) {
             case 'jpeg':
             case 'jpg':
-                processedBuffer = await image.jpeg({ quality: IMAGE_QUALITY }).toBuffer();
+                processedBuffer = await resizedImage
+                    .jpeg({
+                        quality: IMAGE_QUALITY,
+                        progressive: true,
+                        mozjpeg: true,
+                        chromaSubsampling: '4:4:4'
+                    })
+                    .toBuffer();
                 fileExtension = 'jpg';
                 break;
+
             case 'png':
-                processedBuffer = await image.png({ compressionLevel: 9 }).toBuffer();
+                processedBuffer = await resizedImage
+                    .png({
+                        compressionLevel: 9,
+                        palette: true,
+                        quality: IMAGE_QUALITY,
+                        adaptiveFiltering: true
+                    })
+                    .toBuffer();
                 fileExtension = 'png';
                 break;
+
             case 'gif':
-                processedBuffer = await image.gif().toBuffer();
+                processedBuffer = await resizedImage
+                    .gif({
+                        reoptimize: true,
+                        colors: 256
+                    })
+                    .toBuffer();
                 fileExtension = 'gif';
                 break;
+
             default:
-                processedBuffer = await image.jpeg({ quality: IMAGE_QUALITY }).toBuffer();
+                processedBuffer = await resizedImage
+                    .jpeg({ quality: IMAGE_QUALITY })
+                    .toBuffer();
                 fileExtension = 'jpg';
         }
 
@@ -166,8 +194,8 @@ export async function handleImageUpload(file, folder = 'general') {
         return publicUrl;
 
     } catch (error) {
-        logger.error('Error in handleImageUpload:', error);
-        throw error.code ? error : createError('1007', 'Failed to process image');
+        logger.error('Firebase upload failed:', error);
+        throw createError('1007', 'Failed to upload image');
     }
 }
 
@@ -186,7 +214,23 @@ async function deleteFileFromStorage(fileUrl) {
     }
 }
 
+const cleanupFiles = async (files) => {
+    try {
+        if (!files) return;
+
+        const deletePromises = Array.isArray(files) 
+            ? files.map(file => fs.unlink(file.path))
+            : [fs.unlink(files.path)];
+
+        await Promise.all(deletePromises);
+        logger.info('Temporary files cleaned up successfully');
+    } catch (error) {
+        logger.error('Error cleaning up files:', error);
+    }
+};
+
 export {
     generateAvatarUrl,
     generateCoverPhotoUrl,
+    cleanupFiles,
 };

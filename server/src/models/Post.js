@@ -20,9 +20,14 @@ class Post {
     }
 
     validate() {
-        if (this.content.length < 1 || this.content.length > 1000) {
+        if (!this.content || this.content.length < 1 || this.content.length > 1000) {
             throw new Error('Content length must be between 1 and 1000 characters');
         }
+
+        if (this.images && this.images.length > this.MAX_IMAGES) {
+            throw new Error(`Maximum ${this.MAX_IMAGES} images allowed`);
+        }
+
         return true;
     }
 
