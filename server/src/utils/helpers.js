@@ -17,11 +17,7 @@ const IMAGE_QUALITY = 80;
  */
 const generateAvatarUrl = (filename, userId) => {
     if (!filename) return null;
-
-    const storageBaseUrl = process.env.FIREBASE_STORAGE_URL || 'https://storage.googleapis.com';
-    const bucketName = process.env.FIREBASE_STORAGE_BUCKET;
-
-    return `${storageBaseUrl}/${bucketName}/avatars/${userId}/${filename}`;
+    return `https://storage.googleapis.com/${process.env.FIREBASE_STORAGE_BUCKET}/avatars/${userId}/${filename}`;
 };
 
 /**
@@ -31,11 +27,7 @@ const generateAvatarUrl = (filename, userId) => {
  */
 const generateCoverPhotoUrl = (filename, userId) => {
     if (!filename) return null;
-
-    const storageBaseUrl = process.env.FIREBASE_STORAGE_URL || 'https://storage.googleapis.com';
-    const bucketName = process.env.FIREBASE_STORAGE_BUCKET;
-
-    return `${storageBaseUrl}/${bucketName}/covers/${userId}/${filename}`;
+    return `https://storage.googleapis.com/${process.env.FIREBASE_STORAGE_BUCKET}/covers/${userId}/${filename}`;
 };
 
 /**
