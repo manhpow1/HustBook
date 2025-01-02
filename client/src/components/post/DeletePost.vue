@@ -1,173 +1,132 @@
 <template>
     <div>
-        <!-- Delete Button -->
-        <button @click="openModal"
-            class="text-red-600 hover:text-red-800 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 rounded"
-            type="button" aria-label="Delete Post" data-testid="delete-post-button">
-            <TrashIcon class="w-5 h-5" aria-hidden="true" />
+        <!-- Delete Trigger Button -->
+        <Button variant="destructive" class="w-full flex items-center justify-center gap-2" @click="openModal"
+            :disabled="isDeleting">
+            <TrashIcon class="h-4 w-4" />
             Delete Post
-        </button>
+        </Button>
 
-        <!-- Confirmation Modal -->
-        <teleport to="body">
-            <div v-if="showConfirmation"
-                class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" @click="closeModal"
-                role="dialog" aria-modal="true" aria-labelledby="modal-title" aria-describedby="modal-description">
-                <div class="bg-white p-6 rounded-lg shadow-xl max-w-sm w-full" @click.stop>
-                    <h3 id="modal-title" class="text-lg font-semibold mb-4">Confirm Delete</h3>
-                    <p id="modal-description" class="mb-6">
+        <!-- Delete Confirmation Dialog -->
+        <AlertDialog :open="showConfirmation" @update:open="handleDialogChange">
+            <AlertDialogContent>
+                <AlertDialogHeader>
+                    <AlertDialogTitle>Delete Post</AlertDialogTitle>
+                    <AlertDialogDescription>
                         Are you sure you want to delete this post? This action cannot be undone.
-                    </p>
-                    <div class="flex justify-end space-x-4">
-                        <Button @click="confirmDelete" :disabled="isDeleting" variant="danger" class="flex items-center"
-                            aria-label="Confirm Delete" data-testid="confirm-delete-button">
-                            <span v-if="isDeleting" class="flex items-center">
-                                <LoaderIcon class="animate-spin -ml-1 mr-2 h-5 w-5 text-white" aria-hidden="true" />
-                                Deleting...
-                            </span>
-                            <span v-else>Delete</span>
-                        </Button>
-                        <Button @click="closeModal" :disabled="isDeleting" variant="secondary"
-                            aria-label="Cancel Delete" data-testid="cancel-delete-button">
-                            Cancel
-                        </Button>
-                    </div>
-                </div>
-            </div>
-        </teleport>
+                    </AlertDialogDescription>
+                </AlertDialogHeader>
 
-        <!-- Success and Error Messages -->
-        <Alert v-if="successMessage" type="success" title="Deleted" :message="successMessage" />
-        <Alert v-if="errorMessage" type="error" title="Error" :message="errorMessage" :showRetry="false" />
+                <!-- Error Alert -->
+                <Alert v-if="error" variant="destructive" class="my-4">
+                    <AlertCircleIcon class="h-4 w-4" />
+                    <AlertTitle>Error</AlertTitle>
+                    <AlertDescription>{{ error }}</AlertDescription>
+                </Alert>
+
+                <AlertDialogFooter>
+                    <AlertDialogCancel :disabled="isDeleting" @click="closeModal">
+                        Cancel
+                    </AlertDialogCancel>
+                    <AlertDialogAction variant="destructive" :disabled="isDeleting" @click="confirmDelete">
+                        <Loader2Icon v-if="isDeleting" class="mr-2 h-4 w-4 animate-spin" />
+                        {{ isDeleting ? 'Deleting...' : 'Delete' }}
+                    </AlertDialogAction>
+                </AlertDialogFooter>
+            </AlertDialogContent>
+        </AlertDialog>
+
+        <!-- Success Toast -->
+        <Toaster />
     </div>
 </template>
 
 <script setup>
-import { ref, onMounted, onBeforeUnmount } from 'vue';
-import { TrashIcon, LoaderIcon } from 'lucide-vue-next';
-import { Alert } from '@/components/ui/alert';
-import { Button } from '@/components/ui/button';
-import { usePostStore } from '../../stores/postStore';
-import { useRouter } from 'vue-router';
-import { useErrorHandler } from '@/utils/errorHandler';
-import logger from '../../services/logging';
+import { ref } from 'vue'
+import { useRouter } from 'vue-router'
+import { usePostStore } from '@/stores/postStore'
+import { useToast } from '@/components/ui/toast'
+import { AlertCircleIcon, TrashIcon, Loader2Icon } from 'lucide-vue-next'
+import { Button } from '@/components/ui/button'
+import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert'
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, } from '@/components/ui/alert-dialog'
+import { Toaster } from '../ui/toast'
 
 const props = defineProps({
     postId: {
         type: String,
         required: true,
-    },
-});
+        validator(value) {
+            return value.length > 0
+        }
+    }
+})
 
-const emit = defineEmits(['post-deleted']);
+const emit = defineEmits(['post-deleted'])
 
-// State
-const showConfirmation = ref(false);
-const isDeleting = ref(false);
-const successMessage = ref('');
-const errorMessage = ref('');
+// Component state
+const showConfirmation = ref(false)
+const isDeleting = ref(false)
+const error = ref('')
 
-// Stores and Router
-const postStore = usePostStore();
-const router = useRouter();
-const { handleError } = useErrorHandler();
+// Composables
+const router = useRouter()
+const postStore = usePostStore()
+const { toast } = useToast()
 
 // Methods
-
 const openModal = () => {
-    showConfirmation.value = true;
-    nextTick(() => {
-        const confirmButton = document.querySelector('[data-testid="confirm-delete-button"]');
-        if (confirmButton) {
-            confirmButton.focus();
-        }
-    });
-};
+    error.value = ''
+    showConfirmation.value = true
+}
 
 const closeModal = () => {
     if (!isDeleting.value) {
-        showConfirmation.value = false;
-        const deleteButton = document.querySelector('[data-testid="delete-post-button"]');
-        if (deleteButton) {
-            deleteButton.focus();
-        }
+        showConfirmation.value = false
+        error.value = ''
     }
-};
+}
+
+const handleDialogChange = (value) => {
+    if (!value && !isDeleting.value) {
+        closeModal()
+    }
+}
 
 const confirmDelete = async () => {
-    isDeleting.value = true;
-    errorMessage.value = '';
-    successMessage.value = '';
+    if (isDeleting.value) return
+
+    isDeleting.value = true
+    error.value = ''
 
     try {
-        const response = await postStore.removePost(props.postId);
+        const response = await postStore.removePost(props.postId)
 
-        if (response.code === '1000') {
-            successMessage.value = 'Post deleted successfully.';
-            logger.info('Post deleted successfully', { postId: props.postId });
-            emit('post-deleted');
-            router.push({ name: 'Home' }); // Navigate to home or appropriate page
+        if (response?.code === '1000') {
+            toast({
+                title: "Success",
+                description: "Post deleted successfully",
+            })
+
+            emit('post-deleted')
+            router.push({ name: 'Home' })
         } else {
-            errorMessage.value = response.message || 'An error occurred while deleting the post.';
-            logger.warn('Failed to delete post', { responseCode: response.code, message: response.message });
+            throw new Error(response?.message || 'Failed to delete post')
         }
-    } catch (error) {
-        logger.error('Error in confirmDelete', error);
-        errorMessage.value = 'An error occurred while deleting the post. Please try again.';
-        await handleError(error);
+    } catch (err) {
+        error.value = err.message || 'An error occurred while deleting the post'
+        toast({
+            title: "Error",
+            description: error.value,
+            variant: "destructive",
+        })
     } finally {
-        isDeleting.value = false;
-        showConfirmation.value = false;
+        isDeleting.value = false
+
+        // Only close on success
+        if (!error.value) {
+            closeModal()
+        }
     }
-};
-
-// Handle Esc Key to Close Modal
-const handleKeyDown = (event) => {
-    if (event.key === 'Escape' && showConfirmation.value) {
-        closeModal();
-    }
-};
-
-// Lifecycle Hooks
-onMounted(() => {
-    document.addEventListener('keydown', handleKeyDown);
-});
-
-onBeforeUnmount(() => {
-    document.removeEventListener('keydown', handleKeyDown);
-});
+}
 </script>
-
-<style scoped>
-.fade-enter-active,
-.fade-leave-active {
-    transition: opacity 0.2s ease;
-}
-
-.fade-enter-from,
-.fade-leave-to {
-    opacity: 0;
-}
-
-button:focus {
-    outline: 2px solid #4299e1;
-    /* Tailwind's focus ring equivalent */
-    outline-offset: 2px;
-}
-
-.fixed {
-    position: fixed;
-}
-
-.flex {
-    display: flex;
-}
-
-.absolute {
-    position: absolute;
-}
-
-.z-50 {
-    z-index: 50;
-}
-</style>

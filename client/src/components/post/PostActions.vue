@@ -1,96 +1,120 @@
+// PostActions.vue
 <template>
-    <div class="flex items-center justify-between mb-4">
-        <!-- Like Button -->
-        <button @click="debouncedHandleLike" class="flex items-center transition-colors duration-200" :class="[
-            post.isLiked === '1' ? 'text-blue-500' : 'text-gray-500 hover:text-blue-500',
-            { 'opacity-50 cursor-not-allowed': isLiking }
-        ]" :disabled="isLiking" aria-label="Like" role="button" data-testid="like-button">
-            <div class="relative w-5 h-5 mr-1">
-                <ThumbsUpIcon :class="{ 'fill-current': post.isLiked === '1' }" class="w-5 h-5"
-                    :style="{ opacity: isLiking ? '0.5' : '1' }" aria-hidden="true" />
-                <SpinnerIcon v-if="isLiking" class="absolute top-0 left-0 w-5 h-5 animate-spin" aria-hidden="true" />
+    <div class="flex items-center justify-between space-x-4 py-4">
+        <Button variant="ghost" size="sm" :class="[
+            post.isLiked === '1' ? 'text-primary' : 'text-muted-foreground',
+            'hover:text-primary'
+        ]" :disabled="isLiking" @click="debouncedHandleLike" aria-label="Like post">
+            <div class="relative flex items-center gap-2">
+                <HeartIcon :class="[
+                    'h-5 w-5',
+                    post.isLiked === '1' ? 'fill-current' : 'fill-none',
+                    isLiking ? 'opacity-50' : 'opacity-100'
+                ]" />
+                <Loader2Icon v-if="isLiking" class="absolute inset-0 h-5 w-5 animate-spin" />
+                <span>{{ formattedLikes }}</span>
+                <span class="sr-only">likes</span>
             </div>
-            {{ formattedLikes }} Likes
-        </button>
+        </Button>
 
-        <!-- Comment Button -->
-        <button @click="handleComment"
-            class="flex items-center text-gray-500 hover:text-gray-700 transition-colors duration-200"
-            aria-label="Comment" role="button" data-testid="comment-button">
-            <MessageSquareIcon class="w-5 h-5 mr-1" aria-hidden="true" />
-            {{ formattedComments }} Comments
-        </button>
+        <Button variant="ghost" size="sm" class="text-muted-foreground hover:text-primary" @click="handleComment"
+            aria-label="Comment on post">
+            <div class="flex items-center gap-2">
+                <MessageSquareIcon class="h-5 w-5" />
+                <span>{{ formattedComments }}</span>
+                <span class="sr-only">comments</span>
+            </div>
+        </Button>
+
+        <Button variant="ghost" size="sm" class="text-muted-foreground hover:text-primary" @click="handleShare"
+            aria-label="Share post">
+            <div class="flex items-center gap-2">
+                <ShareIcon class="h-5 w-5" />
+                <span>Share</span>
+            </div>
+        </Button>
     </div>
+
+    <Toaster />
 </template>
 
 <script setup>
-import { ref, computed } from 'vue';
-import { defineAsyncComponent } from 'vue';
-import { usePostStore } from '../../stores/postStore';
-import { debounce } from 'lodash-es';
-import { formatNumber } from '../../utils/numberFormat';
+import { ref, computed } from 'vue'
+import { usePostStore } from '@/stores/postStore'
+import { useToast } from '@/components/ui/toast'
+import { Button } from '@/components/ui/button'
+import { Toaster } from '@/components/ui/toast'
+import { HeartIcon, MessageSquareIcon, ShareIcon, Loader2Icon } from 'lucide-vue-next'
+import { formatNumber } from '@/utils/numberFormat'
+import { useDebounce } from '@/composables/useDebounce'
 
-// Asynchronously load icons to reduce initial bundle size
-const ThumbsUpIcon = defineAsyncComponent(() =>
-    import('lucide-vue-next').then(mod => mod.ThumbsUpIcon)
-);
-const MessageSquareIcon = defineAsyncComponent(() =>
-    import('lucide-vue-next').then(mod => mod.MessageSquareIcon)
-);
-const SpinnerIcon = defineAsyncComponent(() =>
-    import('lucide-vue-next').then(mod => mod.Loader2Icon)
-);
-
-// Define component props
 const props = defineProps({
     post: {
         type: Object,
-        required: true
+        required: true,
+        validator(post) {
+            return ['id', 'isLiked', 'like', 'comment'].every(prop => post && prop in post)
+        }
     }
-});
+})
 
-// Initialize store
-const postStore = usePostStore();
+const emit = defineEmits(['comment'])
 
-// Computed properties for formatted counts
-const formattedLikes = computed(() => formatNumber(props.post.like || 0));
-const formattedComments = computed(() => formatNumber(props.post.comment || 0));
+const postStore = usePostStore()
+const { toast } = useToast()
+const isLiking = ref(false)
 
-// Reactive state to manage like operation
-const isLiking = ref(false);
+// Computed
+const formattedLikes = computed(() => formatNumber(props.post.like || 0))
+const formattedComments = computed(() => formatNumber(props.post.comment || 0))
 
-// Handle like action with debouncing
+// Methods
 const handleLike = async () => {
-    if (isLiking.value) return;
-    isLiking.value = true;
+    if (isLiking.value) return
+
+    isLiking.value = true
     try {
-        await postStore.toggleLike(props.post.id);
+        await postStore.toggleLike(props.post.id)
     } catch (error) {
-        console.error('Error toggling like:', error);
+        toast({
+            title: "Error",
+            description: "Failed to like post. Please try again.",
+            variant: "destructive"
+        })
+        console.error('Error toggling like:', error)
     } finally {
-        isLiking.value = false;
+        isLiking.value = false
     }
-};
+}
 
-// Debounced version of handleLike to prevent rapid likes
-const debouncedHandleLike = debounce(handleLike, 300);
+const debouncedHandleLike = useDebounce(handleLike, 300)
 
-// Handle comment action
 const handleComment = () => {
-    postStore.focusCommentInput(props.post.id);
-};
+    emit('comment')
+}
+
+const handleShare = async () => {
+    try {
+        if (navigator.share) {
+            await navigator.share({
+                title: 'Share Post',
+                text: props.post.described,
+                url: window.location.href
+            })
+        } else {
+            await navigator.clipboard.writeText(window.location.href)
+            toast({
+                description: "Link copied to clipboard"
+            })
+        }
+    } catch (error) {
+        if (error.name !== 'AbortError') {
+            toast({
+                title: "Error",
+                description: "Failed to share post",
+                variant: "destructive"
+            })
+        }
+    }
+}
 </script>
-
-<style scoped>
-button:disabled {
-    pointer-events: none;
-}
-
-.relative {
-    position: relative;
-}
-
-.absolute {
-    position: absolute;
-}
-</style>

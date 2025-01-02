@@ -2,18 +2,19 @@
     <div class="space-y-4">
         <div class="relative" @dragover.prevent="isDragging = true" @dragleave.prevent="isDragging = false"
             @drop.prevent="handleDrop">
-            <div class="border-2 border-dashed rounded-lg p-6" :class="[
-                isDragging ? 'border-primary bg-primary/5' : 'border-muted',
-                modelValue.length >= maxFiles ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'
+            <div class="group relative border-2 border-dashed rounded-lg p-6 transition-colors" :class="[
+                isDragging ? 'border-primary bg-primary/5' : 'border-muted-foreground/20',
+                modelValue.length >= maxFiles ? 'opacity-50 cursor-not-allowed' : 'hover:border-primary cursor-pointer'
             ]" @click="triggerFileSelect">
-                <div class="flex flex-col items-center space-y-4">
-                    <div class="p-2 bg-background rounded-full">
-                        <UploadCloudIcon v-if="!isUploading" class="h-10 w-10 text-muted-foreground" />
+                <div class="flex flex-col items-center justify-center space-y-4">
+                    <div class="p-2 bg-background rounded-full ring-1 ring-border/10">
+                        <UploadCloudIcon v-if="!isUploading"
+                            class="h-10 w-10 text-muted-foreground transition-colors group-hover:text-primary" />
                         <Loader2Icon v-else class="h-10 w-10 animate-spin text-primary" />
                     </div>
 
-                    <div class="text-center space-y-1">
-                        <p class="text-sm text-muted-foreground">
+                    <div class="text-center space-y-2">
+                        <p class="text-sm text-muted-foreground/80">
                             <span v-if="!isUploading">
                                 Drag and drop your files here, or
                                 <Button variant="link" class="px-1">browse</Button>
@@ -33,7 +34,12 @@
         </div>
 
         <!-- Upload Progress -->
-        <Progress v-if="isUploading" :value="uploadProgress" class="w-full" />
+        <div v-if="isUploading" class="space-y-2">
+            <Progress :value="uploadProgress" class="w-full h-2" />
+            <p class="text-xs text-muted-foreground text-center">
+                Processing files... {{ Math.round(uploadProgress) }}%
+            </p>
+        </div>
 
         <!-- Preview Grid -->
         <div v-if="previewUrls.length > 0" class="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -57,10 +63,10 @@
         </div>
 
         <!-- Error Alert -->
-        <Alert v-if="error" variant="destructive">
+        <Alert v-if="error" variant="destructive" class="animate-in fade-in-50">
             <AlertCircleIcon class="h-4 w-4" />
-            <AlertTitle>Error</AlertTitle>
-            <AlertDescription>{{ error }}</AlertDescription>
+            <AlertTitle class="font-medium">Error</AlertTitle>
+            <AlertDescription class="text-sm">{{ error }}</AlertDescription>
         </Alert>
     </div>
 </template>
