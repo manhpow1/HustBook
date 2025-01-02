@@ -19,6 +19,8 @@ export const initializeFirebase = async () => {
         const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
         firebaseConfig = {
           credential: admin.credential.cert(serviceAccount),
+          storageBucket: process.env.FIREBASE_STORAGE_BUCKET,
+          databaseURL: "https://facebook-clone-3d881-default-rtdb.asia-southeast1.firebasedatabase.app",
         };
         logger.info('Using complete service account JSON configuration');
       } else if (
@@ -32,6 +34,8 @@ export const initializeFirebase = async () => {
             privateKey: process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, '\n'),
             clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
           }),
+          storageBucket: process.env.FIREBASE_STORAGE_BUCKET,
+          databaseURL: "https://facebook-clone-3d881-default-rtdb.asia-southeast1.firebasedatabase.app",
         };
         logger.info('Using individual Firebase credentials');
       } else {
@@ -45,12 +49,13 @@ export const initializeFirebase = async () => {
     db = admin.firestore();
     auth = admin.auth();
     isInitialized = true;
+    const storage = admin.storage();
 
     // Verify Firestore connection
     await db.collection('test').limit(1).get();
     logger.info('Firestore connection verified');
 
-    return { db, auth };
+    return { db, auth, storage };
   } catch (error) {
     logger.error('Failed to initialize Firebase:', error);
     throw error;

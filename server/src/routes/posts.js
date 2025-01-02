@@ -11,8 +11,18 @@ import postController from '../controllers/postController.js';
 import { authenticateToken } from '../middleware/auth.js';
 const router = express.Router();
 const upload = multer({
-    dest: 'uploads/',
-    limits: { fileSize: 10 * 1024 * 1024 },
+    storage: multer.memoryStorage(),
+    limits: {
+        fileSize: 5 * 1024 * 1024,
+        files: 4
+    },
+    fileFilter: (req, file, cb) => {
+        if (!file.mimetype.match(/^image\/(jpeg|png|gif)$/)) {
+            cb(createError('1004', 'Invalid file type'), false);
+            return;
+        }
+        cb(null, true);
+    }
 });
 const reportLimiter = rateLimit({
     windowMs: 15 * 60 * 1000,

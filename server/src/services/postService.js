@@ -5,16 +5,62 @@ import { collections, createDocument, getDocument, updateDocument } from '../con
 import { db } from '../config/firebase.js';
 import { createError } from '../utils/customError.js';
 import logger from '../utils/logger.js';
+import redis from '../utils/redis.js';
 
 class PostService {
-    async createPost(userId, content, images) {
+    async createPost(userId, content, imageFiles) {
         try {
-            const postData = new Post({ userId, content, images }).toJSON();
+            // Process images if they exist
+            let processedImageUrls = [];
+            if (imageFiles && imageFiles.length > 0) {
+                processedImageUrls = await this.processImages(imageFiles);
+            }
+
+            // Create post
+            const postData = new Post({
+                userId,
+                content,
+                images: processedImageUrls,
+                createdAt: new Date()
+            }).toJSON();
+
             const postId = await createDocument(collections.posts, postData);
             return postId;
+
         } catch (error) {
             logger.error('Error in createPost service:', error);
-            throw createError('9999', 'Exception error');
+            throw error.code ? error : createError('9999', 'Exception error');
+        }
+    }
+
+    async processImages(files) {
+        try {
+            if (!Array.isArray(files)) {
+                throw createError('1002', 'Invalid files array');
+            }
+
+            if (files.length > 4) {
+                throw createError('1008', 'Maximum 4 images allowed');
+            }
+
+            // Process each image in parallel
+            const processedUrls = await Promise.all(
+                files.map(async (file) => {
+                    try {
+                        const imageUrl = await handleImageUpload(file, 'posts');
+                        return imageUrl;
+                    } catch (error) {
+                        logger.error(`Error processing image ${file.originalname}:`, error);
+                        throw createError('1007', 'Failed to process image');
+                    }
+                })
+            );
+
+            return processedUrls;
+
+        } catch (error) {
+            logger.error('Error in processImages:', error);
+            throw error.code ? error : createError('9999', 'Failed to process images');
         }
     }
 
@@ -55,36 +101,45 @@ class PostService {
 
     async deletePost(postId) {
         try {
-            await db.runTransaction(async (transaction) => {
+            return await db.runTransaction(async (transaction) => {
                 const postRef = db.collection(collections.posts).doc(postId);
                 const postDoc = await transaction.get(postRef);
-
                 if (!postDoc.exists) {
                     throw createError('9992', 'The requested post does not exist.');
                 }
-
-                // Delete associated comments and likes
-                const commentsQuery = postRef.collection('comments');
-                const likesQuery = db.collection(collections.likes).where('postId', '==', postId);
-
+                const post = postDoc.data();
+                // Validate post state
+                if (!Post.validateForDeletion(post)) {
+                    throw createError('1012', 'Post cannot be deleted');
+                }
+                // Delete associated resources
                 const [commentsSnapshot, likesSnapshot] = await Promise.all([
-                    transaction.get(commentsQuery),
-                    transaction.get(likesQuery),
+                    transaction.get(postRef.collection('comments')),
+                    transaction.get(db.collection(collections.likes).where('postId', '==', postId))
                 ]);
-
-                commentsSnapshot.docs.forEach((doc) => {
-                    transaction.delete(doc.ref);
-                });
-
-                likesSnapshot.docs.forEach((doc) => {
-                    transaction.delete(doc.ref);
-                });
-
-                transaction.delete(postRef);
+                // Batch delete operations
+                const batch = db.batch();
+                // Delete comments
+                commentsSnapshot.docs.forEach(doc => batch.delete(doc.ref));
+                // Delete likes
+                likesSnapshot.docs.forEach(doc => batch.delete(doc.ref));
+                // Delete images
+                if (post.images && post.images.length > 0) {
+                    // Add image deletion logic
+                }
+                // Delete the post
+                batch.delete(postRef);
+                // Commit the batch
+                await batch.commit();
+                // Clear cache
+                await redis.del(`post:${postId}`);
+                // Log the deletion
+                logger.info(`Post ${postId} deleted successfully`);
+                return true;
             });
         } catch (error) {
             logger.error('Error in deletePost service:', error);
-            throw createError('9999', 'Exception error');
+            throw error;
         }
     }
 

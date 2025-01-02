@@ -10,9 +10,30 @@ const acceptableReasons = [
 ];
 
 const createPostSchema = Joi.object({
-    content: Joi.string().required().max(1000),
-    images: Joi.array().items(Joi.string().uri()).max(4),
-});
+    content: Joi.string()
+        .required()
+        .min(1)
+        .max(1000)
+        .trim()
+        .pattern(/^[^<>]*$/)
+        .messages({
+            'string.empty': 'Content cannot be empty',
+            'string.min': 'Content must be at least 1 character long',
+            'string.max': 'Content cannot exceed 1000 characters',
+            'string.pattern.base': 'Content contains invalid characters'
+        }),
+    images: Joi.array()
+        .items(
+            Joi.string()
+                .uri()
+                .pattern(/\.(jpg|jpeg|png|gif)$/i)
+        )
+        .max(4)
+        .messages({
+            'array.max': 'Maximum 4 images allowed',
+            'string.pattern.base': 'Invalid image format'
+        })
+}).required();
 
 const updatePostSchema = Joi.object({
     content: Joi.string().required().max(1000),
@@ -101,7 +122,14 @@ const validateGetListPosts = (data) => {
     return getListPostsSchema.validate(data, { convert: true });
 };
 
-export default{
+const validateDeletePost = (params) => {
+    const schema = Joi.object({
+        id: Joi.string().required().guid()
+    });
+    return schema.validate(params);
+};
+
+export default {
     validateCreatePost,
     validateUpdatePost,
     validateComment,
@@ -111,4 +139,5 @@ export default{
     validateGetUserPosts,
     validateReportPost,
     validateGetListPosts,
+    validateDeletePost,
 };

@@ -4,19 +4,27 @@ import { sendResponse } from '../utils/responseHandler.js';
 import { createError } from '../utils/customError.js';
 import { collections } from '../config/database.js';
 import { db } from '../config/firebase.js';
+import Post from '../models/Post.js';
 
 class PostController {
     async createPost(req, res, next) {
         try {
             const { error } = postValidator.validateCreatePost(req.body);
-            if (error) throw createError('1002', error.details.map(detail => detail.message).join(', '));
+            if (error) {
+                throw createError('1002', error.details.map(detail => detail.message).join(', '));
+            }
 
             const { content } = req.body;
             const userId = req.user.uid;
-            const images = req.files ? req.files.map(file => file.path) : [];
 
-            const postId = await postService.createPost(userId, content, images);
+            const postId = await postService.createPost(
+                userId,
+                content,
+                req.files || []
+            );
+
             sendResponse(res, '1000', { postId });
+
         } catch (error) {
             next(error);
         }
@@ -61,16 +69,32 @@ class PostController {
 
     async deletePost(req, res, next) {
         try {
+            const { error } = validateDeletePost(req.params);
+            if (error) {
+                throw createError('1002', error.details[0].message);
+            }
             const { id } = req.params;
             const userId = req.user.uid;
+            // Get post with caching
             const post = await postService.getPost(id);
-
-            if (!post) throw createError('9992', 'The requested post does not exist.');
-            if (post.userId !== userId) throw createError('1009', 'Not access');
-            if (post.status === 'reported') throw createError('1012', 'Limited access');
-
+            if (!post) {
+                throw createError('9992', 'The requested post does not exist.');
+            }
+            // Check permissions
+            if (post.userId !== userId && !req.user.isAdmin) {
+                throw createError('1009', 'Not authorized to delete this post');
+            }
+            // Check post state
+            if (!Post.validateForDeletion(post)) {
+                throw createError('1012', 'Post cannot be deleted');
+            }
+            // Delete post and associated resources
             await postService.deletePost(id);
-            sendResponse(res, '1000');
+            // Log the action
+            await req.app.locals.auditLog.logAction(userId, id, 'delete_post', {
+                timestamp: new Date().toISOString()
+            });
+            sendResponse(res, '1000', { message: 'Post deleted successfully' });
         } catch (error) {
             next(error);
         }
