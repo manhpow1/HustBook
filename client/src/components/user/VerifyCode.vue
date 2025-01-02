@@ -87,7 +87,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, watch } from 'vue';
+import { ref, computed, onMounted, watch, nextTick } from 'vue';
 import { ShieldCheck, RefreshCw, AlertCircle, AlertTriangle, ArrowLeft, UserPlus } from 'lucide-vue-next';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -202,7 +202,12 @@ onMounted(() => {
         router.push('/get-verify-code');
         return;
     }
-    digitInputs.value[0]?.focus();
+    nextTick(() => {
+        const element = digitInputs.value[0];
+        if (element && typeof element.focus === 'function') {
+            element.focus();
+        }
+    });
 });
 
 watch(isVerifyCodeExpired, (newValue) => {

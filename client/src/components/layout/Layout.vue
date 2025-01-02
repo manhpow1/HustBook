@@ -159,6 +159,7 @@ import { computed } from 'vue'
 import { useUserStore } from '@/stores/userStore'
 import { storeToRefs } from 'pinia'
 import { useHead } from '@unhead/vue'
+import { useRouter } from 'vue-router'
 import { navItems } from '@/config/navigation'
 import SearchPosts from '@/components/search/SearchPosts.vue'
 import NotificationTab from '@/components/notification/NotificationTab.vue'
@@ -173,6 +174,7 @@ import { Home, User, Users, MessageCircle, Settings, Facebook, Twitter, Instagra
 const iconComponents = { Home, User, Users, MessageCircle, Settings };
 
 const userStore = useUserStore()
+const router = useRouter()
 const { isLoggedIn, user } = storeToRefs(userStore)
 const currentYear = computed(() => new Date().getFullYear())
 
