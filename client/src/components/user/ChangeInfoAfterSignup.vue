@@ -1,89 +1,97 @@
 <template>
-    <div class="max-w-md mx-auto mt-8 p-6 bg-white rounded-lg shadow-xl">
-        <h2 class="text-2xl font-bold mb-4 text-gray-800 flex items-center">
-            <UserPlusIcon class="w-6 h-6 mr-2 text-indigo-600" aria-hidden="true" />
-            Complete Your Profile
-        </h2>
-        <form @submit.prevent="handleSubmit" class="space-y-6" novalidate>
-            <!-- userName Field -->
-            <div>
-                <label for="userName" class="block text-sm font-medium text-gray-700">User Name</label>
-                <div class="mt-1 relative rounded-md shadow-sm">
-                    <input v-model="userName" type="text" id="userName" name="userName" required
-                        aria-describedby="userName-error" @blur="validateUserNameField"
-                        class="block w-full pr-10 border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-                        :class="{ 'border-red-300': userNameError }" placeholder="Enter your User Name" />
-                    <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
-                        <CheckCircleIcon v-if="!userNameError && userName && userName.length >= 3" class="h-5 w-5 text-green-500"
-                            aria-hidden="true" />
-                        <XCircleIcon v-if="userNameError && userName.length >= 3" class="h-5 w-5 text-red-500" aria-hidden="true" />
-                    </div>
-                </div>
-                <p v-if="userNameError" id="userName-error" class="text-sm text-red-600 mt-1" role="alert">
-                    {{ userNameError }}
-                </p>
-            </div>
+    <div class="flex items-center justify-center min-h-screen bg-background">
+        <Card class="w-full max-w-md mx-auto">
+            <CardHeader>
+                <img class="mx-auto h-12 w-auto mb-6" src="../../assets/logo.svg" alt="HUSTBOOK" />
+                <CardTitle class="text-2xl text-center flex items-center justify-center">
+                    <UserPlus class="w-6 h-6 mr-2 text-primary" />
+                    Complete Your Profile
+                </CardTitle>
+                <CardDescription class="text-center">
+                    Please provide your information to complete the signup process
+                </CardDescription>
+            </CardHeader>
 
-            <!-- Avatar Upload Field -->
-            <div>
-                <label for="avatar-upload" class="block text-sm font-medium text-gray-700">Avatar</label>
-                <div class="mt-1 flex items-center space-x-4">
-                    <div v-if="avatarPreview" class="flex-shrink-0">
-                        <img :src="avatarPreview" alt="Avatar preview" class="h-16 w-16 rounded-full object-cover" />
-                    </div>
-                    <label for="avatar-upload"
-                        class="cursor-pointer bg-white py-2 px-3 border border-gray-300 rounded-md shadow-sm text-sm leading-4 font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-                        aria-label="Upload Avatar">
-                        <span>{{ avatar ? 'Change' : 'Upload' }}</span>
-                        <input id="avatar-upload" name="avatar-upload" type="file" @change="handleFileChange"
-                            accept="image/*" class="sr-only" />
-                    </label>
-                    <button v-if="avatar" type="button" @click="removeAvatar"
-                        class="text-sm text-red-500 hover:text-red-700 focus:outline-none" aria-label="Remove Avatar">
-                        Remove
-                    </button>
-                </div>
-                <p v-if="avatarError" class="text-sm text-red-600 mt-1" role="alert">
-                    {{ avatarError }}
-                </p>
-            </div>
+            <CardContent>
+                <form @submit.prevent="handleSubmit" class="space-y-6" novalidate>
+                    <FormField v-slot="{ messages }" name="userName">
+                        <FormItem>
+                            <FormLabel>Username</FormLabel>
+                            <FormControl>
+                                <Input v-model="userName" type="text" :disabled="isLoading"
+                                    @blur="validateUserNameField" placeholder="Enter your username">
+                                <template #prefix>
+                                    <User class="h-4 w-4 text-muted-foreground" />
+                                </template>
+                                <template #suffix>
+                                    <XCircle v-if="userNameError" class="h-4 w-4 text-destructive cursor-pointer"
+                                        @click="userName = ''" />
+                                    <CheckCircle v-else-if="userName && userName.length >= 3"
+                                        class="h-4 w-4 text-success" />
+                                </template>
+                                </Input>
+                            </FormControl>
+                            <FormMessage>{{ userNameError }}</FormMessage>
+                        </FormItem>
+                    </FormField>
 
-            <!-- Submit Button -->
-            <div>
-                <button type="submit" :disabled="isLoading || !!userNameError"
-                    class="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
-                    :aria-disabled="isLoading || !!userNameError">
-                    <LoaderIcon v-if="isLoading" class="animate-spin -ml-1 mr-2 h-5 w-5 text-white"
-                        aria-hidden="true" />
-                    {{ isLoading ? "Updating..." : "Update Profile" }}
-                </button>
-            </div>
-        </form>
+                    <FormField name="avatar">
+                        <FormItem>
+                            <FormLabel>Avatar</FormLabel>
+                            <FormControl>
+                                <div class="flex items-center space-x-4">
+                                    <Avatar v-if="avatarPreview">
+                                        <AvatarImage :src="avatarPreview" alt="Avatar preview" />
+                                        <AvatarFallback>{{ userName?.charAt(0)?.toUpperCase() }}</AvatarFallback>
+                                    </Avatar>
 
-        <!-- Success Message -->
-        <div v-if="successMessage" class="mt-4 p-4 bg-green-100 rounded-md flex items-start" role="alert">
-            <CheckCircleIcon class="h-5 w-5 text-green-400 mr-2" aria-hidden="true" />
-            <p class="text-green-700">{{ successMessage }}</p>
-        </div>
+                                    <Button variant="outline" as="label" for="avatar-upload">
+                                        <Upload class="h-4 w-4 mr-2" />
+                                        {{ avatar ? 'Change' : 'Upload' }}
+                                        <input id="avatar-upload" type="file" @change="handleFileChange"
+                                            accept="image/*" class="sr-only" />
+                                    </Button>
 
-        <!-- Error Message -->
-        <div v-if="errorMessage" class="mt-4 p-4 bg-red-100 rounded-md flex items-start" role="alert">
-            <XCircleIcon class="h-5 w-5 text-red-400 mr-2" aria-hidden="true" />
-            <div>
-                <p class="text-red-700">{{ errorMessage }}</p>
-                <!-- Additional Actions Based on Error -->
-                <div v-if="errorMessage.includes('File upload failed')" class="mt-2 flex space-x-2">
-                    <button @click="continueWithoutAvatar" class="bg-blue-500 text-white px-4 py-2 rounded text-sm"
-                        aria-label="Continue without avatar">
-                        Continue without avatar
-                    </button>
-                    <button @click="retryUpload" class="bg-green-500 text-white px-4 py-2 rounded text-sm"
-                        aria-label="Retry Upload">
-                        Try again
-                    </button>
-                </div>
-            </div>
-        </div>
+                                    <Button v-if="avatar" variant="destructive" size="icon" @click="removeAvatar">
+                                        <Trash class="h-4 w-4" />
+                                    </Button>
+                                </div>
+                            </FormControl>
+                            <FormMessage>{{ avatarError }}</FormMessage>
+                        </FormItem>
+                    </FormField>
+
+                    <Button type="submit" class="w-full" :disabled="isLoading || !!userNameError" :loading="isLoading">
+                        <UserPlus v-if="!isLoading" class="h-4 w-4 mr-2" />
+                        {{ isLoading ? "Updating..." : "Update Profile" }}
+                    </Button>
+                </form>
+
+                <Alert v-if="successMessage" variant="success" class="mt-4">
+                    <CheckCircle class="h-4 w-4" />
+                    <AlertTitle>Success</AlertTitle>
+                    <AlertDescription>{{ successMessage }}</AlertDescription>
+                </Alert>
+
+                <Alert v-if="errorMessage" variant="destructive" class="mt-4">
+                    <AlertCircle class="h-4 w-4" />
+                    <AlertTitle>Error</AlertTitle>
+                    <AlertDescription>
+                        {{ errorMessage }}
+                        <div v-if="errorMessage.includes('File upload failed')" class="mt-4 space-x-2">
+                            <Button variant="secondary" @click="continueWithoutAvatar">
+                                <ArrowRight class="h-4 w-4 mr-2" />
+                                Continue without avatar
+                            </Button>
+                            <Button variant="outline" @click="retryUpload">
+                                <RefreshCw class="h-4 w-4 mr-2" />
+                                Try again
+                            </Button>
+                        </div>
+                    </AlertDescription>
+                </Alert>
+            </CardContent>
+        </Card>
     </div>
 </template>
 
@@ -91,12 +99,19 @@
 import { ref, watch, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { useUserStore } from '../../stores/userStore';
-import { UserPlusIcon, CheckCircleIcon, XCircleIcon, LoaderIcon } from 'lucide-vue-next';
+import { UserPlus, CheckCircle, XCircle, Upload, User, Trash, ArrowRight, RefreshCw, AlertCircle } from 'lucide-vue-next';
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
+import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
+import { FormField, FormItem, FormLabel, FormControl, FormMessage } from '@/components/ui/form';
 import { useFormValidation } from '../../composables/useFormValidation';
 import { useImageProcessing } from '../../composables/useImageProcessing';
 import { sanitizeInput } from '../../utils/sanitize';
 import { useToast } from '../ui/toast';
 import { storeToRefs } from 'pinia';
+import logger from '@/services/logging';
 
 const router = useRouter();
 const userStore = useUserStore();
@@ -115,12 +130,12 @@ const avatarPreview = ref('');
 const avatarError = ref('');
 
 const { validateUsername } = useFormValidation();
-    
+
 const validateUserNameField = () => {
     try {
         userNameError.value = validateUsername(userName.value) || '';
     } catch (err) {
-        console.error('Username validation error:', err);
+        logger.error('Username validation error:', err);
         userNameError.value = 'Error validating username';
     }
 };
@@ -132,6 +147,11 @@ const handleFileChange = async (event) => {
     try {
         if (!validateImage(file)) {
             event.target.value = '';
+            toast({
+                type: 'error',
+                title: 'Invalid Image',
+                description: 'Please select a valid image file (jpg, png, gif under 5MB)'
+            });
             return;
         }
 
@@ -145,17 +165,31 @@ const handleFileChange = async (event) => {
         if (compressedFile) {
             avatar.value = compressedFile;
             avatarError.value = '';
+            toast({
+                type: 'success',
+                title: 'Success',
+                description: 'Image uploaded and compressed successfully'
+            });
         } else {
             avatar.value = null;
             avatarPreview.value = '';
             event.target.value = '';
+            toast({
+                type: 'error',
+                title: 'Error',
+                description: 'Failed to compress image'
+            });
         }
     } catch (error) {
-        console.error('File handling error:', error);
-        toast({ type: 'error', message: 'Error processing image' });
+        logger.error('File handling error:', error);
         avatar.value = null;
         avatarPreview.value = '';
         event.target.value = '';
+        toast({
+            type: 'error',
+            title: 'Error',
+            description: 'Failed to process image file'
+        });
     }
 };
 
@@ -169,26 +203,50 @@ const removeAvatar = () => {
 
 const handleSubmit = async () => {
     if (isCompressing.value) {
-        toast({ type: 'info', message: 'Please wait while the image is being processed' });
+        toast({
+            type: 'info',
+            title: 'Processing',
+            description: 'Please wait while the image is being processed'
+        });
         return;
     }
-    if (userNameError.value) return;
+    if (userNameError.value) {
+        toast({
+            type: 'error',
+            title: 'Validation Error',
+            description: userNameError.value
+        });
+        return;
+    }
 
     try {
         const sanitizedUserName = sanitizeInput(userName.value);
         await userStore.updateProfile(sanitizedUserName, avatar.value);
 
         if (user.value?.isBlocked) {
-            toast({ type: 'error', message: 'Your account has been blocked.' });
+            toast({
+                type: 'error',
+                title: 'Account Blocked',
+                description: 'Your account has been blocked.'
+            });
             router.push({ name: 'Login' });
         } else {
-            toast({ type: 'success', message: 'Profile updated successfully.' });
+            toast({
+                type: 'success',
+                title: 'Success',
+                description: 'Profile updated successfully.'
+            });
             setTimeout(() => {
                 router.push({ name: 'Home' });
             }, 2000);
         }
     } catch (error) {
-        console.error('Error updating profile:', error);
+        logger.error('Error updating profile:', error);
+        toast({
+            type: 'error',
+            title: 'Error',
+            description: error.message || 'Failed to update profile'
+        });
     }
 };
 
@@ -221,7 +279,11 @@ watch(
     () => errorMessage.value,
     (newError) => {
         if (newError) {
-            toast(newError, 'error');
+            toast({
+                type: 'error',
+                title: 'Error',
+                description: newError
+            });
         }
     }
 );
@@ -230,7 +292,11 @@ watch(
     () => successMessage.value,
     (newSuccess) => {
         if (newSuccess) {
-            toast(newSuccess, 'success');
+            toast({
+                type: 'success',
+                title: 'Success',
+                description: newSuccess
+            });
         }
     }
 );

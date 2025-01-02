@@ -1,90 +1,99 @@
 <template>
-    <div class="max-w-md mx-auto mt-8 bg-white shadow-md rounded-lg p-6">
-        <div class="text-center">
-            <img class="mx-auto h-12 w-auto" src="../../assets/logo.svg" alt="HUSTBOOK Logo" />
-            <h2 class="mt-6 text-3xl font-extrabold text-gray-900 flex items-center justify-center">
-                <ShieldCheck class="w-8 h-8 mr-2 text-indigo-600" aria-hidden="true" />
-                Verify Your Account
-            </h2>
-            <p class="mt-2 text-sm text-gray-600">
-                Please enter the verification code
-            </p>
-        </div>
+    <div class="flex items-center justify-center min-h-screen bg-background">
+        <Card class="w-full max-w-md mx-auto">
+            <CardHeader>
+                <img class="mx-auto h-12 w-auto mb-6" src="../../assets/logo.svg" alt="HUSTBOOK" />
+                <CardTitle class="text-2xl text-center flex items-center justify-center">
+                    <ShieldCheck class="w-6 h-6 mr-2 text-primary" />
+                    Verify Your Account
+                </CardTitle>
+                <CardDescription class="text-center">
+                    Please enter the verification code
+                </CardDescription>
+            </CardHeader>
 
-        <!-- Lockout Warning -->
-        <div v-if="isLocked" class="bg-red-100 text-red-700 p-4 rounded-md mt-4">
-            <XCircleIcon class="h-5 w-5 inline mr-2" />
-            Temporarily locked due to too many incorrect attempts
-            <br />Please try again after 5 minutes
-        </div>
+            <CardContent>
 
-        <!-- Remaining Attempts Warning -->
-        <div v-else-if="remainingAttempts < 5" class="bg-yellow-100 text-yellow-700 p-4 rounded-md mt-4">
-            <AlertTriangle class="h-5 w-5 inline mr-2" />
-            {{ remainingAttempts }} attempts remaining
-        </div>
+                <Alert v-if="isLocked" variant="destructive" class="mb-6">
+                    <AlertCircle class="h-4 w-4" />
+                    <AlertTitle>Account Locked</AlertTitle>
+                    <AlertDescription>
+                        Temporarily locked due to too many incorrect attempts.
+                        <br />Please try again after 5 minutes.
+                    </AlertDescription>
+                </Alert>
 
-        <!-- Verification Code Form -->
-        <form @submit.prevent="handleSubmit" class="mt-8 space-y-6" novalidate>
-            <div>
-                <label class="block text-sm font-medium text-gray-700">
-                    Verification Code
-                </label>
-                <div class="mt-1 flex justify-between gap-2">
-                    <input v-for="(digit, index) in 6" :key="index" v-model="codeDigits[index]" type="text"
-                        maxlength="1"
-                        class="w-12 h-12 text-center border-2 rounded-lg text-lg font-semibold focus:border-blue-500 focus:ring-blue-500"
-                        :class="{
-                            'border-red-500': verifyCodeError,
-                            'border-gray-300': !verifyCodeError
-                        }" @input="handleDigitInput($event, index)" @keydown="handleKeyDown($event, index)"
-                        @paste="handlePaste" ref="digitInputs" />
+                <Alert v-else-if="remainingAttempts < 5" variant="warning" class="mb-6">
+                    <AlertTriangle class="h-4 w-4" />
+                    <AlertTitle>Warning</AlertTitle>
+                    <AlertDescription>
+                        {{ remainingAttempts }} attempts remaining
+                    </AlertDescription>
+                </Alert>
+
+                <form @submit.prevent="handleSubmit" class="space-y-6" novalidate>
+                    <FormField v-slot="{ messages }" name="verificationCode">
+                        <FormItem>
+                            <FormLabel>Verification Code</FormLabel>
+                            <FormControl>
+                                <div class="flex justify-between gap-2">
+                                    <Input v-for="(digit, index) in 6" :key="index" v-model="codeDigits[index]"
+                                        type="text" maxlength="1" class="w-12 h-12 text-center text-lg font-semibold"
+                                        :class="{ 'border-destructive': verifyCodeError }"
+                                        @input="handleDigitInput($event, index)" @keydown="handleKeyDown($event, index)"
+                                        @paste="handlePaste" ref="digitInputs" />
+                                </div>
+                            </FormControl>
+                            <FormMessage>{{ verifyCodeError }}</FormMessage>
+                        </FormItem>
+                    </FormField>
+
+                    <div class="space-y-4">
+                        <Button v-if="!verificationSuccess" type="submit" class="w-full"
+                            :disabled="!isCodeComplete || isLoading" :loading="isLoading">
+                            <ShieldCheck v-if="!isLoading" class="h-4 w-4 mr-2" />
+                            Verify Code
+                        </Button>
+
+                        <Button v-if="verificationSuccess" variant="success" class="w-full"
+                            @click="router.push({ name: 'CompleteProfile', query: { phoneNumber } })">
+                            <UserPlus class="h-4 w-4 mr-2" />
+                            Complete Your Profile
+                        </Button>
+
+                        <!-- Resend Code Button -->
+                        <Button type="button" @click="handleResendCode" :disabled="cooldownRemaining > 0 || isLoading"
+                            class="w-full flex justify-center items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed">
+                            <RefreshCw v-if="!cooldownRemaining" class="h-5 w-5 mr-2" />
+                            <span v-if="cooldownRemaining > 0">
+                                Resend code in {{ cooldownRemaining }}s
+                            </span>
+                            <span v-else>Resend Code</span>
+                        </Button>
+                    </div>
+                </form>
+
+                <!-- Back Button -->
+                <div class="mt-4">
+                    <button @click="goBack"
+                        class="w-full flex justify-center items-center px-4 py-2 text-sm text-gray-600 hover:text-gray-900">
+                        <ArrowLeft class="h-4 w-4 mr-2" />
+                        Go back
+                    </button>
                 </div>
-                <p v-if="verifyCodeError" class="mt-2 text-sm text-red-600">
-                    {{ verifyCodeError }}
-                </p>
-            </div>
-
-            <!-- Submit Button -->
-            <div class="space-y-4">
-                <button v-if="!verificationSuccess" type="submit" :disabled="!isCodeComplete || isLoading"
-                    class="w-full flex justify-center items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed">
-                    <Loader2 v-if="isLoading" class="animate-spin h-5 w-5 mr-2" />
-                    <span>Verify Code</span>
-                </button>
-
-                <router-link v-if="verificationSuccess" :to="{ name: 'CompleteProfile', query: { phoneNumber } }"
-                    class="w-full flex justify-center items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500">
-                    <UserPlus class="h-5 w-5 mr-2" />
-                    <span>Complete Your Profile</span>
-                </router-link>
-
-                <!-- Resend Code Button -->
-                <button type="button" @click="handleResendCode" :disabled="cooldownRemaining > 0 || isLoading"
-                    class="w-full flex justify-center items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed">
-                    <RefreshCw v-if="!cooldownRemaining" class="h-5 w-5 mr-2" />
-                    <span v-if="cooldownRemaining > 0">
-                        Resend code in {{ cooldownRemaining }}s
-                    </span>
-                    <span v-else>Resend Code</span>
-                </button>
-            </div>
-        </form>
-
-        <!-- Back Button -->
-        <div class="mt-4">
-            <button @click="goBack"
-                class="w-full flex justify-center items-center px-4 py-2 text-sm text-gray-600 hover:text-gray-900">
-                <ArrowLeft class="h-4 w-4 mr-2" />
-                Go back
-            </button>
-        </div>
+            </CardContent>
+        </Card>
     </div>
 </template>
 
 <script setup>
 import { ref, computed, onMounted, watch } from 'vue';
-import { ShieldCheck, RefreshCw, Loader2, XCircleIcon, AlertTriangle, ArrowLeft, UserPlus } from 'lucide-vue-next';
+import { ShieldCheck, RefreshCw, AlertCircle, AlertTriangle, ArrowLeft, UserPlus } from 'lucide-vue-next';
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
+import { FormField, FormItem, FormLabel, FormControl, FormMessage } from '@/components/ui/form';
 import { useRouter, useRoute } from 'vue-router';
 import { useUserStore } from '../../stores/userStore';
 import { storeToRefs } from 'pinia';
@@ -165,11 +174,19 @@ const handleSubmit = async () => {
 const handleResendCode = async () => {
     const response = await userStore.getVerifyCode(phoneNumber.value);
     if (response.success) {
-        toast({ type: 'success', message: 'New verification code sent successfully' });
+        toast({
+            type: 'success',
+            title: 'Success',
+            description: 'New verification code sent successfully'
+        });
         codeDigits.value = Array(6).fill('');
         digitInputs.value[0]?.focus();
     } else {
-        toast({ type: 'error', message: 'Failed to send new verification code' });
+        toast({
+            type: 'error',
+            title: 'Error',
+            description: 'Failed to send new verification code'
+        });
     }
 };
 

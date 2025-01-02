@@ -1,27 +1,31 @@
 import { computed, ref, onUnmounted } from 'vue';
 
 const TOAST_LIMIT = 1;
-const TOAST_REMOVE_DELAY = 100000;
+const TOAST_REMOVE_DELAY = 3000;
 const TOAST_TYPES = {
   success: {
     variant: 'success',
     title: 'Success',
     duration: 3000,
+    icon: 'CheckCircle'
   },
   error: {
     variant: 'destructive',
     title: 'Error',
-    duration: 3000,
+    duration: 5000,
+    icon: 'AlertCircle'
   },
   warning: {
     variant: 'warning',
     title: 'Warning',
-    duration: 3000,
+    duration: 4000,
+    icon: 'AlertTriangle'
   },
   info: {
     variant: 'default',
     title: 'Info',
     duration: 3000,
+    icon: 'Info'
   }
 };
 
@@ -131,20 +135,33 @@ function toast(options) {
   const id = genId();
 
   let toastOptions;
+  const defaultOptions = TOAST_TYPES.info;
+
   if (typeof options === 'string') {
     toastOptions = {
+      ...defaultOptions,
       description: options,
-      ...TOAST_TYPES.info, // Use a default safe type for string messages
     };
   } else {
-    const { type = 'info', message, ...rest } = options;
+    const { type, message, variant, description, duration, ...rest } = options;
+    
+    // Determine the toast type
+    let toastType = 'info';
+    if (type && TOAST_TYPES[type]) {
+      toastType = type;
+    } else if (variant === 'destructive') {
+      toastType = 'error';
+    } else if (TOAST_TYPES[variant]) {
+      toastType = variant;
+    }
 
-    const validType = Object.prototype.hasOwnProperty.call(TOAST_TYPES, type) ? type : 'info';
+    const typeDefaults = TOAST_TYPES[toastType];
 
     toastOptions = {
-      description: message,
-      ...TOAST_TYPES[validType],
+      ...typeDefaults,
       ...rest,
+      duration: duration || typeDefaults.duration,
+      description: description || message || rest.title || '',
     };
   }
 

@@ -1,118 +1,107 @@
 <template>
-    <div class="min-h-screen max-w-md mx-auto mt-8 bg-white shadow-md rounded-lg p-6">
-        <div class="text-center">
-            <img class="mx-auto h-12 w-auto" src="../../assets/logo.svg" alt="HUSTBOOK Logo" />
-            <h2 class="mt-6 text-3xl font-extrabold text-gray-900 flex items-center justify-center">
-                <ShieldCheck class="w-8 h-8 mr-2 text-indigo-600" aria-hidden="true" />
-                Get Verification Code
-            </h2>
-            <p class="mt-2 text-sm text-gray-600">
-                Please enter your phone number to receive the verification code.
-            </p>
-        </div>
+    <div class="flex items-center justify-center min-h-screen bg-background">
+        <Card class="w-full max-w-md mx-auto">
+            <CardHeader>
+                <img class="mx-auto h-12 w-auto mb-6" src="../../assets/logo.svg" alt="HUSTBOOK" />
+                <CardTitle class="text-2xl text-center flex items-center justify-center">
+                    <ShieldCheck class="w-6 h-6 mr-2 text-primary" />
+                    Get Verification Code
+                </CardTitle>
+                <CardDescription class="text-center">
+                    Please enter your phone number to receive the verification code.
+                </CardDescription>
+            </CardHeader>
 
-        <!-- Lockout Warning -->
-        <div v-if="isLocked" class="bg-red-100 text-red-700 p-4 rounded-md mt-4">
-            Temporarily locked due to too many attempts. Please try again after 5 minutes.
-        </div>
+            <CardContent>
+                <Alert v-if="isLocked" variant="destructive" class="mb-6">
+                    <AlertCircle class="h-4 w-4" />
+                    <AlertTitle>Account Locked</AlertTitle>
+                    <AlertDescription>
+                        Temporarily locked due to too many attempts. Please try again after 5 minutes.
+                    </AlertDescription>
+                </Alert>
 
-        <form @submit.prevent="handleSubmit" class="mt-8 space-y-6" novalidate>
-            <div class="space-y-1">
-                <label for="phoneNumber" class="block text-sm font-medium text-gray-700">Phone Number</label>
-                <div class="relative">
-                    <input v-model="phoneNumber" id="phoneNumber" type="tel" name="phoneNumber"
-                        placeholder="Enter your phone number" :class="[
-                            'w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500',
-                            { 'border-red-500': errors.phoneNumber },
-                            { 'border-gray-300': !errors.phoneNumber }
-                        ]" :disabled="isLoading || cooldownRemaining > 0" @input="handlePhoneNumberInput" required />
-                    <div v-if="phoneNumber" class="absolute right-2 top-2">
-                        <XCircle v-if="errors.phoneNumber" class="h-5 w-5 text-red-500" @click="phoneNumber = ''" />
-                        <CheckCircle v-else-if="isValidPhone" class="h-5 w-5 text-green-500" />
+                <form @submit.prevent="handleSubmit" class="space-y-6" novalidate>
+                    <FormField v-slot="{ messages }" name="phoneNumber">
+                        <FormItem>
+                            <FormLabel>Phone Number</FormLabel>
+                            <FormControl>
+                                <Input v-model="phoneNumber" type="tel" maxlength="10" pattern="[0-9]*"
+                                    :disabled="isLoading || cooldownRemaining > 0" @input="handlePhoneNumberInput"
+                                    placeholder="Enter your phone number">
+                                <template #prefix>
+                                    <Phone class="h-4 w-4 text-muted-foreground" />
+                                </template>
+                                <template #suffix>
+                                    <XCircle v-if="errors.phoneNumber" class="h-4 w-4 text-destructive cursor-pointer"
+                                        @click="phoneNumber = ''" />
+                                    <CheckCircle v-else-if="isValidPhone" class="h-4 w-4 text-success" />
+                                </template>
+                                </Input>
+                            </FormControl>
+                            <FormMessage />
+                        </FormItem>
+                    </FormField>
+
+                    <Button type="submit" class="w-full" :disabled="isLoading || !isValidPhone || cooldownRemaining > 0"
+                        :loading="isLoading">
+                        <ShieldCheck v-if="!isLoading" class="h-4 w-4 mr-2" />
+                        <span v-if="cooldownRemaining > 0">
+                            Resend code in {{ cooldownRemaining }}s
+                        </span>
+                        <span v-else>
+                            Get Verification Code
+                        </span>
+                    </Button>
+                </form>
+
+                <Alert v-if="verificationCode" variant="success" class="mt-6">
+                    <CheckCircle class="h-4 w-4" />
+                    <AlertTitle>Verification Code</AlertTitle>
+                    <AlertDescription class="flex justify-between items-center">
+                        <span>Your verification code is: <span class="font-bold">{{ verificationCode }}</span></span>
+                        <Button variant="outline" size="sm" @click="copyToClipboard">
+                            <CopyIcon v-if="!copied" class="h-4 w-4 mr-2" />
+                            <CheckIcon v-else class="h-4 w-4 mr-2" />
+                            {{ copied ? 'Copied!' : 'Copy' }}
+                        </Button>
+                    </AlertDescription>
+
+                    <div class="mt-4 space-y-2">
+                        <Button class="w-full" @click="copyAndProceed">
+                            <ArrowRightIcon class="h-4 w-4 mr-2" />
+                            Copy & Continue to Verification
+                        </Button>
+
+                        <Button variant="outline" class="w-full" @click="proceedToVerification">
+                            <ArrowRightIcon class="h-4 w-4 mr-2" />
+                            Skip Copy and Continue
+                        </Button>
                     </div>
-                </div>
-                <p v-if="errors.phoneNumber" class="text-red-500 text-xs mt-1">{{ errors.phoneNumber[0] }}</p>
-            </div>
+                </Alert>
 
-            <div class="space-y-4">
-                <button type="submit" :disabled="isLoading || !isValidPhone || cooldownRemaining > 0" :class="[
-                    'w-full flex items-center justify-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white',
-                    isLoading || !isValidPhone || cooldownRemaining > 0
-                        ? 'bg-gray-400 cursor-not-allowed'
-                        : 'bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500'
-                ]">
-                    <Loader2 v-if="isLoading" class="h-5 w-5 mr-2 animate-spin" />
-                    <ShieldCheck v-else class="h-5 w-5 mr-2" />
-                    <span v-if="cooldownRemaining > 0">
-                        Resend code in {{ cooldownRemaining }}s
-                    </span>
-                    <span v-else>
-                        Get Verification Code
-                    </span>
-                </button>
-            </div>
-        </form>
+                <Alert v-if="successMessage" variant="success" class="mt-4">
+                    <CheckCircle class="h-4 w-4" />
+                    <AlertDescription>{{ successMessage }}</AlertDescription>
+                </Alert>
 
-        <!-- Verification Code Display -->
-        <div class="mt-6 bg-green-50 border border-green-200 rounded-md p-4">
-            <div class="flex justify-between items-start">
-                <div class="flex">
-                    <div class="flex-shrink-0">
-                        <CheckCircleIcon class="h-5 w-5 text-green-400" />
-                    </div>
-                    <div class="ml-3">
-                        <h3 class="text-sm font-medium text-green-800">Verification Code</h3>
-                        <div class="mt-2 text-sm text-green-700">
-                            <p>Your verification code is: <span class="font-bold">{{ verificationCode }}</span></p>
-                        </div>
-                    </div>
-                </div>
-                <button @click="copyToClipboard"
-                    class="ml-4 flex items-center text-sm text-blue-600 hover:text-blue-800">
-                    <CopyIcon v-if="!copied" class="h-5 w-5 mr-1" />
-                    <CheckIcon v-else class="h-5 w-5 mr-1 text-green-500" />
-                    {{ copied ? 'Copied!' : 'Copy' }}
-                </button>
-            </div>
-
-            <!-- Actions Buttons -->
-            <div class="mt-4 space-y-2">
-                <!-- Copy & Continue Button -->
-                <button @click="copyAndProceed"
-                    class="w-full flex justify-center items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
-                    <ArrowRightIcon class="h-5 w-5 mr-2" />
-                    Copy & Continue to Verification
-                </button>
-
-                <!-- Skip Copy Button -->
-                <button @click="proceedToVerification"
-                    class="w-full flex justify-center items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
-                    <ArrowRightIcon class="h-5 w-5 mr-2" />
-                    Skip Copy and Continue
-                </button>
-            </div>
-        </div>
-
-        <!-- Status Messages -->
-        <div v-if="successMessage" class="mt-4 bg-green-50 border border-green-200 rounded-md p-4">
-            <div class="flex">
-                <CheckCircleIcon class="h-5 w-5 text-green-400" />
-                <p class="ml-3 text-sm text-green-700">{{ successMessage }}</p>
-            </div>
-        </div>
-
-        <div v-if="error" class="mt-4 bg-red-50 border border-red-200 rounded-md p-4">
-            <div class="flex">
-                <XCircleIcon class="h-5 w-5 text-red-400" />
-                <p class="ml-3 text-sm text-red-700">{{ error }}</p>
-            </div>
-        </div>
+                <Alert v-if="error" variant="destructive" class="mt-4">
+                    <AlertCircle class="h-4 w-4" />
+                    <AlertDescription>{{ error }}</AlertDescription>
+                </Alert>
+            </CardContent>
+        </Card>
     </div>
 </template>
 
 <script setup>
 import { ref, computed, watch } from 'vue';
-import { ShieldCheck, CheckCircleIcon, XCircleIcon, CopyIcon, CheckIcon, ArrowRightIcon, Loader2, CheckCircle, XCircle } from 'lucide-vue-next';
+import { ShieldCheck, CheckCircle, XCircle, CopyIcon, CheckIcon, ArrowRightIcon, Phone, AlertCircle } from 'lucide-vue-next';
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
+import { FormField, FormItem, FormLabel, FormControl, FormMessage } from '@/components/ui/form';
 import { useRouter, useRoute } from 'vue-router';
 import { useUserStore } from '../../stores/userStore';
 import { useFormValidation } from '../../composables/useFormValidation';
@@ -148,13 +137,21 @@ const copyToClipboard = async () => {
     try {
         await navigator.clipboard.writeText(verificationCode.value);
         copied.value = true;
-        toast({ type: 'success', message: 'Verification code copied' });
+        toast({
+            type: 'success',
+            title: 'Success',
+            description: 'Verification code copied to clipboard'
+        });
         setTimeout(() => {
             copied.value = false;
         }, 2000);
         return true;
     } catch (err) {
-        toast({ type: 'error', message: 'Unable to copy verification code' });
+        toast({
+            type: 'error',
+            title: 'Error',
+            description: 'Unable to copy verification code'
+        });
         return false;
     }
 };
@@ -182,7 +179,11 @@ const handleSubmit = async () => {
     }
 
     if (isLocked.value) {
-        toast({ type: 'error', message: 'Account temporarily locked. Please try again later.' });
+        toast({
+            type: 'error',
+            title: 'Error',
+            description: 'Account temporarily locked. Please try again later'
+        });
         return;
     }
 

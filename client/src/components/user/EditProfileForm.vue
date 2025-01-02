@@ -134,7 +134,15 @@ const validators = {
 // Validate form fields
 const validateField = (field, value) => {
     if (validators[field]) {
-        errors.value[field] = validators[field](value)
+        const error = validators[field](value)
+        errors.value[field] = error
+        if (error) {
+            toast({
+                type: 'warning',
+                title: 'Validation Error',
+                description: `${field}: ${error}`
+            })
+        }
     }
 }
 
@@ -169,20 +177,22 @@ const handleSubmit = async () => {
 
         if (success) {
             toast({
-                title: 'Success',
-                description: 'Profile updated successfully',
+                type: 'success',
+                title: 'Profile Updated',
+                description: 'Your profile has been updated successfully'
             })
             logger.info('Profile updated successfully')
         } else {
             throw new Error('Failed to update profile')
         }
     } catch (err) {
-        error.value = err.message || 'An error occurred while updating your profile'
+        const errorMessage = err.message || 'An error occurred while updating your profile'
+        error.value = errorMessage
         logger.error('Profile update failed', { error: err })
         toast({
-            title: 'Error',
-            description: error.value,
-            variant: 'destructive',
+            type: 'error',
+            title: 'Update Failed',
+            description: errorMessage
         })
     } finally {
         isLoading.value = false
@@ -205,10 +215,21 @@ const loadUserData = async () => {
                 cover_image: userData.cover_image || ''
             }
             initialForm = { ...form.value }
+            toast({
+                type: 'success',
+                title: 'Profile Loaded',
+                description: 'Your profile data has been loaded successfully'
+            })
         }
     } catch (err) {
-        logger.error('Failed to load user data', { error: err })
-        error.value = 'Failed to load user data'
+        const errorMessage = 'Failed to load user data'
+        logger.error(errorMessage, { error: err })
+        error.value = errorMessage
+        toast({
+            type: 'error',
+            title: 'Load Failed',
+            description: errorMessage
+        })
     } finally {
         isLoading.value = false
     }

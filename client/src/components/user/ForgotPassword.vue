@@ -1,85 +1,131 @@
 <template>
-  <div class="flex flex-col items-center justify-center p-4 min-h-screen">
-    <Card class="w-full max-w-md p-8">
-      <h2 class="text-2xl font-bold mb-6 text-center">Reset Password</h2>
-      <Alert v-if="verificationCode" class="mb-4">
-        <AlertDescription class="flex items-center justify-between">
-          <span>Verification Code: <strong>{{ verificationCode }}</strong></span>
-          <Button variant="outline" size="sm" class="flex items-center gap-2" @click="copyCode">
-            <Copy class="h-4 w-4" />
-            Copy
-          </Button>
-        </AlertDescription>
-      </Alert>
-
-      <!-- Step 1: Phone Number Form -->
-      <form v-if="step === 1" @submit.prevent="handlePhoneSubmit" class="space-y-4">
-        <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">Phone Number</label>
-          <Input v-model="phoneNumber" type="tel" placeholder="Enter your phone number"
-            :error="submitted && errors.phoneNumber" @input="clearErrors" />
-          <p v-if="submitted && errors.phoneNumber" class="mt-1 text-sm text-red-600">
-            {{ errors.phoneNumber }}
-          </p>
-        </div>
-
-        <Button type="submit" :loading="isLoading" class="w-full" :disabled="isSubmitDisabled">
-          Get Verification Code
-        </Button>
-
-        <div class="text-center mt-4">
-          <router-link to="/login" class="text-blue-600 hover:text-blue-800">
-            Back to Login
-          </router-link>
-        </div>
-      </form>
-
-      <!-- Step 2: Verification and New Password Form -->
-      <form v-if="step === 2" @submit.prevent="handleResetSubmit" class="space-y-4">
-        <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">Verification Code</label>
-          <Input v-model="code" type="text" placeholder="Enter verification code" :error="submitted && errors.code"
-            @input="clearErrors" maxlength="6" />
-          <div v-if="submitted && errors.code" class="mt-1 text-sm text-red-600">
-            {{ errors.code }}
-          </div>
-          <div v-if="remainingAttempts < 5" class="mt-1 text-sm text-gray-600">
-            {{ remainingAttempts }} attempts remaining
-          </div>
-          <div v-if="cooldown > 0" class="mt-2 text-sm text-gray-600">
-            Resend code in {{ cooldown }}s
-          </div>
-          <Button v-else type="button" variant="ghost" @click="resendCode"
-            class="mt-2 text-sm text-blue-600 hover:text-blue-800">
-            Resend verification code
-          </Button>
-        </div>
-
-        <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">New Password</label>
-          <Input v-model="newPassword" type="password" placeholder="Enter new password"
-            :error="submitted && errors.newPassword" @input="clearErrors" />
-          <div v-if="submitted && errors.newPassword" class="mt-1 text-sm text-red-600">
-            {{ errors.newPassword }}
-          </div>
-          <div class="mt-1 text-sm text-gray-500">
-            Password must be at least 8 characters long and include uppercase, lowercase, and numbers
-          </div>
-        </div>
-
-        <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">Confirm Password</label>
-          <Input v-model="confirmPassword" type="password" placeholder="Confirm new password"
-            :error="submitted && errors.confirmPassword" @input="clearErrors" />
-          <div v-if="submitted && errors.confirmPassword" class="mt-1 text-sm text-red-600">
-            {{ errors.confirmPassword }}
-          </div>
-        </div>
-
-        <Button type="submit" :loading="isLoading" class="w-full" :disabled="isSubmitDisabled">
+  <div class="flex items-center justify-center min-h-screen bg-background">
+    <Card class="w-full max-w-md mx-auto">
+      <CardHeader class="space-y-2">
+        <img class="mx-auto h-12 w-auto" src="../../assets/logo.svg" alt="HUSTBOOK" />
+        <CardTitle class="text-2xl text-center flex items-center justify-center">
+          <KeyIcon class="w-6 h-6 mr-2 text-primary" />
           Reset Password
-        </Button>
-      </form>
+        </CardTitle>
+        <CardDescription class="text-center">
+          Reset your password using phone verification
+        </CardDescription>
+      </CardHeader>
+
+      <CardContent class="space-y-4">
+        <Alert v-if="verificationCode" variant="info" class="mb-4">
+          <AlertTitle>Verification Code</AlertTitle>
+          <AlertDescription class="flex items-center justify-between">
+            <span>Your code is: <strong>{{ verificationCode }}</strong></span>
+            <Button variant="outline" size="sm" class="flex items-center gap-2" @click="copyCode">
+              <Copy v-if="!copied" class="h-4 w-4" />
+              <CheckIcon v-else class="h-4 w-4" />
+              {{ copied ? 'Copied!' : 'Copy' }}
+            </Button>
+          </AlertDescription>
+        </Alert>
+
+        <!-- Step 1: Phone Number Form -->
+        <form v-if="step === 1" @submit.prevent="handlePhoneSubmit" class="space-y-6">
+          <FormField v-slot="{ messages }" name="phoneNumber">
+            <FormItem>
+              <FormLabel>Phone Number</FormLabel>
+              <FormControl>
+                <Input v-model="phoneNumber" type="tel" placeholder="Enter your phone number" :disabled="isLoading"
+                  @input="handlePhoneInput">
+                <template #prefix>
+                  <Phone class="h-4 w-4 text-muted-foreground" />
+                </template>
+                <template #suffix>
+                  <XCircle v-if="errors.phoneNumber" class="h-4 w-4 text-destructive cursor-pointer"
+                    @click="phoneNumber = ''" />
+                  <CheckCircle v-else-if="isValidPhone" class="h-4 w-4 text-success" />
+                </template>
+                </Input>
+              </FormControl>
+              <FormMessage>{{ errors.phoneNumber }}</FormMessage>
+            </FormItem>
+          </FormField>
+
+          <Button type="submit" :loading="isLoading" class="w-full" :disabled="!isValidPhone || isLoading">
+            <KeyIcon v-if="!isLoading" class="h-4 w-4 mr-2" />
+            Get Verification Code
+          </Button>
+
+          <div class="text-center">
+            <Button variant="link" @click="router.push('/login')">
+              Back to Login
+            </Button>
+          </div>
+        </form>
+
+        <!-- Step 2: Verification and New Password Form -->
+        <form v-if="step === 2" @submit.prevent="handleResetSubmit" class="space-y-6">
+          <FormField v-slot="{ messages }" name="verificationCode">
+            <FormItem>
+              <FormLabel>Verification Code</FormLabel>
+              <FormControl>
+                <Input v-model="code" type="text" placeholder="Enter verification code" maxlength="6"
+                  :disabled="isLoading" @input="handleCodeInput">
+                <template #prefix>
+                  <ShieldCheck class="h-4 w-4 text-muted-foreground" />
+                </template>
+                </Input>
+              </FormControl>
+              <FormMessage>{{ errors.code }}</FormMessage>
+              <FormDescription v-if="remainingAttempts < 5">
+                {{ remainingAttempts }} attempts remaining
+              </FormDescription>
+            </FormItem>
+          </FormField>
+
+          <FormField v-slot="{ messages }" name="newPassword">
+            <FormItem>
+              <FormLabel>New Password</FormLabel>
+              <FormControl>
+                <Input v-model="newPassword" type="password" placeholder="Enter new password" :disabled="isLoading"
+                  @input="() => validatePassword()">
+                <template #prefix>
+                  <Lock class="h-4 w-4 text-muted-foreground" />
+                </template>
+                </Input>
+              </FormControl>
+              <FormMessage>{{ errors.newPassword }}</FormMessage>
+              <FormDescription>
+                Password must be at least 8 characters with uppercase, lowercase, and numbers
+              </FormDescription>
+            </FormItem>
+          </FormField>
+
+          <FormField v-slot="{ messages }" name="confirmPassword">
+            <FormItem>
+              <FormLabel>Confirm Password</FormLabel>
+              <FormControl>
+                <Input v-model="confirmPassword" type="password" placeholder="Confirm new password"
+                  :disabled="isLoading" @input="() => validateConfirmPassword()">
+                <template #prefix>
+                  <Lock class="h-4 w-4 text-muted-foreground" />
+                </template>
+                </Input>
+              </FormControl>
+              <FormMessage>{{ errors.confirmPassword }}</FormMessage>
+            </FormItem>
+          </FormField>
+
+          <div class="space-y-4">
+            <Button type="submit" :loading="isLoading" class="w-full" :disabled="!isFormValid || isLoading">
+              <KeyIcon v-if="!isLoading" class="h-4 w-4 mr-2" />
+              Reset Password
+            </Button>
+
+            <Button type="button" variant="outline" @click="resendCode" :disabled="cooldown > 0 || isLoading"
+              class="w-full">
+              <RefreshCw v-if="!cooldown" class="h-4 w-4 mr-2" />
+              {{ cooldown > 0 ? `Resend code in ${cooldown}s` : 'Resend Code' }}
+            </Button>
+          </div>
+        </form>
+      </CardContent>
     </Card>
   </div>
 </template>
@@ -89,11 +135,12 @@ import { ref, computed, onBeforeUnmount } from 'vue';
 import { useRouter } from 'vue-router';
 import { useUserStore } from '@/stores/userStore';
 import { useToast } from '../ui/toast';
-import { Input } from '@/components/ui/input';
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Copy } from 'lucide-vue-next';
+import { Input } from '@/components/ui/input';
+import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
+import { FormField, FormItem, FormLabel, FormControl, FormMessage, FormDescription } from '@/components/ui/form';
+import { KeyIcon, Copy, CheckIcon, AlertCircle, AlertTriangle, Phone, Lock, XCircle, CheckCircle, ShieldCheck, RefreshCw } from 'lucide-vue-next';
 import logger from '@/services/logging';
 
 const router = useRouter();
@@ -131,9 +178,17 @@ const isSubmitDisabled = computed(() => {
 const copyCode = async () => {
   try {
     await navigator.clipboard.writeText(verificationCode.value);
-    toast({ type: 'success', message: 'Code copied to clipboard' });
+    toast({
+      type: 'success',
+      title: 'Success',
+      description: 'Verification code copied to clipboard'
+    });
   } catch (error) {
-    toast({ type: 'error', message: 'Failed to copy code' });
+    toast({
+      type: 'error',
+      title: 'Error',
+      description: 'Failed to copy verification code'
+    });
     logger.error('Copy code error:', error);
   }
 };
@@ -224,13 +279,21 @@ const handlePhoneSubmit = async () => {
       verificationCode.value = response.verifyCode;
       step.value = 2;
       startCooldown();
-      toast({ type: 'success', message: 'Verification code sent successfully' });
+      toast({
+        type: 'success',
+        description: 'Verification code sent successfully',
+        duration: 4000
+      });
 
       // Store verification code in localStorage for step 2
       localStorage.setItem('resetPhoneNumber', phoneNumber.value);
     }
   } catch (error) {
-    toast(error.message, 'error');
+    toast({
+      type: 'error',
+      description: error.message || 'Failed to send verification code',
+      duration: 5000
+    });
     logger.error('Phone submission error:', error);
   }
 };
@@ -241,7 +304,11 @@ const handleResetSubmit = async () => {
 
   const storedPhone = localStorage.getItem('resetPhoneNumber');
   if (!storedPhone || !code.value || !newPassword.value) {
-    toast({ type: 'error', message: 'Verification code and new password are required' });
+    toast({
+      type: 'error',
+      title: 'Validation Error',
+      description: 'Verification code and new password are required'
+    });
     return;
   }
 
@@ -254,7 +321,11 @@ const handleResetSubmit = async () => {
 
     if (response?.success) {
       localStorage.removeItem('resetPhoneNumber');
-      toast({ type: 'success', message: 'Password reset successful!' });
+      toast({
+        type: 'success',
+        title: 'Success',
+        description: 'Your password has been reset successfully'
+      });
       router.push('/login');
     }
   } catch (error) {
@@ -272,7 +343,11 @@ const resendCode = async () => {
     if (response?.success) {
       verificationCode.value = response.verifyCode;
       startCooldown();
-      toast({ type: 'success', message: 'Verification code resent successfully!' });
+      toast({
+        type: 'success',
+        title: 'Success',
+        description: 'New verification code sent successfully'
+      });
     }
   } catch (error) {
     toast(error.message, 'error');

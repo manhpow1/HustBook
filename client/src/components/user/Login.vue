@@ -1,98 +1,97 @@
 <template>
-  <div class="flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-    <div class="max-w-md w-full space-y-8">
-      <div>
-        <img class="mx-auto h-12 w-auto" src="../../assets/logo.svg" alt="HUSTBOOK" />
-        <h2 class="mt-6 text-center text-3xl font-extrabold text-gray-900">Sign in to your account</h2>
-        <p class="mt-2 text-center text-sm text-gray-600">
+  <div class="flex items-center justify-center min-h-screen bg-background">
+    <Card class="w-full max-w-md mx-auto">
+      <CardHeader>
+        <img class="mx-auto h-12 w-auto mb-6" src="../../assets/logo.svg" alt="HUSTBOOK" />
+        <CardTitle class="text-2xl text-center">Sign in to your account</CardTitle>
+        <CardDescription class="text-center">
           Or
-          <router-link to="/signup" class="font-medium text-indigo-600 hover:text-indigo-500">
+          <router-link to="/signup" class="font-medium text-primary hover:text-primary/90">
             create a new account
           </router-link>
-        </p>
-      </div>
+        </CardDescription>
+      </CardHeader>
 
-      <div v-if="showSessionWarning" class="rounded-md bg-yellow-50 p-4 mb-4" role="alert">
-        <div class="flex">
-          <AlertCircleIcon class="h-5 w-5 text-yellow-400" />
-          <div class="ml-3">
-            <h3 class="text-sm font-medium text-yellow-800">Session Expiring Soon</h3>
-            <p class="mt-2 text-sm text-yellow-700">Your session will expire soon. Please save your work and re-login.
-            </p>
-          </div>
-        </div>
-      </div>
+      <CardContent>
+        <Alert v-if="showSessionWarning" variant="warning" class="mb-4">
+          <AlertCircle class="h-4 w-4" />
+          <AlertTitle>Session Expiring Soon</AlertTitle>
+          <AlertDescription>
+            Your session will expire soon. Please save your work and re-login.
+          </AlertDescription>
+        </Alert>
 
-      <form @submit.prevent="handleSubmit" class="mt-8 space-y-6" novalidate>
-        <div class="rounded-md shadow-sm -space-y-px">
-          <div class="relative">
-            <label for="phoneNumber" class="sr-only">Phone Number</label>
-            <input v-model="phoneNumber" id="phoneNumber" name="phoneNumber" type="tel" autocomplete="tel" required
-              :disabled="isFormDisabled"
-              class="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-t-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
-              :class="{ 'border-red-500': errors.phone }" placeholder="Phone number" />
-            <transition name="fade">
-              <p v-if="errors.phone" class="mt-2 text-sm text-red-600" role="alert">{{ errors.phone }}</p>
-            </transition>
-          </div>
+        <form @submit.prevent="handleSubmit" class="space-y-6" novalidate>
+          <FormField v-slot="{ messages }" name="phoneNumber">
+            <FormItem>
+              <FormLabel>Phone Number</FormLabel>
+              <FormControl>
+                <Input v-model="phoneNumber" type="tel" maxlength="10" pattern="[0-9]*" :disabled="isFormDisabled"
+                  placeholder="Phone number (10 digits)">
+                <template #prefix>
+                  <Phone class="h-4 w-4 text-muted-foreground" />
+                </template>
+                </Input>
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          </FormField>
 
-          <div class="relative">
-            <label for="password" class="sr-only">Password</label>
-            <div class="flex relative">
-              <input v-model="password" :type="showPassword ? 'text' : 'password'" id="password" name="password"
-                autocomplete="current-password" required :disabled="isFormDisabled"
-                class="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-b-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm pr-10"
-                :class="{ 'border-red-500': errors.password }" placeholder="Password" />
-              <button type="button" @click="togglePasswordVisibility"
-                class="absolute inset-y-0 right-0 pr-3 flex items-center"
-                :aria-label="showPassword ? 'Hide password' : 'Show password'">
-                <EyeIcon v-if="showPassword" class="h-5 w-5 text-gray-400" />
-                <EyeOffIcon v-else class="h-5 w-5 text-gray-400" />
-              </button>
+          <FormField v-slot="{ messages }" name="password">
+            <FormItem>
+              <FormLabel>Password</FormLabel>
+              <FormControl>
+                <Input v-model="password" :type="showPassword ? 'text' : 'password'" :disabled="isFormDisabled"
+                  placeholder="Enter your password">
+                <template #prefix>
+                  <Lock class="h-4 w-4 text-muted-foreground" />
+                </template>
+                <template #suffix>
+                  <button type="button" @click="togglePasswordVisibility"
+                    class="text-muted-foreground hover:text-foreground">
+                    <EyeIcon v-if="showPassword" class="h-4 w-4" />
+                    <EyeOffIcon v-else class="h-4 w-4" />
+                  </button>
+                </template>
+                </Input>
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          </FormField>
+
+          <Alert v-if="remainingAttempts <= 2 && remainingAttempts > 0" variant="warning">
+            <AlertCircle class="h-4 w-4" />
+            <AlertDescription>
+              {{ remainingAttempts }} login attempts remaining before temporary lockout
+            </AlertDescription>
+          </Alert>
+
+          <div class="flex items-center justify-between">
+            <div class="flex items-center space-x-2">
+              <Checkbox v-model="rememberMe" id="remember-me" :disabled="isFormDisabled" />
+              <label for="remember-me"
+                class="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                Remember me
+              </label>
             </div>
-            <transition name="fade">
-              <p v-if="errors.password" class="mt-2 text-sm text-red-600" role="alert">{{ errors.password }}</p>
-            </transition>
-          </div>
-        </div>
-
-        <div v-if="remainingAttempts <= 2 && remainingAttempts > 0" class="text-sm text-yellow-600">
-          {{ remainingAttempts }} login attempts remaining before temporary lockout
-        </div>
-
-        <div class="flex items-center justify-between">
-          <div class="flex items-center">
-            <input v-model="rememberMe" id="remember-me" name="remember-me" type="checkbox" :disabled="isFormDisabled"
-              class="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded" />
-            <label for="remember-me" class="ml-2 block text-sm text-gray-900">Remember me</label>
-          </div>
-          <div class="text-sm">
-            <router-link :to="{ name: 'ForgotPassword' }" class="font-medium text-indigo-600 hover:text-indigo-500">
+            <router-link :to="{ name: 'ForgotPassword' }"
+              class="text-sm font-medium text-primary hover:text-primary/90">
               Forgot your password?
             </router-link>
           </div>
-        </div>
 
-        <div>
-          <button type="submit" :disabled="isFormDisabled"
-            class="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
-            :aria-busy="isLoading">
-            <span class="absolute left-0 inset-y-0 flex items-center pl-3">
-              <Lock class="h-5 w-5 text-indigo-500 group-hover:text-indigo-400" aria-hidden="true" />
-            </span>
-            <LoaderIcon v-if="isLoading" class="animate-spin -ml-1 mr-2 h-5 w-5 text-white" aria-hidden="true" />
-            <span>{{ loginButtonText }}</span>
-          </button>
-        </div>
+          <Button type="submit" class="w-full" :disabled="isFormDisabled" :loading="isLoading">
+            {{ loginButtonText }}
+          </Button>
 
-        <transition name="fade">
-          <div v-if="loginSuccess" class="mt-4 p-4 bg-green-100 rounded-md flex items-center" role="alert">
-            <CheckCircleIcon class="h-5 w-5 text-green-400 mr-2" aria-hidden="true" />
-            <p class="text-green-700">Login successful! Redirecting...</p>
-          </div>
-        </transition>
-      </form>
-    </div>
+          <Alert v-if="loginSuccess" variant="success">
+            <CheckCircle class="h-4 w-4" />
+            <AlertTitle>Success</AlertTitle>
+            <AlertDescription>Login successful! Redirecting...</AlertDescription>
+          </Alert>
+        </form>
+      </CardContent>
+    </Card>
   </div>
 </template>
 
@@ -101,7 +100,13 @@ import { ref, computed, watch, onMounted, onUnmounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { storeToRefs } from 'pinia';
 import Cookies from 'js-cookie';
-import { Lock, LoaderIcon, CheckCircleIcon, AlertCircleIcon, EyeIcon, EyeOffIcon } from 'lucide-vue-next';
+import { Lock, Phone, CheckCircle, AlertCircle, EyeIcon, EyeOffIcon } from 'lucide-vue-next'
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Checkbox } from '@/components/ui/checkbox'
+import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert'
+import { FormField, FormItem, FormLabel, FormControl, FormMessage } from '@/components/ui/form'
 import { useUserStore } from '../../stores/userStore';
 import { useErrorHandler } from '@/utils/errorHandler';
 import { useToast } from '../ui/toast';
@@ -161,7 +166,11 @@ const handleSubmit = async () => {
   try {
     const success = await userStore.login(phoneNumber.value, password.value, rememberMe.value);
     if (success) {
-      toast({ type: 'success', message: 'Login successful!' });
+      toast({
+        type: 'success',
+        title: 'Success',
+        description: 'Login successful!'
+      });
       // Server already verified the user, no need to fetch profile again
       router.push({ name: 'Home' });
     } else {
@@ -174,7 +183,11 @@ const handleSubmit = async () => {
     }
   } catch (err) {
     handleError(err);
-    toast({ type: 'error', message: 'An unexpected error occurred. Please try again.' });
+    toast({
+      type: 'error',
+      title: 'Error',
+      description: 'An unexpected error occurred. Please try again.'
+    });
   }
 };
 
@@ -182,7 +195,11 @@ const togglePasswordVisibility = () => showPassword.value = !showPassword.value;
 
 const showSessionTimeoutWarning = () => {
   showSessionWarning.value = true;
-  toast({ type: 'warning', message: 'Your session will expire soon. Please re-login.' });
+  toast({
+    type: 'warning',
+    title: 'Warning',
+    description: 'Your session will expire soon. Please re-login.'
+  });
 };
 
 watch(
@@ -201,7 +218,11 @@ watch(
 
 onMounted(() => {
   if (isSessionExpired.value) {
-    toast({ type: 'warning', message: 'Your previous session has expired. Please login again.' });
+    toast({
+      type: 'warning',
+      title: 'Warning',
+      description: 'Your previous session has expired. Please login again.'
+    });
   }
 
   const token = Cookies.get('accessToken');
