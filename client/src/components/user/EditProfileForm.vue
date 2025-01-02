@@ -79,6 +79,7 @@
 
 <script setup>
 import { ref, computed, onMounted, watch } from 'vue'
+import { onBeforeRouteLeave } from 'vue-router'
 import { useUserStore } from '@/stores/userStore'
 import { useToast } from '@/components/ui/toast'
 import { AlertCircle, Loader2Icon } from 'lucide-vue-next'
