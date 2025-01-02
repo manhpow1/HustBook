@@ -6,6 +6,7 @@ import { db } from '../config/firebase.js';
 import { createError } from '../utils/customError.js';
 import logger from '../utils/logger.js';
 import redis from '../utils/redis.js';
+import { handleImageUpload } from '../utils/helpers.js';
 
 class PostService {
     async createPost(userId, content, imageFiles) {
