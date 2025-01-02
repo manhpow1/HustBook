@@ -52,7 +52,7 @@ HustBook is a social networking platform designed for students and alumni of Han
 ### Installation
 
 1. Clone the repository:
-git clone [https://github.com/yourusername/hustbook.git](https://github.com/yourusername/hustbook.git)
+git clone [https://github.com/manhpow1/HustBook.git](https://github.com/manhpow1/HustBook.git)
 cd hustbook
 
 2. Install dependencies for both client and server:
@@ -66,7 +66,8 @@ cd ../server && npm install
 
 ## Project Structure
 
-hustbook/
+```
+# hustbook/
 ├── client/
 │   ├── public/
 │   ├── src/
@@ -101,6 +102,7 @@ hustbook/
 │   ├── package.json
 │   └── server.js
 └── README.md
+```
 
 ## Configuration
 
