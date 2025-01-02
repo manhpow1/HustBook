@@ -1,5 +1,5 @@
 <template>
-  <div class="flex items-center justify-center min-h-screen bg-background">
+  <div class="flex items-center justify-center bg-background">
     <Card class="w-full max-w-md mx-auto">
       <CardHeader>
         <img class="mx-auto h-12 w-auto mb-6" src="../../assets/logo.svg" alt="HUSTBOOK" />

@@ -69,7 +69,7 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue';
+import { ref, computed, watch } from 'vue';
 import { useSearchStore } from '@/stores/searchStore';
 import { useFriendStore } from '@/stores/friendStore';
 import { useToast } from '@/components/ui/toast';
