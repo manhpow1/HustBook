@@ -1,44 +1,42 @@
 <template>
   <div class="min-h-screen flex flex-col bg-background">
-    <!-- Navigation -->
     <header
       class="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <nav class="container flex h-16 items-center">
-        <router-link to="/" class="mr-8">
-          <img class="h-8 w-auto" src="../../assets/logo.svg" alt="HUSTBOOK" />
-        </router-link>
+      <nav class="container flex h-16 items-center gap-4">
+        <div class="flex items-center gap-4 flex-shrink-0">
+          <router-link to="/" aria-label="Home">
+            <img class="h-8 w-auto" src="../../assets/logo.svg" alt="HUSTBOOK" />
+          </router-link>
 
-        <div class="flex-1 items-center md:justify-end md:flex">
-          <SearchPosts class="w-full max-w-sm lg:max-w-lg mr-4" />
+          <SearchPosts class="hidden sm:block w-[300px]" />
         </div>
 
-        <!-- Desktop Navigation -->
-        <div class="hidden md:flex items-center space-x-4">
-          <template v-if="isLoggedIn">
-            <NavigationMenu>
-              <NavigationMenuList>
-                <NavigationMenuItem v-for="item in navItems" :key="item.path">
-                  <NavigationMenuLink :href="item.path">
-                    <component :is="iconComponents[item.icon]" class="h-4 w-4 mr-2" />
-                    {{ item.name }}
-                  </NavigationMenuLink>
-                </NavigationMenuItem>
-              </NavigationMenuList>
-            </NavigationMenu>
+        <div class="flex-1 flex items-center justify-end gap-4">
+          <NavigationMenu v-if="isLoggedIn" class="hidden md:flex">
+            <NavigationMenuList>
+              <NavigationMenuItem v-for="item in navItems" :key="item.path">
+                <NavigationMenuLink :href="item.path" :aria-label="item.name">
+                  <component :is="iconComponents[item.icon]" class="h-4 w-4 mr-2" aria-hidden="true" />
+                  {{ item.name }}
+                </NavigationMenuLink>
+              </NavigationMenuItem>
+            </NavigationMenuList>
+          </NavigationMenu>
 
-            <NotificationTab />
+          <NotificationTab v-if="isLoggedIn" />
 
+          <div class="hidden md:flex items-center gap-4" v-if="isLoggedIn">
             <DropdownMenu>
               <DropdownMenuTrigger>
                 <Avatar>
-                  <AvatarImage :src="user?.avatar" />
+                  <AvatarImage :src="user?.avatar" :alt="user?.userName || 'User avatar'" />
                   <AvatarFallback>
-                    <User class="h-4 w-4" />
+                    <User class="h-4 w-4" aria-hidden="true" />
                   </AvatarFallback>
                 </Avatar>
               </DropdownMenuTrigger>
-              <DropdownMenuContent>
-                <DropdownMenuLabel>My Account</DropdownMenuLabel>
+              <DropdownMenuContent align="end">
+                <DropdownMenuLabel>Account</DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem>
                   <router-link to="/profile">Profile</router-link>
@@ -48,11 +46,11 @@
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem @click="handleLogout">
-                  Log out
+                  Logout
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
-          </template>
+          </div>
 
           <template v-else>
             <Button variant="outline" asChild>
@@ -62,39 +60,39 @@
               <router-link to="/signup">Sign Up</router-link>
             </Button>
           </template>
-        </div>
 
-        <!-- Mobile Menu Button -->
-        <Sheet>
-          <SheetTrigger class="md:hidden">
-            <Button variant="ghost" size="icon">
-              <Menu class="h-6 w-6" />
-            </Button>
-          </SheetTrigger>
-          <SheetContent side="right" class="w-72">
-            <SheetHeader>
-              <SheetTitle>Menu</SheetTitle>
-            </SheetHeader>
-            <nav class="flex flex-col space-y-4 mt-4">
-              <template v-if="isLoggedIn">
-                <router-link v-for="item in navItems" :key="item.path" :to="item.path"
-                  class="flex items-center p-2 hover:bg-accent rounded-md">
-                  <component :is="iconComponents[item.icon]" class="h-4 w-4 mr-2" />
-                  {{ item.name }}
-                </router-link>
-                <NotificationTab />
-              </template>
-              <template v-else>
-                <Button variant="outline" class="w-full" asChild>
-                  <router-link to="/login">Sign In</router-link>
-                </Button>
-                <Button class="w-full" asChild>
-                  <router-link to="/signup">Sign Up</router-link>
-                </Button>
-              </template>
-            </nav>
-          </SheetContent>
-        </Sheet>
+          <Sheet>
+            <SheetTrigger class="md:hidden">
+              <Button variant="ghost" size="icon" aria-label="Menu">
+                <Menu class="h-6 w-6" />
+              </Button>
+            </SheetTrigger>
+            <SheetContent side="right" class="w-72">
+              <SheetHeader>
+                <SheetTitle>Menu</SheetTitle>
+              </SheetHeader>
+              <nav class="flex flex-col space-y-4 mt-4">
+                <SearchPosts class="w-full mb-4 sm:hidden" />
+                <template v-if="isLoggedIn">
+                  <router-link v-for="item in navItems" :key="item.path" :to="item.path"
+                    class="flex items-center p-2 hover:bg-accent rounded-md">
+                    <component :is="iconComponents[item.icon]" class="h-4 w-4 mr-2" />
+                    {{ item.name }}
+                  </router-link>
+                  <NotificationTab />
+                </template>
+                <template v-else>
+                  <Button variant="outline" class="w-full" asChild>
+                    <router-link to="/login">Login</router-link>
+                  </Button>
+                  <Button class="w-full" asChild>
+                    <router-link to="/signup">Signup</router-link>
+                  </Button>
+                </template>
+              </nav>
+            </SheetContent>
+          </Sheet>
+        </div>
       </nav>
     </header>
 
