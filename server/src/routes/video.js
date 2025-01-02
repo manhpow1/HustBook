@@ -1,7 +1,7 @@
 /**
  * @swagger
  * tags:
- *   name: Videos
+ *   name: Video
  *   description: Endpoints related to video retrieval and management.
  */
 import { Router } from 'express';
