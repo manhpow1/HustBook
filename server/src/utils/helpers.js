@@ -191,18 +191,14 @@ export async function handleImageUpload(file, folder = 'general') {
     }
 }
 
-async function deleteFileFromStorage(fileUrl) {
+async function deleteFileFromStorage(url) {
     try {
-        if (!fileUrl) return;
-
+        if (!url) return;
         const bucket = admin.storage().bucket();
-        const fileName = fileUrl.split('/').pop();
-
+        const fileName = url.split('/').pop();
         await bucket.file(fileName).delete();
-        logger.info(`Successfully deleted file: ${fileName}`);
     } catch (error) {
-        logger.error('Error deleting file from storage:', error);
-        throw error;
+        logger.error('Error deleting file:', error);
     }
 }
 
@@ -224,5 +220,6 @@ const cleanupFiles = async (files) => {
 export {
     generateAvatarUrl,
     generateCoverPhotoUrl,
+    deleteFileFromStorage,
     cleanupFiles,
 };

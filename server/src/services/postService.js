@@ -6,7 +6,7 @@ import { db } from '../config/firebase.js';
 import { createError } from '../utils/customError.js';
 import logger from '../utils/logger.js';
 import redis from '../utils/redis.js';
-import { handleImageUpload } from '../utils/helpers.js';
+import { handleImageUpload, deleteFileFromStorage } from '../utils/helpers.js';
 
 class PostService {
     async createPost(userId, content, imageFiles) {
@@ -51,73 +51,106 @@ class PostService {
         }
     }
 
-    async updatePost(postId, userId, content, images) {
+    async updatePost(postId, userId, content, newImages) {
         try {
             const existingPost = await this.getPost(postId);
-            if (!existingPost || existingPost.userId !== userId) {
-                throw createError('9992', 'Post not found or unauthorized');
+            if (!existingPost) {
+                throw createError('9992', 'Post not found');
             }
 
+            if (existingPost.userId !== userId) {
+                throw createError('1009', 'Not authorized to update this post');
+            }
+
+            // Create updated post with validation
             const updatedPost = new Post({
                 ...existingPost,
                 content,
-                images,
-                updatedAt: new Date(),
-            }).toJSON();
+                images: newImages,
+                updatedAt: new Date()
+            });
 
-            await updateDocument(collections.posts, postId, updatedPost);
-            return updatedPost;
+            // Validate the updated post
+            updatedPost.validate();
+
+            // Delete old images if they're being replaced
+            if (existingPost.images && existingPost.images.length > 0 && newImages.length > 0) {
+                try {
+                    await Promise.all(
+                        existingPost.images.map(url => deleteFileFromStorage(url))
+                    );
+                } catch (error) {
+                    logger.error('Error deleting old images:', error);
+                    // Continue with update even if image deletion fails
+                }
+            }
+
+            // Update in database
+            await updateDocument(collections.posts, postId, updatedPost.toJSON());
+
+            // Clear cache
+            await redis.del(`post:${postId}`);
+            await redis.del(`user:${userId}:posts`);
+
+            return updatedPost.toJSON();
         } catch (error) {
             logger.error('Error in updatePost service:', error);
-            if (error.code) {
-                throw error;
-            }
-            throw createError('9999', 'Exception error');
+            throw error.code ? error : createError('9999', 'Exception error');
         }
     }
 
-    async deletePost(postId) {
-        try {
-            return await db.runTransaction(async (transaction) => {
-                const postRef = db.collection(collections.posts).doc(postId);
-                const postDoc = await transaction.get(postRef);
-                if (!postDoc.exists) {
-                    throw createError('9992', 'The requested post does not exist.');
-                }
-                const post = postDoc.data();
-                // Validate post state
-                if (!Post.validateForDeletion(post)) {
-                    throw createError('1012', 'Post cannot be deleted');
-                }
-                // Delete associated resources
-                const [commentsSnapshot, likesSnapshot] = await Promise.all([
-                    transaction.get(postRef.collection('comments')),
-                    transaction.get(db.collection(collections.likes).where('postId', '==', postId))
-                ]);
-                // Batch delete operations
-                const batch = db.batch();
-                // Delete comments
-                commentsSnapshot.docs.forEach(doc => batch.delete(doc.ref));
-                // Delete likes
-                likesSnapshot.docs.forEach(doc => batch.delete(doc.ref));
-                // Delete images
-                if (post.images && post.images.length > 0) {
-                    // Add image deletion logic
-                }
-                // Delete the post
-                batch.delete(postRef);
-                // Commit the batch
-                await batch.commit();
-                // Clear cache
-                await redis.del(`post:${postId}`);
-                // Log the deletion
-                logger.info(`Post ${postId} deleted successfully`);
-                return true;
+    async deletePost(postId, userId) {
+        return await db.runTransaction(async (transaction) => {
+            const postRef = db.collection(collections.posts).doc(postId);
+            const postDoc = await transaction.get(postRef);
+
+            if (!postDoc.exists) {
+                throw createError('9992', 'Post not found');
+            }
+
+            const post = postDoc.data();
+            if (post.userId !== userId && !post.isAdmin) {
+                throw createError('1009', 'Not authorized to delete this post');
+            }
+
+            if (!Post.validateForDeletion(post)) {
+                throw createError('1012', 'Post cannot be deleted');
+            }
+
+            // Get associated resources
+            const [commentsSnapshot, likesSnapshot] = await Promise.all([
+                transaction.get(postRef.collection('comments')),
+                transaction.get(db.collection(collections.likes).where('postId', '==', postId))
+            ]);
+
+            // Delete comments
+            commentsSnapshot.docs.forEach(doc => {
+                transaction.delete(doc.ref);
             });
-        } catch (error) {
-            logger.error('Error in deletePost service:', error);
-            throw error;
-        }
+
+            // Delete likes
+            likesSnapshot.docs.forEach(doc => {
+                transaction.delete(doc.ref);
+            });
+
+            // Delete images
+            if (post.images?.length > 0) {
+                await Promise.all(post.images.map(url => deleteFileFromStorage(url)));
+            }
+
+            // Delete post
+            transaction.delete(postRef);
+
+            // Clear caches
+            await Promise.all([
+                redis.del(`post:${postId}`),
+                redis.del(`user:${post.userId}:posts`),
+                redis.del(`post:${postId}:comments`),
+                redis.del(`post:${postId}:likes`)
+            ]);
+
+            return true;
+        });
     }
 
     async checkUserLike(postId, userId) {
@@ -132,23 +165,68 @@ class PostService {
     }
 
     async toggleLike(postId, userId) {
-        try {
-            const isLiked = await this.checkUserLike(postId, userId);
-            await db.runTransaction(async (transaction) => {
-                const postRef = db.collection(collections.posts).doc(postId);
-                const likeRef = db.collection(collections.likes).doc(`${postId}_${userId}`);
+        const likeId = `${postId}_${userId}`;
 
-                if (isLiked) {
-                    transaction.update(postRef, { likes: admin.firestore.FieldValue.increment(-1) });
-                    transaction.delete(likeRef);
-                } else {
-                    transaction.update(postRef, { likes: admin.firestore.FieldValue.increment(1) });
-                    transaction.set(likeRef, { userId, postId, createdAt: new Date() });
-                }
+        return await db.runTransaction(async (transaction) => {
+            const postRef = db.collection(collections.posts).doc(postId);
+            const likeRef = db.collection(collections.likes).doc(likeId);
+
+            const [postDoc, likeDoc] = await Promise.all([
+                transaction.get(postRef),
+                transaction.get(likeRef)
+            ]);
+
+            if (!postDoc.exists) {
+                throw createError('9992', 'Post not found');
+            }
+
+            const liked = !likeDoc.exists;
+            const postData = postDoc.data();
+            const newLikeCount = (postData.likes || 0) + (liked ? 1 : -1);
+
+            if (liked) {
+                transaction.set(likeRef, {
+                    userId,
+                    postId,
+                    createdAt: new Date()
+                });
+            } else {
+                transaction.delete(likeRef);
+            }
+
+            transaction.update(postRef, {
+                likes: newLikeCount,
+                updatedAt: new Date()
+            });
+
+            // Invalidate caches
+            await Promise.all([
+                redis.del(`post:${postId}`),
+                redis.del(`user:${userId}:likes`),
+                redis.del(`post:${postId}:likeCount`)
+            ]);
+
+            // Log activity
+            await this.logLikeActivity(userId, postId, liked);
+
+            return {
+                liked,
+                likeCount: newLikeCount
+            };
+        });
+    }
+
+    async logLikeActivity(userId, postId, isLike) {
+        try {
+            await db.collection('activities').add({
+                type: isLike ? 'like' : 'unlike',
+                userId,
+                postId,
+                timestamp: new Date()
             });
         } catch (error) {
-            logger.error('Error in toggleLike service:', error);
-            throw createError('9999', 'Exception error');
+            logger.error('Failed to log like activity:', error);
+            // Non-blocking error
         }
     }
 
@@ -181,33 +259,90 @@ class PostService {
         }
     }
 
-    async getComments(postId, limit = 20, startAfterDoc = null) {
+    async getComments(postId, userId, limit = 20, lastVisible = null) {
         try {
-            let query = db.collection(collections.comments)
-                .where('postId', '==', postId)
+            const postRef = db.collection(collections.posts).doc(postId);
+            const post = await postRef.get();
+
+            if (!post.exists) {
+                throw createError('9992', 'Post not found');
+            }
+
+            let query = postRef.collection('comments')
                 .orderBy('createdAt', 'desc')
                 .limit(limit);
 
-            if (startAfterDoc) {
-                query = query.startAfter(startAfterDoc);
+            if (lastVisible) {
+                const decodedLastVisible = Buffer.from(lastVisible, 'base64').toString('utf-8');
+                const lastDoc = await postRef.collection('comments').doc(decodedLastVisible).get();
+
+                if (!lastDoc.exists) {
+                    throw createError('1004', 'Invalid pagination token');
+                }
+                query = query.startAfter(lastDoc);
             }
 
             const snapshot = await query.get();
+            const commentUserIds = new Set();
+            const comments = [];
 
-            const comments = snapshot.docs.map(doc => ({
-                id: doc.id,
-                ...doc.data(),
+            snapshot.docs.forEach(doc => {
+                const commentData = doc.data();
+                commentUserIds.add(commentData.userId);
+                comments.push({
+                    id: doc.id,
+                    ...commentData
+                });
+            });
+
+            // Get user data in parallel
+            const userDocs = await db.collection(collections.users)
+                .where('__name__', 'in', Array.from(commentUserIds))
+                .get();
+
+            const userMap = new Map();
+            userDocs.docs.forEach(doc => {
+                userMap.set(doc.id, {
+                    id: doc.id,
+                    userName: doc.data().userName || '',
+                    avatar: doc.data().avatar || ''
+                });
+            });
+
+            const enrichedComments = comments.map(comment => ({
+                id: comment.id,
+                content: comment.content,
+                createdAt: comment.createdAt.toDate().toISOString(),
+                author: userMap.get(comment.userId) || {
+                    id: comment.userId,
+                    userName: 'Unknown User',
+                    avatar: ''
+                },
+                isAuthor: comment.userId === userId,
+                canEdit: comment.userId === userId || post.data().userId === userId,
+                canDelete: comment.userId === userId || post.data().userId === userId
             }));
 
-            const lastVisible = snapshot.docs.length > 0 ? snapshot.docs[snapshot.docs.length - 1] : null;
+            // Cache comments
+            await this.cacheComments(postId, enrichedComments);
 
             return {
-                comments,
-                lastVisible,
+                comments: enrichedComments,
+                lastVisible: snapshot.docs.length > 0 ?
+                    snapshot.docs[snapshot.docs.length - 1].id : null
             };
         } catch (error) {
             logger.error('Error in getComments service:', error);
-            throw createError('9999', 'Exception error');
+            throw error.code ? error : createError('9999', 'Exception error');
+        }
+    }
+
+    async cacheComments(postId, comments) {
+        try {
+            const cacheKey = `post:${postId}:comments`;
+            await redis.setex(cacheKey, 300, JSON.stringify(comments));
+        } catch (error) {
+            logger.warn('Failed to cache comments:', error);
         }
     }
 
@@ -270,74 +405,145 @@ class PostService {
         limit = 20,
     }) {
         try {
+            // Build base query
             let query = db.collection(collections.posts)
-                .orderBy('createdAt', 'desc')
-                .limit(limit);
+                .orderBy('createdAt', 'desc');
 
+            // Campaign filter
             if (inCampaign === '1' && campaignId) {
                 query = query.where('campaignId', '==', campaignId);
             }
 
+            // Location filter
             if (latitude && longitude) {
                 const radiusKm = 10;
-                const bounds = getBoundingBox(latitude, longitude, radiusKm);
-                query = query.where('location.latitude', '>=', bounds.minLat)
+                const bounds = getBoundingBox(parseFloat(latitude), parseFloat(longitude), radiusKm);
+
+                // Create geohash or coordinate bounds
+                query = query
+                    .where('location.latitude', '>=', bounds.minLat)
                     .where('location.latitude', '<=', bounds.maxLat);
             }
 
+            // Pagination
             if (lastVisible) {
-                query = query.startAfter(lastVisible);
+                const lastDoc = await db.collection(collections.posts).doc(lastVisible).get();
+                if (!lastDoc.exists) {
+                    throw createError('1004', 'Invalid pagination token');
+                }
+                query = query.startAfter(lastDoc);
             }
 
-            const snapshot = await query.get();
+            // Execute query
+            const snapshot = await query.limit(limit).get();
 
-            const posts = snapshot.docs.map(doc => ({
-                id: doc.id,
-                ...doc.data(),
-            }));
+            // Early return if no results
+            if (snapshot.empty) {
+                return { posts: [], lastVisible: null };
+            }
 
-            const authorIds = [...new Set(posts.map(post => post.userId))];
-            const authorDocs = await db.collection(collections.users).where('__name__', 'in', authorIds).get();
-            const authorMap = new Map(authorDocs.docs.map(doc => [doc.id, doc.data()]));
+            // Collect post data and author IDs
+            const posts = [];
+            const authorIds = new Set();
+            const likePromises = [];
 
-            const likeChecks = posts.map(post => this.checkUserLike(post.id, userId));
-            const likeResults = await Promise.all(likeChecks);
-            const newLastVisible = snapshot.docs.length > 0 ? snapshot.docs[snapshot.docs.length - 1] : null;
+            snapshot.docs.forEach(doc => {
+                const postData = doc.data();
+                authorIds.add(postData.userId);
 
-            const postsWithDetails = posts.map((post, index) => {
-                let postWithDetails = {
+                // Queue like status check
+                likePromises.push(this.checkUserLike(doc.id, userId));
+
+                posts.push({
+                    id: doc.id,
+                    ...postData
+                });
+            });
+
+            // Fetch authors and like statuses in parallel
+            const [authors, likeStatuses] = await Promise.all([
+                this.getAuthorsInfo(Array.from(authorIds)),
+                Promise.all(likePromises)
+            ]);
+
+            // Process posts with author info and location filtering
+            const processedPosts = posts.map((post, index) => {
+                const author = authors.get(post.userId) || {};
+
+                let processedPost = {
                     ...post,
-                    isLiked: likeResults[index],
+                    isLiked: likeStatuses[index],
                     author: {
                         id: post.userId,
-                        ...authorMap.get(post.userId),
-                    },
+                        userName: author.userName || '',
+                        avatar: author.avatar || ''
+                    }
                 };
 
+                // Apply distance filtering if location provided
                 if (latitude && longitude && post.location) {
                     const distance = getDistance(
-                        latitude,
-                        longitude,
+                        parseFloat(latitude),
+                        parseFloat(longitude),
                         post.location.latitude,
                         post.location.longitude
                     );
+
                     if (distance <= 10) {
-                        postWithDetails.distance = distance.toFixed(2);
-                    } else {
-                        return null;
+                        processedPost.distance = distance;
+                        return processedPost;
                     }
+                    return null;
                 }
 
-                return postWithDetails;
-            }).filter(Boolean);
+                return processedPost;
+            }).filter(Boolean); // Remove null entries from location filtering
+
+            // Cache results
+            await this.cachePostsList(userId, processedPosts);
 
             return {
-                posts: postsWithDetails,
-                lastVisible: newLastVisible,
+                posts: processedPosts,
+                lastVisible: snapshot.docs[snapshot.docs.length - 1].id
             };
+
         } catch (error) {
             logger.error('Error in getListPosts service:', error);
-            throw createError('9999', 'Exception error');
+            throw error.code ? error : createError('9999', 'Exception error');
+        }
+    }
+
+    async getAuthorsInfo(authorIds) {
+        const authorsMap = new Map();
+
+        if (authorIds.length === 0) return authorsMap;
+
+        const chunks = [];
+        for (let i = 0; i < authorIds.length; i += 10) {
+            chunks.push(authorIds.slice(i, i + 10));
+        }
+
+        await Promise.all(chunks.map(async chunk => {
+            const snapshot = await db.collection(collections.users)
+                .where('__name__', 'in', chunk)
+                .get();
+
+            snapshot.docs.forEach(doc => {
+                authorsMap.set(doc.id, doc.data());
+            });
+        }));
+
+        return authorsMap;
+    }
+
+    // Helper method to cache posts list
+    async cachePostsList(userId, posts) {
+        try {
+            const cacheKey = `user:${userId}:posts:list`;
+            await redis.setex(cacheKey, 300, JSON.stringify(posts)); // Cache for 5 minutes
+        } catch (error) {
+            logger.warn('Failed to cache posts list:', error);
+            // Continue execution even if caching fails
         }
     }
 }

@@ -5,7 +5,7 @@ import { createError } from '../utils/customError.js';
 import { collections } from '../config/database.js';
 import { db } from '../config/firebase.js';
 import Post from '../models/Post.js';
-import { cleanupFiles } from '../utils/helpers.js';
+import { cleanupFiles, handleImageUpload } from '../utils/helpers.js';
 
 class PostController {
     async createPost(req, res, next) {
@@ -61,50 +61,61 @@ class PostController {
     async updatePost(req, res, next) {
         try {
             const { error } = postValidator.validateUpdatePost(req.body);
-            if (error) throw createError('1002', error.details.map(detail => detail.message).join(', '));
+            if (error) {
+                throw createError('1002', error.details.map(detail => detail.message).join(', '));
+            }
 
             const { id } = req.params;
             const { content } = req.body;
             const userId = req.user.uid;
-            const images = req.files ? req.files.map(file => file.path) : [];
 
-            const updatedPost = await postService.updatePost(id, userId, content, images);
+            // Process image uploads
+            let processedImages = [];
+            if (req.files && req.files.length > 0) {
+                if (req.files.length > Post.MAX_IMAGES) {
+                    throw createError('1008', `Maximum ${Post.MAX_IMAGES} images allowed`);
+                }
+                try {
+                    processedImages = await Promise.all(
+                        req.files.map(file => handleImageUpload(file, `posts/${userId}`))
+                    );
+                } catch (uploadError) {
+                    await cleanupFiles(req.files);
+                    throw createError('1007', 'Failed to process image uploads');
+                }
+            }
 
-            if (!updatedPost) throw createError('9992', 'The requested post does not exist.');
+            const updatedPost = await postService.updatePost(id, userId, content, processedImages);
+
+            // Clean up temp files after successful update
+            if (req.files) {
+                await cleanupFiles(req.files);
+            }
 
             sendResponse(res, '1000', updatedPost);
         } catch (error) {
+            // Clean up files on error
+            if (req.files) {
+                await cleanupFiles(req.files);
+            }
             next(error);
         }
     }
 
     async deletePost(req, res, next) {
         try {
-            const { error } = validateDeletePost(req.params);
-            if (error) {
-                throw createError('1002', error.details[0].message);
-            }
-            const { id } = req.params;
+            const { error } = postValidator.validateDeletePost(req.params);
+            if (error) throw createError('1002', error.details[0].message);
+
+            const { id: postId } = req.params;
             const userId = req.user.uid;
-            // Get post with caching
-            const post = await postService.getPost(id);
-            if (!post) {
-                throw createError('9992', 'The requested post does not exist.');
-            }
-            // Check permissions
-            if (post.userId !== userId && !req.user.isAdmin) {
-                throw createError('1009', 'Not authorized to delete this post');
-            }
-            // Check post state
-            if (!Post.validateForDeletion(post)) {
-                throw createError('1012', 'Post cannot be deleted');
-            }
-            // Delete post and associated resources
-            await postService.deletePost(id);
-            // Log the action
-            await req.app.locals.auditLog.logAction(userId, id, 'delete_post', {
+
+            await postService.deletePost(postId, userId);
+
+            await req.app.locals.auditLog.logAction(userId, postId, 'delete_post', {
                 timestamp: new Date().toISOString()
             });
+
             sendResponse(res, '1000', { message: 'Post deleted successfully' });
         } catch (error) {
             next(error);
@@ -133,35 +144,16 @@ class PostController {
             const { error } = postValidator.validateGetPostComments(req.query);
             if (error) throw createError('1002', error.details.map(detail => detail.message).join(', '));
 
-            const { id } = req.params;
+            const { id: postId } = req.params;
             const { limit = 20, lastVisible } = req.query;
+            const userId = req.user.uid;
 
-            let startAfterDoc = null;
-
-            if (lastVisible) {
-                const lastVisibleId = Buffer.from(lastVisible, 'base64').toString('utf-8');
-                startAfterDoc = await db.collection(collections.comments).doc(lastVisibleId).get();
-
-                if (!startAfterDoc.exists) {
-                    throw createError('1004', 'Invalid lastVisible value');
-                }
-            }
-
-            const { comments, lastVisible: newLastVisible } = await postService.getComments(
-                id,
-                parseInt(limit),
-                startAfterDoc
-            );
-
-            if (!comments.length) throw createError('9994', 'No data or end of list data');
-
-            const encodedLastVisible = newLastVisible
-                ? Buffer.from(newLastVisible.id).toString('base64')
-                : null;
+            const result = await postService.getComments(postId, userId, parseInt(limit), lastVisible);
 
             sendResponse(res, '1000', {
-                comments,
-                lastVisible: encodedLastVisible,
+                comments: result.comments,
+                lastVisible: result.lastVisible ?
+                    Buffer.from(result.lastVisible).toString('base64') : null
             });
         } catch (error) {
             next(error);
@@ -235,9 +227,11 @@ class PostController {
             const userId = req.user.uid;
             const { id: postId } = req.params;
 
-            await postService.toggleLike(postId, userId);
-
-            sendResponse(res, '1000', { message: 'Like status updated successfully' });
+            const result = await postService.toggleLike(postId, userId);
+            sendResponse(res, '1000', {
+                liked: result.liked,
+                likeCount: result.likeCount
+            });
         } catch (error) {
             next(error);
         }
@@ -260,33 +254,28 @@ class PostController {
                 limit = 20,
             } = value;
 
-            let startAfterDoc = null;
-            if (lastVisible) {
-                const lastVisibleId = Buffer.from(lastVisible, 'base64').toString('utf-8');
-                startAfterDoc = await db.collection(collections.posts).doc(lastVisibleId).get();
-                if (!startAfterDoc.exists) {
-                    throw createError('1004', 'Invalid lastVisible value');
-                }
+            const currentUserId = req.user.uid;
+            const result = await postService.getListPosts({
+                userId: userId || currentUserId,
+                inCampaign: in_campaign,
+                campaignId,
+                latitude: latitude ? parseFloat(latitude) : undefined,
+                longitude: longitude ? parseFloat(longitude) : undefined,
+                lastVisible: lastVisible ?
+                    Buffer.from(lastVisible, 'base64').toString('utf-8') : null,
+                limit: parseInt(limit)
+            });
+
+            if (!result.posts.length) {
+                throw createError('9994', 'No data or end of list data');
             }
 
-            const { posts, lastVisible: newLastVisible } = await postService.getListPosts({
-                userId: userId || req.user.uid,
-                inCampaign: in_campaign,
-                campaignId: campaignId,
-                latitude,
-                longitude,
-                lastVisible: startAfterDoc,
-                limit: parseInt(limit),
-            });
-
-            const encodedLastVisible = newLastVisible
-                ? Buffer.from(newLastVisible.id).toString('base64')
-                : null;
-
             return sendResponse(res, '1000', {
-                posts,
-                lastVisible: encodedLastVisible,
+                posts: result.posts,
+                lastVisible: result.lastVisible ?
+                    Buffer.from(result.lastVisible).toString('base64') : null
             });
+
         } catch (error) {
             next(error);
         }
