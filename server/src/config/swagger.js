@@ -24,7 +24,7 @@ const options = {
                 description: 'Endpoints related to user authentication and token management.'
             },
             {
-                name: 'User',
+                name: 'Users',
                 description: 'Endpoints for user profile and account management.'
             },
             {

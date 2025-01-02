@@ -2,7 +2,7 @@
  * @swagger
  * tags:
  *   name: Videos
- *   description: Video related endpoints
+ *   description: Endpoints related to video retrieval and management.
  */
 import { Router } from 'express';
 import { authenticateToken } from '../middleware/auth.js';
