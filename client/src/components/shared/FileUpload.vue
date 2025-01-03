@@ -79,7 +79,7 @@ const props = defineProps({
     },
     className: {
         type: String,
-        default: 'h-32'
+        default: 'h-24'
     }
 })
 
