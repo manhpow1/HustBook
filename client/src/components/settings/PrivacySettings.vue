@@ -70,6 +70,7 @@
 
 <script setup>
 import { ref, computed, watch } from 'vue';
+import { useDebounce } from '@/composables/useDebounce';
 import { useSearchStore } from '@/stores/searchStore';
 import { useFriendStore } from '@/stores/friendStore';
 import { useToast } from '@/components/ui/toast';
