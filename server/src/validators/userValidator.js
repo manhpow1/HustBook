@@ -147,12 +147,25 @@ const changeInfoAfterSignupSchema = Joi.object({
             'string.pattern.base': 'Username can only contain letters, numbers, and underscores.',
             'any.required': 'Username is required.'
         }),
-    avatar: Joi.string()
-        .uri()
-        .allow(null, '')
-        .messages({
-            'string.uri': 'Avatar must be a valid URL.'
+    avatar: Joi.alternatives().try(
+        Joi.string().uri().messages({
+            'string.uri': 'Avatar URL must be a valid URL.'
+        }),
+        Joi.object({
+            fieldname: Joi.string().required(),
+            originalname: Joi.string().required(),
+            encoding: Joi.string().required(),
+            mimetype: Joi.string().pattern(/^image\/(jpeg|png|gif)$/).required().messages({
+                'string.pattern.base': 'Avatar must be a valid image file (jpg, png, or gif).'
+            }),
+            buffer: Joi.binary().required(),
+            size: Joi.number().max(5 * 1024 * 1024).required().messages({
+                'number.max': 'Avatar file size must not exceed 5MB.'
+            })
         })
+    ).allow(null, '').messages({
+        'alternatives.types': 'Avatar must be either a valid URL or an image file.'
+    })
 }).required();
 
 /**
