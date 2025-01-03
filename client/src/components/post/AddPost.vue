@@ -50,9 +50,9 @@
                 </div>
             </form>
 
-            <Dialog :open="showEmojiPicker" @close="showEmojiPicker = false">
+            <Dialog :open="showEmojiPicker" @update:open="showEmojiPicker = $event">
                 <DialogContent class="p-0">
-                    <EmojiPicker @select="insertEmoji" />
+                    <EmojiPicker @select="insertEmoji" @close="showEmojiPicker = false" />
                 </DialogContent>
             </Dialog>
         </CardContent>

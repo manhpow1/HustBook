@@ -9,9 +9,12 @@
                 <ScrollArea class="h-[300px]">
                     <CommandGroup v-for="(emojis, category) in filteredCategories" :key="category" :heading="category">
                         <div class="grid grid-cols-8 gap-2 p-2">
-                            <Button v-for="emoji in emojis" :key="emoji" variant="ghost" size="icon" class="h-8 w-8"
+                            <Button v-for="emoji in emojis" :key="emoji" variant="ghost" size="icon" class="h-8 w-8 relative group"
                                 @click="selectEmoji(emoji)" :aria-label="`Select ${emoji} emoji`">
                                 <span class="text-lg">{{ emoji }}</span>
+                                <span class="absolute -top-8 left-1/2 transform -translate-x-1/2 bg-popover text-popover-foreground text-xs px-2 py-1 rounded shadow-md opacity-0 group-hover:opacity-100 whitespace-nowrap z-50">
+                                    {{ getEmojiName(emoji, category) }}
+                                </span>
                             </Button>
                         </div>
                     </CommandGroup>
@@ -118,6 +121,30 @@ const filteredCategories = computed(() => {
 });
 
 // Select emoji handler
+const getEmojiName = (emoji, category) => {
+    // Simple mapping of emoji to descriptive names
+    const emojiNames = {
+        '😀': 'Grinning Face',
+        '😃': 'Grinning Face with Big Eyes',
+        '😄': 'Grinning Face with Smiling Eyes',
+        '😁': 'Beaming Face with Smiling Eyes',
+        '😅': 'Grinning Face with Sweat',
+        '😂': 'Face with Tears of Joy',
+        '🤣': 'Rolling on the Floor Laughing',
+        '😊': 'Smiling Face with Smiling Eyes',
+        '😇': 'Smiling Face with Halo',
+        '🙂': 'Slightly Smiling Face',
+        '😉': 'Winking Face',
+        '😌': 'Relieved Face',
+        '😍': 'Smiling Face with Heart-Eyes',
+        '🥰': 'Smiling Face with Hearts',
+        '😘': 'Face Blowing a Kiss',
+        // Add more emoji names as needed
+    };
+    
+    return emojiNames[emoji] || `${category} Emoji`;
+};
+
 const selectEmoji = (emoji) => {
     saveRecentEmojis(emoji);
     emit('select', emoji);
