@@ -20,7 +20,10 @@ class PostService {
                 processedImageUrls = await Promise.all(uploadPromises);
             }
 
+            const postId = await createDocument(collections.posts, {});
+            
             const postData = new Post({
+                postId,
                 userId,
                 content,
                 images: processedImageUrls,
@@ -29,7 +32,7 @@ class PostService {
                 comments: 0
             }).toJSON();
 
-            const postId = await createDocument(collections.posts, postData);
+            await updateDocument(collections.posts, postId, postData);
 
             // Cache invalidation
             await redis.cache.del(`user:${userId}:posts`);
