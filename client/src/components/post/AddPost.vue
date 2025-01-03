@@ -71,7 +71,7 @@ import { ImageIcon, Loader2Icon, SmileIcon, XIcon } from 'lucide-vue-next'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
-import { Dialog, DialogContent, DialogTitle, DialogHeader, DialogClose } from '@/components/ui/dialog'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogClose } from '@/components/ui/dialog'
 import EmojiPicker from '../shared/EmojiPicker.vue'
 import FileUpload from '../shared/FileUpload.vue'
 
@@ -174,7 +174,8 @@ const handleSubmit = async () => {
 
     try {
         const formData = new FormData()
-        formData.append('content', description.value.trim())
+        // Match the field name expected by the server
+        formData.append('described', description.value.trim())
 
         files.value.forEach(file => {
             formData.append('files', file)
