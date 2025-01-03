@@ -567,8 +567,13 @@ export const useUserStore = defineStore('user', () => {
 
             const formData = new FormData();
             formData.append('userName', userName);
-            if (avatar) {
+            
+            // Handle avatar file upload
+            if (avatar instanceof File) {
                 formData.append('avatar', avatar, avatar.name);
+            } else if (typeof avatar === 'string' && avatar) {
+                // If avatar is already a URL string, pass it directly
+                formData.append('avatar', avatar);
             }
 
             const response = await apiService.changeInfoAfterSignup(formData, {

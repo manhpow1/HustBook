@@ -36,7 +36,7 @@ class UserService {
             // Create new User model instance with all required fields
             const user = new User({
                 userId: userId,
-                userName: '',  // Initialize with empty string
+                userName: `user_${userId.substring(0, 8)}`,
                 phoneNumber,
                 password: hashedPassword,
                 passwordHistory: [hashedPassword],
@@ -56,7 +56,7 @@ class UserService {
                 online: false,
                 isBlocked: false,
                 isAdmin: false,
-                avatar: null,  // Initialize avatar as null
+                avatar: null, 
                 createdAt: new Date().toISOString(),
                 updatedAt: new Date().toISOString(),
                 lastPasswordChange: new Date().toISOString()
@@ -421,15 +421,13 @@ class UserService {
                 throw createError('9995', 'User not found');
             }
 
-            // Handle avatar upload if provided
-            let avatarUrl = null;
-            if (avatarFile) {
-                avatarUrl = await handleAvatarUpload(avatarFile, userId);
-            }
-
             // Update user information
             user.userName = userName;
-            user.avatar = avatarUrl || '';  // Always set a string value
+            // Handle avatar URL - ensure it's a string
+            if (avatarFile) {
+                const uploadedAvatarUrl = await handleAvatarUpload(avatarFile, userId);
+                user.avatar = uploadedAvatarUrl || '';
+            }
             user.updatedAt = new Date().toISOString();
 
             await user.save();
