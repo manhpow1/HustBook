@@ -16,16 +16,17 @@ const axiosInstance = axios.create({
     timeout: REQUEST_TIMEOUT,
     headers: {
         'Content-Type': 'application/json',
-        'X-Requested-With': 'XMLHttpRequest',
+        //'X-Requested-With': 'XMLHttpRequest',
     },
-    xsrfCookieName: 'XSRF-TOKEN',
-    xsrfHeaderName: 'X-CSRF-Token',
+    // xsrfCookieName: 'XSRF-TOKEN',
+    // xsrfHeaderName: 'X-CSRF-Token',
 });
 
 // Token refresh state
 let isRefreshing = false;
 let failedQueue = [];
 let retryCount = 0;
+/*
 let csrfToken = null;
 
 const getCsrfToken = async () => {
@@ -37,6 +38,7 @@ const getCsrfToken = async () => {
         throw error;
     }
 };
+*/
 
 const processQueue = (error, token = null) => {
     failedQueue.forEach(prom => {
@@ -74,16 +76,19 @@ axiosInstance.interceptors.request.use(
             config.headers['Authorization'] = `Bearer ${accessToken}`;
         }
 
+        // Comment out CSRF token check
+        /*
         if (['post', 'put', 'delete', 'patch'].includes(config.method?.toLowerCase())) {
             try {
                 if (!csrfToken) {
-                    csrfToken = await getCsrfToken();
+                    csrfToken = await getCsrfToken(); 
                 }
                 config.headers['X-CSRF-Token'] = csrfToken;
             } catch (error) {
                 logger.error('Error setting CSRF token:', error);
             }
         }
+        */
 
         if (shouldRefreshToken() && !config.url.includes('refresh-token')) {
             try {
@@ -107,10 +112,12 @@ axiosInstance.interceptors.request.use(
 
 axiosInstance.interceptors.response.use(
     response => {
-        const newCsrfToken = response.headers['x-csrf-token'];
-        if (newCsrfToken) {
-            csrfToken = newCsrfToken;
-        }
+        /*
+const newCsrfToken = response.headers['x-csrf-token'];
+if (newCsrfToken) {
+    csrfToken = newCsrfToken;
+}
+*/
         response.headers['x-response-time'] = Date.now();
         return response;
     },
@@ -118,22 +125,23 @@ axiosInstance.interceptors.response.use(
         const originalRequest = error.config;
         const { useUserStore } = await import('@/stores/userStore'); // Lazy import
         const userStore = useUserStore();
-
-        if (
-            error.response?.data?.code === '9998' &&
-            error.response?.data?.message?.includes('CSRF') &&
-            !originalRequest._csrfRetry
-        ) {
-            try {
-                originalRequest._csrfRetry = true;
-                csrfToken = await getCsrfToken();
-                originalRequest.headers['X-CSRF-Token'] = csrfToken;
-                return axiosInstance(originalRequest);
-            } catch (retryError) {
-                logger.error('CSRF token refresh failed:', retryError);
-                return Promise.reject(retryError);
-            }
-        }
+        /*
+                if (
+                    error.response?.data?.code === '9998' &&
+                    error.response?.data?.message?.includes('CSRF') &&
+                    !originalRequest._csrfRetry
+                ) {
+                    try {
+                        originalRequest._csrfRetry = true;
+                        csrfToken = await getCsrfToken();
+                        originalRequest.headers['X-CSRF-Token'] = csrfToken;
+                        return axiosInstance(originalRequest);
+                    } catch (retryError) {
+                        logger.error('CSRF token refresh failed:', retryError);
+                        return Promise.reject(retryError);
+                    }
+                }
+        */
 
         if (
             !error.response ||
@@ -169,8 +177,10 @@ axiosInstance.interceptors.response.use(
                 throw new Error('No refresh token available');
             }
 
+            /*
             const newCsrfToken = await getCsrfToken();
             csrfToken = newCsrfToken;
+            */
 
             const response = await axios.post(
                 `${axiosInstance.defaults.baseURL}/api/auth/refresh-token`,
@@ -178,7 +188,7 @@ axiosInstance.interceptors.response.use(
                 {
                     headers: {
                         'Content-Type': 'application/json',
-                        'X-CSRF-Token': newCsrfToken,
+                        // 'X-CSRF-Token': newCsrfToken,
                     },
                 }
             );
@@ -203,7 +213,7 @@ axiosInstance.interceptors.response.use(
                 processQueue(null, newAccessToken);
 
                 originalRequest.headers['Authorization'] = `Bearer ${newAccessToken}`;
-                originalRequest.headers['X-CSRF-Token'] = newCsrfToken;
+                // originalRequest.headers['X-CSRF-Token'] = newCsrfToken;
 
                 return axiosInstance(originalRequest);
             } else {

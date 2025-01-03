@@ -141,17 +141,12 @@ const changeInfoAfterSignupSchema = Joi.object({
         .pattern(/^[a-zA-Z0-9_]+$/)
         .required(),
     avatar: Joi.alternatives().try(
-        // For URL string
-        Joi.string().uri(),
-        // For multer file object 
-        Joi.object({
-            fieldname: Joi.string(),
-            originalname: Joi.string(),
-            encoding: Joi.string(),
-            mimetype: Joi.string().valid('image/jpeg', 'image/png', 'gif'),
-            buffer: Joi.any(),
-            size: Joi.number().max(5 * 1024 * 1024) // 5MB
-        }).unknown(true)
+        // Cho phép string URL
+        Joi.string(),
+        // Cho phép null/undefined
+        Joi.any().allow(null),
+        // Cho phép file upload object từ multer
+        Joi.object().unknown(true)
     ).optional()
 });
 
