@@ -9,9 +9,10 @@ const REFRESH_THRESHOLD = 5 * 60 * 1000; // 5 minutes in ms
 const MAX_RETRY_ATTEMPTS = 3;
 const REQUEST_TIMEOUT = 30000; // 30 seconds
 const { handleError } = useErrorHandler();
+const baseURL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000';
 
 const axiosInstance = axios.create({
-    baseURL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000',
+    baseURL: baseURL.toString(),
     timeout: REQUEST_TIMEOUT,
     headers: {
         'Content-Type': 'application/json',
