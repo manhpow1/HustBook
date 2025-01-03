@@ -1,40 +1,37 @@
 <template>
-    <Popover :open="true">
-        <PopoverContent class="w-[280px] p-0" side="top">
-            <Command>
-                <CommandInput v-if="searchEnabled" placeholder="Search emoji..." v-model="searchQuery" />
-                <CommandList>
-                    <CommandEmpty v-if="filteredEmojis.length === 0">
-                        No emoji found.
-                    </CommandEmpty>
-                    <CommandGroup>
-                        <ScrollArea class="h-[200px]">
-                            <div class="grid grid-cols-8 gap-2 p-2">
-                                <Button v-for="emoji in filteredEmojis" :key="emoji" variant="ghost" size="icon"
-                                    class="h-8 w-8" @click="selectEmoji(emoji)" :aria-label="`Select ${emoji} emoji`">
-                                    <span class="text-lg">{{ emoji }}</span>
-                                </Button>
-                            </div>
-                        </ScrollArea>
-                    </CommandGroup>
-                    <Separator v-if="recentEmojis.length > 0" />
-                    <CommandGroup v-if="recentEmojis.length > 0" heading="Recently Used">
+    <div class="w-[280px] p-0">
+        <Command>
+            <CommandInput v-if="searchEnabled" placeholder="Search emoji..." v-model="searchQuery" />
+            <CommandList>
+                <CommandEmpty v-if="filteredEmojis.length === 0">
+                    No emoji found.
+                </CommandEmpty>
+                <CommandGroup>
+                    <ScrollArea class="h-[200px]">
                         <div class="grid grid-cols-8 gap-2 p-2">
-                            <Button v-for="emoji in recentEmojis" :key="emoji" variant="ghost" size="icon"
+                            <Button v-for="emoji in filteredEmojis" :key="emoji" variant="ghost" size="icon"
                                 class="h-8 w-8" @click="selectEmoji(emoji)" :aria-label="`Select ${emoji} emoji`">
                                 <span class="text-lg">{{ emoji }}</span>
                             </Button>
                         </div>
-                    </CommandGroup>
-                </CommandList>
-            </Command>
-        </PopoverContent>
-    </Popover>
+                    </ScrollArea>
+                </CommandGroup>
+                <Separator v-if="recentEmojis.length > 0" />
+                <CommandGroup v-if="recentEmojis.length > 0" heading="Recently Used">
+                    <div class="grid grid-cols-8 gap-2 p-2">
+                        <Button v-for="emoji in recentEmojis" :key="emoji" variant="ghost" size="icon" class="h-8 w-8"
+                            @click="selectEmoji(emoji)" :aria-label="`Select ${emoji} emoji`">
+                            <span class="text-lg">{{ emoji }}</span>
+                        </Button>
+                    </div>
+                </CommandGroup>
+            </CommandList>
+        </Command>
+    </div>
 </template>
 
 <script setup>
 import { ref, computed, onMounted } from 'vue';
-import { Popover, PopoverContent } from '@/components/ui/popover';
 import { Command, CommandInput, CommandList, CommandEmpty, CommandGroup } from '@/components/ui/command';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
@@ -44,6 +41,10 @@ const STORAGE_KEY = 'recent-emojis';
 const MAX_RECENT = 16;
 
 const props = defineProps({
+    modelValue: {
+        type: Boolean,
+        default: false
+    },
     commonEmojis: {
         type: Array,
         default: () => [
