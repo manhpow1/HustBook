@@ -11,58 +11,22 @@ const IMAGE_QUALITY = 80;
 // Utility Functions
 
 /**
- * Generates a URL for the avatar.
- * @param {string} filename - The filename of the avatar.
- * @returns {string|null} - The URL of the avatar or null if filename is not provided.
- */
-const generateAvatarUrl = (filename, userId) => {
-    if (!filename) return null;
-    return `https://storage.googleapis.com/${process.env.FIREBASE_STORAGE_BUCKET}/avatars/${userId}/${filename}`;
-};
-
-/**
- * Generates a URL for the cover photo.
- * @param {string} filename - The filename of the cover photo.
- * @returns {string|null} - The URL of the cover photo or null if filename is not provided.
- */
-const generateCoverPhotoUrl = (filename, userId) => {
-    if (!filename) return null;
-    return `https://storage.googleapis.com/${process.env.FIREBASE_STORAGE_BUCKET}/covers/${userId}/${filename}`;
-};
-
-/**
  * Handles the upload and processing of a cover photo.
  * @param {object} file - The file object containing path and filename.
  * @param {string|null} oldCoverPath - The path to the old cover photo.
  * @returns {string|null} - The URL of the new cover photo or null.
  */
-export async function handleCoverPhotoUpload(file, oldCoverUrl = null) {
+async function handleAvatarUpload(file, userId) {
     try {
         if (!file) return null;
 
-        const imageUrl = await handleImageUpload(file, 'covers');
-        await cleanupFiles(file);
-        return imageUrl;
-    } catch (error) {
-        await cleanupFiles(file);
-        logger.error('Cover photo upload error:', error);
-        throw createError('9999', 'Failed to process cover photo upload');
-    }
-}
+        // Process và compress ảnh
+        const processedImage = await handleImageUpload(file, `avatars/${userId}`);
 
-/**
- * Handles the upload and processing of an avatar.
- * @param {object} file - The file object containing path and filename.
- * @param {string|null} oldAvatarPath - The path to the old avatar.
- * @returns {string|null} - The URL of the new avatar or null.
- */
-export async function handleAvatarUpload(file, oldAvatarUrl = null) {
-    try {
-        if (!file) return null;
-
-        const imageUrl = await handleImageUpload(file, 'avatars');
         await cleanupFiles(file);
-        return imageUrl;
+
+        return processedImage;
+
     } catch (error) {
         await cleanupFiles(file);
         logger.error('Avatar upload error:', error);
@@ -70,7 +34,24 @@ export async function handleAvatarUpload(file, oldAvatarUrl = null) {
     }
 }
 
-export async function handleImageUpload(file, folder = 'general') {
+async function handleCoverPhotoUpload(file, userId) {
+    try {
+        if (!file) return null;
+
+        const processedImage = await handleImageUpload(file, `covers/${userId}`);
+
+        await cleanupFiles(file);
+
+        return processedImage;
+
+    } catch (error) {
+        await cleanupFiles(file);
+        logger.error('Cover photo upload error:', error);
+        throw createError('9999', 'Failed to process cover photo upload');
+    }
+}
+
+async function handleImageUpload(file, folder = 'general') {
     try {
         // Validate file
         if (!file || !file.buffer) {
@@ -180,10 +161,13 @@ export async function handleImageUpload(file, folder = 'general') {
         await fileUpload.makePublic();
 
         // Get the public URL
-        const publicUrl = `https://storage.googleapis.com/${bucket.name}/${filename}`;
+        const [url] = await fileUpload.getSignedUrl({
+            action: 'read',
+            expires: '03-01-2500'
+        });
 
-        logger.info(`Successfully uploaded image to Firebase Storage: ${publicUrl}`);
-        return publicUrl;
+        logger.info(`Successfully uploaded image to Firebase Storage: ${url}`);
+        return url;
 
     } catch (error) {
         logger.error('Firebase upload failed:', error);
@@ -194,9 +178,16 @@ export async function handleImageUpload(file, folder = 'general') {
 async function deleteFileFromStorage(url) {
     try {
         if (!url) return;
+
+        // Extract filename from Firebase Storage URL
         const bucket = admin.storage().bucket();
-        const fileName = url.split('/').pop();
-        await bucket.file(fileName).delete();
+        const decodedUrl = decodeURIComponent(url);
+        const startIndex = decodedUrl.indexOf('/o/') + 3;
+        const endIndex = decodedUrl.indexOf('?');
+        const filename = decodedUrl.substring(startIndex, endIndex);
+
+        await bucket.file(filename).delete();
+
     } catch (error) {
         logger.error('Error deleting file:', error);
     }
@@ -206,7 +197,7 @@ const cleanupFiles = async (files) => {
     try {
         if (!files) return;
 
-        const deletePromises = Array.isArray(files) 
+        const deletePromises = Array.isArray(files)
             ? files.map(file => fs.unlink(file.path))
             : [fs.unlink(files.path)];
 
@@ -218,8 +209,9 @@ const cleanupFiles = async (files) => {
 };
 
 export {
-    generateAvatarUrl,
-    generateCoverPhotoUrl,
     deleteFileFromStorage,
     cleanupFiles,
+    handleImageUpload,
+    handleAvatarUpload,
+    handleCoverPhotoUpload,
 };

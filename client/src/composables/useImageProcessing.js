@@ -1,21 +1,19 @@
 import { ref } from 'vue';
 import { useToast } from '@/components/ui/toast';
+import logger from '@/services/logging';
 
 export function useImageProcessing() {
     const { toast } = useToast();
     const isProcessing = ref(false);
 
-    const compressImage = async (file, maxWidth = 1024, maxHeight = 1024, quality = 0.8) => {
+    const compressImage = async (file, maxWidth = 1920, maxHeight = 1080, quality = 0.8) => {
         try {
             isProcessing.value = true;
 
-            // Validate file type
-            if (!file.type.startsWith('image/')) {
-                toast({ type: 'error', message: 'Only image files are allowed' });
+            if (!validateImage(file)) {
                 return null;
             }
 
-            // Create image object
             const img = new Image();
             const imageUrl = URL.createObjectURL(file);
 
@@ -25,58 +23,43 @@ export function useImageProcessing() {
                 img.src = imageUrl;
             });
 
-            // Check minimum dimensions
-            if (img.width < 100 || img.height < 100) {
-                toast({ type: 'error', message: 'Image dimensions too small. Minimum size is 100x100 pixels' });
-                return null;
-            }
+            let { width, height } = calculateDimensions(img, maxWidth, maxHeight);
 
-            // Calculate new dimensions while maintaining aspect ratio
-            let newWidth = img.width;
-            let newHeight = img.height;
-
-            if (newWidth > maxWidth) {
-                newHeight = Math.round((maxWidth * newHeight) / newWidth);
-                newWidth = maxWidth;
-            }
-
-            if (newHeight > maxHeight) {
-                newWidth = Math.round((maxHeight * newWidth) / newHeight);
-                newHeight = maxHeight;
-            }
-
-            // Create canvas and compress image
             const canvas = document.createElement('canvas');
-            canvas.width = newWidth;
-            canvas.height = newHeight;
+            canvas.width = width;
+            canvas.height = height;
 
             const ctx = canvas.getContext('2d');
-            ctx.drawImage(img, 0, 0, newWidth, newHeight);
+            ctx.drawImage(img, 0, 0, width, height);
 
-            // Convert to blob
             const blob = await new Promise(resolve => {
                 canvas.toBlob(resolve, 'image/jpeg', quality);
             });
 
-            // Clean up
             URL.revokeObjectURL(imageUrl);
 
-            // Create new file with compressed data
             const compressedFile = new File([blob], file.name, {
                 type: 'image/jpeg',
                 lastModified: Date.now()
             });
 
-            // Verify final file size
-            if (compressedFile.size > 4 * 1024 * 1024) { // 4MB limit
-                toast({ type: 'error', message: 'Image file size is too large even after compression' });
+            if (compressedFile.size > 4 * 1024 * 1024) {
+                toast({
+                    title: "Error",
+                    description: "File size too large even after compression",
+                    variant: "destructive"
+                });
                 return null;
             }
 
             return compressedFile;
         } catch (error) {
             console.error('Image compression error:', error);
-            toast({ type: 'error', message: 'Error processing image' });
+            toast({
+                title: "Error",
+                description: "Failed to process image",
+                variant: "destructive"
+            });
             return null;
         } finally {
             isProcessing.value = false;
@@ -84,20 +67,54 @@ export function useImageProcessing() {
     };
 
     const validateImage = (file) => {
-        // Validate file size (4MB)
+        if (!file) return false;
+
         if (file.size > 4 * 1024 * 1024) {
-            toast({ type: 'error', message: 'File size too large. Maximum size is 4MB' });
+            toast({
+                title: "Error",
+                description: "File size must be less than 4MB",
+                variant: "destructive"
+            });
             return false;
         }
 
-        // Validate file type
         const allowedTypes = ['image/jpeg', 'image/png', 'image/gif'];
         if (!allowedTypes.includes(file.type)) {
-            toast({ type: 'error', message: 'Invalid file type. Only JPG, PNG and GIF are allowed' });
+            toast({
+                title: "Error",
+                description: "Only JPG, PNG and GIF files are allowed",
+                variant: "destructive"
+            });
             return false;
         }
 
         return true;
+    };
+
+    const calculateDimensions = (img, maxWidth, maxHeight) => {
+        let width = img.width;
+        let height = img.height;
+
+        if (width < 100 || height < 100) {
+            toast({
+                title: "Error",
+                description: "Image dimensions must be at least 100x100 pixels",
+                variant: "destructive"
+            });
+            throw new Error("Image too small");
+        }
+
+        if (width > maxWidth) {
+            height = Math.round((maxWidth * height) / width);
+            width = maxWidth;
+        }
+
+        if (height > maxHeight) {
+            width = Math.round((maxHeight * width) / height);
+            height = maxHeight;
+        }
+
+        return { width, height };
     };
 
     return {

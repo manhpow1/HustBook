@@ -297,7 +297,7 @@ export const useUserStore = defineStore('user', () => {
                 setAuthCookies(token);
                 updateLastActivity();
                 successMessage.value = 'Registration successful! Please verify your account.';
-                toast({ type: 'success', message: successMessage.value });
+                toast({ type: 'success', message: 'Registration successful! Please verify your account.' });
                 return true;
             }
             return false;
@@ -513,7 +513,7 @@ export const useUserStore = defineStore('user', () => {
                         : 'Verification successful. Please continue registration!';
 
                     successMessage.value = message;
-                    toast({ type: 'success', message: 'Login successful!' });
+                    toast({ type: 'success', message: successMessage.value });
 
                     return {
                         success: true,
@@ -579,7 +579,7 @@ export const useUserStore = defineStore('user', () => {
             if (response.data.code === '1000') {
                 user.value = { ...user.value, ...response.data.data };
                 successMessage.value = 'Profile updated successfully!';
-                toast({ type: 'success', message: 'Login successful!' });
+                toast({ type: 'error', message: error.value });
                 return true;
             }
             return false;
@@ -603,7 +603,7 @@ export const useUserStore = defineStore('user', () => {
 
             if (currentPassword === newPassword) {
                 error.value = 'New password must be different from current password';
-                toast({ type: 'success', message: 'Login successful!' });
+                toast({ type: 'success', message: successMessage.value });
                 return false;
             }
 
@@ -615,7 +615,8 @@ export const useUserStore = defineStore('user', () => {
 
             if (response.data.code === '1000') {
                 successMessage.value = 'Password changed successfully!';
-                toast({ type: 'success', message: 'Login successful!' });
+                toast({ type: 'success', message: successMessage.value });
+                router.push('/login');
                 await logout(true);
                 router.push('/login');
                 return true;

@@ -109,19 +109,29 @@ const apiService = {
     // POST APIs
     // ─────────────────────────────────────────────────────────
     async createPost(postData) {
-        return axiosInstance.post(API_ENDPOINTS.ADD_POST, postData);
+        const formData = new FormData();
+        if (postData.content) formData.append('content', postData.content);
+        if (postData.images) {
+            postData.images.forEach(img => formData.append('images', img));
+        }
+        return this.upload(API_ENDPOINTS.ADD_POST, formData);
     },
 
     async getPost(postId) {
-        return axiosInstance.get(API_ENDPOINTS.GET_POST(postId));
+        return this.get(API_ENDPOINTS.GET_POST(postId));
     },
 
     async updatePost(postId, postData) {
-        return axiosInstance.put(API_ENDPOINTS.UPDATE_POST(postId), postData);
+        const formData = new FormData();
+        if (postData.content) formData.append('content', postData.content);
+        if (postData.images) {
+            postData.images.forEach(img => formData.append('images', img));
+        }
+        return this.upload(API_ENDPOINTS.UPDATE_POST(postId), formData);
     },
 
     async deletePost(postId) {
-        return axiosInstance.delete(API_ENDPOINTS.DELETE_POST(postId));
+        return this.delete(API_ENDPOINTS.DELETE_POST(postId));
     },
 
     async reportPost(postId, reason, details) {
@@ -129,11 +139,11 @@ const apiService = {
     },
 
     async likePost(postId) {
-        return axiosInstance.post(API_ENDPOINTS.LIKE_POST(postId));
+        return this.post(API_ENDPOINTS.LIKE_POST(postId));
     },
 
     async getListPosts(params = {}) {
-        return axiosInstance.get(API_ENDPOINTS.GET_LIST_POSTS, { params });
+        return this.get(API_ENDPOINTS.GET_LIST_POSTS, { params });
     },
 
     /**
@@ -147,11 +157,11 @@ const apiService = {
     // COMMENT APIs
     // ─────────────────────────────────────────────────────────
     async addComment(postId, content) {
-        return axiosInstance.post(API_ENDPOINTS.ADD_COMMENT(postId), { content });
+        return this.post(API_ENDPOINTS.ADD_COMMENT(postId), { content });
     },
 
     async getComments(postId, params = {}) {
-        return axiosInstance.get(API_ENDPOINTS.GET_COMMENTS(postId), { params });
+        return this.get(API_ENDPOINTS.GET_COMMENTS(postId), {params});
     },
 
     // ─────────────────────────────────────────────────────────

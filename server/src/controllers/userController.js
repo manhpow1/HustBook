@@ -345,7 +345,7 @@ class UserController {
 
             let avatarUrl = null;
             if (req.file) {
-                avatarUrl = await handleAvatarUpload(req.file, currentUser.avatar_url);
+                avatarUrl = await handleAvatarUpload(req.file, userId);
             }
 
             await userService.changeInfoAfterSignup(userId, userName, avatarUrl);
@@ -521,10 +521,10 @@ class UserController {
             let updateData = { ...value };
             if (req.files) {
                 if (req.files.avatar) {
-                    updateData.avatar = await handleAvatarUpload(req.files.avatar[0]);
+                    updateData.avatar = await handleAvatarUpload(req.files.avatar[0], userId);
                 }
                 if (req.files.coverPhoto) {
-                    updateData.coverPhoto = await handleCoverPhotoUpload(req.files.coverPhoto[0]);
+                    updateData.coverPhoto = await handleCoverPhotoUpload(req.files.coverPhoto[0], userId);
                 }
             }
 

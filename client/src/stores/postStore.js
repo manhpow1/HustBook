@@ -3,6 +3,7 @@ import { ref, computed } from 'vue';
 import apiService from '../services/api';
 import { formatNumber } from '../utils/numberFormat';
 import { useErrorHandler } from '@/utils/errorHandler';
+import { useImageProcessing } from '@/composables/useImageProcessing';
 import inappropriateWords from '../words/inappropriateWords';
 
 export const usePostStore = defineStore('post', () => {
@@ -25,14 +26,9 @@ export const usePostStore = defineStore('post', () => {
 
     // Fetch Posts
     async function fetchPosts(params = {}) {
-        if (!hasMorePosts.value) {
-            console.log("No more posts to load.");
-            return;
-        }
+        if (!hasMorePosts.value) return;
 
         loading.value = true;
-        error.value = null;
-
         try {
             const response = await apiService.getListPosts({
                 ...params,
@@ -40,24 +36,23 @@ export const usePostStore = defineStore('post', () => {
                 limit: 10,
             });
 
-            const data = response.data;
-
-            if (data.code === '1000') {
-                const newPosts = data.data.posts
+            if (response.data.code === '1000') {
+                const newPosts = response.data.data.posts
                     .map(validateAndProcessPost)
-                    .filter((post) => post !== null);
+                    .filter(Boolean);
 
                 posts.value.push(...newPosts);
-                lastVisible.value = data.data.lastVisible;
+                lastVisible.value = response.data.data.lastVisible;
                 hasMorePosts.value = newPosts.length === 10;
-            } else if (data.code === '9994') {
+            } else if (response.data.code === '9994') {
                 hasMorePosts.value = false;
             } else {
-                throw new Error(data.message || 'Failed to load posts');
+                throw new Error(response.data.message);
             }
         } catch (err) {
             await handleError(err);
-            error.value = err.message || 'Failed to load posts';
+            error.value = err.message;
+            throw err;
         } finally {
             loading.value = false;
         }
@@ -66,48 +61,49 @@ export const usePostStore = defineStore('post', () => {
     // Fetch Single Post
     async function fetchPost(postId) {
         loading.value = true;
-        error.value = null;
         try {
             const response = await apiService.getPost(postId);
-            const data = response.data;
-
-            if (data.code === '1000') {
-                currentPost.value = data.data;
-            } else {
-                throw new Error(data.message || 'Failed to load post');
+            if (response.data.code === '1000') {
+                currentPost.value = validateAndProcessPost(response.data.data);
+                return response.data;
             }
+            throw new Error(response.data.message);
         } catch (err) {
             await handleError(err);
-            error.value = err.message || 'Failed to load post';
+            error.value = err.message;
+            throw err;
         } finally {
             loading.value = false;
         }
     }
 
-    async function getUserPosts(userId, { limit = 10 } = {}) {
+    async function getUserPosts(userId) {
+        if (!hasMorePosts.value) return;
+
         loading.value = true;
-        error.value = null;
-
         try {
-            const response = await apiService.getListPosts({ userId, limit, lastVisible: lastVisible.value });
-            const data = response.data;
+            const response = await apiService.getUserPosts(userId, {
+                lastVisible: lastVisible.value,
+                limit: 10
+            });
 
-            if (data.code === '1000') {
-                const newPosts = data.data.posts
+            if (response.data.code === '1000') {
+                const newPosts = response.data.data.posts
                     .map(validateAndProcessPost)
-                    .filter((post) => post !== null);
+                    .filter(Boolean);
 
                 posts.value.push(...newPosts);
-                lastVisible.value = data.data.lastVisible;
-                hasMorePosts.value = newPosts.length === limit;
-            } else if (data.code === '9994') {
+                lastVisible.value = response.data.data.lastVisible;
+                hasMorePosts.value = newPosts.length === 10;
+            } else if (response.data.code === '9994') {
                 hasMorePosts.value = false;
             } else {
-                throw new Error(data.message || 'Failed to load user posts');
+                throw new Error(response.data.message);
             }
         } catch (err) {
             await handleError(err);
-            error.value = err.message || 'Failed to load user posts';
+            error.value = err.message;
+            throw err;
         } finally {
             loading.value = false;
         }
@@ -116,20 +112,24 @@ export const usePostStore = defineStore('post', () => {
     // Create Post
     async function createPost(postData) {
         loading.value = true;
-        error.value = null;
         try {
-            const response = await apiService.createPost(postData);
-            const data = response.data;
-
-            if (data.code === '1000') {
-                posts.value.unshift(data.data);
-                return data;
-            } else {
-                throw new Error(data.message || 'Failed to create post');
+            if (postData.images?.length) {
+                const processedImages = await Promise.all(
+                    postData.images.map(img => useImageProcessing().compressImage(img))
+                );
+                postData.images = processedImages.filter(Boolean);
             }
+
+            const response = await apiService.createPost(postData);
+            if (response.data.code === '1000') {
+                const newPost = validateAndProcessPost(response.data.data);
+                if (newPost) posts.value.unshift(newPost);
+                return response.data;
+            }
+            throw new Error(response.data.message);
         } catch (err) {
             await handleError(err);
-            error.value = err.message || 'Failed to create post';
+            error.value = err.message;
             throw err;
         } finally {
             loading.value = false;
@@ -139,39 +139,26 @@ export const usePostStore = defineStore('post', () => {
     // Update Post
     async function updatePost(postId, postData) {
         loading.value = true;
-        error.value = null;
         try {
-            // Validate and sanitize `postData`
-            if (!postData || typeof postData !== 'object') {
-                throw new Error('Invalid post data');
+            if (postData.images?.length) {
+                const processedImages = await Promise.all(
+                    postData.images.map(img => useImageProcessing().compressImage(img))
+                );
+                postData.images = processedImages.filter(Boolean);
             }
 
-            const allowedKeys = ['content', 'images', 'likes', 'comments', 'isLiked', 'video'];
-            const sanitizedData = Object.keys(postData).reduce((acc, key) => {
-                if (allowedKeys.includes(key)) {
-                    acc[key] = postData[key];
-                }
-                return acc;
-            }, {});
-
-            const response = await apiService.updatePost(postId, sanitizedData);
-            const data = response.data;
-
-            if (data.code === '1000') {
-                const index = posts.value.findIndex((post) => post.id === postId);
-                if (index !== -1) {
-                    posts.value[index] = { ...posts.value[index], ...sanitizedData };
-                }
-                if (currentPost.value && currentPost.value.id === postId) {
-                    currentPost.value = { ...currentPost.value, ...sanitizedData };
-                }
-                return data;
-            } else {
-                throw new Error(data.message || 'Failed to update post');
+            const response = await apiService.updatePost(postId, postData);
+            if (response.data.code === '1000') {
+                const updatedPost = validateAndProcessPost(response.data.data);
+                const index = posts.value.findIndex(p => p.id === postId);
+                if (index !== -1) posts.value[index] = updatedPost;
+                if (currentPost.value?.id === postId) currentPost.value = updatedPost;
+                return response.data;
             }
+            throw new Error(response.data.message);
         } catch (err) {
             await handleError(err);
-            error.value = err.message || 'Failed to update post';
+            error.value = err.message;
             throw err;
         } finally {
             loading.value = false;
@@ -184,63 +171,56 @@ export const usePostStore = defineStore('post', () => {
             const post = posts.value.find(p => p.id === postId);
             const isLiked = post?.isLiked === '1';
 
-            // Optimistic UI update
             if (post) {
                 post.isLiked = isLiked ? '0' : '1';
                 post.likes += isLiked ? -1 : 1;
             }
-            if (currentPost.value && currentPost.value.id === postId) {
+
+            if (currentPost.value?.id === postId) {
                 currentPost.value.isLiked = isLiked ? '0' : '1';
                 currentPost.value.likes += isLiked ? -1 : 1;
             }
 
-            // Call the like API
             await apiService.likePost(postId);
         } catch (err) {
             await handleError(err);
-
-            // Revert the UI update on failure
             const post = posts.value.find(p => p.id === postId);
             if (post) {
-                const isLiked = post.isLiked === '1';
-                post.isLiked = isLiked ? '0' : '1';
-                post.likes += isLiked ? -1 : 1;
+                post.isLiked = post.isLiked === '1' ? '0' : '1';
+                post.likes += post.isLiked === '1' ? 1 : -1;
             }
-            if (currentPost.value && currentPost.value.id === postId) {
-                const isLiked = currentPost.value.isLiked === '1';
-                currentPost.value.isLiked = isLiked ? '0' : '1';
-                currentPost.value.likes += isLiked ? -1 : 1;
+            if (currentPost.value?.id === postId) {
+                currentPost.value.isLiked = currentPost.value.isLiked === '1' ? '0' : '1';
+                currentPost.value.likes += currentPost.value.isLiked === '1' ? 1 : -1;
             }
+            throw err;
         }
     }
 
     // Fetch Comments
-    async function fetchComments(postId, limit = 10) {
+    async function fetchComments(postId) {
         if (!hasMoreComments.value) return;
 
         loadingComments.value = true;
-        commentError.value = null;
-
         try {
             const response = await apiService.getComments(postId, {
-                limit,
-                lastVisible: lastVisible.value, // Assuming server uses lastVisible for pagination
+                lastVisible: lastVisible.value,
+                limit: 10
             });
 
-            const data = response.data;
-
-            if (data.code === '1000') {
-                const newComments = data.data.comments;
-                comments.value.push(...newComments);
-                hasMoreComments.value = newComments.length === limit;
-            } else if (data.code === '9994') {
+            if (response.data.code === '1000') {
+                comments.value.push(...response.data.data.comments);
+                lastVisible.value = response.data.data.lastVisible;
+                hasMoreComments.value = response.data.data.comments.length === 10;
+            } else if (response.data.code === '9994') {
                 hasMoreComments.value = false;
             } else {
-                throw new Error(data.message || 'Failed to load comments');
+                throw new Error(response.data.message);
             }
-        } catch (error) {
-            commentError.value = error.message;
-            await handleError(error);
+        } catch (err) {
+            await handleError(err);
+            commentError.value = err.message;
+            throw err;
         } finally {
             loadingComments.value = false;
         }
@@ -250,18 +230,16 @@ export const usePostStore = defineStore('post', () => {
     async function addComment(postId, content) {
         try {
             const response = await apiService.addComment(postId, content);
-            const data = response.data;
-
-            if (data.code === '1000') {
-                comments.value.unshift(data.data);
-                if (currentPost.value && currentPost.value.id === postId) {
+            if (response.data.code === '1000') {
+                comments.value.unshift(response.data.data);
+                if (currentPost.value?.id === postId) {
                     currentPost.value.comments++;
                 }
-            } else {
-                throw new Error(data.message || 'Failed to add comment');
+                return response.data;
             }
+            throw new Error(response.data.message);
         } catch (err) {
-            console.error('Error adding comment:', err);
+            await handleError(err);
             throw err;
         }
     }
@@ -270,22 +248,15 @@ export const usePostStore = defineStore('post', () => {
     async function removePost(postId) {
         try {
             const response = await apiService.deletePost(postId);
-            const data = response.data;
-
-            if (data.code === '1000') {
-                const index = posts.value.findIndex(post => post.id === postId);
-                if (index !== -1) {
-                    posts.value.splice(index, 1);
-                }
-                if (currentPost.value && currentPost.value.id === postId) {
-                    currentPost.value = null;
-                }
+            if (response.data.code === '1000') {
+                posts.value = posts.value.filter(p => p.id !== postId);
+                if (currentPost.value?.id === postId) currentPost.value = null;
             } else {
-                throw new Error(data.message || 'Failed to remove post');
+                throw new Error(response.data.message);
             }
         } catch (err) {
-            console.error('Error removing post:', err);
-            error.value = 'Failed to remove post';
+            await handleError(err);
+            error.value = err.message;
             throw err;
         }
     }
@@ -293,6 +264,7 @@ export const usePostStore = defineStore('post', () => {
     // Reset Comments
     function resetComments() {
         comments.value = [];
+        lastVisible.value = null;
         hasMoreComments.value = true;
     }
 
