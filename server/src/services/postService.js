@@ -426,6 +426,7 @@ class PostService {
     }
 
     async getListPosts({
+        id,
         userId,
         inCampaign,
         campaignId,
@@ -439,6 +440,10 @@ class PostService {
                 .orderBy('createdAt', 'desc');
 
             // Add filters
+            if (id) {
+                query = query.where('__name__', '==', id);
+            }
+            
             if (userId) {
                 query = query.where('userId', '==', userId);
             }

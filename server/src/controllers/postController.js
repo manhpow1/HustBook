@@ -249,6 +249,7 @@ class PostController {
             }
 
             const {
+                id,
                 userId,
                 in_campaign,
                 campaignId,
@@ -260,6 +261,7 @@ class PostController {
 
             const currentUserId = req.user.uid;
             const result = await postService.getListPosts({
+                id,
                 userId: userId || currentUserId,
                 inCampaign: in_campaign,
                 campaignId,
