@@ -327,34 +327,6 @@ class UserController {
         }
     }
 
-    async changeInfoAfterSignup(req, res, next) {
-        try {
-            const { error, value } = userValidator.validateChangeInfoAfterSignup(req.body);
-            if (error) {
-                const errorMessage = error.details.map(detail => detail.message).join(', ');
-                throw createError('1002', errorMessage);
-            }
-
-            const userId = req.user.userId;
-            const { userName } = value;
-            const avatarFile = req.files?.avatar?.[0];
-
-            const updatedUser = await userService.changeInfoAfterSignup(userId, userName, avatarFile);
-
-            sendResponse(res, '1000', {
-                message: 'Profile updated successfully',
-                user: {
-                    userId: updatedUser.userId,
-                    userName: updatedUser.userName,
-                    avatar_url: updatedUser.avatar
-                }
-            });
-        } catch (error) {
-            logger.error('Set User Info Error:', error);
-            next(error);
-        }
-    }
-
     async logout(req, res, next) {
         try {
             const userId = req.user.userId;
@@ -544,6 +516,42 @@ class UserController {
             sendResponse(res, '1000', { user: userInfo });
         } catch (error) {
             logger.error('Get User Info Error:', error);
+            next(error);
+        }
+    }
+
+    async changeInfoAfterSignup(req, res, next) {
+        try {
+            const { error, value } = userValidator.validateChangeInfoAfterSignup(req.body);
+            if (error) {
+                const errorMessage = error.details.map(detail => detail.message).join(', ');
+                throw createError('1002', errorMessage);
+            }
+
+            const userId = req.user.userId;
+            const { userName } = value;
+            let avatarFile = null;
+
+            // Handle avatar file if present
+            if (req.files && req.files.avatar) {
+                avatarFile = req.files.avatar[0];
+            } else if (req.body.avatar) {
+                // If avatar is provided as a URL string
+                avatarFile = req.body.avatar;
+            }
+
+            const updatedUser = await userService.changeInfoAfterSignup(userId, userName, avatarFile);
+
+            sendResponse(res, '1000', {
+                message: 'Profile updated successfully',
+                user: {
+                    userId: updatedUser.userId,
+                    userName: updatedUser.userName,
+                    avatar: updatedUser.avatar
+                }
+            });
+        } catch (error) {
+            logger.error('Change Info After Signup Error:', error);
             next(error);
         }
     }

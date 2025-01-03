@@ -402,8 +402,14 @@ class UserService {
             
             // Handle avatar upload if provided
             if (avatarFile) {
-                const uploadedAvatarUrl = await handleAvatarUpload(avatarFile, userId);
-                user.avatar = uploadedAvatarUrl || '';
+                if (typeof avatarFile === 'string') {
+                    // If avatarFile is already a URL string, use it directly
+                    user.avatar = avatarFile;
+                } else {
+                    // If avatarFile is a file object, process the upload
+                    const uploadedAvatarUrl = await handleAvatarUpload(avatarFile, userId);
+                    user.avatar = uploadedAvatarUrl || '';
+                }
             }
 
             // Update metadata
