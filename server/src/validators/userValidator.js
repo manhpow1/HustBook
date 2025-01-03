@@ -148,23 +148,25 @@ const changeInfoAfterSignupSchema = Joi.object({
             'any.required': 'Username is required.'
         }),
     avatar: Joi.alternatives().try(
+        // Handle URL string
         Joi.string().uri().messages({
             'string.uri': 'Avatar URL must be a valid URL.'
         }),
-        Joi.object({
+        // Handle file upload
+        Joi.object().keys({
             fieldname: Joi.string().required(),
             originalname: Joi.string().required(),
             encoding: Joi.string().required(),
-            mimetype: Joi.string().pattern(/^image\/(jpeg|png|gif)$/).required().messages({
-                'string.pattern.base': 'Avatar must be a valid image file (jpg, png, or gif).'
-            }),
+            mimetype: Joi.string().valid('image/jpeg', 'image/png', 'image/gif').required(),
             buffer: Joi.binary().required(),
-            size: Joi.number().max(5 * 1024 * 1024).required().messages({
-                'number.max': 'Avatar file size must not exceed 5MB.'
-            })
-        })
-    ).allow(null, '').messages({
-        'alternatives.types': 'Avatar must be either a valid URL or an image file.'
+            size: Joi.number().max(5 * 1024 * 1024).required(),
+            path: Joi.string().allow(''),
+            destination: Joi.string().allow('')
+        }).unknown(true),
+        // Handle null/empty cases
+        Joi.string().allow('', null)
+    ).messages({
+        'alternatives.match': 'Avatar must be either a valid URL or an image file.'
     })
 }).required();
 
