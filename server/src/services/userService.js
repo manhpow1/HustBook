@@ -429,9 +429,7 @@ class UserService {
 
             // Update user information
             user.userName = userName;
-            if (avatarUrl) {
-                user.avatar = avatarUrl;
-            }
+            user.avatar = avatarUrl || '';  // Always set a string value
             user.updatedAt = new Date().toISOString();
 
             await user.save();
@@ -463,7 +461,12 @@ class UserService {
                 throw createError('9999', 'Data was modified by another request');
             }
 
-            Object.assign(user, updateData);
+            // Ensure avatar is always a string
+            const sanitizedData = {
+                ...updateData,
+                avatar: updateData.avatar || ''
+            };
+            Object.assign(user, sanitizedData);
             user.version = currentVersion + 1;
             user.lastModifiedAt = currentTime;
             user.updatedAt = new Date().toISOString();

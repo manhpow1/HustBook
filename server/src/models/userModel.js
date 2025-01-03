@@ -9,7 +9,7 @@ class User {
         this.userId = data.userId;  // Updated to use userId consistently
         this.userName = data.userName || null;
         this.phoneNumber = data.phoneNumber;
-        this.avatar = data.avatar || null;
+        this.avatar = data.avatar || '';  // Initialize as empty string instead of null
         this.createdAt = data.createdAt || new Date().toISOString();
         this.isVerified = data.isVerified || false;
         this.isBlocked = data.isBlocked || false;
