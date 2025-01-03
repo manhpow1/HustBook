@@ -26,7 +26,12 @@ const createPostSchema = Joi.object({
         .items(
             Joi.string()
                 .uri()
-                .pattern(/\.(jpg|jpeg|png|gif)$/i)
+                .custom((value, helpers) => {
+                    if (!value.match(/\.(jpg|jpeg|png|gif)$/i)) {
+                        return helpers.error('string.pattern.base');
+                    }
+                    return value;
+                })
         )
         .max(4)
         .messages({
