@@ -145,6 +145,7 @@ const handleFileChange = async (event) => {
     if (!file) return;
 
     try {
+        // Validate file type and size
         if (!validateImage(file)) {
             event.target.value = '';
             toast({
@@ -155,41 +156,46 @@ const handleFileChange = async (event) => {
             return;
         }
 
+        // Show preview immediately
         const reader = new FileReader();
         reader.onload = (e) => {
             avatarPreview.value = e.target.result;
         };
         reader.readAsDataURL(file);
 
+        // Compress image
         const compressedFile = await compressImage(file);
         if (compressedFile) {
+            const compressedSize = compressedFile.size / (1024 * 1024); // Size in MB
             avatar.value = compressedFile;
             avatarError.value = '';
+            
             toast({
                 type: 'success',
                 title: 'Success',
-                description: 'Image uploaded and compressed successfully'
+                description: `Image processed successfully (${compressedSize.toFixed(2)}MB)`
             });
         } else {
-            avatar.value = null;
-            avatarPreview.value = '';
-            event.target.value = '';
+            removeAvatar();
             toast({
                 type: 'error',
                 title: 'Error',
-                description: 'Failed to compress image'
+                description: 'Failed to process image. Please try a different file.'
             });
         }
     } catch (error) {
         logger.error('File handling error:', error);
-        avatar.value = null;
-        avatarPreview.value = '';
-        event.target.value = '';
+        removeAvatar();
         toast({
             type: 'error',
             title: 'Error',
-            description: 'Failed to process image file'
+            description: 'Failed to process image file. Please try again.'
         });
+    } finally {
+        // Reset file input if there was an error
+        if (!avatar.value) {
+            event.target.value = '';
+        }
     }
 };
 
@@ -210,6 +216,17 @@ const handleSubmit = async () => {
         });
         return;
     }
+
+    // Validate username
+    if (!userName.value?.trim()) {
+        toast({
+            type: 'error',
+            title: 'Validation Error',
+            description: 'Username is required'
+        });
+        return;
+    }
+
     if (userNameError.value) {
         toast({
             type: 'error',
@@ -220,32 +237,37 @@ const handleSubmit = async () => {
     }
 
     try {
-        const sanitizedUserName = sanitizeInput(userName.value);
-        await userStore.updateProfile(sanitizedUserName, avatar.value);
+        const sanitizedUserName = sanitizeInput(userName.value.trim());
+        const success = await userStore.updateProfile(sanitizedUserName, avatar.value);
 
-        if (user.value?.isBlocked) {
-            toast({
-                type: 'error',
-                title: 'Account Blocked',
-                description: 'Your account has been blocked.'
-            });
-            router.push({ name: 'Login' });
+        if (success) {
+            if (user.value?.isBlocked) {
+                toast({
+                    type: 'error',
+                    title: 'Account Blocked',
+                    description: 'Your account has been blocked.'
+                });
+                router.push({ name: 'Login' });
+            } else {
+                toast({
+                    type: 'success',
+                    title: 'Success',
+                    description: 'Profile updated successfully.'
+                });
+                // Allow time for the success message to be seen
+                setTimeout(() => {
+                    router.push({ name: 'Home' });
+                }, 2000);
+            }
         } else {
-            toast({
-                type: 'success',
-                title: 'Success',
-                description: 'Profile updated successfully.'
-            });
-            setTimeout(() => {
-                router.push({ name: 'Home' });
-            }, 2000);
+            throw new Error('Failed to update profile');
         }
     } catch (error) {
         logger.error('Error updating profile:', error);
         toast({
             type: 'error',
             title: 'Error',
-            description: error.message || 'Failed to update profile'
+            description: error.message || 'Failed to update profile. Please try again.'
         });
     }
 };

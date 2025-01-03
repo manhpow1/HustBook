@@ -563,10 +563,12 @@ export const useUserStore = defineStore('user', () => {
             isLoading.value = true;
             error.value = null;
 
+            logger.debug('Updating profile', { userName, hasAvatar: !!avatar });
+
             const formData = new FormData();
             formData.append('userName', userName);
             if (avatar) {
-                formData.append('avatar', avatar);
+                formData.append('avatar', avatar, avatar.name);
             }
 
             const response = await apiService.changeInfoAfterSignup(formData, {
@@ -576,14 +578,24 @@ export const useUserStore = defineStore('user', () => {
                 }
             });
 
-            if (response.data.code === '1000') {
-                user.value = { ...user.value, ...response.data.data };
+            if (response.data?.code === '1000') {
+                const userData = response.data.data;
+                user.value = {
+                    ...user.value,
+                    userName: userData.userName,
+                    avatar_url: userData.avatar
+                };
+
                 successMessage.value = 'Profile updated successfully!';
-                toast({ type: 'error', message: error.value });
+                toast({ type: 'success', message: successMessage.value });
                 return true;
             }
+
+            error.value = response.data?.message || 'Failed to update profile';
+            toast({ type: 'error', message: error.value });
             return false;
         } catch (err) {
+            logger.error('Profile update error:', err);
             handleAuthError(err);
             return false;
         } finally {
