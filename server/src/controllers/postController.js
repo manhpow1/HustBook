@@ -223,7 +223,7 @@ class PostController {
         }
     }
 
-    async toggleLike(req, res, next) {
+    async ike(req, res, next) {
         try {
             const { error } = postValidator.validateLike(req.params);
             if (error) throw createError('1002', error.details.map(detail => detail.message).join(', '));

@@ -196,21 +196,14 @@ const getMediaArray = (post) => {
 const mappedPosts = computed(() =>
   postStore.posts.map((p) => ({
     postId: p.postId,
-    // Some API responses might store time in `p.created`, others in `p.createdAt`
     created: p.created ?? p.createdAt ?? new Date().toISOString(),
-
-    // Author fields
-    userName: p.author?.name || 'Unknown',
+    userName: p.author?.userName || 'Unknown',
     userAvatar: p.author?.avatar || '',
-
-    // Content fields
     described: p.content || '',
     media: getMediaArray(p),
-
-    // Engagement fields
     likes: p.likes || 0,
     comments: p.comments || 0,
-    isLiked: p.isLiked || '0' // '0' or '1'
+    isLiked: p.isLiked || '0'
   }))
 )
 

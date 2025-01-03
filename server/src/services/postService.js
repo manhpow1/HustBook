@@ -25,7 +25,7 @@ class PostService {
             }
 
             const postId = await createDocument(collections.posts, {});
-            
+
             const postData = new Post({
                 postId,
                 userId,
@@ -352,7 +352,7 @@ class PostService {
                 createdAt: comment.createdAt.toDate().toISOString(),
                 author: userMap.get(comment.userId) || {
                     userId: comment.userId,
-                    userName: 'Unknown User',
+                    userName: comment.userName,
                     avatar: ''
                 },
                 isAuthor: comment.userId === userId,
@@ -450,7 +450,7 @@ class PostService {
             if (postId) {
                 query = query.where('__name__', '==', postId);
             }
-            
+
             if (userId) {
                 query = query.where('userId', '==', userId);
             }
@@ -499,7 +499,8 @@ class PostService {
                     author: {
                         userId: post.userId,
                         userName: author.userName || 'Unknown User',
-                        avatar: author.avatar || ''
+                        avatar: author.avatar || '',
+                        online: author.online || '0'
                     }
                 };
             });
@@ -530,36 +531,42 @@ class PostService {
     }
 
     async getAuthorsInfo(authorIds) {
-        const authorsMap = new Map();
-
-        if (authorIds.length === 0) return authorsMap;
-
-        const chunks = [];
-        for (let i = 0; i < authorIds.length; i += 10) {
-            chunks.push(authorIds.slice(i, i + 10));
-        }
-
-        await Promise.all(chunks.map(async chunk => {
-            const snapshot = await db.collection(collections.users)
-                .where('__name__', 'in', chunk)
-                .get();
-
-            snapshot.docs.forEach(doc => {
-                authorsMap.set(doc.id, doc.data());
-            });
-        }));
-
-        return authorsMap;
-    }
-
-    // Helper method to cache posts list
-    async cachePostsList(userId, posts) {
         try {
-            const cacheKey = `user:${userId}:posts:list`;
-            await redis.setex(cacheKey, 300, JSON.stringify(posts)); // Cache for 5 minutes
+            const authorsMap = new Map();
+            if (!authorIds?.length) return authorsMap;
+
+            // Process in chunks of 10 (Firestore limitation)
+            const chunks = [];
+            for (let i = 0; i < authorIds.length; i += 10) {
+                chunks.push(authorIds.slice(i, i + 10));
+            }
+
+            await Promise.all(chunks.map(async chunk => {
+                try {
+                    const snapshot = await db.collection(collections.users)
+                        .where(admin.firestore.FieldPath.documentId(), 'in', chunk)
+                        .get();
+
+                    snapshot.docs.forEach(doc => {
+                        if (doc.exists) {
+                            authorsMap.set(doc.id, {
+                                userId: doc.id,
+                                userName: doc.data().userName || 'Unknown User',
+                                avatar: doc.data().avatar || '',
+                                online: doc.data().online || '0'
+                            });
+                        }
+                    });
+                } catch (error) {
+                    logger.error(`Error fetching author chunk: ${chunk}`, error);
+                    // Continue with other chunks even if one fails
+                }
+            }));
+
+            return authorsMap;
         } catch (error) {
-            logger.warn('Failed to cache posts list:', error);
-            // Continue execution even if caching fails
+            logger.error('Error in getAuthorsInfo:', error);
+            throw error;
         }
     }
 }
