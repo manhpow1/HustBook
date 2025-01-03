@@ -59,7 +59,10 @@ const getListPostsSchema = Joi.object({
     campaignId: Joi.string().optional(),
     latitude: Joi.number().min(-90).max(90).optional(),
     longitude: Joi.number().min(-180).max(180).optional(),
-    lastVisible: Joi.string().optional(),
+    lastVisible: Joi.alternatives().try(
+        Joi.string(),
+        Joi.allow(null)
+    ).optional(),
     limit: Joi.number().integer().min(1).max(100).default(20),
     reset: Joi.boolean().optional()
 }).required();
