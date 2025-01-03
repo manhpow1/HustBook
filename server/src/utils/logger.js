@@ -19,7 +19,6 @@ const maskSensitiveData = winston.format((info) => {
         // Enhanced masking patterns
         info.message = info.message.replace(/(password=)([^&\s]+)/gi, '$1***');
         info.message = info.message.replace(/(token=)([^&\s]+)/gi, '$1***');
-        info.message = info.message.replace(/(email=)([^&\s]+)/gi, '$1***');
     }
     return info;
 });
