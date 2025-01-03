@@ -46,7 +46,7 @@
 
             <!-- Posts List -->
             <TransitionGroup v-else-if="mappedPosts.length > 0" name="post-list" tag="ul" class="space-y-4">
-              <li v-for="post in mappedPosts" :key="post.id">
+              <li v-for="post in mappedPosts" :key="post.postId">
                 <Card>
                   <CardHeader>
                     <div class="flex items-center gap-4">
@@ -75,7 +75,7 @@
                           <img v-if="isImage(media)" :src="media" :alt="`Post image ${index + 1}`"
                             class="w-full h-full object-cover" loading="lazy" />
 
-                          <div v-else @click="goToWatchPage(post.id, index)" class="relative h-full cursor-pointer">
+                          <div v-else @click="goToWatchPage(post.postId, index)" class="relative h-full cursor-pointer">
                             <video :src="media" class="w-full h-full object-cover" preload="metadata">
                             </video>
                             <div class="absolute inset-0 flex items-center justify-center bg-black/50">
@@ -88,14 +88,14 @@
                   </CardContent>
 
                   <CardFooter class="flex flex-wrap gap-2">
-                    <Button @click="likePost(post.id)" variant="outline"
+                    <Button @click="likePost(post.postId)" variant="outline"
                       :class="{ 'text-primary': post.isLiked === '1' }">
                       <ThumbsUp class="w-4 h-4 mr-2" />
                       {{ post.likes }}
                       {{ post.likes === 1 ? 'Like' : 'Likes' }}
                     </Button>
 
-                    <Button @click="showComments(post.id)" variant="outline">
+                    <Button @click="showComments(post.postId)" variant="outline">
                       <MessageCircle class="w-4 h-4 mr-2" />
                       {{ post.comments }}
                       {{ post.comments === 1 ? 'Comment' : 'Comments' }}
@@ -195,7 +195,7 @@ const getMediaArray = (post) => {
 // e.g., rename `content -> described`, combine images/video into `media`, etc.
 const mappedPosts = computed(() =>
   postStore.posts.map((p) => ({
-    id: p.id,
+    postId: p.postId,
     // Some API responses might store time in `p.created`, others in `p.createdAt`
     created: p.created ?? p.createdAt ?? new Date().toISOString(),
 
@@ -253,7 +253,7 @@ const likePost = async (postId) => {
 const showComments = (postId) => {
   router.push({
     name: 'PostDetail',
-    params: { id: postId },
+    params: { postId: postId },
     hash: '#comments'
   })
 }
@@ -276,7 +276,7 @@ const isImage = (fileUrl) => {
 const goToWatchPage = (postId, mediaIndex) => {
   router.push({
     name: 'PostDetail',
-    params: { id: postId },
+    params: { postId: postId },
     // e.g., you can pass the mediaIndex in query or hash
     query: { mediaIndex }
   })
