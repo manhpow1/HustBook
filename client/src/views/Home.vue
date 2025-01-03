@@ -13,18 +13,40 @@
             </h2>
 
             <!-- Loading State -->
-            <div v-if="postStore.loading">
-              <Skeleton v-for="i in 3" :key="i" class="w-full h-32 mb-4" />
+            <div v-if="postStore.loading && !postStore.posts.length" class="space-y-4">
+              <Skeleton v-for="i in 3" :key="i">
+                <div class="space-y-3">
+                  <div class="flex items-center space-x-4">
+                    <div class="h-12 w-12 rounded-full bg-muted" />
+                    <div class="space-y-2">
+                      <div class="h-4 w-[200px] bg-muted rounded" />
+                      <div class="h-4 w-[150px] bg-muted rounded" />
+                    </div>
+                  </div>
+                  <div class="space-y-2">
+                    <div class="h-4 w-[100%] bg-muted rounded" />
+                    <div class="h-4 w-[80%] bg-muted rounded" />
+                  </div>
+                </div>
+              </Skeleton>
             </div>
 
             <!-- Error State -->
-            <Alert v-else-if="postStore.error" variant="destructive">
+            <Alert v-else-if="postStore.error" variant="destructive" class="animate-in fade-in-50">
               <AlertCircle class="h-4 w-4" />
-              <AlertTitle>Error</AlertTitle>
-              <AlertDescription>{{ postStore.error }}</AlertDescription>
-              <Button @click="retryFetchPosts" variant="outline" class="mt-2">
-                Retry
-              </Button>
+              <AlertTitle>Unable to load posts</AlertTitle>
+              <AlertDescription class="mt-2">
+                {{ postStore.error }}
+                <Button 
+                  @click="retryFetchPosts" 
+                  variant="outline" 
+                  class="mt-3 w-full"
+                  :disabled="postStore.loading"
+                >
+                  <RefreshCw v-if="postStore.loading" class="mr-2 h-4 w-4 animate-spin" />
+                  {{ postStore.loading ? 'Retrying...' : 'Try Again' }}
+                </Button>
+              </AlertDescription>
             </Alert>
 
             <!-- Posts List -->
@@ -137,7 +159,7 @@
 <script setup>
 import { onMounted, watch, computed, defineAsyncComponent } from 'vue'
 import { useRouter } from 'vue-router'
-import { AlertCircle, ThumbsUp, MessageCircle, Play } from 'lucide-vue-next'
+import { AlertCircle, ThumbsUp, MessageCircle, Play, RefreshCw } from 'lucide-vue-next'
 import { formatDistanceToNow } from 'date-fns'
 import { vi } from 'date-fns/locale'
 import { usePostStore } from '../stores/postStore'
@@ -220,9 +242,11 @@ const retryFetchPosts = () => {
 
 const mediaGridClass = (count) => ({
   'grid-cols-1': count === 1,
-  'grid-cols-2': count === 2,
-  'grid-cols-3': count >= 3,
-  'md:grid-cols-4': count >= 4
+  'grid-cols-2': count === 2 || count === 4,
+  'grid-cols-3': count === 3,
+  'grid-rows-2': count === 4,
+  'aspect-square': count > 1,
+  'gap-1': count > 2
 })
 
 // Toggle post like

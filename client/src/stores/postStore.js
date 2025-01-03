@@ -32,10 +32,18 @@ export const usePostStore = defineStore('post', () => {
         error.value = null;
         
         try {
-            const response = await apiService.getListPosts({
-                ...params,
-                lastVisible: params.reset ? null : lastVisible.value,
-                limit: 20
+            if (params.reset) {
+                posts.value = [];
+                lastVisible.value = null;
+                hasMorePosts.value = true;
+            }
+
+            const response = await apiService.get(API_ENDPOINTS.GET_LIST_POSTS, {
+                params: {
+                    ...params,
+                    lastVisible: lastVisible.value,
+                    limit: 20
+                }
             });
 
             if (response.data.code === '1000') {
