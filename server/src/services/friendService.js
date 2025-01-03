@@ -23,7 +23,7 @@ class FriendService {
                 ref.where('__name__', 'in', senderIds)
             );
 
-            const userMap = new Map(senderUsers.map(user => [user.id, user]));
+            const userMap = new Map(senderUsers.map(user => [user.userId, user]));
 
             const formattedRequests = friendRequests.map(request => ({
                 id: request.senderId,
@@ -274,7 +274,7 @@ class FriendService {
             const blocks = blockedUsers
                 .filter(user => user !== null)
                 .map(user => ({
-                    id: user.id,
+                    userId: user.userId,
                     name: user.userName || '',
                     avatar: user.avatar || '',
                 }));

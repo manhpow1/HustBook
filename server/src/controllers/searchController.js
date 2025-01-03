@@ -21,7 +21,7 @@ class SearchController {
             }
 
             const { keyword, index, count } = value;
-            const userId = req.user.uid;
+            const userId = req.user.userId;
 
             const matchingPosts = await searchService.searchPosts(userId, keyword, index, count);
 
@@ -48,7 +48,7 @@ class SearchController {
             }
     
             const { keyword, index, count } = value;
-            const userId = req.user.uid;
+            const userId = req.user.userId;
             
             const users = await searchService.searchUsers(userId, keyword, index, count);
             
@@ -69,7 +69,7 @@ class SearchController {
                 throw createError('1002', error.details.map(detail => detail.message).join(', '));
             }
             const { index, count } = value;
-            const userId = req.user.uid;
+            const userId = req.user.userId;
             const savedSearches = await searchService.getSavedSearches(userId, index, count);
 
             return sendResponse(res, '1000', {
@@ -93,7 +93,7 @@ class SearchController {
 
             const { searchId } = req.params;
             const { all } = req.query;
-            const userId = req.user.uid;
+            const userId = req.user.userId;
 
             await searchService.deleteSavedSearch(userId, searchId, all === '1');
 

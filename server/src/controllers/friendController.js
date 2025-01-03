@@ -12,7 +12,7 @@ class FriendController {
             }
 
             const { index, count } = req.query;
-            const userId = req.user.uid;
+            const userId = req.user.userId;
 
             const result = await friendService.getRequestedFriends(userId, parseInt(index), parseInt(count));
 
@@ -80,7 +80,7 @@ class FriendController {
             }
 
             const { index, count } = value;
-            const userId = req.user.uid;
+            const userId = req.user.userId;
 
             const result = await friendService.getListSuggestedFriends(userId, index, count);
 
@@ -104,7 +104,7 @@ class FriendController {
             }
 
             const { userId } = req.body;
-            const senderId = req.user.uid;
+            const senderId = req.user.userId;
 
             if (senderId === userId) {
                 throw createError('1004', 'Cannot send friend request to yourself');
@@ -130,7 +130,7 @@ class FriendController {
             }
 
             const { index, count } = req.query;
-            const userId = req.user.uid;
+            const userId = req.user.userId;
 
             const result = await friendService.getListBlocks(userId, parseInt(index), parseInt(count));
 

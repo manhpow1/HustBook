@@ -34,7 +34,7 @@ class UserService {
 
             // Create new User model instance with all required fields
             const user = new User({
-                uid: userId,
+                userId: userId,
                 phoneNumber,
                 password: hashedPassword,
                 passwordHistory: [hashedPassword],
@@ -393,7 +393,7 @@ class UserService {
             }
 
             return {
-                uid: user.uid,  // Standardized to uid
+                userId: user.userId,  // Standardized to userId
                 userName: user.userName,
                 fullName: user.fullName,
                 avatar: user.avatar,
@@ -500,7 +500,7 @@ class UserService {
 
             // Validate password strength
             if (!passwordStrength(newPassword)) {
-                logger.warn('Password strength check failed', { userId: user.uid });
+                logger.warn('Password strength check failed', { userId: user.userId });
                 throw createError('9997', 'New password does not meet security requirements');
             }
 
@@ -510,7 +510,7 @@ class UserService {
             ).catch(() => false);
 
             if (isPasswordReused) {
-                logger.warn('Password reuse detected', { userId: user.uid });
+                logger.warn('Password reuse detected', { userId: user.userId });
                 throw createError('9992', 'Password has been used recently');
             }
 
@@ -525,14 +525,14 @@ class UserService {
             await Promise.all([
                 user.save(),
                 verificationRef.delete(),
-                req.app.locals.auditLog.logAction(user.uid, null, 'password_reset', {
+                req.app.locals.auditLog.logAction(user.userId, null, 'password_reset', {
                     deviceId: req.get('Device-ID'),
                     ip: req.ip,
                     timestamp: new Date().toISOString()
                 })
             ]);
 
-            logger.info('Password reset completed successfully', { userId: user.uid });
+            logger.info('Password reset completed successfully', { userId: user.userId });
             return { success: true };
 
         } catch (error) {

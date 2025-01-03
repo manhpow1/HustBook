@@ -72,7 +72,7 @@ const profileUpdateLimiter = rateLimit({
     windowMs: 5 * 60 * 1000, // 5 minutes
     max: 3, // 3 updates per window
     message: 'Too many profile updates, please try again later',
-    keyGenerator: (req) => `${req.user.uid}:profile_update`
+    keyGenerator: (req) => `${req.user.userId}:profile_update`
 });
 
 const upload = multer({

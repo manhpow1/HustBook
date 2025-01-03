@@ -14,7 +14,7 @@ class ChatController {
             }
 
             const { index, count } = value;
-            const userId = req.user.uid;
+            const userId = req.user.userId;
 
             const { conversations, numNewMessage } = await chatService.getListConversation(userId, index, count);
 
@@ -41,7 +41,7 @@ class ChatController {
             }
 
             const { partnerId, conversationId, index, count } = value;
-            const userId = req.user.uid;
+            const userId = req.user.userId;
 
             const messagesData = await chatService.getConversation(userId, partnerId, conversationId, index, count);
 
@@ -65,7 +65,7 @@ class ChatController {
             }
 
             const { partnerId, conversationId } = value;
-            const userId = req.user.uid;
+            const userId = req.user.userId;
 
             const updatedCount = await chatService.setReadMessage(userId, partnerId, conversationId);
 
@@ -85,7 +85,7 @@ class ChatController {
             }
 
             const { partnerId, conversationId } = value;
-            const userId = req.user.uid;
+            const userId = req.user.userId;
             const { messageId } = req.params;
 
             if (!messageId) {
@@ -110,7 +110,7 @@ class ChatController {
             }
 
             const { partnerId, conversationId } = value;
-            const userId = req.user.uid;
+            const userId = req.user.userId;
 
             const deletionResult = await chatService.deleteConversation(userId, partnerId, conversationId);
 

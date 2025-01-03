@@ -76,7 +76,7 @@ const routes = [
         meta: { requiresAuth: true }
     },
     {
-        path: '/post/:id',
+        path: '/post/:postId',
         name: 'PostDetail',
         component: () => import('../components/post/PostDetail.vue'),
         meta: {
@@ -85,24 +85,24 @@ const routes = [
         },
         beforeEnter: (to, from, next) => {
             const commentStore = useCommentStore();
-            commentStore.prefetchComments(to.params.id);
+            commentStore.prefetchComments(to.params.postId);
             next();
         }
     },
     {
-        path: '/edit-post/:id',
+        path: '/edit-post/:postId',
         name: 'EditPost',
         component: () => import('../components/post/EditPost.vue'),
         meta: { requiresAuth: true }
     },
     {
-        path: '/watch/:id',
+        path: '/watch/:postId',
         name: 'Watch',
         component: () => import('../views/Watch.vue'),
         meta: { requiresAuth: true },
     },
     {
-        path: '/delete-post/:id',
+        path: '/delete-post/:postId',
         name: 'DeletePost',
         component: () => import('../components/post/DeletePost.vue'),
         meta: { requiresAuth: true }

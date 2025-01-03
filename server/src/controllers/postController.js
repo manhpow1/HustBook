@@ -16,7 +16,7 @@ class PostController {
             }
 
             const { content } = req.body;
-            const userId = req.user.uid;
+            const userId = req.user.userId;
             const files = req.files;
 
             // Validate file count
@@ -49,7 +49,7 @@ class PostController {
             }
 
             const { postId } = req.params;
-            const userId = req.user.uid;
+            const userId = req.user.userId;
             const post = await postService.getPost(postId, userId);
 
             if (!post) {
@@ -71,7 +71,7 @@ class PostController {
 
             const { postId } = req.params;
             const { content } = req.body;
-            const userId = req.user.uid;
+            const userId = req.user.userId;
 
             // Process image uploads
             let processedImages = [];
@@ -112,7 +112,7 @@ class PostController {
             if (error) throw createError('1002', error.details[0].message);
 
             const { postId } = req.params;
-            const userId = req.user.uid;
+            const userId = req.user.userId;
 
             await postService.deletePost(postId, userId);
 
@@ -133,7 +133,7 @@ class PostController {
 
             const { postId } = req.params;
             const { content } = req.body;
-            const userId = req.user.uid;
+            const userId = req.user.userId;
 
             await postService.addComment(postId, userId, content);
 
@@ -150,7 +150,7 @@ class PostController {
 
             const { postId } = req.params;
             const { limit = 20, lastVisible } = req.query;
-            const userId = req.user.uid;
+            const userId = req.user.userId;
 
             const result = await postService.getComments(postId, userId, parseInt(limit), lastVisible);
 
@@ -209,7 +209,7 @@ class PostController {
 
             const { postId } = req.params;
             const { reason, details } = req.body;
-            const userId = req.user.uid;
+            const userId = req.user.userId;
 
             const post = await postService.getPost(postId);
 
@@ -228,7 +228,7 @@ class PostController {
             const { error } = postValidator.validateLike(req.params);
             if (error) throw createError('1002', error.details.map(detail => detail.message).join(', '));
 
-            const userId = req.user.uid;
+            const userId = req.user.userId;
             const { postId } = req.params;
 
             const result = await postService.toggleLike(postId, userId);
@@ -259,7 +259,7 @@ class PostController {
                 limit = 20,
             } = req.query;
 
-            const currentUserId = req.user.uid;
+            const currentUserId = req.user.userId;
             const result = await postService.getListPosts({
                 postId,
                 userId: userId || currentUserId,

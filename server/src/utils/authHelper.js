@@ -69,7 +69,7 @@ export const generateJWT = (payload) => {
         );
 
         // Log token generation for audit
-        logger.info(`Access token generated for user ${payload.uid}`);
+        logger.info(`Access token generated for user ${payload.userId}`);
         return token;
     } catch (error) {
         logger.error('Error generating JWT:', error);
@@ -86,7 +86,7 @@ export const generateRefreshToken = (user) => {
 
         const token = jwt.sign(
             {
-                userId: user.uid,
+                userId: user.userId,
                 tokenVersion: user.tokenVersion,
                 family: tokenFamily,
                 type: 'refresh',
@@ -100,7 +100,7 @@ export const generateRefreshToken = (user) => {
                 issuer: config.has('app.name') ? config.get('app.name') : 'HustBook'
             }
         );
-        logger.info(`Refresh token generated for user ${user.uid}`);
+        logger.info(`Refresh token generated for user ${user.userId}`);
         return token;
     } catch (error) {
         logger.error('Error generating refresh token:', error);

@@ -5,7 +5,7 @@ class UserStatusController {
     async checkUserStatus(req, res, next) {
         try {
 
-            const userId = req.user.uid;
+            const userId = req.user.userId;
 
             const data = await userStatusService.getUserStatus(userId);
 

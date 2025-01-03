@@ -52,22 +52,22 @@ async function authenticateSocket(socket, next) {
             return next(createError('9998', 'Invalid or expired token'));
         }
 
-        const { uid, tokenVersion } = decoded;
+        const { userId, tokenVersion } = decoded;
 
-        let user = await cache.get(`user:${uid}`);
+        let user = await cache.get(`user:${userId}`);
         if (!user) {
-            user = await getDocument(collections.users, uid);
+            user = await getDocument(collections.users, userId);
             if (!user) {
                 return next(createError('9995', 'User not found'));
             }
-            await cache.set(`user:${uid}`, user, 3600);
+            await cache.set(`user:${userId}`, user, 3600);
         }
 
         if (user.tokenVersion !== tokenVersion) {
             return next(createError('9998', 'Token is invalid or expired'));
         }
 
-        socket.userId = uid;
+        socket.userId = userId;
         socket.clientIp = clientIp; // Store IP for monitoring
 
         // Add disconnect handler to clean up

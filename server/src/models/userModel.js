@@ -6,7 +6,7 @@ import redis from '../utils/redis.js';
 
 class User {
     constructor(data) {
-        this.uid = data.uid;  // Updated to use uid consistently
+        this.userId = data.userId;  // Updated to use userId consistently
         this.userName = data.userName || null;
         this.phoneNumber = data.phoneNumber;
         this.avatar = data.avatar || null;
@@ -32,7 +32,7 @@ class User {
 
     toJSON() {
         return {
-            uid: this.uid,  // Updated to use uid consistently
+            userId: this.userId,  // Updated to use userId consistently
             ...(this.userName && { userName: this.userName }),
             phoneNumber: this.phoneNumber,
             avatar: this.avatar,
@@ -47,7 +47,7 @@ class User {
     }
 
     async getUserRef() {
-        return db.collection(collections.users).doc(this.uid);  // Updated to use uid consistently
+        return db.collection(collections.users).doc(this.userId);  // Updated to use userId consistently
     }
 
     async addDevice(deviceId) {
@@ -62,13 +62,13 @@ class User {
                     deviceIds: arrayUnion(deviceId)
                 });
 
-                await redis.setKey(`user:${this.uid}:devices`,
+                await redis.setKey(`user:${this.userId}:devices`,
                     JSON.stringify([...this.deviceIds, deviceId]));
 
                 this.deviceIds.push(deviceId);
-                logger.info(`Added device ${deviceId} for user ${this.uid}`);
+                logger.info(`Added device ${deviceId} for user ${this.userId}`);
             } catch (error) {
-                logger.error(`Error adding device for user ${this.uid}:`, error);
+                logger.error(`Error adding device for user ${this.userId}:`, error);
                 throw createError('9999', 'Failed to add device');
             }
         }
@@ -82,13 +82,13 @@ class User {
             });
 
             const updatedDevices = this.deviceIds.filter(id => id !== deviceId);
-            await redis.setKey(`user:${this.uid}:devices`,
+            await redis.setKey(`user:${this.userId}:devices`,
                 JSON.stringify(updatedDevices));
 
             this.deviceIds = updatedDevices;
-            logger.info(`Removed device ${deviceId} for user ${this.uid}`);
+            logger.info(`Removed device ${deviceId} for user ${this.userId}`);
         } catch (error) {
-            logger.error(`Error removing device for user ${this.uid}:`, error);
+            logger.error(`Error removing device for user ${this.userId}:`, error);
             throw createError('9999', 'Failed to remove device');
         }
     }
@@ -107,10 +107,10 @@ class User {
                 updatedAt: new Date().toISOString()
             });
 
-            await redis.deleteKey(`user:${this.uid}`);
-            logger.info(`User ${this.uid} blocked user ${targetUserId}`);
+            await redis.deleteKey(`user:${this.userId}`);
+            logger.info(`User ${this.userId} blocked user ${targetUserId}`);
         } catch (error) {
-            logger.error(`Error blocking user ${targetUserId} by user ${this.uid}:`, error);
+            logger.error(`Error blocking user ${targetUserId} by user ${this.userId}:`, error);
             throw createError('9999', 'Exception error while blocking user.');
         }
     }
@@ -129,10 +129,10 @@ class User {
                 updatedAt: new Date().toISOString()
             });
 
-            await redis.deleteKey(`user:${this.uid}`);
-            logger.info(`User ${this.uid} unblocked user ${targetUserId}`);
+            await redis.deleteKey(`user:${this.userId}`);
+            logger.info(`User ${this.userId} unblocked user ${targetUserId}`);
         } catch (error) {
-            logger.error(`Error unblocking user ${targetUserId} by user ${this.uid}:`, error);
+            logger.error(`Error unblocking user ${targetUserId} by user ${this.userId}:`, error);
             throw createError('9999', 'Exception error while unblocking user.');
         }
     }
@@ -140,7 +140,7 @@ class User {
     async save() {
         const userRef = await this.getUserRef();
         const userData = {
-            uid: this.uid,
+            userId: this.userId,
             userName: this.userName,
             phoneNumber: this.phoneNumber,
             avatar: this.avatar,

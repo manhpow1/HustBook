@@ -22,7 +22,7 @@ class userStatusService {
 
         return {
             User: {
-                id: user.id,
+                userId: user.userId,
                 active: userActive
             },
             badge: unreadNotifications.toString(),

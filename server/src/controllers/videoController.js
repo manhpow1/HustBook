@@ -23,7 +23,7 @@ class VideoController {
             } = value;
 
             const result = await videoService.getListVideos({
-                userId: userId || req.user.uid,
+                userId: userId || req.user.userId,
                 inCampaign: in_campaign,
                 campaignId: campaignId,
                 latitude: latitude ? parseFloat(latitude) : undefined,

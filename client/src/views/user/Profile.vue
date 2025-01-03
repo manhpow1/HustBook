@@ -142,7 +142,7 @@
                     No posts found
                   </div>
                   <div v-else class="space-y-4">
-                    <Card v-for="post in filteredPosts" :key="post.id" class="overflow-hidden">
+                    <Card v-for="post in filteredPosts" :key="post.postId" class="overflow-hidden">
                       <CardHeader>
                         <div class="flex items-center space-x-4">
                           <Avatar>
@@ -297,7 +297,7 @@ const showVideoModal = ref(false);
 const selectedVideo = ref(null);
 
 // Computed properties
-const isCurrentUser = computed(() => userStore.user?.id === route.params.id);
+const isCurrentUser = computed(() => userStore.user?.userId === route.params.userId);
 
 const truncatedDescription = computed(() => {
   const desc = user.value?.description;
@@ -318,7 +318,7 @@ const filteredPosts = computed(() => {
 });
 
 const hasMorePosts = computed(() => postStore.hasMorePosts);
-const isFriend = computed(() => friends.value.some(friend => friend.id === userStore.user?.id));
+const isFriend = computed(() => friends.value.some(friend => friend.id === userStore.user?.userId));
 
 // Methods
 const getInitials = (name) => {
@@ -336,14 +336,14 @@ const fetchUserData = async () => {
   error.value = null;
 
   try {
-    const userData = await userStore.getUserProfile(route.params.id);
+    const userData = await userStore.getUserProfile(route.params.userId);
     if (!userData) {
       error.value = 'Failed to load user profile';
       return;
     }
 
     user.value = userData;
-    friends.value = await friendStore.getUserFriends(route.params.id);
+    friends.value = await friendStore.getUserFriends(route.params.userId);
     userVideos.value = await videoStore.getUserVideos(route.params.id);
     await fetchPostsForUser();
   } catch (err) {
@@ -357,7 +357,7 @@ const fetchUserData = async () => {
 const fetchPostsForUser = async () => {
   try {
     await postStore.resetPosts();
-    await postStore.getUserPosts(route.params.id);
+    await postStore.getUserPosts(route.params.userId);
   } catch (err) {
     console.error('Error loading posts:', err);
   }
@@ -365,7 +365,7 @@ const fetchPostsForUser = async () => {
 
 const loadMorePosts = () => {
   if (!postStore.hasMorePosts) return;
-  postStore.getUserPosts(route.params.id);
+  postStore.getUserPosts(route.params.userId);
 };
 
 const searchPosts = () => {
@@ -380,14 +380,14 @@ const handleFriendAction = async () => {
   try {
     if (isFriend.value) {
       // Implement unfriend logic
-      await friendStore.removeFriend(route.params.id);
+      await friendStore.removeFriend(route.params.userId);
       toast({
         title: "Friend Removed",
         description: "User has been removed from your friends list",
       });
     } else {
       // Implement add friend logic
-      await friendStore.sendFriendRequest(route.params.id);
+      await friendStore.sendFriendRequest(route.params.userId);
       toast({
         title: "Friend Request Sent",
         description: "Friend request has been sent successfully",
@@ -405,14 +405,14 @@ const handleFriendAction = async () => {
 const sendMessage = () => {
   router.push({
     name: 'Messages',
-    query: { userId: route.params.id }
+    query: { userId: route.params.userIdd }
   });
 };
 
 const viewAllFriends = () => {
   router.push({
     name: 'Friends',
-    query: { userId: route.params.id }
+    query: { userId: route.params.userId }
   });
 };
 
@@ -425,7 +425,7 @@ const uploadCoverPhoto = () => {
 
 const copyProfileLink = async () => {
   try {
-    const link = `${window.location.origin}/profile/${route.params.id}`;
+    const link = `${window.location.origin}/profile/${route.params.userId}`;
     await navigator.clipboard.writeText(link);
     toast({
       description: "Profile link copied to clipboard",
@@ -464,12 +464,12 @@ const formatDate = (date) => {
 
 // Lifecycle hooks
 onMounted(() => {
-  if (route.params.id) {
+  if (route.params.userId) {
     fetchUserData();
   }
 });
 
-watch(() => route.params.id, (newId) => {
+watch(() => route.params.userId, (newId) => {
   if (newId) {
     fetchUserData();
   }

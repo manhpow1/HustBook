@@ -23,7 +23,7 @@ const checkVerifyCodeRateLimiter = createLimiter(10, 60, 'rl:code');
 function createRateLimitMiddleware(limiter, errorMessage) {
     return async (req, res, next) => {
         try {
-            const key = req.user ? req.user.uid : req.ip;
+            const key = req.user ? req.user.userId : req.ip;
             await limiter.consume(key);
             next();
         } catch (error) {

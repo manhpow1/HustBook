@@ -199,7 +199,7 @@ export const useFriendStore = defineStore('friend', () => {
                     toast({ type: 'success', message: 'User blocked successfully' });
                 } else if (type === 1) {
                     // Unblocking the user
-                    blockedUsers.value = blockedUsers.value.filter(user => user.id !== userId);
+                    blockedUsers.value = blockedUsers.value.filter(user => user.userId !== userId);
                     toast({ type: 'success', message: 'User unblocked successfully' });
                 }
             } else {

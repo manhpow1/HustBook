@@ -75,7 +75,7 @@ export const useChatStore = defineStore('chat', {
                 messageId: tempId,
                 unread: '0',
                 created: new Date().toISOString(),
-                sender: { id: userStore.uid, userName: userStore.userName, avatar: userStore.avatar },
+                sender: { id: userStore.userId, userName: userStore.userName, avatar: userStore.avatar },
                 isBlocked: '0'
             };
             this.messages.push(pendingMessage);

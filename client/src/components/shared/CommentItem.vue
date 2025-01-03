@@ -132,7 +132,7 @@ const showDeleteDialog = ref(false)
 
 // Computed
 const canEditDelete = computed(() =>
-    userStore.user?.id === props.comment.user.id
+    userStore.user?.userId === props.comment.user.userId
 )
 
 const formattedDate = computed(() =>

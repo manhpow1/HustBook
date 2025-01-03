@@ -155,7 +155,7 @@
               No users found
             </div>
             <div v-else class="space-y-2">
-              <button v-for="user in searchResults" :key="user.id" @click="startConversation(user)"
+              <button v-for="user in searchResults" :key="user.userId" @click="startConversation(user)"
                 class="w-full p-2 flex items-center space-x-4 hover:bg-accent rounded-md transition-colors">
                 <Avatar>
                   <AvatarImage :src="user.avatar" :alt="user.userName" />
@@ -277,7 +277,7 @@ const searchUsers = useDebounce(async () => {
       index: 0,
       count: 20
     });
-    searchResults.value = results.filter(user => user.id !== userStore.user?.id);
+    searchResults.value = results.filter(user => user.userId !== userStore.user?.userId);
   } catch (error) {
     logger.error('Failed to search users:', error);
   }
@@ -285,7 +285,7 @@ const searchUsers = useDebounce(async () => {
 
 const startConversation = async (user) => {
   try {
-    const conversationId = await chatStore.createConversation(user.id);
+    const conversationId = await chatStore.createConversation(user.userId);
     showNewMessageDialog.value = false;
     await selectConversation(conversationId);
   } catch (error) {

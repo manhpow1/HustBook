@@ -329,10 +329,10 @@ export const useUserStore = defineStore('user', () => {
 
             if (response.data?.code === '1000') {
                 failedAttempts.value = 0;
-                const { token, refreshToken, id, userName, phoneNumber: userPhone, deviceToken } = response.data.data;
+                const { token, refreshToken, userId, userName, phoneNumber: userPhone, deviceToken } = response.data.data;
                 setAuthCookies(token, refreshToken, rememberMe);
                 user.value = {
-                    uid: id,
+                    userId: userId,
                     userName,
                     phoneNumber: userPhone,
                     isVerified: true, // Server only returns success if verified
@@ -500,11 +500,11 @@ export const useUserStore = defineStore('user', () => {
             });
 
             if (response.data.code === '1000') {
-                const { verified, exists, token, id } = response.data.data;
+                const { verified, exists, token, userId } = response.data.data;
 
                 if (verified) {
                     setAuthCookies(token);
-                    user.value = { ...user.value, isVerified: true, id };
+                    user.value = { ...user.value, isVerified: true, userId };
                     verificationAttempts.value = 0;
                     isVerifyCodeExpired.value = false;
 

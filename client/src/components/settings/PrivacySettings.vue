@@ -19,7 +19,7 @@
                 <div v-if="searchResults.length > 0" class="mt-4">
                     <h4 class="text-sm font-medium mb-2">Search Results</h4>
                     <div class="space-y-2">
-                        <Card v-for="user in searchResults" :key="user.id">
+                        <Card v-for="user in searchResults" :key="user.userId">
                             <CardContent class="p-3 flex items-center justify-between">
                                 <div class="flex items-center space-x-3">
                                     <Avatar>
@@ -31,10 +31,10 @@
                                         <p class="text-sm text-muted-foreground">{{ user.email }}</p>
                                     </div>
                                 </div>
-                                <Button variant="destructive" size="sm" :disabled="blockingUsers.has(user.id)"
-                                    @click="blockUser(user.id)">
-                                    <Loader2Icon v-if="blockingUsers.has(user.id)" class="mr-2 h-4 w-4 animate-spin" />
-                                    {{ blockingUsers.has(user.id) ? 'Blocking...' : 'Block' }}
+                                <Button variant="destructive" size="sm" :disabled="blockingUsers.has(user.userId)"
+                                    @click="blockUser(user.userId)">
+                                    <Loader2Icon v-if="blockingUsers.has(user.userId)" class="mr-2 h-4 w-4 animate-spin" />
+                                    {{ blockingUsers.has(user.userId) ? 'Blocking...' : 'Block' }}
                                 </Button>
                             </CardContent>
                         </Card>

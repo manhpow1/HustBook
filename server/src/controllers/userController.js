@@ -22,7 +22,7 @@ class UserController {
 
     async checkAuth(req, res, next) {
         try {
-            const userId = req.user.uid;
+            const userId = req.user.userId;
             const user = await userService.getUserById(userId);
             if (!user) {
                 throw createError('9995', 'User not found');
@@ -31,7 +31,7 @@ class UserController {
             sendResponse(res, '1000', {
                 isAuthenticated: true,
                 user: {
-                    id: user.uid,
+                    id: user.userId,
                     userName: user.userName,
                     phoneNumber: user.phoneNumber,
                     avatar_url: user.avatar_url
@@ -52,7 +52,7 @@ class UserController {
             }
 
             const { password, new_password } = value;
-            const userId = req.user.uid;
+            const userId = req.user.userId;
 
             await userService.updatePassword(req, userId, password, new_password);
 
@@ -87,7 +87,7 @@ class UserController {
                 throw createError('1006', 'Invalid refresh token');
             }
 
-            const userId = decoded.uid;
+            const userId = decoded.userId;
             const user = await userService.getUserById(userId);
             if (!user) {
                 throw createError('9995', 'User not found');
@@ -98,7 +98,7 @@ class UserController {
             }
 
             const tokenPayload = {
-                uid: user.uid,
+                userId: user.userId,
                 phone: user.phoneNumber,
                 tokenVersion: user.tokenVersion,
                 tokenFamily: user.tokenFamily,
@@ -187,7 +187,7 @@ class UserController {
                 } else {
                     const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
                     if (new Date(existingUser.createdAt) < twentyFourHoursAgo) {
-                        await userService.deleteUser(existingUser.uid);
+                        await userService.deleteUser(existingUser.userId);
                     } else {
                         throw createError('9996', 'Please verify your existing registration');
                     }
@@ -206,7 +206,7 @@ class UserController {
             );
 
             const token = generateJWT({
-                uid: userId,
+                userId: userId,
                 phone: phoneNumber,
                 tokenVersion: 0,
                 tokenFamily,
@@ -281,10 +281,10 @@ class UserController {
                 throw createError('1003', 'Maximum number of devices reached. Please remove a device first.');
             }
 
-            await userService.updateUserDeviceInfo(user.uid, deviceToken, deviceId);
+            await userService.updateUserDeviceInfo(user.userId, deviceToken, deviceId);
 
             const tokenPayload = {
-                uid: user.uid,
+                userId: user.userId,
                 phone: user.phoneNumber,
                 tokenVersion: user.tokenVersion,
                 tokenFamily: user.tokenFamily,
@@ -313,7 +313,7 @@ class UserController {
             }
 
             sendResponse(res, '1000', {
-                id: user.uid,
+                id: user.userId,
                 userName: user.userName,
                 phoneNumber: user.phoneNumber,
                 token,
@@ -336,7 +336,7 @@ class UserController {
             }
 
             const { userName } = value;
-            const userId = req.user.uid;
+            const userId = req.user.userId;
 
             const currentUser = await userService.getUserById(userId);
             if (!currentUser) {
@@ -360,7 +360,7 @@ class UserController {
 
             sendResponse(res, '1000', {
                 message: 'Profile updated successfully',
-                id: updatedUser.uid,
+                id: updatedUser.userId,
                 userName: updatedUser.userName,
                 avatar_url: updatedUser.avatar_url,
                 phoneNumber: updatedUser.phoneNumber,
@@ -376,7 +376,7 @@ class UserController {
 
     async logout(req, res, next) {
         try {
-            const userId = req.user.uid;
+            const userId = req.user.userId;
             const deviceId = req.get('X-Device-ID');
 
             await Promise.all([
@@ -455,13 +455,13 @@ class UserController {
             }
 
             // Update user verification status if user exists
-            await userService.updateVerificationStatus(user.uid, true);
+            await userService.updateVerificationStatus(user.userId, true);
 
             const deviceToken = generateDeviceToken();
             const tokenFamily = generateTokenFamily();
 
             const token = generateJWT({
-                uid: user.uid,
+                userId: user.userId,
                 phone: phoneNumber,
                 tokenVersion: user.tokenVersion || 0,
                 tokenFamily,
@@ -471,7 +471,7 @@ class UserController {
             sendResponse(res, '1000', {
                 verified: true,
                 exists: true,
-                id: user.uid,
+                id: user.userId,
                 token,
                 deviceToken,
                 active: user.active ? "1" : "0"
@@ -491,7 +491,7 @@ class UserController {
             }
 
             const { userId: targetUserId, type } = value;
-            const userId = req.user.uid;
+            const userId = req.user.userId;
 
             if (userId === targetUserId) {
                 throw createError('1002', 'Cannot block yourself');
@@ -516,7 +516,7 @@ class UserController {
                 throw createError('1002', errorMessage);
             }
 
-            const userId = req.user.uid;
+            const userId = req.user.userId;
 
             let updateData = { ...value };
             if (req.files) {
@@ -533,7 +533,7 @@ class UserController {
             sendResponse(res, '1000', {
                 message: 'Profile updated successfully',
                 user: {
-                    uid: updatedUser.uid,
+                    userId: updatedUser.userId,
                     userName: updatedUser.userName,
                     fullName: updatedUser.fullName,
                     avatar_url: updatedUser.avatar_url,
@@ -550,13 +550,13 @@ class UserController {
 
     async getUserInfo(req, res, next) {
         try {
-            const { error, value } = userValidator.validateGetUserInfo({ id: req.params.id });
+            const { error, value } = userValidator.validateGetUserInfo({ userId: req.params.userId });
             if (error) {
                 const errorMessage = error.details.map(detail => detail.message).join(', ');
                 throw createError('1002', errorMessage);
             }
 
-            const targetUserId = value.id || req.user.uid;
+            const targetUserId = value.userId || req.user.userId;
 
             const userInfo = await userService.getUserInfo(targetUserId);
 

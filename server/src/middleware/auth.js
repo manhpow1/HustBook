@@ -74,7 +74,7 @@ const authenticateToken = async (req, res, next) => {
                 ignoreExpiration: false // Ensure token expiration is checked
             });
 
-            const { uid, tokenVersion, exp } = decoded;
+            const { userId, tokenVersion, exp } = decoded;
 
             // Additional expiration check
             const currentTimestamp = Math.floor(Date.now() / 1000);
@@ -83,8 +83,8 @@ const authenticateToken = async (req, res, next) => {
             }
 
             // Rate limiting check from Redis
-            const requestCount = await cache.incr(`auth:${uid}:requests`);
-            await cache.expire(`auth:${uid}:requests`, 60); // Expire after 60 seconds
+            const requestCount = await cache.incr(`auth:${userId}:requests`);
+            await cache.expire(`auth:${userId}:requests`, 60); // Expire after 60 seconds
 
             if (requestCount > 100) { // 100 requests per minute limit
                 throw createError('1009', 'Too many requests');
@@ -92,20 +92,20 @@ const authenticateToken = async (req, res, next) => {
 
             // Fetch user data from cache or database with timeout
             let user = await Promise.race([
-                cache.get(`user:${uid}`),
+                cache.get(`user:${userId}`),
                 new Promise((_, reject) => setTimeout(() => reject(new Error('Cache timeout')), 5000))
             ]).catch(async () => {
                 // Fallback to database if cache fails or times out
-                return await getDocument(collections.users, uid);
+                return await getDocument(collections.users, userId);
             });
 
             if (!user) {
-                user = await getDocument(collections.users, uid);
+                user = await getDocument(collections.users, userId);
                 if (!user) {
                     throw createError('9995', 'User not found');
                 }
                 // Update cache with shorter TTL if we had to fall back to DB
-                await cache.set(`user:${uid}`, user, 1800); // Cache for 30 minutes
+                await cache.set(`user:${userId}`, user, 1800); // Cache for 30 minutes
             }
 
             // Security checks
@@ -120,14 +120,14 @@ const authenticateToken = async (req, res, next) => {
             // Attach user data to request
             req.user = { 
                 ...user,
-                uid,
+                userId,
                 // Only include necessary fields
                 isAdmin: user.isAdmin || false,
                 tokenVersion: user.tokenVersion
             };
 
             // Log successful authentication
-            logger.info(`User ${uid} authenticated successfully`);
+            logger.info(`User ${userId} authenticated successfully`);
 
             next();
         } catch (jwtError) {

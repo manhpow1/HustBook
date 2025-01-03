@@ -28,7 +28,7 @@ class NotificationController {
 
     async getPushSettings(req, res, next) {
         try {
-            const userId = req.user.uid;
+            const userId = req.user.userId;
 
             const settings = await notificationService.getPushSettings(userId);
 
@@ -47,13 +47,13 @@ class NotificationController {
                 const messages = error.details.map(detail => detail.message).join(', ');
                 throw createError('1003', messages);
             }
-            const userId = req.user.uid;
+            const userId = req.user.userId;
             const settings = value;
 
             const updatedSettings = await notificationService.updatePushSettings(userId, settings);
             return sendResponse(res, '1000', updatedSettings);
         } catch (err) {
-            logger.error(`Error in setPushSettings controller for user ${req.user.uid}:`, err);
+            logger.error(`Error in setPushSettings controller for user ${req.user.userId}:`, err);
             next(err);
         }
     }
@@ -66,7 +66,7 @@ class NotificationController {
                 throw createError('1002', messages);
             }
             const { index, count } = value;
-            const userId = req.user.uid; // set by authenticateToken middleware
+            const userId = req.user.userId; // set by authenticateToken middleware
             const { notifications, badge, last_update } = await notificationService.getNotifications(userId, index, count);
             if (notifications.length === 0) {
                 throw createError('9994', 'No data or end of list data');
@@ -92,7 +92,7 @@ class NotificationController {
             }
 
             const { notificationId } = value;
-            const userId = req.user.uid; // From authenticateToken
+            const userId = req.user.userId; // From authenticateToken
 
             const { badge, last_update } = await notificationService.setReadNotification(userId, notificationId);
 
