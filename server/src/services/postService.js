@@ -15,7 +15,11 @@ class PostService {
 
             if (imageFiles && imageFiles.length > 0) {
                 const uploadPromises = imageFiles.map(file =>
-                    handleImageUpload(file, `posts/${userId}`)
+                    handleImageUpload(file, `posts/${userId}`, {
+                        width: 1920,
+                        height: 1080,
+                        fit: 'inside'
+                    })
                 );
                 processedImageUrls = await Promise.all(uploadPromises);
             }

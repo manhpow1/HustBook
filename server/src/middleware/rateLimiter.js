@@ -13,11 +13,11 @@ const createLimiter = (points, duration, prefix) => {
 };
 
 // Rate-limiters for various endpoints/actions
-const authRateLimiter = createLimiter(5, 60, 'rl:auth');
-const verifyCodeRateLimiter = createLimiter(10, 60, 'rl:verify');
-const pushSettingsRateLimiter = createLimiter(100, 60, 'rl:push');
-const setBlockRateLimiter = createLimiter(10, 60, 'rl:block');
-const checkVerifyCodeRateLimiter = createLimiter(10, 60, 'rl:code');
+const authRateLimiter = createLimiter(20, 60, 'rl:auth');
+const verifyCodeRateLimiter = createLimiter(50, 60, 'rl:verify');
+const pushSettingsRateLimiter = createLimiter(300, 60, 'rl:push');
+const setBlockRateLimiter = createLimiter(50, 60, 'rl:block');
+const checkVerifyCodeRateLimiter = createLimiter(200, 60, 'rl:code');
 
 // Convert a RateLimiter to an Express middleware
 function createRateLimitMiddleware(limiter, errorMessage) {

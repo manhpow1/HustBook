@@ -246,41 +246,6 @@ class UserService {
         }
     }
 
-    async changeInfoAfterSignup(userId, userName, avatarUrl = null) {
-        try {
-            const user = await this.getUserById(userId);
-            if (!user) {
-                throw createError('9995', 'User not found');
-            }
-
-            if (!userName) {
-                throw createError('1002', 'Username is required');
-            }
-
-            // Rate limiting check
-            const currentTime = Date.now();
-            const lastModifiedAt = user.lastModifiedAt || 0;
-            if (currentTime - lastModifiedAt < 1000) {
-                throw createError('1003', 'Please wait a moment before updating again');
-            }
-
-            user.userName = userName;
-            if (avatarUrl !== null) {
-                user.avatar = avatarUrl;
-            }
-
-            user.lastModifiedAt = currentTime;
-            user.version = (user.version || 0) + 1;
-
-            await user.save();
-            logger.info(`Updated user info after signup for user ${userId}`);
-
-            return user.toJSON();
-        } catch (error) {
-            logger.error('Error updating user info after signup:', error);
-            throw error;
-        }
-    }
 
     async cleanupInactiveDevices(userId) {
         try {
@@ -421,13 +386,29 @@ class UserService {
                 throw createError('9995', 'User not found');
             }
 
+            if (!userName) {
+                throw createError('1002', 'Username is required');
+            }
+
+            // Rate limiting check
+            const currentTime = Date.now();
+            const lastModifiedAt = user.lastModifiedAt || 0;
+            if (currentTime - lastModifiedAt < 1000) {
+                throw createError('1003', 'Please wait a moment before updating again');
+            }
+
             // Update user information
             user.userName = userName;
-            // Handle avatar URL - ensure it's a string
+            
+            // Handle avatar upload if provided
             if (avatarFile) {
                 const uploadedAvatarUrl = await handleAvatarUpload(avatarFile, userId);
                 user.avatar = uploadedAvatarUrl || '';
             }
+
+            // Update metadata
+            user.lastModifiedAt = currentTime;
+            user.version = (user.version || 0) + 1;
             user.updatedAt = new Date().toISOString();
 
             await user.save();

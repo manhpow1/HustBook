@@ -21,11 +21,14 @@ async function handleAvatarUpload(file, userId) {
     try {
         if (!file) return null;
 
-        // Process và compress ảnh
-        const processedImage = await handleImageUpload(file, `avatars/${userId}`);
+        // Process and compress image
+        const processedImage = await handleImageUpload(file, `avatars/${userId}`, {
+            width: 400,
+            height: 400,
+            fit: 'cover'
+        });
 
         await cleanupFiles(file);
-
         return processedImage;
 
     } catch (error) {
@@ -52,7 +55,7 @@ async function handleCoverPhotoUpload(file, userId) {
     }
 }
 
-async function handleImageUpload(file, folder = 'general') {
+async function handleImageUpload(file, folder = 'general', options = {}) {
     try {
         // Validate file
         if (!file || !file.buffer) {
@@ -73,8 +76,13 @@ async function handleImageUpload(file, folder = 'general') {
         const image = sharp(file.buffer);
         const metadata = await image.metadata();
 
-        // Resize if necessary (maintaining aspect ratio)
-        if (metadata.width > 2048 || metadata.height > 2048) {
+        // Apply resize options if provided, otherwise use default resizing
+        if (options.width || options.height) {
+            image.resize(options.width, options.height, {
+                fit: options.fit || 'inside',
+                withoutEnlargement: true
+            });
+        } else if (metadata.width > 2048 || metadata.height > 2048) {
             image.resize(2048, 2048, {
                 fit: 'inside',
                 withoutEnlargement: true
