@@ -291,8 +291,8 @@ onMounted(() => {
 
     if (user.value) {
         userName.value = user.value.userName || '';
-        if (user.value.avatar_url) {
-            avatarPreview.value = user.value.avatar_url;
+        if (user.value.avatar) {
+            avatarPreview.value = user.value.avatar;
         }
     }
 });

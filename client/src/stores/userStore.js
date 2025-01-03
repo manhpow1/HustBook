@@ -588,7 +588,7 @@ export const useUserStore = defineStore('user', () => {
                 user.value = {
                     ...user.value,
                     userName: userData.userName,
-                    avatar_url: userData.avatar
+                    avatar: userData.avatar
                 };
 
                 successMessage.value = 'Profile updated successfully!';

@@ -34,7 +34,7 @@ class UserController {
                     id: user.userId,
                     userName: user.userName,
                     phoneNumber: user.phoneNumber,
-                    avatar_url: user.avatar_url
+                    avatar: user.avatar
                 }
             });
         } catch (error) {
@@ -489,7 +489,7 @@ class UserController {
                     userId: updatedUser.userId,
                     userName: updatedUser.userName,
                     fullName: updatedUser.fullName,
-                    avatar_url: updatedUser.avatar_url,
+                    avatar: updatedUser.avatar,
                     coverPhoto: updatedUser.coverPhoto,
                     bio: updatedUser.bio,
                     location: updatedUser.location
