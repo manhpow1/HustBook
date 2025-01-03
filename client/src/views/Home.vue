@@ -9,7 +9,7 @@
             <h2 class="scroll-m-20 text-2xl font-semibold tracking-tight mb-4">Recent Posts</h2>
 
             <!-- Loading State -->
-            <div v-if="postStore.loading && !postStore.posts.length">
+            <div v-if="postStore.loading">
               <Skeleton v-for="i in 3" :key="i" class="w-full h-32 mb-4" />
             </div>
 
@@ -91,7 +91,10 @@ const { handleError } = useErrorHandler()
 // Methods
 const loadMorePosts = async () => {
   try {
-    await postStore.fetchPosts();
+    await postStore.fetchPosts({
+      lastVisible: postStore.lastVisible,
+      limit: 10
+    });
   } catch (err) {
     handleError(err);
   }
@@ -100,7 +103,9 @@ const loadMorePosts = async () => {
 const retryFetchPosts = async () => {
   postStore.resetPosts();
   try {
-    await postStore.fetchPosts();
+    await postStore.fetchPosts({
+      limit: 10
+    });
   } catch (err) {
     handleError(err);
   }
@@ -113,9 +118,15 @@ const mediaGridClass = (count) => ({
   'md:grid-cols-4': count >= 4
 });
 
-const handlePostCreated = (newPost) => {
-  postStore.resetPosts();
-  postStore.fetchPosts();
+const handlePostCreated = async (newPost) => {
+  try {
+    await postStore.fetchPosts({
+      limit: 10,
+      refresh: true
+    });
+  } catch (err) {
+    handleError(err);
+  }
 }
 
 const likePost = async (postId) => {
@@ -156,13 +167,19 @@ const sanitizeUrl = (url) => sanitizeOutput(url)
 // Lifecycle
 onMounted(async () => {
   if (userStore.isLoggedIn) {
-    await retryFetchPosts();
+    await postStore.fetchPosts({
+      limit: 10,
+      sort: 'newest'
+    });
   }
 });
 
 watch(() => userStore.isLoggedIn, async (isLoggedIn) => {
   if (isLoggedIn) {
-    await retryFetchPosts();
+    await postStore.fetchPosts({
+      limit: 10,
+      sort: 'newest'
+    });
   } else {
     postStore.resetPosts();
   }
