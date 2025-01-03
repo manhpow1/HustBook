@@ -3,14 +3,14 @@
         <Command>
             <CommandInput v-if="searchEnabled" placeholder="Search emoji..." v-model="searchQuery" />
             <CommandList>
-                <CommandEmpty v-if="filteredEmojis.length === 0">
+                <CommandEmpty v-if="Object.keys(filteredCategories).length === 0">
                     No emoji found.
                 </CommandEmpty>
                 <ScrollArea class="h-[300px]">
                     <CommandGroup v-for="(emojis, category) in filteredCategories" :key="category" :heading="category">
                         <div class="grid grid-cols-8 gap-2 p-2">
-                            <Button v-for="emoji in emojis" :key="emoji" variant="ghost" size="icon"
-                                class="h-8 w-8" @click="selectEmoji(emoji)" :aria-label="`Select ${emoji} emoji`">
+                            <Button v-for="emoji in emojis" :key="emoji" variant="ghost" size="icon" class="h-8 w-8"
+                                @click="selectEmoji(emoji)" :aria-label="`Select ${emoji} emoji`">
                                 <span class="text-lg">{{ emoji }}</span>
                             </Button>
                         </div>
@@ -101,19 +101,19 @@ const filteredCategories = computed(() => {
 
     const query = searchQuery.value.toLowerCase();
     const filtered = {};
-    
+
     Object.entries(props.emojiCategories).forEach(([category, emojis]) => {
         const matchingEmojis = emojis.filter(emoji => {
             // Search in both emoji and category name
-            return emoji.toLowerCase().includes(query) || 
-                   category.toLowerCase().includes(query);
+            return emoji.toLowerCase().includes(query) ||
+                category.toLowerCase().includes(query);
         });
-        
+
         if (matchingEmojis.length > 0) {
             filtered[category] = matchingEmojis;
         }
     });
-    
+
     return filtered;
 });
 
