@@ -56,7 +56,7 @@
             <h3 class="text-lg font-semibold">Comments</h3>
             <ScrollArea class="h-[600px]">
                 <TransitionGroup name="comment-list" tag="div" class="space-y-4">
-                    <CommentItem v-for="comment in comments" :key="comment.id" :comment="comment"
+                    <CommentItem v-for="comment in comments" :key="comment.commentId" :comment="comment"
                         @update="onUpdateComment" @delete="onDeleteComment" data-testid="comment-item" />
                 </TransitionGroup>
 
@@ -170,7 +170,7 @@ const onAddComment = async () => {
 
 const onUpdateComment = async (updatedComment) => {
     try {
-        await commentStore.updateComment(props.postId, updatedComment.id, updatedComment.content)
+        await commentStore.updateComment(props.postId, updatedComment.commentId, updatedComment.content)
         notificationStore.showNotification('Comment updated successfully', 'success')
     } catch (error) {
         await handleError(error)

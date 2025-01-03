@@ -55,7 +55,7 @@
                         </div>
 
                         <!-- Actual comments when not loading -->
-                        <CommentSection v-else :postId="post.id" :comments="comments" @addComment="handleComment"
+                        <CommentSection v-else :postId="post.postId" :comments="comments" @addComment="handleComment"
                             @updateComment="handleCommentUpdate" @deleteComment="handleCommentDelete"
                             @loadMore="loadMoreComments" :loading="loadingMoreComments" :error="commentError"
                             @retry="retryLoadComments" />
@@ -75,11 +75,11 @@
                 @toggleComments="toggleComments" @report="handleReportPost" @hide="hidePost" />
 
             <!-- Delete Post Confirmation -->
-            <DeletePost v-if="showDeletePostModal" :postId="post.id" @post-deleted="handlePostDeleted"
+            <DeletePost v-if="showDeletePostModal" :postId="post.postId" @post-deleted="handlePostDeleted"
                 data-testid="delete-post-modal" />
 
             <!-- Report Post Modal -->
-            <ReportPostModal v-if="showReportPostModal" :postId="post.id" @close="showReportPostModal = false"
+            <ReportPostModal v-if="showReportPostModal" :postId="post.postId" @close="showReportPostModal = false"
                 @report-submitted="handleReportSubmitted" @post-removed="handlePostRemoved" />
         </ErrorBoundary>
     </main>
@@ -132,7 +132,7 @@ const loading = computed(() => postStore.loading);
 const error = computed(() => postStore.error);
 const loadingMoreComments = computed(() => postStore.loadingMoreComments);
 const commentError = computed(() => postStore.commentError);
-const isOwnPost = computed(() => post.value?.author?.id === userStore.currentUser?.id);
+const isOwnPost = computed(() => post.value?.author?.userId === userStore.currentUser?.userId);
 const formattedLikes = computed(() => formatNumber(post.value?.like || 0));
 const formattedComments = computed(() => formatNumber(post.value?.comment || 0));
 const mediaList = computed(() => {
@@ -162,11 +162,11 @@ const mediaList = computed(() => {
 
 // Fetch the post data
 const fetchPost = async () => {
-    await postStore.fetchPost(route.params.id);
+    await postStore.fetchPost(route.params.postId);
 };
 
 // Load more comments
-const loadMoreComments = () => postStore.loadMoreComments(route.params.id);
+const loadMoreComments = () => postStore.loadMoreComments(route.params.postId);
 
 // Retry loading comments in case of an error
 const retryLoadComments = () => postStore.resetComments();
@@ -174,7 +174,7 @@ const retryLoadComments = () => postStore.resetComments();
 // Handle like action
 const handleLike = async () => {
     try {
-        await postStore.toggleLike(post.value.id);
+        await postStore.toggleLike(post.value.postId);
     } catch (error) {
         console.error('Failed to like post:', error);
         await handleError(error);
@@ -209,7 +209,7 @@ const toggleContent = () => {
 
 // Edit the post by navigating to the edit route
 const editPost = () => {
-    router.push({ name: 'EditPost', params: { id: post.value.id } });
+    router.push({ name: 'EditPost', params: { postId: post.value.postId } });
     showAdvancedOptionsModal.value = false;
 };
 
@@ -224,7 +224,7 @@ const confirmDeletePost = async () => {
 // Handle the actual deletion of the post
 const deletePost = async () => {
     try {
-        await postStore.removePost(post.value.id);
+        await postStore.removePost(post.value.postId);
         toast({ type: 'success', message: 'Post deleted successfully.' });
         router.push({ name: 'Home' });
     } catch (error) {

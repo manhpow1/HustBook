@@ -248,7 +248,7 @@ const handleSubmit = async () => {
             logger.info('Post updated successfully', { postId: props.postId });
             resetForm();
             emit('post-updated');
-            router.push({ name: 'PostDetail', params: { id: props.postId } }); // Navigate to post detail
+            router.push({ name: 'PostDetail', params: { postId: props.postId } }); // Navigate to post detail
         } else {
             errorMessage.value = response.message || 'An error occurred while updating the post.';
             logger.warn('Failed to update post', { responseCode: response.code, message: response.message });

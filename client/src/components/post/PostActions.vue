@@ -53,7 +53,7 @@ const props = defineProps({
         type: Object,
         required: true,
         validator(post) {
-            return ['id', 'isLiked', 'like', 'comment'].every(prop => post && prop in post)
+            return ['postId', 'isLiked', 'like', 'comment'].every(prop => post && prop in post)
         }
     }
 })
@@ -74,7 +74,7 @@ const handleLike = async () => {
 
     isLiking.value = true
     try {
-        await postStore.toggleLike(props.post.id)
+        await postStore.toggleLike(props.post.postId)
     } catch (error) {
         toast({
             title: "Error",

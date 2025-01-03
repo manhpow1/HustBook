@@ -70,8 +70,8 @@
             </div>
 
             <div v-else-if="sortedSearchResults.length > 0" class="space-y-4 p-4">
-                <Card v-for="post in sortedSearchResults" :key="post.id" class="overflow-hidden search-result"
-                    :data-test="`card-${post.id}`">
+                <Card v-for="post in sortedSearchResults" :key="post.postId" class="overflow-hidden search-result"
+                    :data-test="`card-${post.postId}`">
                     <div class="p-4">
                         <h2 class="text-lg font-semibold mb-2">{{ post.author.userName }}</h2>
                         <h3 class="text-xl mb-2">{{ post.title }}</h3>
@@ -81,7 +81,7 @@
                             <span>{{ formatDate(post.created) }}</span>
                         </div>
                         <div class="mt-2">
-                            <Button @click="viewPost(post.id)">
+                            <Button @click="viewPost(post.postId)">
                                 View Post
                             </Button>
                         </div>

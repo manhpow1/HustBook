@@ -25,7 +25,7 @@
 
                 <ScrollArea v-else className="h-[400px] rounded-md border p-4">
                     <div class="space-y-4">
-                        <Card v-for="user in blockedUsers" :key="user.id">
+                        <Card v-for="user in blockedUsers" :key="user.userId">
                             <CardContent class="p-4">
                                 <div class="flex items-center justify-between">
                                     <div class="flex items-center space-x-4">
@@ -39,11 +39,11 @@
                                                 formatDate(user.blockedAt) }}</p>
                                         </div>
                                     </div>
-                                    <Button variant="outline" :disabled="processingIds.has(user.id)"
-                                        @click="confirmUnblock(user.id)">
-                                        <Loader2Icon v-if="processingIds.has(user.id)"
+                                    <Button variant="outline" :disabled="processingIds.has(user.userId)"
+                                        @click="confirmUnblock(user.userId)">
+                                        <Loader2Icon v-if="processingIds.has(user.userIdd)"
                                             class="mr-2 h-4 w-4 animate-spin" />
-                                        {{ processingIds.has(user.id) ? 'Processing...' : 'Unblock' }}
+                                        {{ processingIds.has(user.userId) ? 'Processing...' : 'Unblock' }}
                                     </Button>
                                 </div>
                             </CardContent>
