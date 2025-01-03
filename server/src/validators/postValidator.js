@@ -27,6 +27,9 @@ const createPostSchema = Joi.object({
             Joi.string()
                 .uri()
                 .custom((value, helpers) => {
+                    if (typeof value !== 'string') {
+                        return helpers.error('string.base');
+                    }
                     if (!value.match(/\.(jpg|jpeg|png|gif)$/i)) {
                         return helpers.error('string.pattern.base');
                     }
