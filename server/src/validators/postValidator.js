@@ -125,7 +125,7 @@ const validateGetListPosts = (data) => {
 
 const validateDeletePost = (params) => {
     const schema = Joi.object({
-        id: Joi.string().required().guid()
+        id: Joi.string().required()
     });
     return schema.validate(params);
 };
