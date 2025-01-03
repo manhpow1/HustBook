@@ -32,7 +32,7 @@ class PostService {
             const postId = await createDocument(collections.posts, postData);
 
             // Cache invalidation
-            await redis.del(`user:${userId}:posts`);
+            await redis.cache.del(`user:${userId}:posts`);
 
             return postId;
         } catch (error) {
