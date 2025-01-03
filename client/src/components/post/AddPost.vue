@@ -1,366 +1,211 @@
 <template>
-    <div class="max-w-2xl mx-auto mt-8 p-6" role="form">
-        <Card>
-            <CardHeader>
-                <CardTitle class="flex items-center">
-                    <PencilIcon class="w-6 h-6 mr-2 text-primary" />
-                    Create a New Post
-                </CardTitle>
-            </CardHeader>
-            <CardContent>
-                <form @submit.prevent="submitPost" class="space-y-6">
-                    <div class="space-y-2">
-                        <Label for="description">Description</Label>
-                        <Textarea v-model="description" id="description"
-                            :class="{ 'border-destructive': descriptionError }" placeholder="What's on your mind?"
-                            @input="onDescriptionInput" data-testid="description-textarea" />
-                        <p v-if="descriptionError" class="text-sm text-destructive">
-                            {{ descriptionError }}
-                        </p>
-                    </div>
-
-                    <div class="space-y-2">
-                        <Label for="status-select">How are you feeling?</Label>
-                        <Select v-model="status" id="status-select" :options="statusOptions">
-                            <SelectTrigger :id="id" :class="{ 'border-destructive': statusError }">
-                                <SelectValue placeholder="Select a status" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem v-for="option in statusOptions" :key="option.value" :value="option.value">
-                                    {{ option.label }}
-                                </SelectItem>
-                            </SelectContent>
-                        </Select>
-                        <p v-if="statusError" class="text-sm text-destructive">
-                            {{ statusError }}
-                        </p>
-                    </div>
-
-                    <div class="space-y-2">
-                        <Label>Upload Images or Videos</Label>
-                        <FileUpload v-model:files="files" :maxFiles="4" @upload-progress="handleUploadProgress"
-                            @upload-error="handleUploadError" data-testid="file-upload" />
-                        <p v-if="fileError" class="text-sm text-destructive">
-                            {{ fileError }}
-                        </p>
-                    </div>
-
-                    <div class="relative">
-                        <Button type="button" variant="outline" @click="toggleEmojiPicker"
-                            data-testid="toggle-emoji-picker-button">
-                            <SmileIcon class="w-5 h-5 mr-2" />
-                            Add Emoji
+    <Card class="shadow-none">
+        <CardContent class="space-y-4 p-4">
+            <form @submit.prevent="handleSubmit" class="space-y-4">
+                <div class="relative">
+                    <Textarea v-model="description" placeholder="What's on your mind?" :disabled="isLoading"
+                        :maxLength="1000" rows="3" class="resize-none no-scrollbar" @input="validateDescription" />
+                    <div class="absolute bottom-2 right-2 flex items-center gap-2">
+                        <span class="text-xs text-muted-foreground">
+                            {{ description.length }}/1000
+                        </span>
+                        <Button type="button" variant="ghost" size="sm" class="h-8 w-8 p-0"
+                            @click="showEmojiPicker = !showEmojiPicker">
+                            <SmileIcon class="h-4 w-4" />
                         </Button>
-                        <EmojiPicker v-if="showEmojiPicker" @select="insertEmoji" class="absolute z-10 mt-2" />
+                    </div>
+                </div>
+
+                <div class="flex items-center gap-2">
+                    <div class="flex-1">
+                        <FileUpload v-model="files" :maxFiles="4" accept="image/jpeg,image/png,image/gif" class="h-24"
+                            @change="handleFilesChange">
+                            <template #trigger>
+                                <Button variant="outline" size="sm">
+                                    <ImageIcon class="h-4 w-4 mr-2" />
+                                    Add Images
+                                </Button>
+                            </template>
+                        </FileUpload>
                     </div>
 
-                    <Button type="submit" :disabled="isLoading || !isFormValid" class="w-full">
-                        <LoaderIcon v-if="isLoading" class="animate-spin mr-2" />
-                        {{ isLoading ? 'Posting...' : 'Create Post' }}
+                    <Button type="submit" :disabled="!isValid || isLoading" size="sm">
+                        <Loader2Icon v-if="isLoading" class="h-4 w-4 animate-spin mr-2" />
+                        {{ isLoading ? 'Posting...' : 'Post' }}
                     </Button>
-                </form>
+                </div>
 
-                <Toaster />
-                <ToastProvider>
-                    <ToastViewport />
-                </ToastProvider>
+                <div v-if="files.length > 0" class="flex gap-2 overflow-x-auto pb-2">
+                    <div v-for="(file, index) in previewUrls" :key="index" class="relative h-20 w-20 flex-shrink-0">
+                        <img :src="file" class="h-full w-full object-cover rounded-md" alt="Preview" />
+                        <Button variant="destructive" size="icon" class="absolute -top-2 -right-2 h-6 w-6"
+                            @click="removeFile(index)">
+                            <XIcon class="h-4 w-4" />
+                        </Button>
+                    </div>
+                </div>
 
-                <Progress v-if="showUploadProgress" :value="uploadProgress" class="w-48 fixed top-4 right-4" />
+                <div v-if="descriptionError" class="text-sm text-destructive mt-1">
+                    {{ descriptionError }}
+                </div>
+            </form>
 
-                <Dialog v-model:open="showUnsavedChangesModal">
-                    <DialogContent>
-                        <DialogHeader>
-                            <DialogTitle>Unsaved Changes</DialogTitle>
-                            <DialogDescription>
-                                Do you want to save your changes before leaving?
-                            </DialogDescription>
-                        </DialogHeader>
-                        <DialogFooter>
-                            <Button variant="outline" @click="cancelNavigation">Cancel</Button>
-                            <Button variant="destructive" @click="discardChanges">Discard</Button>
-                            <Button @click="saveChanges">Save</Button>
-                        </DialogFooter>
-                    </DialogContent>
-                </Dialog>
-            </CardContent>
-        </Card>
-    </div>
+            <Dialog :open="showEmojiPicker" @close="showEmojiPicker = false">
+                <DialogContent class="p-0">
+                    <EmojiPicker @select="insertEmoji" />
+                </DialogContent>
+            </Dialog>
+        </CardContent>
+    </Card>
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
-import { useRouter } from 'vue-router'
+import { ref, computed } from 'vue'
+import { usePostStore } from '@/stores/postStore'
 import { useToast } from '@/components/ui/toast'
-import { PencilIcon, LoaderIcon, SmileIcon } from 'lucide-vue-next'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Toaster, ToastProvider, ToastViewport } from '@/components/ui/toast'
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import { AlertDialog, AlertDialogAction, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { ImageIcon, Loader2Icon, SmileIcon, XIcon } from 'lucide-vue-next'
+import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Progress } from '@/components/ui/progress'
-import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
-import FileUpload from '../shared/FileUpload.vue'
+import { Dialog, DialogContent } from '@/components/ui/dialog'
 import EmojiPicker from '../shared/EmojiPicker.vue'
-import { usePostStore } from '../../stores/postStore'
-import { useFormValidation } from '../../composables/useFormValidation'
-import { useErrorHandler } from '@/utils/errorHandler'
-import { debounce } from 'lodash-es'
-import { sanitizeInput } from '../../utils/sanitize'
-import logger from '../../services/logging'
+import FileUpload from '../shared/FileUpload.vue'
 
-const router = useRouter();
-const postStore = usePostStore();
-const { handleError } = useErrorHandler();
+const MAX_FILE_SIZE = 4 * 1024 * 1024 // 4MB
+const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/gif']
 
-// Form State
-const description = ref('');
-const status = ref('');
-const files = ref([]);
-const isLoading = ref(false);
-const successMessage = ref('');
-const errorMessage = ref('');
-const showEmojiPicker = ref(false);
-const showUploadProgress = ref(false);
-const uploadProgress = ref(0);
+const postStore = usePostStore()
+const { toast } = useToast()
 
-// Modal State
-const showUnsavedChangesModal = ref(false);
-const pendingNavigation = ref(null);
+const description = ref('')
+const descriptionError = ref('')
+const files = ref([])
+const previewUrls = ref([])
+const isLoading = ref(false)
+const showEmojiPicker = ref(false)
 
-// Form Validation
-const {
-    descriptionError,
-    statusError,
-    fileError,
-    validateDescription,
-    validateStatus,
-    validateFiles,
-} = useFormValidation();
+const isValid = computed(() => {
+    return description.value.trim().length > 0 &&
+        description.value.length <= 1000 &&
+        files.value.length <= 4 &&
+        !descriptionError.value
+})
 
-// Status Options
-const statusOptions = [
-    { value: 'happy', label: 'Happy' },
-    { value: 'sad', label: 'Sad' },
-    { value: 'excited', label: 'Excited' },
-    { value: 'angry', label: 'Angry' },
-    { value: 'neutral', label: 'Neutral' },
-    { value: 'loved', label: 'Loved' },
-];
-
-// Computed Properties
-const isFormValid = computed(() => {
-    const isDescriptionValid = validateDescription(description.value);
-    const isStatusValid = validateStatus(status.value);
-    const areFilesValid = validateFiles(files.value);
-    return isDescriptionValid && isStatusValid && areFilesValid && !fileError.value;
-});
-
-// Debounced Functions
-const debouncedValidateInput = debounce((input, errorRef) => {
-    if (input.length > 1000) {
-        errorRef.value = 'Description is too long.';
-    } else if (input.trim() === '') {
-        errorRef.value = 'Description cannot be empty.';
+const validateDescription = () => {
+    const content = description.value.trim()
+    if (content.length === 0) {
+        descriptionError.value = 'Description cannot be empty'
+    } else if (content.length > 1000) {
+        descriptionError.value = 'Description must not exceed 1000 characters'
     } else {
-        errorRef.value = '';
+        descriptionError.value = ''
     }
-}, 300);
+}
 
-const debouncedSaveDraft = debounce(() => {
-    const draft = {
-        description: description.value,
-        status: status.value,
-        files: files.value,
-    };
-    localStorage.setItem('postDraft', JSON.stringify(draft));
-    logger.debug('Draft saved to localStorage');
-}, 1000);
+const handleFilesChange = async (newFiles) => {
+    if (!newFiles?.length) return
 
-// Input Handler
-const onDescriptionInput = () => {
-    debouncedValidateInput(description.value, descriptionError);
-    debouncedSaveDraft();
-};
-
-// Load Draft on Mount
-const loadDraft = () => {
-    const draft = localStorage.getItem('postDraft');
-    if (draft) {
-        const { description: desc, status: stat, files: fls } = JSON.parse(draft);
-        description.value = desc;
-        status.value = stat;
-        files.value = fls;
-        logger.debug('Draft loaded from localStorage');
-    }
-};
-
-// Submit Post
-const submitPost = async () => {
-    if (!isFormValid.value) {
-        errorMessage.value = 'Please fix the errors before submitting.';
-        return;
+    // Validate file count
+    if (newFiles.length > 4) {
+        toast({
+            title: 'Error',
+            description: 'Maximum 4 files allowed',
+            variant: 'destructive'
+        })
+        return
     }
 
-    isLoading.value = true;
-    errorMessage.value = '';
-    successMessage.value = '';
-    showUploadProgress.value = true;
+    // Validate each file
+    const invalidFiles = newFiles.filter(file => {
+        if (file.size > MAX_FILE_SIZE) {
+            toast({
+                title: 'Error',
+                description: `File ${file.name} exceeds 4MB limit`,
+                variant: 'destructive'
+            })
+            return true
+        }
+        if (!ALLOWED_TYPES.includes(file.type)) {
+            toast({
+                title: 'Error',
+                description: `File ${file.name} must be JPEG, PNG or GIF`,
+                variant: 'destructive'
+            })
+            return true
+        }
+        return false
+    })
 
-    const sanitizedDescription = sanitizeInput(description.value);
+    if (invalidFiles.length) {
+        files.value = newFiles.filter(f => !invalidFiles.includes(f))
+    } else {
+        files.value = newFiles
+    }
+
+    // Generate previews
+    previewUrls.value = []
+    for (const file of files.value) {
+        const reader = new FileReader()
+        reader.onload = (e) => {
+            previewUrls.value.push(e.target.result)
+        }
+        reader.readAsDataURL(file)
+    }
+}
+
+const removeFile = (index) => {
+    files.value = files.value.filter((_, i) => i !== index)
+    previewUrls.value = previewUrls.value.filter((_, i) => i !== index)
+}
+
+const insertEmoji = (emoji) => {
+    description.value += emoji
+    showEmojiPicker.value = false
+}
+
+const handleSubmit = async () => {
+    if (!isValid.value) return
+
+    isLoading.value = true
 
     try {
-        const response = await postStore.createPost({
-            described: sanitizedDescription,
-            status: status.value,
-            files: files.value, // Assuming files are handled as File objects in store
-        });
+        const formData = new FormData()
+        formData.append('content', description.value.trim())
 
-        if (response.code === '1000') {
-            successMessage.value = 'Post created successfully!';
-            logger.info('Post created successfully', { postId: response.data.id });
-            resetForm();
-            router.push('/'); // Navigate to home or post detail page as needed
-        } else {
-            errorMessage.value = response.message || 'An error occurred while creating the post.';
-            logger.warn('Failed to create post', { responseCode: response.code, message: response.message });
-        }
-    } catch (error) {
-        logger.error('Error in submitPost', error);
-        errorMessage.value = 'An error occurred while creating the post. Please try again.';
-        await handleError(error);
+        files.value.forEach(file => {
+            formData.append('files', file)
+        })
+
+        await postStore.createPost(formData)
+
+        toast({
+            description: 'Post created successfully'
+        })
+
+        // Reset form
+        description.value = ''
+        files.value = []
+        previewUrls.value = []
+        descriptionError.value = ''
+
+    } catch (err) {
+        toast({
+            title: 'Error',
+            description: err.message || 'Failed to create post',
+            variant: 'destructive'
+        })
     } finally {
-        isLoading.value = false;
-        showUploadProgress.value = false;
-        uploadProgress.value = 0;
+        isLoading.value = false
     }
-};
-
-// Reset Form Fields
-const resetForm = () => {
-    description.value = '';
-    status.value = '';
-    files.value = [];
-    showEmojiPicker.value = false;
-    localStorage.removeItem('postDraft');
-};
-
-// Insert Emoji into Description
-const insertEmoji = (emoji) => {
-    description.value += emoji;
-};
-
-// Toggle Emoji Picker
-const toggleEmojiPicker = () => {
-    showEmojiPicker.value = !showEmojiPicker.value;
-};
-
-// Handle Upload Progress
-const handleUploadProgress = (progress) => {
-    uploadProgress.value = progress;
-};
-
-// Handle Upload Errors
-const handleUploadError = (error) => {
-    errorMessage.value = 'Failed to upload files. Please try again.';
-    logger.error('File upload error:', error);
-};
-
-// Handle Unsaved Changes
-const saveChanges = async () => {
-    await submitPost();
-    if (!errorMessage.value) {
-        showUnsavedChangesModal.value = false;
-        pendingNavigation.value.next();
-    }
-};
-
-const discardChanges = () => {
-    resetForm();
-    showUnsavedChangesModal.value = false;
-    pendingNavigation.value.next();
-};
-
-const cancelNavigation = () => {
-    showUnsavedChangesModal.value = false;
-    pendingNavigation.value.next(false);
-};
-
-// Navigation Guard
-const handleRouteChange = (to, from, next) => {
-    if (hasUnsavedChanges.value) {
-        showUnsavedChangesModal.value = true;
-        pendingNavigation.value = { to, from, next };
-    } else {
-        next();
-    }
-};
-
-// Computed for Unsaved Changes
-const hasUnsavedChanges = computed(() => {
-    return (
-        description.value.trim() !== '' ||
-        status.value !== '' ||
-        files.value.length > 0
-    );
-});
-
-// Lifecycle Hooks
-onMounted(() => {
-    loadDraft();
-    window.addEventListener('beforeunload', handleBeforeUnload);
-    router.beforeEach(handleRouteChange);
-});
-
-onBeforeUnmount(() => {
-    window.removeEventListener('beforeunload', handleBeforeUnload);
-    router.beforeEach(() => { }); // Remove the navigation guard
-});
-
-// Handle Browser Before Unload Event
-const handleBeforeUnload = (e) => {
-    if (hasUnsavedChanges.value) {
-        e.preventDefault();
-        e.returnValue = '';
-    }
-};
+}
 </script>
 
 <style scoped>
-.fade-enter-active,
-.fade-leave-active {
-    transition: opacity 0.2s ease;
+.no-scrollbar {
+    scrollbar-width: none;
 }
 
-.fade-enter-from,
-.fade-leave-to {
-    opacity: 0;
-}
-
-button:focus {
-    outline: 2px solid #4299e1;
-    /* Tailwind's focus ring equivalent */
-    outline-offset: 2px;
-}
-
-.relative {
-    position: relative;
-}
-
-.absolute {
-    position: absolute;
-}
-
-.fixed {
-    position: fixed;
-}
-
-.z-10 {
-    z-index: 10;
-}
-
-.z-50 {
-    z-index: 50;
+.no-scrollbar::-webkit-scrollbar {
+    display: none;
 }
 </style>
