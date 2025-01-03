@@ -101,7 +101,7 @@
                       {{ post.comments === 1 ? 'Comment' : 'Comments' }}
                     </Button>
 
-                    <RouterLink :to="{ name: 'PostDetail', params: { id: post.id } }" class="w-full sm:w-auto">
+                    <RouterLink :to="{ name: 'PostDetail', params: { postId: post.postId } }" class="w-full sm:w-auto">
                       <Button variant="default" class="w-full">
                         View Full Post
                       </Button>

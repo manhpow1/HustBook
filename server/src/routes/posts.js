@@ -78,7 +78,7 @@ router.post('/', authenticateToken, upload.array('images', 4), postController.cr
 
 /**
  * @swagger
- * /posts/{id}:
+ * /posts/{postId}:
  *   get:
  *     summary: Get a post by ID
  *     tags: [Posts]
@@ -86,7 +86,7 @@ router.post('/', authenticateToken, upload.array('images', 4), postController.cr
  *       - bearerAuth: []
  *     parameters:
  *       - in: path
- *         name: id
+ *         name: postId
  *         description: ID of the post to retrieve
  *         required: true
  *         schema:
@@ -105,7 +105,7 @@ router.post('/', authenticateToken, upload.array('images', 4), postController.cr
  *                 data:
  *                   type: object
  *                   properties:
- *                     id:
+ *                     postId:
  *                       type: string
  *                     content:
  *                       type: string
@@ -179,7 +179,7 @@ router.get('/get_list_posts', authenticateToken, postController.getListPosts);
 
 /**
  * @swagger
- * /posts/{id}:
+ * /posts/{postId}:
  *   get:
  *     summary: Get a post by ID
  *     tags: [Posts]
@@ -187,7 +187,7 @@ router.get('/get_list_posts', authenticateToken, postController.getListPosts);
  *       - bearerAuth: []
  *     parameters:
  *       - in: path
- *         name: id
+ *         name: postId
  *         required: true
  *         description: ID of the post to retrieve
  *         schema:
@@ -206,7 +206,7 @@ router.get('/get_list_posts', authenticateToken, postController.getListPosts);
  *                 data:
  *                   type: object
  *                   properties:
- *                     id:
+ *                     postId:
  *                       type: string
  *                       description: Post ID
  *                     content:
@@ -220,7 +220,7 @@ router.get('/get_list_posts', authenticateToken, postController.getListPosts);
  *                     author:
  *                       type: object
  *                       properties:
- *                         id:
+ *                         userId:
  *                           type: string
  *                           description: Author's user ID
  *                         userName:
@@ -248,11 +248,11 @@ router.get('/get_list_posts', authenticateToken, postController.getListPosts);
  *       401:
  *         description: Unauthorized - Invalid or missing token
  */
-router.get('/:id', authenticateToken, postController.getPost);
+router.get('/:postId', authenticateToken, postController.getPost);
 
 /**
  * @swagger
- * /posts/{id}:
+ * /posts/{postId}:
  *   put:
  *     summary: Update a post by ID
  *     tags: [Posts]
@@ -260,7 +260,7 @@ router.get('/:id', authenticateToken, postController.getPost);
  *       - bearerAuth: []
  *     parameters:
  *       - in: path
- *         name: id
+ *         name: postId
  *         description: ID of the post to update
  *         required: true
  *         schema:
@@ -291,11 +291,11 @@ router.get('/:id', authenticateToken, postController.getPost);
  *       404:
  *         description: Post not found
  */
-router.put('/:id', authenticateToken, upload.array('images', 4), postController.updatePost);
+router.put('/:postId', authenticateToken, upload.array('images', 4), postController.updatePost);
 
 /**
  * @swagger
- * /posts/{id}:
+ * /posts/{postId}:
  *   delete:
  *     summary: Delete a post by ID
  *     tags: [Posts]
@@ -303,7 +303,7 @@ router.put('/:id', authenticateToken, upload.array('images', 4), postController.
  *       - bearerAuth: []
  *     parameters:
  *       - in: path
- *         name: id
+ *         name: postId
  *         description: ID of the post to delete
  *         required: true
  *         schema:
@@ -317,11 +317,11 @@ router.put('/:id', authenticateToken, upload.array('images', 4), postController.
  *       404:
  *         description: Post not found
  */
-router.delete('/:id', authenticateToken, postController.deletePost);
+router.delete('/:postId', authenticateToken, postController.deletePost);
 
 /**
  * @swagger
- * /posts/{id}/comment:
+ * /posts/{postId}/comment:
  *   post:
  *     summary: Add a comment to a post
  *     tags: [Posts]
@@ -329,7 +329,7 @@ router.delete('/:id', authenticateToken, postController.deletePost);
  *       - bearerAuth: []
  *     parameters:
  *       - in: path
- *         name: id
+ *         name: postId
  *         description: ID of the post to comment on
  *         required: true
  *         schema:
@@ -352,7 +352,7 @@ router.delete('/:id', authenticateToken, postController.deletePost);
  *       404:
  *         description: Post not found
  */
-router.post('/:id/comment', authenticateToken, postController.addComment);
+router.post('/:postId/comment', authenticateToken, postController.addComment);
 
 /**
  * @swagger
@@ -389,7 +389,7 @@ router.get('/user/:userId', authenticateToken, postController.getUserPosts);
 
 /**
  * @swagger
- * /posts/{id}/report-post:
+ * /posts/{postId}/report-post:
  *   post:
  *     summary: Report a post
  *     tags: [Posts]
@@ -397,7 +397,7 @@ router.get('/user/:userId', authenticateToken, postController.getUserPosts);
  *       - bearerAuth: []
  *     parameters:
  *       - in: path
- *         name: id
+ *         name: postId
  *         description: ID of the post to report
  *         required: true
  *         schema:
@@ -425,11 +425,11 @@ router.get('/user/:userId', authenticateToken, postController.getUserPosts);
  *       404:
  *         description: Post not found
  */
-router.post('/:id/report-post', authenticateToken, reportLimiter, postController.reportPost);
+router.post('/:postId/report-post', authenticateToken, reportLimiter, postController.reportPost);
 
 /**
  * @swagger
- * /posts/{id}/like:
+ * /posts/{postId}/like:
  *   post:
  *     summary: Toggle like status on a post
  *     tags: [Posts]
@@ -437,7 +437,7 @@ router.post('/:id/report-post', authenticateToken, reportLimiter, postController
  *       - bearerAuth: []
  *     parameters:
  *       - in: path
- *         name: id
+ *         name: postId
  *         description: ID of the post to like/unlike
  *         required: true
  *         schema:
@@ -449,11 +449,11 @@ router.post('/:id/report-post', authenticateToken, reportLimiter, postController
  *       404:
  *         description: Post not found
  */
-router.post('/:id/like', authenticateToken, postController.toggleLike);
+router.post('/:postId/like', authenticateToken, postController.toggleLike);
 
 /**
  * @swagger
- * /posts/{id}/comments:
+ * /posts/{postId}/comments:
  *   get:
  *     summary: Get comments for a post
  *     tags: [Posts]
@@ -461,7 +461,7 @@ router.post('/:id/like', authenticateToken, postController.toggleLike);
  *       - bearerAuth: []
  *     parameters:
  *       - in: path
- *         name: id
+ *         name: postId
  *         description: Post ID to fetch comments for
  *         required: true
  *         schema:
@@ -484,6 +484,6 @@ router.post('/:id/like', authenticateToken, postController.toggleLike);
  *       404:
  *         description: No comments found
  */
-router.get('/:id/comments', authenticateToken, postController.getComments);
+router.get('/:postId/comments', authenticateToken, postController.getComments);
 
 export default router;

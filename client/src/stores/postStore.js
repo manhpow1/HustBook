@@ -171,9 +171,9 @@ export const usePostStore = defineStore('post', () => {
             const response = await apiService.updatePost(postId, postData);
             if (response.data.code === '1000') {
                 const updatedPost = validateAndProcessPost(response.data.data);
-                const index = posts.value.findIndex(p => p.id === postId);
+                const index = posts.value.findIndex(p => p.postId === postId);
                 if (index !== -1) posts.value[index] = updatedPost;
-                if (currentPost.value?.id === postId) currentPost.value = updatedPost;
+                if (currentPost.value?.postId === postId) currentPost.value = updatedPost;
                 return response.data;
             }
             throw new Error(response.data.message);
@@ -189,7 +189,7 @@ export const usePostStore = defineStore('post', () => {
     // Toggle Like
     async function toggleLike(postId) {
         try {
-            const post = posts.value.find(p => p.id === postId);
+            const post = posts.value.find(p => p.postId === postId);
             const isLiked = post?.isLiked === '1';
 
             if (post) {
@@ -197,7 +197,7 @@ export const usePostStore = defineStore('post', () => {
                 post.likes += isLiked ? -1 : 1;
             }
 
-            if (currentPost.value?.id === postId) {
+            if (currentPost.value?.postId === postId) {
                 currentPost.value.isLiked = isLiked ? '0' : '1';
                 currentPost.value.likes += isLiked ? -1 : 1;
             }
@@ -205,12 +205,12 @@ export const usePostStore = defineStore('post', () => {
             await apiService.likePost(postId);
         } catch (err) {
             await handleError(err);
-            const post = posts.value.find(p => p.id === postId);
+            const post = posts.value.find(p => p.postId === postId);
             if (post) {
                 post.isLiked = post.isLiked === '1' ? '0' : '1';
                 post.likes += post.isLiked === '1' ? 1 : -1;
             }
-            if (currentPost.value?.id === postId) {
+            if (currentPost.value?.postId === postId) {
                 currentPost.value.isLiked = currentPost.value.isLiked === '1' ? '0' : '1';
                 currentPost.value.likes += currentPost.value.isLiked === '1' ? 1 : -1;
             }
@@ -253,7 +253,7 @@ export const usePostStore = defineStore('post', () => {
             const response = await apiService.addComment(postId, content);
             if (response.data.code === '1000') {
                 comments.value.unshift(response.data.data);
-                if (currentPost.value?.id === postId) {
+                if (currentPost.value?.postId === postId) {
                     currentPost.value.comments++;
                 }
                 return response.data;
@@ -270,8 +270,8 @@ export const usePostStore = defineStore('post', () => {
         try {
             const response = await apiService.deletePost(postId);
             if (response.data.code === '1000') {
-                posts.value = posts.value.filter(p => p.id !== postId);
-                if (currentPost.value?.id === postId) currentPost.value = null;
+                posts.value = posts.value.filter(p => p.postId !== postId);
+                if (currentPost.value?.postId === postId) currentPost.value = null;
             } else {
                 throw new Error(response.data.message);
             }
@@ -314,7 +314,7 @@ export const usePostStore = defineStore('post', () => {
             if (!hasContent && !hasMedia) return null;
 
             // Ensure the post has a valid author
-            if (!post.userId || !post.author || !post.author.id) return null;
+            if (!post.userId || !post.author || !post.author.userId) return null;
 
             // Process and validate URLs
             if (Array.isArray(post.images)) {
