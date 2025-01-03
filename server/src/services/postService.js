@@ -41,13 +41,43 @@ class PostService {
         }
     }
 
-    async getPost(postId) {
+    async getPost(postId, userId) {
         try {
-            const post = await getDocument(collections.posts, postId);
-            return post ? new Post(post) : null;
+            const postRef = db.collection(collections.posts).doc(postId);
+            const postDoc = await postRef.get();
+
+            if (!postDoc.exists) {
+                return null;
+            }
+
+            const postData = postDoc.data();
+
+            // Get author info
+            const authorDoc = await db.collection(collections.users)
+                .doc(postData.userId)
+                .get();
+
+            const authorData = authorDoc.exists ? authorDoc.data() : {};
+
+            // Check if user has liked the post
+            const likeRef = db.collection(collections.likes)
+                .doc(`${postId}_${userId}`);
+            const likeDoc = await likeRef.get();
+
+            return {
+                id: postDoc.id,
+                ...postData,
+                created: postData.createdAt?.toDate?.()?.toISOString() || null,
+                isLiked: likeDoc.exists ? '1' : '0',
+                author: {
+                    id: postData.userId,
+                    userName: authorData.userName || 'Unknown User',
+                    avatar: authorData.avatar || ''
+                }
+            };
         } catch (error) {
             logger.error('Error in getPost service:', error);
-            throw createError('9999', 'Exception error');
+            throw error.code ? error : createError('9999', 'Exception error');
         }
     }
 
@@ -405,108 +435,82 @@ class PostService {
         limit = 20,
     }) {
         try {
-            // Build base query
             let query = db.collection(collections.posts)
                 .orderBy('createdAt', 'desc');
 
-            // Campaign filter
+            // Add filters
+            if (userId) {
+                query = query.where('userId', '==', userId);
+            }
+
             if (inCampaign === '1' && campaignId) {
                 query = query.where('campaignId', '==', campaignId);
             }
 
-            // Location filter
-            if (latitude && longitude) {
-                const radiusKm = 10;
-                const bounds = getBoundingBox(parseFloat(latitude), parseFloat(longitude), radiusKm);
-
-                // Create geohash or coordinate bounds
-                query = query
-                    .where('location.latitude', '>=', bounds.minLat)
-                    .where('location.latitude', '<=', bounds.maxLat);
-            }
-
-            // Pagination
+            // Handle pagination
             if (lastVisible) {
                 const lastDoc = await db.collection(collections.posts).doc(lastVisible).get();
-                if (!lastDoc.exists) {
-                    throw createError('1004', 'Invalid pagination token');
+                if (lastDoc.exists) {
+                    query = query.startAfter(lastDoc);
                 }
-                query = query.startAfter(lastDoc);
             }
 
             // Execute query
             const snapshot = await query.limit(limit).get();
 
-            // Early return if no results
             if (snapshot.empty) {
                 return { posts: [], lastVisible: null };
             }
 
-            // Collect post data and author IDs
+            // Process posts
             const posts = [];
             const authorIds = new Set();
-            const likePromises = [];
 
             snapshot.docs.forEach(doc => {
                 const postData = doc.data();
                 authorIds.add(postData.userId);
-
-                // Queue like status check
-                likePromises.push(this.checkUserLike(doc.id, userId));
-
                 posts.push({
                     id: doc.id,
-                    ...postData
+                    ...postData,
+                    created: postData.createdAt?.toDate?.()?.toISOString() || null
                 });
             });
 
-            // Fetch authors and like statuses in parallel
-            const [authors, likeStatuses] = await Promise.all([
-                this.getAuthorsInfo(Array.from(authorIds)),
-                Promise.all(likePromises)
-            ]);
+            // Get author information
+            const authors = await this.getAuthorsInfo(Array.from(authorIds));
 
-            // Process posts with author info and location filtering
-            const processedPosts = posts.map((post, index) => {
+            // Enrich posts with author info
+            const enrichedPosts = posts.map(post => {
                 const author = authors.get(post.userId) || {};
-
-                let processedPost = {
+                return {
                     ...post,
-                    isLiked: likeStatuses[index],
                     author: {
                         id: post.userId,
-                        userName: author.userName || '',
+                        userName: author.userName || 'Unknown User',
                         avatar: author.avatar || ''
                     }
                 };
+            });
 
-                // Apply distance filtering if location provided
-                if (latitude && longitude && post.location) {
+            // Apply location filtering if coordinates provided
+            let filteredPosts = enrichedPosts;
+            if (latitude && longitude) {
+                filteredPosts = enrichedPosts.filter(post => {
+                    if (!post.location) return false;
                     const distance = getDistance(
                         parseFloat(latitude),
                         parseFloat(longitude),
                         post.location.latitude,
                         post.location.longitude
                     );
-
-                    if (distance <= 10) {
-                        processedPost.distance = distance;
-                        return processedPost;
-                    }
-                    return null;
-                }
-
-                return processedPost;
-            }).filter(Boolean); // Remove null entries from location filtering
-
-            // Cache results
-            await this.cachePostsList(userId, processedPosts);
+                    return distance <= 10; // 10km radius
+                });
+            }
 
             return {
-                posts: processedPosts,
-                lastVisible: snapshot.docs[snapshot.docs.length - 1].id
+                posts: filteredPosts,
+                lastVisible: snapshot.docs[snapshot.docs.length - 1]?.id || null
             };
-
         } catch (error) {
             logger.error('Error in getListPosts service:', error);
             throw error.code ? error : createError('9999', 'Exception error');

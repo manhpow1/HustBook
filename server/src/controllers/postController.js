@@ -44,13 +44,17 @@ class PostController {
     async getPost(req, res, next) {
         try {
             const { error } = postValidator.validateGetPost(req.params);
-            if (error) throw createError('1002', error.details.map(detail => detail.message).join(', '));
+            if (error) {
+                throw createError('1002', error.details.map(detail => detail.message).join(', '));
+            }
 
             const { id } = req.params;
+            const userId = req.user.uid;
+            const post = await postService.getPost(id, userId);
 
-            const post = await postService.getPost(id);
-
-            if (!post) throw createError('9992', 'The requested post does not exist.');
+            if (!post) {
+                return sendResponse(res, '9994', { message: 'No data found' });
+            }
 
             sendResponse(res, '1000', post);
         } catch (error) {
@@ -266,8 +270,10 @@ class PostController {
                 limit: parseInt(limit)
             });
 
-            if (!result.posts.length) {
-                throw createError('9994', 'No data or end of list data');
+            if (!result || !result.posts || result.posts.length === 0) {
+                return sendResponse(res, '9994', {
+                    message: 'No data or end of list data'
+                });
             }
 
             return sendResponse(res, '1000', {
@@ -275,7 +281,6 @@ class PostController {
                 lastVisible: result.lastVisible ?
                     Buffer.from(result.lastVisible).toString('base64') : null
             });
-
         } catch (error) {
             next(error);
         }
