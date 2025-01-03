@@ -7,6 +7,7 @@ import { passwordStrength } from '../validators/userValidator.js';
 import redis from '../utils/redis.js';
 import logger from '../utils/logger.js';
 import User from '../models/userModel.js';
+import { handleAvatarUpload } from '../utils/helpers.js';
 
 // Constants
 const MAX_DEVICES_PER_USER = 5;
@@ -35,6 +36,7 @@ class UserService {
             // Create new User model instance with all required fields
             const user = new User({
                 userId: userId,
+                userName: '',  // Initialize with empty string
                 phoneNumber,
                 password: hashedPassword,
                 passwordHistory: [hashedPassword],
@@ -54,6 +56,7 @@ class UserService {
                 online: false,
                 isBlocked: false,
                 isAdmin: false,
+                avatar: null,  // Initialize avatar as null
                 createdAt: new Date().toISOString(),
                 updatedAt: new Date().toISOString(),
                 lastPasswordChange: new Date().toISOString()
@@ -407,6 +410,36 @@ class UserService {
             };
         } catch (error) {
             logger.error('Error getting user info:', error);
+            throw error;
+        }
+    }
+
+    async changeInfoAfterSignup(userId, userName, avatarFile) {
+        try {
+            const user = await this.getUserById(userId);
+            if (!user) {
+                throw createError('9995', 'User not found');
+            }
+
+            // Handle avatar upload if provided
+            let avatarUrl = null;
+            if (avatarFile) {
+                avatarUrl = await handleAvatarUpload(avatarFile, userId);
+            }
+
+            // Update user information
+            user.userName = userName;
+            if (avatarUrl) {
+                user.avatar = avatarUrl;
+            }
+            user.updatedAt = new Date().toISOString();
+
+            await user.save();
+            logger.info(`Updated user info after signup for user ${userId}`);
+
+            return user.toJSON();
+        } catch (error) {
+            logger.error('Error updating user info after signup:', error);
             throw error;
         }
     }

@@ -197,11 +197,19 @@ async function deleteFileFromStorage(url) {
 const cleanupFiles = async (files) => {
     try {
         if (!files) return;
-        const deletePromises = Array.isArray(files)
-            ? files.map(file => unlink(file.path))
-            : [unlink(files.path)];
 
+        // Make 'files' always an array
+        const filesArray = Array.isArray(files) ? files : [files];
+
+        // Extract the .path from each file, filter out anything that’s falsy
+        const validPaths = filesArray
+            .map(file => file?.path)
+            .filter(Boolean);
+
+        // Unlink each valid file path
+        const deletePromises = validPaths.map(path => unlink(path));
         await Promise.all(deletePromises);
+
         logger.info('Temporary files cleaned up successfully');
     } catch (error) {
         logger.error('Error cleaning up files:', error);

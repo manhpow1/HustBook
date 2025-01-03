@@ -335,41 +335,22 @@ class UserController {
                 throw createError('1002', errorMessage);
             }
 
-            const { userName } = value;
             const userId = req.user.userId;
+            const { userName } = value;
+            const avatarFile = req.files?.avatar?.[0];
 
-            const currentUser = await userService.getUserById(userId);
-            if (!currentUser) {
-                throw createError('9995', 'User not found');
-            }
-
-            let avatarUrl = null;
-            if (req.file) {
-                avatarUrl = await handleAvatarUpload(req.file, userId);
-            }
-
-            await userService.changeInfoAfterSignup(userId, userName, avatarUrl);
-
-            await req.app.locals.auditLog.logAction(userId, null, 'profile_update', {
-                deviceId: req.get('Device-ID'),
-                ip: req.ip,
-                timestamp: new Date().toISOString()
-            });
-
-            const updatedUser = await userService.getUserById(userId);
+            const updatedUser = await userService.changeInfoAfterSignup(userId, userName, avatarFile);
 
             sendResponse(res, '1000', {
                 message: 'Profile updated successfully',
-                id: updatedUser.userId,
-                userName: updatedUser.userName,
-                avatar_url: updatedUser.avatar_url,
-                phoneNumber: updatedUser.phoneNumber,
-                created: updatedUser.createdAt,
-                isBlocked: updatedUser.isBlocked,
-                online: updatedUser.online
+                user: {
+                    userId: updatedUser.userId,
+                    userName: updatedUser.userName,
+                    avatar_url: updatedUser.avatar
+                }
             });
         } catch (error) {
-            logger.error('Change Info Error:', error);
+            logger.error('Set User Info Error:', error);
             next(error);
         }
     }
