@@ -60,6 +60,7 @@ const getListPostsSchema = Joi.object({
     longitude: Joi.number().min(-180).max(180).optional(),
     lastVisible: Joi.string().optional(),
     limit: Joi.number().integer().min(1).max(100).default(20),
+    reset: Joi.boolean().optional()
 });
 
 const getPostCommentsSchema = Joi.object({
