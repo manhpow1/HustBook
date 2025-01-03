@@ -47,7 +47,8 @@
             </FormItem>
           </FormField>
 
-          <Button type="submit" :loading="isLoading" class="w-full" :disabled="!isValidPhone || isLoading">
+          <Button type="submit" :loading="isLoading" class="w-full"
+            :disabled="!isValidPhone || isLoading || cooldown > 0">
             <KeyIcon v-if="!isLoading" class="h-4 w-4 mr-2" />
             Get Verification Code
           </Button>
@@ -171,11 +172,13 @@ const isValidPhone = computed(() => {
   return /^0[1-9][0-9]{8}$/.test(phoneNumber.value);
 });
 
-const isSubmitDisabled = computed(() => {
+const isFormValid = computed(() => {
   if (step.value === 1) {
-    return !phoneNumber.value || userStore.isLoading;
+    return isValidPhone.value && !userStore.isLoading;
   }
-  return !code.value || !newPassword.value || !confirmPassword.value || userStore.isLoading;
+  return code.value && newPassword.value && confirmPassword.value &&
+    !errors.value.code && !errors.value.newPassword && !errors.value.confirmPassword &&
+    !userStore.isLoading;
 });
 
 // Methods
