@@ -2,7 +2,7 @@ import sharp from 'sharp';
 import { createError } from './customError.js';
 import logger from './logger.js';
 import admin from 'firebase-admin';
-import fs from 'fs';
+import { unlink } from 'fs/promises';
 
 // Constants
 const MAX_IMAGE_SIZE = 5 * 1024 * 1024; // 5MB
@@ -197,10 +197,9 @@ async function deleteFileFromStorage(url) {
 const cleanupFiles = async (files) => {
     try {
         if (!files) return;
-
         const deletePromises = Array.isArray(files)
-            ? files.map(file => fs.unlink(file.path))
-            : [fs.unlink(files.path)];
+            ? files.map(file => unlink(file.path))
+            : [unlink(files.path)];
 
         await Promise.all(deletePromises);
         logger.info('Temporary files cleaned up successfully');
