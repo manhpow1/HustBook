@@ -175,7 +175,7 @@ const handleSubmit = async () => {
     try {
         const formData = new FormData()
         // Match the field name expected by the server
-        formData.append('described', description.value.trim())
+        formData.append('content', description.value.trim())
 
         files.value.forEach(file => {
             formData.append('files', file)
