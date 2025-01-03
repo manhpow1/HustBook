@@ -174,7 +174,7 @@ router.post('/', authenticateToken, upload.array('images', 4), postController.cr
  *       404:
  *         description: No posts found
  */
-router.get('/get_list_posts', authenticateToken, postController.getListPosts);
+router.get('/get_list_posts/:id?', authenticateToken, postController.getListPosts);
 
 
 /**

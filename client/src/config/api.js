@@ -21,7 +21,7 @@ export const API_ENDPOINTS = {
     DELETE_POST: (postId) => `${API_BASE_URL}/api/posts/${postId}`,
     REPORT_POST: (postId) => `${API_BASE_URL}/api/posts/${postId}/report-post`,
     LIKE_POST: (postId) => `${API_BASE_URL}/api/posts/${postId}/like`,
-    GET_LIST_POSTS: `${API_BASE_URL}/api/posts/get_list_posts`,
+    GET_LIST_POSTS: (id) => id ? `${API_BASE_URL}/api/posts/get_list_posts/${id}` : `${API_BASE_URL}/api/posts/get_list_posts`,
     // Comment Endpoints
     ADD_COMMENT: (postId) => `${API_BASE_URL}/api/posts/${postId}/comment`,
     GET_COMMENTS: (postId) => `${API_BASE_URL}/api/posts/${postId}/comments`,

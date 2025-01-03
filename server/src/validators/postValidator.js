@@ -53,7 +53,7 @@ const getPostSchema = Joi.object({
 });
 
 const getListPostsSchema = Joi.object({
-    id: Joi.string().optional(),
+    id: Joi.string().allow('').optional(),
     userId: Joi.string().optional(),
     in_campaign: Joi.string().valid('0', '1').optional(),
     campaignId: Joi.string().optional(),
