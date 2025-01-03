@@ -112,6 +112,7 @@ export const usePostStore = defineStore('post', () => {
     // Create Post
     async function createPost(postData) {
         loading.value = true;
+        error.value = null
         try {
             if (postData.images?.length) {
                 const processedImages = await Promise.all(
@@ -120,19 +121,24 @@ export const usePostStore = defineStore('post', () => {
                 postData.images = processedImages.filter(Boolean);
             }
 
-            const response = await apiService.createPost(postData);
-            if (response.data.code === '1000') {
-                const newPost = validateAndProcessPost(response.data.data);
-                if (newPost) posts.value.unshift(newPost);
-                return response.data;
+            const response = await apiService.createPost(postData)
+            const data = response.data
+
+            if (data.code === '1000') {
+                const newPost = validateAndProcessPost(data.data)
+                if (newPost) {
+                    posts.value.unshift(newPost)
+                }
+                return data
+            } else {
+                throw new Error(data.message || 'Failed to create post')
             }
-            throw new Error(response.data.message);
         } catch (err) {
-            await handleError(err);
-            error.value = err.message;
-            throw err;
+            await handleError(err)
+            error.value = err.message || 'Failed to create post'
+            throw err
         } finally {
-            loading.value = false;
+            loading.value = false
         }
     }
 

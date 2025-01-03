@@ -109,12 +109,11 @@ const apiService = {
     // POST APIs
     // ─────────────────────────────────────────────────────────
     async createPost(postData) {
-        const formData = new FormData();
-        if (postData.content) formData.append('content', postData.content);
-        if (postData.images) {
-            postData.images.forEach(img => formData.append('images', img));
-        }
-        return this.upload(API_ENDPOINTS.ADD_POST, formData);
+        return axiosInstance.post(API_ENDPOINTS.ADD_POST, postData, {
+            headers: {
+                'Content-Type': 'multipart/form-data'
+            }
+        })
     },
 
     async getPost(postId) {
@@ -161,7 +160,7 @@ const apiService = {
     },
 
     async getComments(postId, params = {}) {
-        return this.get(API_ENDPOINTS.GET_COMMENTS(postId), {params});
+        return this.get(API_ENDPOINTS.GET_COMMENTS(postId), { params });
     },
 
     // ─────────────────────────────────────────────────────────

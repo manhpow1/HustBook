@@ -169,16 +169,14 @@ const insertEmoji = (emoji) => {
 
 const handleSubmit = async () => {
     if (!isValid.value) return
-
     isLoading.value = true
 
     try {
         const formData = new FormData()
-        // Match the field name expected by the server
-        formData.append('content', description.value.trim())
+        formData.append('content', description.value.trim()) // Giữ nguyên 'content'
 
         files.value.forEach(file => {
-            formData.append('files', file)
+            formData.append('images', file)
         })
 
         await postStore.createPost(formData)
