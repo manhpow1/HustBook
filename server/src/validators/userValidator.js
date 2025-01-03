@@ -139,36 +139,21 @@ const changeInfoAfterSignupSchema = Joi.object({
         .min(3)
         .max(30)
         .pattern(/^[a-zA-Z0-9_]+$/)
-        .required()
-        .messages({
-            'string.empty': 'Username cannot be empty.',
-            'string.min': 'Username must be at least 3 characters.',
-            'string.max': 'Username cannot exceed 30 characters.',
-            'string.pattern.base': 'Username can only contain letters, numbers, and underscores.',
-            'any.required': 'Username is required.'
-        }),
+        .required(),
     avatar: Joi.alternatives().try(
-        // Handle URL string
-        Joi.string().uri().messages({
-            'string.uri': 'Avatar URL must be a valid URL.'
-        }),
-        // Handle file upload
-        Joi.object().keys({
-            fieldname: Joi.string().required(),
-            originalname: Joi.string().required(),
-            encoding: Joi.string().required(),
-            mimetype: Joi.string().valid('image/jpeg', 'image/png', 'image/gif').required(),
-            buffer: Joi.binary().required(),
-            size: Joi.number().max(5 * 1024 * 1024).required(),
-            path: Joi.string().allow(''),
-            destination: Joi.string().allow('')
-        }).unknown(true),
-        // Handle null/empty cases
-        Joi.string().allow('', null)
-    ).messages({
-        'alternatives.match': 'Avatar must be either a valid URL or an image file.'
-    })
-}).required();
+        // For URL string
+        Joi.string().uri(),
+        // For multer file object 
+        Joi.object({
+            fieldname: Joi.string(),
+            originalname: Joi.string(),
+            encoding: Joi.string(),
+            mimetype: Joi.string().valid('image/jpeg', 'image/png', 'gif'),
+            buffer: Joi.any(),
+            size: Joi.number().max(5 * 1024 * 1024) // 5MB
+        }).unknown(true)
+    ).optional()
+});
 
 /**
  * Change password schema

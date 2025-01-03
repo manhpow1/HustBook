@@ -522,29 +522,25 @@ class UserController {
 
     async changeInfoAfterSignup(req, res, next) {
         try {
-            const { error, value } = userValidator.validateChangeInfoAfterSignup(req.body);
+            const { error, value } = userValidator.validateChangeInfoAfterSignup({
+                userName: req.body.userName,
+                avatar: req.files?.avatar?.[0] || null
+            });
+
             if (error) {
-                const errorMessage = error.details.map(detail => detail.message).join(', ');
-                throw createError('1002', errorMessage);
+                throw createError('1002', error.details[0].message);
             }
 
             const userId = req.user.userId;
             const { userName } = value;
-            let avatarFile = null;
-
-            // Handle avatar file if present
-            if (req.files && req.files.avatar) {
-                avatarFile = req.files.avatar[0];
-            } else if (req.body.avatar) {
-                // If avatar is provided as a URL string
-                avatarFile = req.body.avatar;
-            }
+            const avatarFile = req.files?.avatar?.[0];
 
             const updatedUser = await userService.changeInfoAfterSignup(userId, userName, avatarFile);
 
-            sendResponse(res, '1000', {
+            res.status(200).json({
+                code: '1000',
                 message: 'Profile updated successfully',
-                user: {
+                data: {
                     userId: updatedUser.userId,
                     userName: updatedUser.userName,
                     avatar: updatedUser.avatar

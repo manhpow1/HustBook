@@ -56,7 +56,7 @@ class UserService {
                 online: false,
                 isBlocked: false,
                 isAdmin: false,
-                avatar: null, 
+                avatar: null,
                 createdAt: new Date().toISOString(),
                 updatedAt: new Date().toISOString(),
                 lastPasswordChange: new Date().toISOString()
@@ -390,25 +390,20 @@ class UserService {
                 throw createError('1002', 'Username is required');
             }
 
-            // Rate limiting check
             const currentTime = Date.now();
             const lastModifiedAt = user.lastModifiedAt || 0;
             if (currentTime - lastModifiedAt < 1000) {
-                throw createError('1003', 'Please wait a moment before updating again');
+                throw createError('1003', 'Please wait before updating again');
             }
 
             // Update user information
             user.userName = userName;
-            
+
             // Handle avatar upload if provided
             if (avatarFile) {
-                if (typeof avatarFile === 'string') {
-                    // If avatarFile is already a URL string, use it directly
-                    user.avatar = avatarFile;
-                } else {
-                    // If avatarFile is a file object, process the upload
-                    const uploadedAvatarUrl = await handleAvatarUpload(avatarFile, userId);
-                    user.avatar = uploadedAvatarUrl || '';
+                const uploadedAvatarUrl = await handleAvatarUpload(avatarFile, userId);
+                if (uploadedAvatarUrl) {
+                    user.avatar = uploadedAvatarUrl;
                 }
             }
 
@@ -418,7 +413,6 @@ class UserService {
             user.updatedAt = new Date().toISOString();
 
             await user.save();
-            logger.info(`Updated user info after signup for user ${userId}`);
 
             return user.toJSON();
         } catch (error) {
