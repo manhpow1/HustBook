@@ -1,6 +1,6 @@
 {
     "server": {
         "port": 3000,
-        "corsOrigin": "https://hust-book.vercel.app/"
+        "corsOrigin": "http://localhost:5173/"
     }
 }

@@ -1,4 +1,4 @@
-import { initializeFirebase } from '../config/firebase.js';
+import { db } from '../config/firebase.js';
 import { collections, arrayUnion, arrayRemove } from '../config/database.js';
 import { createError } from '../utils/customError.js';
 import logger from '../utils/logger.js';
@@ -47,7 +47,6 @@ class User {
     }
 
     async getUserRef() {
-        const { db } = await initializeFirebase();
         return db.collection(collections.users).doc(this.uid);  // Updated to use uid consistently
     }
 

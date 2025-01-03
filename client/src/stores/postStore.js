@@ -303,24 +303,67 @@ export const usePostStore = defineStore('post', () => {
 
     // Validate and Process Post
     function validateAndProcessPost(post) {
-        // Ensure the post has either content or media
-        const hasContent = typeof post.content === 'string' && post.content.trim() !== '';
-        const hasMedia = (Array.isArray(post.images) && post.images.length > 0) ||
-            (typeof post.video === 'string' && post.video.trim() !== '');
+        if (!post) return null;
 
-        if (!hasContent && !hasMedia) return null;
+        try {
+            // Ensure the post has either content or media
+            const hasContent = typeof post.content === 'string' && post.content.trim() !== '';
+            const hasMedia = (Array.isArray(post.images) && post.images.length > 0) ||
+                (typeof post.video === 'string' && post.video?.trim() !== '');
 
-        // Ensure the post has a valid author
-        if (!post.userId || !post.author || !post.author.id) return null;
+            if (!hasContent && !hasMedia) return null;
 
-        // Ensure 'likes' and 'comments' fields are non-negative integers
-        post.likes = Number.isInteger(post.likes) && post.likes >= 0 ? post.likes : 0;
-        post.comments = Number.isInteger(post.comments) && post.comments >= 0 ? post.comments : 0;
+            // Ensure the post has a valid author
+            if (!post.userId || !post.author || !post.author.id) return null;
 
-        // Validate inappropriate content
-        if (containsInappropriateContent(post.content)) return null;
+            // Process and validate URLs
+            if (Array.isArray(post.images)) {
+                post.images = post.images
+                    .filter(url => url && typeof url === 'string')
+                    .map(url => {
+                        try {
+                            return url.trim();
+                        } catch (e) {
+                            console.warn('Invalid image URL:', url);
+                            return '';
+                        }
+                    })
+                    .filter(url => url !== '');
+            } else {
+                post.images = [];
+            }
+            
+            if (post.video) {
+                try {
+                    post.video = typeof post.video === 'string' ? post.video.trim() : null;
+                } catch (e) {
+                    console.warn('Invalid video URL:', post.video);
+                    post.video = null;
+                }
+            }
+            
+            if (post.author) {
+                try {
+                    post.author.avatar = typeof post.author.avatar === 'string' ? 
+                        post.author.avatar.trim() : '';
+                } catch (e) {
+                    console.warn('Invalid avatar URL:', post.author.avatar);
+                    post.author.avatar = '';
+                }
+            }
 
-        return post;
+            // Ensure 'likes' and 'comments' fields are non-negative integers
+            post.likes = Number.isInteger(post.likes) && post.likes >= 0 ? post.likes : 0;
+            post.comments = Number.isInteger(post.comments) && post.comments >= 0 ? post.comments : 0;
+
+            // Validate inappropriate content
+            if (containsInappropriateContent(post.content)) return null;
+
+            return post;
+        } catch (err) {
+            console.error('Error validating post:', err);
+            return null;
+        }
     }
 
     // Check for Inappropriate Content

@@ -20,7 +20,6 @@ export const initializeFirebase = async () => {
         firebaseConfig = {
           credential: admin.credential.cert(serviceAccount),
           storageBucket: process.env.FIREBASE_STORAGE_BUCKET,
-          databaseURL: "https://facebook-clone-3d881-default-rtdb.asia-southeast1.firebasedatabase.app",
         };
         logger.info('Using complete service account JSON configuration');
       } else if (
@@ -35,10 +34,10 @@ export const initializeFirebase = async () => {
             clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
           }),
           storageBucket: process.env.FIREBASE_STORAGE_BUCKET,
-          databaseURL: "https://facebook-clone-3d881-default-rtdb.asia-southeast1.firebasedatabase.app",
         };
         logger.info('Using individual Firebase credentials');
       } else {
+        logger.error('Firebase configuration missing: Check environment variables.');
         throw new Error('Firebase configuration missing');
       }
 
@@ -57,7 +56,8 @@ export const initializeFirebase = async () => {
 
     return { db, auth, storage };
   } catch (error) {
-    logger.error('Failed to initialize Firebase:', error);
+    logger.error('Failed to initialize Firebase. Error:', error.message);
+    logger.error('Stack trace:', error.stack);
     throw error;
   }
 };

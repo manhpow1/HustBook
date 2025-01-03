@@ -37,12 +37,7 @@
               <AlertTitle>Unable to load posts</AlertTitle>
               <AlertDescription class="mt-2">
                 {{ postStore.error }}
-                <Button 
-                  @click="retryFetchPosts" 
-                  variant="outline" 
-                  class="mt-3 w-full"
-                  :disabled="postStore.loading"
-                >
+                <Button @click="retryFetchPosts" variant="outline" class="mt-3 w-full" :disabled="postStore.loading">
                   <RefreshCw v-if="postStore.loading" class="mr-2 h-4 w-4 animate-spin" />
                   {{ postStore.loading ? 'Retrying...' : 'Try Again' }}
                 </Button>
@@ -56,13 +51,13 @@
                   <CardHeader>
                     <div class="flex items-center gap-4">
                       <Avatar>
-                        <AvatarImage :src="sanitizeUrl(post.userAvatar)" />
+                        <AvatarImage :src="post.userAvatar" />
                         <AvatarFallback>
                           {{ post.userName ? post.userName.charAt(0) : 'U' }}
                         </AvatarFallback>
                       </Avatar>
                       <div class="space-y-1">
-                        <h3 class="font-semibold">{{ sanitizeText(post.userName) }}</h3>
+                        <h3 class="font-semibold">{{ sanitizeOutput(post.userName) }}</h3>
                         <time :datetime="post.created" class="text-sm text-muted-foreground">
                           {{ formatDate(post.created) }}
                         </time>
@@ -71,20 +66,17 @@
                   </CardHeader>
 
                   <CardContent>
-                    <p class="text-card-foreground">{{ sanitizeText(post.described) }}</p>
+                    <p class="text-card-foreground">{{ sanitizeOutput(post.described) }}</p>
 
-                    <!-- Media Grid -->
                     <AspectRatio v-if="post.media.length" :ratio="16 / 9" class="mt-4">
                       <div class="grid gap-2" :class="mediaGridClass(post.media.length)">
                         <div v-for="(media, index) in post.media" :key="index"
                           class="relative rounded-lg overflow-hidden">
-                          <!-- If it's an image -->
-                          <img v-if="isImage(media)" :src="sanitizeUrl(media)" :alt="`Post image ${index + 1}`"
+                          <img v-if="isImage(media)" :src="media" :alt="`Post image ${index + 1}`"
                             class="w-full h-full object-cover" loading="lazy" />
 
-                          <!-- If it's a video -->
                           <div v-else @click="goToWatchPage(post.id, index)" class="relative h-full cursor-pointer">
-                            <video :src="sanitizeUrl(media)" class="w-full h-full object-cover" preload="metadata">
+                            <video :src="media" class="w-full h-full object-cover" preload="metadata">
                             </video>
                             <div class="absolute inset-0 flex items-center justify-center bg-black/50">
                               <Play class="w-12 h-12 text-white" />
@@ -176,9 +168,8 @@ import { Skeleton } from '@/components/ui/skeleton'
 const AddPost = defineAsyncComponent(() =>
   import('../components/post/AddPost.vue')
 )
-
 // Utils
-import { sanitizeOutput } from '../utils/sanitize'
+import { sanitizeInput, sanitizeOutput } from '../utils/sanitize';
 import { useErrorHandler } from '@/utils/errorHandler'
 
 const router = useRouter()
@@ -290,10 +281,6 @@ const goToWatchPage = (postId, mediaIndex) => {
     query: { mediaIndex }
   })
 }
-
-// Basic sanitizing
-const sanitizeText = (text) => sanitizeOutput(text)
-const sanitizeUrl = (url) => sanitizeOutput(url)
 
 /**
  * ================

@@ -215,7 +215,7 @@ const loadUserData = async () => {
                 link: userData.link || '',
                 cover_image: userData.cover_image || ''
             }
-            initialForm = { ...form.value }
+            let initialForm = { ...form.value }
             toast({
                 type: 'success',
                 title: 'Profile Loaded',
