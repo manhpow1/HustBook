@@ -48,9 +48,9 @@ class PostController {
                 throw createError('1002', error.details.map(detail => detail.message).join(', '));
             }
 
-            const { id } = req.params;
+            const { postId } = req.params;
             const userId = req.user.uid;
-            const post = await postService.getPost(id, userId);
+            const post = await postService.getPost(postId, userId);
 
             if (!post) {
                 return sendResponse(res, '9994', { message: 'No data found' });
@@ -69,7 +69,7 @@ class PostController {
                 throw createError('1002', error.details.map(detail => detail.message).join(', '));
             }
 
-            const { id } = req.params;
+            const { postId } = req.params;
             const { content } = req.body;
             const userId = req.user.uid;
 
@@ -89,7 +89,7 @@ class PostController {
                 }
             }
 
-            const updatedPost = await postService.updatePost(id, userId, content, processedImages);
+            const updatedPost = await postService.updatePost(postId, userId, content, processedImages);
 
             // Clean up temp files after successful update
             if (req.files) {
@@ -111,7 +111,7 @@ class PostController {
             const { error } = postValidator.validateDeletePost(req.params);
             if (error) throw createError('1002', error.details[0].message);
 
-            const { id: postId } = req.params;
+            const { postId } = req.params;
             const userId = req.user.uid;
 
             await postService.deletePost(postId, userId);
@@ -131,11 +131,11 @@ class PostController {
             const { error } = postValidator.validateComment(req.body);
             if (error) throw createError('1002', error.details.map(detail => detail.message).join(', '));
 
-            const { id } = req.params;
+            const { postId } = req.params;
             const { content } = req.body;
             const userId = req.user.uid;
 
-            await postService.addComment(id, userId, content);
+            await postService.addComment(postId, userId, content);
 
             sendResponse(res, '1000', { message: 'Comment added successfully' });
         } catch (error) {
@@ -148,7 +148,7 @@ class PostController {
             const { error } = postValidator.validateGetPostComments(req.query);
             if (error) throw createError('1002', error.details.map(detail => detail.message).join(', '));
 
-            const { id: postId } = req.params;
+            const { postId } = req.params;
             const { limit = 20, lastVisible } = req.query;
             const userId = req.user.uid;
 
@@ -207,15 +207,15 @@ class PostController {
             const { error } = postValidator.validateReportPost(req.body);
             if (error) throw createError('1002', error.details.map(detail => detail.message).join(', '));
 
-            const { id } = req.params;
+            const { postId } = req.params;
             const { reason, details } = req.body;
             const userId = req.user.uid;
 
-            const post = await postService.getPost(id);
+            const post = await postService.getPost(postId);
 
             if (!post) throw createError('9992', 'The requested post does not exist.');
 
-            await postService.reportPost(id, userId, reason, details);
+            await postService.reportPost(postId, userId, reason, details);
 
             sendResponse(res, '1000', { message: 'Report submitted successfully. The post is under review.' });
         } catch (error) {
@@ -229,7 +229,7 @@ class PostController {
             if (error) throw createError('1002', error.details.map(detail => detail.message).join(', '));
 
             const userId = req.user.uid;
-            const { id: postId } = req.params;
+            const { postId } = req.params;
 
             const result = await postService.toggleLike(postId, userId);
             sendResponse(res, '1000', {
@@ -249,7 +249,7 @@ class PostController {
             }
 
             const {
-                id,
+                postId,
                 userId,
                 in_campaign,
                 campaignId,
@@ -261,7 +261,7 @@ class PostController {
 
             const currentUserId = req.user.uid;
             const result = await postService.getListPosts({
-                id,
+                postId,
                 userId: userId || currentUserId,
                 inCampaign: in_campaign,
                 campaignId,

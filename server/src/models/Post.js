@@ -2,13 +2,13 @@ class Post {
     static MAX_IMAGES = 4;
     static ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/gif'];
 
-    constructor({ id = null, userId, content, images = [], likes = 0, comments = 0, createdAt = new Date(), updatedAt = null }) {
+    constructor({ postId = null, userId, content, images = [], likes = 0, comments = 0, createdAt = new Date(), updatedAt = null }) {
         if (!userId) throw new Error('userId is required');
         if (!content) throw new Error('content is required');
         if (!Array.isArray(images)) throw new Error('images must be an array');
         if (images.length > Post.MAX_IMAGES) throw new Error(`Maximum ${Post.MAX_IMAGES} images allowed`);
 
-        this.id = id;
+        this.postId = postId;
         this.userId = userId;
         this.content = content;
         this.images = images;
@@ -33,7 +33,7 @@ class Post {
 
     toJSON() {
         return {
-            id: this.id,
+            postId: this.postId,
             userId: this.userId,
             content: this.content,
             images: this.images,

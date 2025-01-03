@@ -65,12 +65,12 @@ class PostService {
             const likeDoc = await likeRef.get();
 
             return {
-                id: postDoc.id,
+                postId: postDoc.postId,
                 ...postData,
                 created: postData.createdAt?.toDate?.()?.toISOString() || null,
                 isLiked: likeDoc.exists ? '1' : '0',
                 author: {
-                    id: postData.userId,
+                    userId: postData.userId,
                     userName: authorData.userName || 'Unknown User',
                     avatar: authorData.avatar || ''
                 }
@@ -320,7 +320,7 @@ class PostService {
                 const commentData = doc.data();
                 commentUserIds.add(commentData.userId);
                 comments.push({
-                    id: doc.id,
+                    commentId: doc.id,
                     ...commentData
                 });
             });
@@ -333,18 +333,18 @@ class PostService {
             const userMap = new Map();
             userDocs.docs.forEach(doc => {
                 userMap.set(doc.id, {
-                    id: doc.id,
+                    userId: doc.id,
                     userName: doc.data().userName || '',
                     avatar: doc.data().avatar || ''
                 });
             });
 
             const enrichedComments = comments.map(comment => ({
-                id: comment.id,
+                commentId: comment.commentId,
                 content: comment.content,
                 createdAt: comment.createdAt.toDate().toISOString(),
                 author: userMap.get(comment.userId) || {
-                    id: comment.userId,
+                    userId: comment.userId,
                     userName: 'Unknown User',
                     avatar: ''
                 },
@@ -391,7 +391,7 @@ class PostService {
             const snapshot = await query.get();
 
             const posts = snapshot.docs.map(doc => ({
-                id: doc.id,
+                postId: doc.id,
                 ...doc.data(),
             }));
 
@@ -426,7 +426,7 @@ class PostService {
     }
 
     async getListPosts({
-        id,
+        postId,
         userId,
         inCampaign,
         campaignId,
@@ -440,8 +440,8 @@ class PostService {
                 .orderBy('createdAt', 'desc');
 
             // Add filters
-            if (id) {
-                query = query.where('__name__', '==', id);
+            if (postId) {
+                query = query.where('__name__', '==', postId);
             }
             
             if (userId) {
@@ -475,7 +475,7 @@ class PostService {
                 const postData = doc.data();
                 authorIds.add(postData.userId);
                 posts.push({
-                    id: doc.id,
+                    postId: doc.id,
                     ...postData,
                     created: postData.createdAt?.toDate?.()?.toISOString() || null
                 });
@@ -490,7 +490,7 @@ class PostService {
                 return {
                     ...post,
                     author: {
-                        id: post.userId,
+                        userId: post.userId,
                         userName: author.userName || 'Unknown User',
                         avatar: author.avatar || ''
                     }
