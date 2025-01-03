@@ -2,6 +2,7 @@ import sharp from 'sharp';
 import { createError } from './customError.js';
 import logger from './logger.js';
 import admin from 'firebase-admin';
+import fs from 'fs';
 
 // Constants
 const MAX_IMAGE_SIZE = 5 * 1024 * 1024; // 5MB
