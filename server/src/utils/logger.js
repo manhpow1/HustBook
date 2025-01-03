@@ -14,7 +14,8 @@ const logFormat = printf(({ level, message, timestamp, ...metadata }) => {
 
 // Formatter to mask sensitive data
 const maskSensitiveData = winston.format((info) => {
-    if (info.message && typeof info.message === 'string') {
+    if (info.message) {
+        info.message = String(info.message); // Ensure it's a string
         // Enhanced masking patterns
         info.message = info.message.replace(/(password=)([^&\s]+)/gi, '$1***');
         info.message = info.message.replace(/(token=)([^&\s]+)/gi, '$1***');
