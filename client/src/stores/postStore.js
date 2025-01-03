@@ -30,7 +30,7 @@ export const usePostStore = defineStore('post', () => {
 
         loading.value = true;
         error.value = null;
-        
+
         try {
             if (params.reset) {
                 posts.value = [];
@@ -38,12 +38,10 @@ export const usePostStore = defineStore('post', () => {
                 hasMorePosts.value = true;
             }
 
-            const response = await apiService.get(API_ENDPOINTS.GET_LIST_POSTS, {
-                params: {
-                    ...params,
-                    lastVisible: lastVisible.value,
-                    limit: 20
-                }
+            const response = await apiService.getListPosts({
+                ...params,
+                lastVisible: lastVisible.value,
+                limit: 20
             });
 
             if (response.data.code === '1000') {
@@ -57,7 +55,7 @@ export const usePostStore = defineStore('post', () => {
                 } else {
                     posts.value.push(...newPosts);
                 }
-                
+
                 lastVisible.value = response.data.data.lastVisible;
                 hasMorePosts.value = newPosts.length === 20;
             } else {
