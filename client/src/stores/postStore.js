@@ -26,7 +26,7 @@ export const usePostStore = defineStore('post', () => {
 
     // Fetch Posts
     async function fetchPosts(params = {}) {
-        if (!hasMorePosts.value) return;
+        if (!hasMorePosts.value && !params.reset) return;
 
         loading.value = true;
         error.value = null;
@@ -34,7 +34,7 @@ export const usePostStore = defineStore('post', () => {
         try {
             const response = await apiService.getListPosts({
                 ...params,
-                lastVisible: lastVisible.value,
+                lastVisible: params.reset ? null : lastVisible.value,
                 limit: 20
             });
 
@@ -45,12 +45,13 @@ export const usePostStore = defineStore('post', () => {
 
                 if (params.reset) {
                     posts.value = newPosts;
+                    hasMorePosts.value = true;
                 } else {
                     posts.value.push(...newPosts);
                 }
                 
                 lastVisible.value = response.data.data.lastVisible;
-                hasMorePosts.value = newPosts.length === 10;
+                hasMorePosts.value = newPosts.length === 20;
             } else {
                 hasMorePosts.value = false;
                 if (response.data.code !== '9994') {

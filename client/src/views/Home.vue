@@ -278,7 +278,11 @@ const sanitizeUrl = (url) => sanitizeOutput(url)
  */
 onMounted(async () => {
   if (userStore.isLoggedIn) {
-    await postStore.fetchPosts({ reset: true })
+    try {
+      await postStore.fetchPosts({ reset: true });
+    } catch (error) {
+      handleError(error);
+    }
   }
 })
 

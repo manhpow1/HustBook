@@ -122,6 +122,132 @@ router.post('/', authenticateToken, upload.array('images', 4), postController.cr
  *       404:
  *         description: Post not found
  */
+/**
+ * @swagger
+ * /posts/get_list_posts:
+ *   get:
+ *     summary: Get a list of posts with optional filters
+ *     tags: [Posts]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: userId
+ *         description: Filter posts by userId
+ *         schema:
+ *           type: string
+ *       - in: query
+ *         name: in_campaign
+ *         description: Filter by campaign posts (0 or 1)
+ *         schema:
+ *           type: string
+ *           enum: [0, 1]
+ *       - in: query
+ *         name: campaignId
+ *         description: Campaign ID if in_campaign=1
+ *         schema:
+ *           type: string
+ *       - in: query
+ *         name: latitude
+ *         description: Latitude for location-based filtering
+ *         schema:
+ *           type: number
+ *       - in: query
+ *         name: longitude
+ *         description: Longitude for location-based filtering
+ *         schema:
+ *           type: number
+ *       - in: query
+ *         name: lastVisible
+ *         description: Base64 encoded lastVisible id for pagination
+ *         schema:
+ *           type: string
+ *       - in: query
+ *         name: limit
+ *         description: Number of posts to return
+ *         schema:
+ *           type: integer
+ *           default: 20
+ *     responses:
+ *       200:
+ *         description: Posts retrieved successfully
+ *       404:
+ *         description: No posts found
+ */
+router.get('/get_list_posts', authenticateToken, postController.getListPosts);
+
+
+/**
+ * @swagger
+ * /posts/{id}:
+ *   get:
+ *     summary: Get a post by ID
+ *     tags: [Posts]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         description: ID of the post to retrieve
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Post retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 code:
+ *                   type: string
+ *                   example: "1000"
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     id:
+ *                       type: string
+ *                       description: Post ID
+ *                     content:
+ *                       type: string
+ *                       description: Post content
+ *                     images:
+ *                       type: array
+ *                       items:
+ *                         type: string
+ *                       description: Array of image URLs
+ *                     author:
+ *                       type: object
+ *                       properties:
+ *                         id:
+ *                           type: string
+ *                           description: Author's user ID
+ *                         userName:
+ *                           type: string
+ *                           description: Author's username
+ *                         avatar:
+ *                           type: string
+ *                           description: Author's avatar URL
+ *                     created:
+ *                       type: string
+ *                       format: date-time
+ *                       description: Post creation timestamp
+ *                     likes:
+ *                       type: integer
+ *                       description: Number of likes
+ *                     comments:
+ *                       type: integer
+ *                       description: Number of comments
+ *                     isLiked:
+ *                       type: string
+ *                       enum: ["0", "1"]
+ *                       description: Whether the current user has liked the post
+ *       404:
+ *         description: Post not found
+ *       401:
+ *         description: Unauthorized - Invalid or missing token
+ */
 router.get('/:id', authenticateToken, postController.getPost);
 
 /**
@@ -359,59 +485,5 @@ router.post('/:id/like', authenticateToken, postController.toggleLike);
  *         description: No comments found
  */
 router.get('/:id/comments', authenticateToken, postController.getComments);
-
-/**
- * @swagger
- * /posts/get_list_posts:
- *   get:
- *     summary: Get a list of posts with optional filters
- *     tags: [Posts]
- *     security:
- *       - bearerAuth: []
- *     parameters:
- *       - in: query
- *         name: userId
- *         description: Filter posts by userId
- *         schema:
- *           type: string
- *       - in: query
- *         name: in_campaign
- *         description: Filter by campaign posts (0 or 1)
- *         schema:
- *           type: string
- *           enum: [0, 1]
- *       - in: query
- *         name: campaignId
- *         description: Campaign ID if in_campaign=1
- *         schema:
- *           type: string
- *       - in: query
- *         name: latitude
- *         description: Latitude for location-based filtering
- *         schema:
- *           type: number
- *       - in: query
- *         name: longitude
- *         description: Longitude for location-based filtering
- *         schema:
- *           type: number
- *       - in: query
- *         name: lastVisible
- *         description: Base64 encoded lastVisible id for pagination
- *         schema:
- *           type: string
- *       - in: query
- *         name: limit
- *         description: Number of posts to return
- *         schema:
- *           type: integer
- *           default: 20
- *     responses:
- *       200:
- *         description: Posts retrieved successfully
- *       404:
- *         description: No posts found
- */
-router.get('/get_list_posts', authenticateToken, postController.getListPosts);
 
 export default router;
