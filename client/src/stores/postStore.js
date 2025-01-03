@@ -29,11 +29,13 @@ export const usePostStore = defineStore('post', () => {
         if (!hasMorePosts.value) return;
 
         loading.value = true;
+        error.value = null;
+        
         try {
             const response = await apiService.getListPosts({
                 ...params,
                 lastVisible: lastVisible.value,
-                limit: 10,
+                limit: 20
             });
 
             if (response.data.code === '1000') {
@@ -41,13 +43,19 @@ export const usePostStore = defineStore('post', () => {
                     .map(validateAndProcessPost)
                     .filter(Boolean);
 
-                posts.value.push(...newPosts);
+                if (params.reset) {
+                    posts.value = newPosts;
+                } else {
+                    posts.value.push(...newPosts);
+                }
+                
                 lastVisible.value = response.data.data.lastVisible;
                 hasMorePosts.value = newPosts.length === 10;
-            } else if (response.data.code === '9994') {
-                hasMorePosts.value = false;
             } else {
-                throw new Error(response.data.message);
+                hasMorePosts.value = false;
+                if (response.data.code !== '9994') {
+                    throw new Error(response.data.message || 'Failed to fetch posts');
+                }
             }
         } catch (err) {
             await handleError(err);

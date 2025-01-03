@@ -256,7 +256,7 @@ class PostController {
                 longitude,
                 lastVisible,
                 limit = 20,
-            } = value;
+            } = req.query;
 
             const currentUserId = req.user.uid;
             const result = await postService.getListPosts({

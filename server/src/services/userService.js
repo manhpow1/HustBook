@@ -263,7 +263,7 @@ class UserService {
 
             user.userName = userName;
             if (avatarUrl !== null) {
-                user.avatar_url = avatarUrl;
+                user.avatar = avatarUrl;
             }
 
             user.lastModifiedAt = currentTime;
@@ -396,7 +396,7 @@ class UserService {
                 uid: user.uid,  // Standardized to uid
                 userName: user.userName,
                 fullName: user.fullName,
-                avatar_url: user.avatar_url,
+                avatar: user.avatar,
                 coverPhoto: user.coverPhoto,
                 bio: user.bio,
                 location: user.location,

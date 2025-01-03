@@ -276,9 +276,9 @@ const sanitizeUrl = (url) => sanitizeOutput(url)
  * LIFECYCLE HOOKS
  * ================
  */
-onMounted(() => {
-  if (userStore.isLoggedIn && postStore.posts.length === 0) {
-    postStore.fetchPosts({})
+onMounted(async () => {
+  if (userStore.isLoggedIn) {
+    await postStore.fetchPosts({ reset: true })
   }
 })
 
