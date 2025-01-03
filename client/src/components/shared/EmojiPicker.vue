@@ -6,16 +6,16 @@
                 <CommandEmpty v-if="filteredEmojis.length === 0">
                     No emoji found.
                 </CommandEmpty>
-                <CommandGroup>
-                    <ScrollArea class="h-[200px]">
+                <ScrollArea class="h-[300px]">
+                    <CommandGroup v-for="(emojis, category) in filteredCategories" :key="category" :heading="category">
                         <div class="grid grid-cols-8 gap-2 p-2">
-                            <Button v-for="emoji in filteredEmojis" :key="emoji" variant="ghost" size="icon"
+                            <Button v-for="emoji in emojis" :key="emoji" variant="ghost" size="icon"
                                 class="h-8 w-8" @click="selectEmoji(emoji)" :aria-label="`Select ${emoji} emoji`">
                                 <span class="text-lg">{{ emoji }}</span>
                             </Button>
                         </div>
-                    </ScrollArea>
-                </CommandGroup>
+                    </CommandGroup>
+                </ScrollArea>
                 <Separator v-if="recentEmojis.length > 0" />
                 <CommandGroup v-if="recentEmojis.length > 0" heading="Recently Used">
                     <div class="grid grid-cols-8 gap-2 p-2">
@@ -45,18 +45,16 @@ const props = defineProps({
         type: Boolean,
         default: false
     },
-    commonEmojis: {
-        type: Array,
-        default: () => [
-            '😀', '😂', '😊', '🥰', '😎',
-            '🤔', '😴', '😭', '😤', '😱',
-            '👍', '👎', '👋', '👏', '🙌',
-            '🎉', '✨', '❤️', '🔥', '⭐',
-            '🌟', '💯', '✅', '❌', '💪',
-            '🙏', '🤝', '🎈', '🎁', '🎨',
-            '🌈', '☀️', '⛅', '🌙', '⚡',
-            '💫', '🌺', '🌸', '🍀', '🌿'
-        ],
+    emojiCategories: {
+        type: Object,
+        default: () => ({
+            "Smileys & Emotion": ['😀', '😃', '😄', '😁', '😅', '😂', '🤣', '😊', '😇', '🙂', '😉', '😌', '😍', '🥰', '😘'],
+            "Gestures & People": ['👋', '🤚', '🖐️', '✋', '🖖', '👌', '🤌', '🤏', '✌️', '🤞', '🫰', '🤟', '🤘', '🤙', '👈'],
+            "Hearts & Love": ['❤️', '🧡', '💛', '💚', '💙', '💜', '🤎', '🖤', '🤍', '💯', '💕', '💞', '💓', '💗', '💖'],
+            "Nature & Animals": ['🌸', '💐', '🌹', '🌺', '🌻', '🌼', '🌷', '🌱', '🪴', '🌲', '🐶', '🐱', '🐭', '🐹', '🐰'],
+            "Activities": ['⚽', '🏀', '🏈', '⚾', '🥎', '🎾', '🏐', '🏉', '🎱', '🎮', '🎲', '🧩', '🎭', '🎨', '🎬'],
+            "Food & Drink": ['🍎', '🍐', '🍊', '🍋', '🍌', '🍉', '🍇', '🍓', '🫐', '🍈', '🍒', '🍑', '🥭', '🍍', '🥥']
+        })
     },
     searchEnabled: {
         type: Boolean,
@@ -98,14 +96,25 @@ const saveRecentEmojis = (emoji) => {
 };
 
 // Filtered emojis based on search query
-const filteredEmojis = computed(() => {
-    if (!searchQuery.value) return props.commonEmojis;
+const filteredCategories = computed(() => {
+    if (!searchQuery.value) return props.emojiCategories;
 
     const query = searchQuery.value.toLowerCase();
-    return props.commonEmojis.filter(emoji => {
-        // Unicode name search would be better, but this is a simple implementation
-        return emoji.toLowerCase().includes(query);
+    const filtered = {};
+    
+    Object.entries(props.emojiCategories).forEach(([category, emojis]) => {
+        const matchingEmojis = emojis.filter(emoji => {
+            // Search in both emoji and category name
+            return emoji.toLowerCase().includes(query) || 
+                   category.toLowerCase().includes(query);
+        });
+        
+        if (matchingEmojis.length > 0) {
+            filtered[category] = matchingEmojis;
+        }
     });
+    
+    return filtered;
 });
 
 // Select emoji handler
