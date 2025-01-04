@@ -322,5 +322,5 @@ const closeMediaViewer = () => {
     showMediaViewer.value = false;
 };
 
-onMounted(fetchPost());
+onMounted(fetchPost);
 </script>
