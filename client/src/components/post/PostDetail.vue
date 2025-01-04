@@ -125,6 +125,7 @@ import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "../ui/skeleton";
+import { useMediaUtils } from '@/composables/useMediaUtils';
 
 const DeletePost = defineAsyncComponent(() => import("./DeletePost.vue"));
 const ErrorBoundary = defineAsyncComponent(() =>
@@ -173,31 +174,11 @@ const isOwnPost = computed(() => {
     return post.value?.author?.userId === userStore.user?.userId;
 });
 
+const { createMediaList } = useMediaUtils();
+
 const mediaList = computed(() => {
     if (!post.value) return [];
-
-    const media = [];
-
-    if (post.value.image?.length) {
-        media.push(
-            ...post.value.image.slice(0, 4).map((img) => ({
-                type: "image",
-                url: img.url,
-                alt: post.value.described,
-                covered: img.covered,
-            }))
-        );
-    }
-
-    if (post.value.video?.length) {
-        media.push({
-            type: "video",
-            url: post.value.video[0].url,
-            covered: post.value.video[0].covered,
-        });
-    }
-
-    return media;
+    return createMediaList(post.value.image, post.value.video, post.value.described);
 });
 
 // Methods

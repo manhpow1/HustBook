@@ -1,13 +1,12 @@
 <template>
-    <transition name="fade">
-        <div v-if="isOpen" class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-90"
-            role="dialog" aria-labelledby="media-viewer-title" aria-modal="true" data-testid="media-viewer">
+    <Dialog :open="isOpen" @update:open="close">
+        <DialogContent class="max-w-7xl w-full bg-transparent border-none shadow-none" data-testid="media-viewer">
             <div class="relative max-w-4xl max-h-full w-full">
-                <!-- Close Button -->
-                <button @click="close" class="absolute top-4 right-4 text-white hover:text-gray-300 focus:outline-none"
-                    aria-label="Close Media Viewer" data-testid="close-media-viewer-button">
-                    <XIcon class="w-8 h-8" />
-                </button>
+                <DialogClose
+                    class="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground">
+                    <X class="h-8 w-8 text-white" />
+                    <span class="sr-only">Close</span>
+                </DialogClose>
 
                 <!-- Media Content -->
                 <div v-if="currentMedia.type === 'image'" class="flex items-center justify-center">
@@ -24,36 +23,43 @@
                 </div>
 
                 <!-- Navigation Buttons -->
-                <button v-if="mediaList.length > 1" @click="previousMedia"
-                    class="absolute left-4 top-1/2 transform -translate-y-1/2 text-white hover:text-gray-300 focus:outline-none"
-                    aria-label="Previous Media" data-testid="previous-media-button">
-                    <ChevronLeftIcon class="w-10 h-10" />
-                </button>
+                <Button v-if="mediaList.length > 1" variant="ghost" size="icon"
+                    class="absolute left-4 top-1/2 -translate-y-1/2 h-auto bg-transparent hover:bg-accent/10"
+                    :disabled="rateLimiter.isRateLimited" @click="previousMedia" data-testid="previous-media-button">
+                    <ChevronLeft class="h-10 w-10 text-white" />
+                    <span class="sr-only">Previous media</span>
+                </Button>
 
-                <button v-if="mediaList.length > 1" @click="nextMedia"
-                    class="absolute right-4 top-1/2 transform -translate-y-1/2 text-white hover:text-gray-300 focus:outline-none"
-                    aria-label="Next Media" data-testid="next-media-button">
-                    <ChevronRightIcon class="w-10 h-10" />
-                </button>
+                <Button v-if="mediaList.length > 1" variant="ghost" size="icon"
+                    class="absolute right-4 top-1/2 -translate-y-1/2 h-auto bg-transparent hover:bg-accent/10"
+                    :disabled="rateLimiter.isRateLimited" @click="nextMedia" data-testid="next-media-button">
+                    <ChevronRight class="h-10 w-10 text-white" />
+                    <span class="sr-only">Next media</span>
+                </Button>
 
                 <!-- Media Indicators -->
-                <div v-if="mediaList.length > 1" class="absolute bottom-4 left-0 right-0 flex justify-center space-x-2">
-                    <button v-for="(media, index) in mediaList" :key="index" @click="setCurrentMedia(index)"
-                        class="w-3 h-3 rounded-full focus:outline-none transition-colors duration-200"
+                <div v-if="mediaList.length > 1" class="absolute bottom-4 left-0 right-0 flex justify-center gap-2">
+                    <Button v-for="(media, index) in mediaList" :key="index" variant="ghost" size="icon"
+                        class="w-3 h-3 p-0 rounded-full"
                         :class="index === currentIndex ? 'bg-white' : 'bg-gray-500 hover:bg-gray-300'"
-                        :aria-label="`View media ${index + 1}`" data-testid="media-indicator-button"></button>
+                        :disabled="rateLimiter.isRateLimited" @click="setCurrentMedia(index)"
+                        :aria-label="`View media ${index + 1} of ${mediaList.length}`"
+                        data-testid="media-indicator-button" />
                 </div>
             </div>
-        </div>
-    </transition>
+        </DialogContent>
+    </Dialog>
 </template>
 
 <script setup>
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue';
-import { XIcon, ChevronLeftIcon, ChevronRightIcon } from 'lucide-vue-next';
+import { X, ChevronLeft, ChevronRight } from 'lucide-vue-next';
+import { Dialog, DialogContent, DialogClose } from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
 import { useRateLimiter } from '../../composables/useRateLimiter';
 import { useErrorHandler } from '@/utils/errorHandler';
 import { useToast } from '../ui/toast';
+import { useMediaUtils } from '@/composables/useMediaUtils';
 
 // Define component props
 const props = defineProps({
@@ -64,18 +70,28 @@ const props = defineProps({
     mediaList: {
         type: Array,
         required: true,
+        validator: (value) => {
+            return value.every(item => 
+                item.type === 'image' || item.type === 'video' &&
+                typeof item.url === 'string' &&
+                typeof item.covered === 'boolean'
+            );
+        }
     },
     initialIndex: {
         type: Number,
         default: 0,
+        validator: (value) => value >= 0
     },
     likes: {
         type: Number,
         default: 0,
+        validator: (value) => value >= 0
     },
     comments: {
         type: Number,
         default: 0,
+        validator: (value) => value >= 0
     },
     isLiked: {
         type: Boolean,
@@ -85,6 +101,7 @@ const props = defineProps({
 
 // Define component emits
 const emit = defineEmits(['close', 'like', 'comment']);
+const { getOptimizedImageUrl, getImageSrcSet } = useMediaUtils();
 
 // Composables and utilities
 const { handleError } = useErrorHandler();
@@ -151,18 +168,6 @@ const handleVideoClick = () => {
             videoPlayer.value.pause();
         }
     }
-};
-
-// Helper methods for image optimization
-const getOptimizedImageUrl = (url, width = 1280) => {
-    // Implement logic to return an optimized version of the image
-    // For example, using a CDN that supports image resizing
-    return `${url}?w=${width}&q=80&auto=format`;
-};
-
-const getImageSrcSet = (url) => {
-    const widths = [320, 640, 1024, 1280, 1920];
-    return widths.map((w) => `${getOptimizedImageUrl(url, w)} ${w}w`).join(', ');
 };
 
 // Keyboard navigation
