@@ -3,21 +3,21 @@
         <CardContent class="p-4">
             <div class="flex space-x-4">
                 <Avatar>
-                    <AvatarImage :src="comment.user.avatar" :alt="comment.userName" />
+                    <AvatarImage :src="comment.user.avatar" :alt="comment.user.userName" />
                     <AvatarFallback>
-                        {{ getInitials(comment.userName) }}
+                        {{ getInitials(comment.user.userName) }}
                     </AvatarFallback>
                 </Avatar>
-
                 <div class="flex-1 space-y-2">
                     <div class="flex items-center justify-between">
                         <div class="flex items-center space-x-2">
-                            <h4 class="font-semibold">{{ comment.userName }}</h4>
+                            <h4 class="font-semibold">
+                                {{ comment.user.userName }}
+                            </h4>
                             <span class="text-sm text-muted-foreground">
                                 {{ formattedDate }}
                             </span>
                         </div>
-
                         <DropdownMenu v-if="canEditDelete">
                             <DropdownMenuTrigger asChild>
                                 <Button variant="ghost" size="sm">
@@ -37,9 +37,7 @@
                             </DropdownMenuContent>
                         </DropdownMenu>
                     </div>
-
                     <div v-if="!isEditing" class="text-sm prose prose-sm max-w-none" v-html="renderedContent" />
-
                     <div v-else class="space-y-2">
                         <Textarea v-model="editedContent" :rows="3" placeholder="Edit your comment..."
                             class="w-full resize-none" />
@@ -56,7 +54,6 @@
                             </Button>
                         </div>
                     </div>
-
                     <div class="flex items-center space-x-4 pt-2">
                         <Button variant="ghost" size="sm" :class="{ 'text-primary': comment.isLiked }"
                             @click="toggleLike" :disabled="isLikeLoading">
@@ -73,18 +70,19 @@
                 </div>
             </div>
         </CardContent>
-
-        <AlertDialog :open="showDeleteDialog">
+        <AlertDialog v-model:open="showDeleteDialog">
             <AlertDialogContent>
                 <AlertDialogHeader>
-                    <AlertDialogTitle>Delete Comment</AlertDialogTitle>
+                    <AlertDialogTitle> Delete Comment </AlertDialogTitle>
                     <AlertDialogDescription>
                         Are you sure you want to delete this comment? This action cannot be
                         undone.
                     </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
-                    <AlertDialogCancel @click="closeDeleteDialog">Cancel</AlertDialogCancel>
+                    <AlertDialogCancel @click="showDeleteDialog = false">
+                        Cancel
+                    </AlertDialogCancel>
                     <AlertDialogAction @click="confirmDelete" :disabled="isDeleteLoading"
                         class="bg-destructive text-destructive-foreground hover:bg-destructive/90">
                         <Loader2Icon v-if="isDeleteLoading" class="mr-2 h-4 w-4 animate-spin" />
@@ -106,26 +104,51 @@ import { Button } from "@/components/ui/button";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Textarea } from "@/components/ui/textarea";
 import {
-    DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem,
+    DropdownMenu,
+    DropdownMenuTrigger,
+    DropdownMenuContent,
+    DropdownMenuItem,
 } from "@/components/ui/dropdown-menu";
-import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogAction } from "@/components/ui/alert-dialog";
-import { MoreVerticalIcon, PencilIcon, TrashIcon, ThumbsUpIcon, ReplyIcon, Loader2Icon } from "lucide-vue-next";
+import {
+    AlertDialog,
+    AlertDialogContent,
+    AlertDialogHeader,
+    AlertDialogTitle,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogCancel,
+    AlertDialogAction,
+} from "@/components/ui/alert-dialog";
+import {
+    MoreVerticalIcon,
+    PencilIcon,
+    TrashIcon,
+    ThumbsUpIcon,
+    ReplyIcon,
+    Loader2Icon,
+} from "lucide-vue-next";
 
 const props = defineProps({
     comment: {
         type: Object,
         required: true,
         validator(comment) {
-            return ["commentId", "content", "userId", "created", "userName"].every(
-                (prop) => prop in comment
-            );
+            return [
+                "commentId",
+                "content",
+                "userId",
+                "created",
+                "userName",
+                "like",
+                "isLiked",
+                "user",
+            ].every((prop) => prop in comment);
         },
     },
 });
 
 const emit = defineEmits(["update", "delete"]);
 const userStore = useUserStore();
-
 const isEditing = ref(false);
 const editedContent = ref(props.comment.content);
 const commentError = ref("");
@@ -138,18 +161,15 @@ const showDeleteDialog = ref(false);
 const canEditDelete = computed(
     () => userStore?.userId === props.comment.userId
 );
-
 const formattedDate = computed(() => {
     const date = new Date(props.comment.created);
     return isNaN(date.getTime())
         ? "Invalid date"
         : formatDistanceToNow(date, { addSuffix: true });
 });
-
 const renderedContent = computed(() => renderMarkdown(props.comment.content));
-
-// Methods
 const getInitials = (name) => {
+    if (!name) return "";
     return name
         .split(" ")
         .map((word) => word[0])
@@ -157,7 +177,6 @@ const getInitials = (name) => {
         .toUpperCase()
         .slice(0, 2);
 };
-
 const toggleEdit = () => {
     isEditing.value = !isEditing.value;
     if (isEditing.value) {
@@ -165,7 +184,6 @@ const toggleEdit = () => {
         commentError.value = "";
     }
 };
-
 const cancelEdit = () => {
     isEditing.value = false;
     editedContent.value = props.comment.content;
@@ -177,12 +195,10 @@ const saveEdit = async () => {
         commentError.value = "Comment cannot be empty";
         return;
     }
-
     if (editedContent.value === props.comment.content) {
         isEditing.value = false;
         return;
     }
-
     try {
         isSaveLoading.value = true;
         await emit("update", {
@@ -196,30 +212,22 @@ const saveEdit = async () => {
         isSaveLoading.value = false;
     }
 };
-
 const openDeleteDialog = () => {
     showDeleteDialog.value = true;
-};
-
-const closeDeleteDialog = () => {
-    showDeleteDialog.value = false;
 };
 
 const confirmDelete = async () => {
     try {
         isDeleteLoading.value = true;
         await emit("delete", props.comment.commentId);
-        showDeleteDialog.value = false;
     } catch (error) {
         console.error("Error deleting comment:", error);
     } finally {
         isDeleteLoading.value = false;
     }
 };
-
 const toggleLike = async () => {
     if (isLikeLoading.value) return;
-
     isLikeLoading.value = true;
     try {
         await emit("update", {
@@ -233,13 +241,10 @@ const toggleLike = async () => {
         isLikeLoading.value = false;
     }
 };
-
 const toggleReply = () => {
-    // Implement reply functionality
     console.log("Reply clicked");
 };
 </script>
-
 <style scoped>
 :deep(.prose) {
     @apply text-foreground;
