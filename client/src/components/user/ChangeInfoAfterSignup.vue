@@ -283,7 +283,7 @@ const handleSubmit = async () => {
 
   try {
     isLoading.value = true;
-    error.value = null;
+    errorMessage.value = null; 
 
     if (!userName.value?.trim()) {
       toast({
