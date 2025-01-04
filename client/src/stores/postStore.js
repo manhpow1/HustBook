@@ -247,24 +247,6 @@ export const usePostStore = defineStore('post', () => {
         }
     }
 
-    // Add Comment
-    async function addComment(postId, content) {
-        try {
-            const response = await apiService.addComment(postId, content);
-            if (response.data.code === '1000') {
-                comments.value.unshift(response.data.data);
-                if (currentPost.value?.postId === postId) {
-                    currentPost.value.comments++;
-                }
-                return response.data;
-            }
-            throw new Error(response.data.message);
-        } catch (err) {
-            await handleError(err);
-            throw err;
-        }
-    }
-
     // Remove Post
     async function removePost(postId) {
         try {
@@ -282,12 +264,6 @@ export const usePostStore = defineStore('post', () => {
         }
     }
 
-    // Reset Comments
-    function resetComments() {
-        comments.value = [];
-        lastVisible.value = null;
-        hasMoreComments.value = true;
-    }
 
     // Reset Posts
     function resetPosts() {
@@ -391,14 +367,12 @@ export const usePostStore = defineStore('post', () => {
         formattedLikes,
         formattedComments,
         resetPosts,
-        resetComments,
         fetchPosts,
         fetchPost,
         createPost,
         toggleLike,
         fetchComments,
         updatePost,
-        addComment,
         removePost,
         setLastKnownCoordinates,
         validateAndProcessPost,

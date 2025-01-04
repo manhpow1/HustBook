@@ -113,7 +113,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from "vue";
+import { ref, computed, onMounted, defineAsyncComponent } from "vue";
 import { storeToRefs } from "pinia";
 import { useRouter } from "vue-router";
 import { usePostStore } from "@/stores/postStore";
@@ -126,6 +126,7 @@ import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "../ui/skeleton";
 import { useMediaUtils } from '@/composables/useMediaUtils';
+import { useCommentStore } from "@/stores/commentStore";
 
 const DeletePost = defineAsyncComponent(() => import("./DeletePost.vue"));
 const ErrorBoundary = defineAsyncComponent(() =>
@@ -135,25 +136,16 @@ const PostHeader = defineAsyncComponent(() => import("./PostHeader.vue"));
 const PostContent = defineAsyncComponent(() => import("./PostContent.vue"));
 const PostMedia = defineAsyncComponent(() => import("./PostMedia.vue"));
 const PostActions = defineAsyncComponent(() => import("./PostActions.vue"));
-const PostBanWarning = defineAsyncComponent(() =>
-    import("./PostBanWarning.vue")
-);
-const CommentSection = defineAsyncComponent(() =>
-    import("./CommentSection.vue")
-);
-const MediaViewer = defineAsyncComponent(() =>
-    import("../shared/MediaViewer.vue")
-);
-const AdvancedOptionsModal = defineAsyncComponent(() =>
-    import("./AdvancedOptionsModal.vue")
-);
-const ReportPostModal = defineAsyncComponent(() =>
-    import("./ReportPostModal.vue")
-);
+const PostBanWarning = defineAsyncComponent(() => import("./PostBanWarning.vue"));
+const CommentSection = defineAsyncComponent(() => import("./CommentSection.vue"));
+const MediaViewer = defineAsyncComponent(() => import("../shared/MediaViewer.vue"));
+const AdvancedOptionsModal = defineAsyncComponent(() => import("./AdvancedOptionsModal.vue"));
+const ReportPostModal = defineAsyncComponent(() => import("./ReportPostModal.vue"));
 
 const router = useRouter();
 const postStore = usePostStore();
 const userStore = useUserStore();
+const commentStore = useCommentStore
 const { toast } = useToast();
 
 // State
@@ -215,7 +207,7 @@ const handleLike = async () => {
 
 const handleComment = async (content) => {
     try {
-        await postStore.addComment(post.value.postId, content);
+        await commentStore.addComment(post.value.postId, content);
     } catch (err) {
         toast({
             title: "Error",
@@ -227,7 +219,7 @@ const handleComment = async (content) => {
 
 const handleCommentUpdate = async (commentId, content) => {
     try {
-        await postStore.updateComment(post.value.postId, commentId, content);
+        await commentStore.updateComment(post.value.postId, commentId, content);
     } catch (err) {
         toast({
             title: "Error",
@@ -239,7 +231,7 @@ const handleCommentUpdate = async (commentId, content) => {
 
 const handleCommentDelete = async (commentId) => {
     try {
-        await postStore.deleteComment(post.value.postId, commentId);
+        await commentStore.deleteComment(post.value.postId, commentId);
         toast({
             description: "Comment deleted successfully",
         });
@@ -253,11 +245,11 @@ const handleCommentDelete = async (commentId) => {
 };
 
 const loadMoreComments = async () => {
-    await postStore.fetchComments(post.value.postId);
+    await commentStore.fetchComments(post.value.postId);
 };
 
 const retryLoadComments = () => {
-    postStore.resetComments();
+    commentStore.resetComments();
 };
 
 const handleUncoverMedia = async (mediaId) => {
@@ -330,18 +322,5 @@ const closeMediaViewer = () => {
     showMediaViewer.value = false;
 };
 
-const hidePost = async () => {
-    try {
-        await postStore.hidePost(post.value.postId);
-        router.push({ name: "Home" });
-    } catch (err) {
-        toast({
-            title: "Error",
-            description: "Failed to hide post",
-            variant: "destructive",
-        });
-    }
-};
-
-onMounted(fetchPost);
+onMounted(fetchPost());
 </script>

@@ -141,6 +141,7 @@ export const useCommentStore = defineStore('comment', () => {
     const resetComments = () => {
         comments.value = [];
         pageIndex.value = 0;
+        lastVisible.value = null;
         hasMoreComments.value = true;
         commentError.value = null;
     };
