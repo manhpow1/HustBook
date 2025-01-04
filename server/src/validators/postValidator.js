@@ -45,15 +45,15 @@ const commentSchema = Joi.object({
 });
 
 const likeSchema = Joi.object({
-    id: Joi.string().required()
+    postId: Joi.string().required()
 });
 
 const getPostSchema = Joi.object({
-    id: Joi.string().required()
+    postId: Joi.string().required()
 });
 
 const getListPostsSchema = Joi.object({
-    id: Joi.string().allow('').optional(),
+    postId: Joi.string().allow('').optional(),
     userId: Joi.string().optional(),
     in_campaign: Joi.string().valid('0', '1').optional(),
     campaignId: Joi.string().optional(),
@@ -129,7 +129,7 @@ const validateGetListPosts = (data) => {
 
 const validateDeletePost = (params) => {
     const schema = Joi.object({
-        id: Joi.string().required()
+        postId: Joi.string().required()
     });
     return schema.validate(params);
 };
