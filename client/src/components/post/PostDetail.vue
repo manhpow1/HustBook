@@ -175,7 +175,7 @@ const mediaList = computed(() => {
 
 // Methods
 const fetchPost = async () => {
-    await postStore.fetchPost(route.params.postId);
+    await postStore.fetchPost(post.value.postId);
 };
 
 const editPost = () => {
