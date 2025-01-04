@@ -8,12 +8,18 @@
 
           <!-- Recent Posts -->
           <section class="mt-8" aria-labelledby="recent-posts-heading">
-            <h2 id="recent-posts-heading" class="scroll-m-20 text-2xl font-semibold tracking-tight mb-4">
+            <h2
+              id="recent-posts-heading"
+              class="scroll-m-20 text-2xl font-semibold tracking-tight mb-4"
+            >
               Recent Posts
             </h2>
 
             <!-- Loading State -->
-            <div v-if="postStore.loading && !postStore.posts.length" class="space-y-4">
+            <div
+              v-if="postStore.loading && !postStore.posts.length"
+              class="space-y-4"
+            >
               <Skeleton v-for="i in 3" :key="i">
                 <div class="space-y-3">
                   <div class="flex items-center space-x-4">
@@ -32,52 +38,107 @@
             </div>
 
             <!-- Error State -->
-            <Alert v-else-if="postStore.error" variant="destructive" class="animate-in fade-in-50">
+            <Alert
+              v-else-if="postStore.error"
+              variant="destructive"
+              class="animate-in fade-in-50"
+            >
               <AlertCircle class="h-4 w-4" />
               <AlertTitle>Unable to load posts</AlertTitle>
               <AlertDescription class="mt-2">
                 {{ postStore.error }}
-                <Button @click="retryFetchPosts" variant="outline" class="mt-3 w-full" :disabled="postStore.loading">
-                  <RefreshCw v-if="postStore.loading" class="mr-2 h-4 w-4 animate-spin" />
+                <Button
+                  @click="retryFetchPosts"
+                  variant="outline"
+                  class="mt-3 w-full"
+                  :disabled="postStore.loading"
+                >
+                  <RefreshCw
+                    v-if="postStore.loading"
+                    class="mr-2 h-4 w-4 animate-spin"
+                  />
                   {{ postStore.loading ? "Retrying..." : "Try Again" }}
                 </Button>
               </AlertDescription>
             </Alert>
 
             <!-- Posts List -->
-            <TransitionGroup v-else-if="mappedPosts.length > 0" name="post-list" tag="ul" class="space-y-4">
+            <TransitionGroup
+              v-else-if="mappedPosts.length > 0"
+              name="post-list"
+              tag="ul"
+              class="space-y-4"
+            >
               <li v-for="post in mappedPosts" :key="post.postId">
                 <Card>
                   <CardHeader>
                     <div class="flex items-center gap-4">
-                      <Avatar>
-                        <AvatarImage :src="post.userAvatar" />
-                        <AvatarFallback>
-                          {{ post.userName ? post.userName.charAt(0) : "U" }}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div class="space-y-1">
-                        <h3 class="font-semibold">{{ sanitizeOutput(post.userName) }}</h3>
-                        <time :datetime="post.created" class="text-sm text-muted-foreground">
-                          {{ formatDate(post.created) }}
-                        </time>
-                      </div>
+                      <RouterLink
+                        :to="{ name: 'Profile', params: { id: post.userId } }"
+                        class="flex items-center gap-4 hover:opacity-80"
+                      >
+                        <Avatar>
+                          <AvatarImage :src="post.userAvatar" />
+                          <AvatarFallback>
+                            {{ post.userName ? post.userName.charAt(0) : "U" }}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div class="space-y-1">
+                          <h3 class="font-semibold">
+                            {{ sanitizeOutput(post.userName) }}
+                          </h3>
+                          <time
+                            :datetime="post.created"
+                            class="text-sm text-muted-foreground"
+                          >
+                            {{ formatDate(post.created) }}
+                          </time>
+                        </div>
+                      </RouterLink>
                     </div>
                   </CardHeader>
 
                   <CardContent>
-                    <p class="text-card-foreground">{{ sanitizeOutput(post.described) }}</p>
+                    <p
+                      class="text-card-foreground whitespace-pre-wrap break-words"
+                    >
+                      {{ sanitizeOutput(post.described) }}
+                    </p>
 
-                    <AspectRatio v-if="post.media.length" :ratio="16 / 9" class="mt-4">
-                      <div class="grid gap-2" :class="mediaGridClass(post.media.length)">
-                        <div v-for="(media, index) in post.media" :key="index"
-                          class="relative rounded-lg overflow-hidden">
-                          <img v-if="isImage(media)" :src="media" :alt="`Post image ${index + 1}`"
-                            class="w-full h-full object-cover" loading="lazy" />
-
-                          <div v-else @click="goToWatchPage(post.postId, index)" class="relative h-full cursor-pointer">
-                            <video :src="media" class="w-full h-full object-cover" preload="metadata"></video>
-                            <div class="absolute inset-0 flex items-center justify-center bg-black/50">
+                    <AspectRatio
+                      v-if="post.media.length"
+                      :ratio="16 / 9"
+                      class="mt-4"
+                    >
+                      <div
+                        class="grid gap-2"
+                        :class="mediaGridClass(post.media.length)"
+                      >
+                        <div
+                          v-for="(media, index) in post.media"
+                          :key="index"
+                          class="relative rounded-lg overflow-hidden"
+                        >
+                          <img
+                            v-if="isImage(media)"
+                            :src="media"
+                            :alt="`Post image ${index + 1}`"
+                            class="w-full h-full object-cover"
+                            loading="lazy"
+                          />
+                          <div
+                            v-else
+                            @click="goToWatchPage(post.postId, index)"
+                            class="relative h-full cursor-pointer"
+                          >
+                            <video
+                              :src="media"
+                              class="w-full h-full object-cover"
+                              preload="metadata"
+                            ></video>
+                            <div
+                              class="absolute inset-0 flex items-center justify-center bg-black/50"
+                            >
                               <Play class="w-12 h-12 text-white" />
                             </div>
                           </div>
@@ -87,20 +148,32 @@
                   </CardContent>
 
                   <CardFooter class="flex flex-wrap gap-2">
-                    <Button @click="likePost(post.postId)" variant="outline"
-                      :class="{ 'text-primary': post.isLiked === '1' }">
+                    <Button
+                      @click="likePost(post.postId)"
+                      variant="outline"
+                      :class="{ 'text-primary': post.isLiked === '1' }"
+                    >
                       <ThumbsUp class="w-4 h-4 mr-2" />
                       {{ post.likes }}
                       {{ post.likes === 1 ? "Like" : "Likes" }}
                     </Button>
 
-                    <Button @click="showComments(post.postId)" variant="outline">
+                    <Button
+                      @click="showComments(post.postId)"
+                      variant="outline"
+                    >
                       <MessageCircle class="w-4 h-4 mr-2" />
                       {{ post.comments }}
                       {{ post.comments === 1 ? "Comment" : "Comments" }}
                     </Button>
 
-                    <RouterLink :to="{ name: 'PostDetail', params: { postId: post.postId } }" class="w-full sm:w-auto">
+                    <RouterLink
+                      :to="{
+                        name: 'PostDetail',
+                        params: { postId: post.postId },
+                      }"
+                      class="w-full sm:w-auto"
+                    >
                       <Button variant="default" class="w-full">
                         View Full Post
                       </Button>
@@ -119,12 +192,18 @@
           </section>
 
           <!-- Load More -->
-          <div v-if="postStore.hasMorePosts && !postStore.loading" class="mt-6 text-center">
+          <div
+            v-if="postStore.hasMorePosts && !postStore.loading"
+            class="mt-6 text-center"
+          >
             <Button @click="loadMorePosts" variant="outline">Load More</Button>
           </div>
 
           <!-- Spinner if loading more -->
-          <div v-if="postStore.loading && postStore.posts.length > 0" class="mt-6 flex justify-center">
+          <div
+            v-if="postStore.loading && postStore.posts.length > 0"
+            class="mt-6 flex justify-center"
+          >
             <div class="flex justify-center">
               <div class="loading loading-spinner loading-md"></div>
             </div>
@@ -150,7 +229,13 @@
 <script setup>
 import { onMounted, watch, computed } from "vue";
 import { useRouter } from "vue-router";
-import { AlertCircle, ThumbsUp, MessageCircle, Play, RefreshCw } from "lucide-vue-next";
+import {
+  AlertCircle,
+  ThumbsUp,
+  MessageCircle,
+  Play,
+  RefreshCw,
+} from "lucide-vue-next";
 import { formatDistanceToNow } from "date-fns";
 import { vi } from "date-fns/locale";
 import { usePostStore } from "../stores/postStore";
@@ -158,7 +243,12 @@ import { useUserStore } from "../stores/userStore";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { Card, CardHeader, CardContent, CardFooter } from "@/components/ui/card";
+import {
+  Card,
+  CardHeader,
+  CardContent,
+  CardFooter,
+} from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { AspectRatio } from "@/components/ui/aspect-ratio";
 import { Skeleton } from "@/components/ui/skeleton";
