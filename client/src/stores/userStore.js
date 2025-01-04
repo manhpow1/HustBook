@@ -558,53 +558,31 @@ export const useUserStore = defineStore('user', () => {
 
 
     // Profile Management Methods
-    const updateProfile = async (userName, avatar = null) => {
+    const updateProfile = async (userName, avatarFile) => {
         try {
-            isLoading.value = true;
-            error.value = null;
-
-            logger.debug('Updating profile', { userName, hasAvatar: !!avatar });
-
             const formData = new FormData();
             formData.append('userName', userName);
-            
-            // Handle avatar file upload
-            if (avatar instanceof File) {
-                formData.append('avatar', avatar, avatar.name);
-            } else if (typeof avatar === 'string' && avatar) {
-                // If avatar is already a URL string, pass it directly
-                formData.append('avatar', avatar);
+
+            if (avatarFile) {
+                formData.append('avatar', avatarFile);
             }
 
-            const response = await apiService.changeInfoAfterSignup(formData, {
-                headers: {
-                    'Content-Type': 'multipart/form-data',
-                    'Device-ID': deviceId.value
-                }
-            });
+            const response = await apiService.changeInfoAfterSignup(formData);
 
-            if (response.data?.code === '1000') {
-                const userData = response.data.data;
+            if (response.data.code === '1000') {
                 user.value = {
                     ...user.value,
-                    userName: userData.userName,
-                    avatar: userData.avatar
+                    ...response.data.data
                 };
-
-                successMessage.value = 'Profile updated successfully!';
-                toast({ type: 'success', message: successMessage.value });
-                return true;
+                return {
+                    success: true,
+                    data: response.data.data
+                };
             }
-
-            error.value = response.data?.message || 'Failed to update profile';
-            toast({ type: 'error', message: error.value });
-            return false;
-        } catch (err) {
-            logger.error('Profile update error:', err);
-            handleAuthError(err);
-            return false;
-        } finally {
-            isLoading.value = false;
+            throw createError(response.data.code, response.data.message);
+        } catch (error) {
+            logger.error('Update profile error:', error);
+            throw error;
         }
     };
 
@@ -692,57 +670,38 @@ export const useUserStore = defineStore('user', () => {
 
     /**
  * Updates user profile information
- * @param {Object} profileData - Profile data to update
+ * @param {Object} updateData - Profile data to update
  * @returns {Promise<boolean>} Success status
  */
-    const updateUserProfile = async (profileData) => {
+    const updateUserProfile = async (updateData) => {
         try {
-            isLoading.value = true;
-            error.value = null;
-
-            // Prepare form data with version tracking
             const formData = new FormData();
-            formData.append('version', profileData.version || 1);
-            
-            // Add profile fields
-            Object.entries(profileData).forEach(([key, value]) => {
-                if (value !== null && value !== undefined && key !== 'version') {
-                    formData.append(key, value);
+            Object.keys(updateData).forEach(key => {
+                if (updateData[key] !== null && updateData[key] !== undefined) {
+                    if (key === 'avatar' || key === 'coverPhoto') {
+                        if (updateData[key] instanceof File) {
+                            formData.append(key, updateData[key]);
+                        }
+                    } else {
+                        formData.append(key, updateData[key]);
+                    }
                 }
             });
 
-            // Handle file uploads
-            if (profileData.avatarFile) {
-                formData.append('avatar', profileData.avatarFile);
-            }
-            if (profileData.coverFile) {
-                formData.append('coverPhoto', profileData.coverFile);
-            }
+            const response = await apiService.setUserInfo(formData);
 
-            logger.debug('Updating user profile', { profileData });
-            const response = await apiService.setUserInfo(formData, {
-                headers: {
-                    'Content-Type': 'multipart/form-data'
-                }
-            });
-
-            if (response.data?.code === '1000') {
-                // Update local user data
-                user.value = { ...user.value, ...response.data.user };
-                successMessage.value = 'Profile updated successfully';
-                logger.debug('User profile updated successfully');
-                return true;
-            } else {
-                throw new Error(response.data?.message || 'Failed to update profile');
+            if (response.data.code === '1000') {
+                // Update local user state
+                user.value = {
+                    ...user.value,
+                    ...response.data.data.user
+                };
+                return response.data.data;
             }
-        } catch (err) {
-            const errorMessage = 'Failed to update user profile';
-            logger.error(errorMessage, { error: err });
-            error.value = errorMessage;
-            await handleError(err);
-            return false;
-        } finally {
-            isLoading.value = false;
+            throw createError(response.data.code, response.data.message);
+        } catch (error) {
+            logger.error('Set user info error:', error);
+            throw error;
         }
     };
 

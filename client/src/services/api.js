@@ -90,7 +90,11 @@ const apiService = {
      * Change user info after signup (e.g., username, avatar) 
      */
     async changeInfoAfterSignup(data) {
-        return this.upload(API_ENDPOINTS.CHANGE_INFO_AFTER_SIGNUP, data);
+        return this.post(API_ENDPOINTS.CHANGE_INFO_AFTER_SIGNUP, data, {
+            headers: {
+                'Content-Type': 'multipart/form-data'
+            }
+        });
     },
 
     // ─────────────────────────────────────────────────────────
@@ -102,7 +106,11 @@ const apiService = {
     },
 
     async setUserInfo(data) {
-        return axiosInstance.put(API_ENDPOINTS.SET_USER_INFO, data);
+        return this.put(API_ENDPOINTS.SET_USER_INFO, data, {
+            headers: {
+                'Content-Type': 'multipart/form-data'
+            }
+        });
     },
 
     // ─────────────────────────────────────────────────────────

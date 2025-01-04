@@ -398,24 +398,40 @@ class UserService {
 
             // Update user information
             user.userName = userName;
+            let uploadedAvatarUrl = null;
 
             // Handle avatar upload if provided
             if (avatarFile) {
                 try {
-                    logger.info('Processing avatar upload', { userId });
-                    const uploadedAvatarUrl = await handleAvatarUpload(avatarFile, userId);
+                    logger.info('Processing avatar upload', {
+                        userId,
+                        fileName: avatarFile.originalname
+                    });
+
+                    uploadedAvatarUrl = await handleAvatarUpload(avatarFile, userId);
 
                     if (uploadedAvatarUrl) {
                         // If user already has an avatar, delete the old one
                         if (user.avatar) {
-                            await deleteFileFromStorage(user.avatar);
+                            try {
+                                await deleteFileFromStorage(user.avatar);
+                                logger.info('Deleted old avatar', { userId });
+                            } catch (deleteError) {
+                                logger.warn('Failed to delete old avatar', {
+                                    userId,
+                                    error: deleteError.message
+                                });
+                            }
                         }
                         user.avatar = uploadedAvatarUrl;
-                        logger.info('Avatar updated successfully', { userId, url: uploadedAvatarUrl });
+                        logger.info('Avatar updated successfully', {
+                            userId,
+                            url: uploadedAvatarUrl
+                        });
                     }
                 } catch (uploadError) {
-                    logger.error('Avatar upload failed:', uploadError);
-                    throw createError('9999', 'Failed to upload avatar image');
+                    logger.error('Avatar upload failed:', uploadError, { userId });
+                    throw createError('9999', 'Failed to upload avatar image: ' + uploadError.message);
                 }
             }
 
@@ -424,12 +440,33 @@ class UserService {
             user.version = (user.version || 0) + 1;
             user.updatedAt = new Date().toISOString();
 
+            // Save changes to database
             await user.save();
-            logger.info('User info updated after signup', { userId, userName });
 
-            return user.toJSON();
+            logger.info('User info updated after signup', {
+                userId,
+                userName,
+                hasAvatar: !!uploadedAvatarUrl
+            });
+
+            return {
+                userId: user.userId,
+                userName: user.userName,
+                avatar: user.avatar,
+                version: user.version,
+                updatedAt: user.updatedAt
+            };
+
         } catch (error) {
-            logger.error('Error updating user info after signup:', error);
+            logger.error('Error updating user info after signup:', error, { userId });
+
+            // Add specific error handling for different scenarios
+            if (error.code === '1007') {
+                throw createError('9999', 'Avatar upload failed - storage error');
+            } else if (error.code === '1006') {
+                throw createError('9999', 'Avatar file too large');
+            }
+
             throw error;
         }
     }
@@ -437,7 +474,7 @@ class UserService {
     async setUserInfo(userId, updateData, retryCount = 0) {
         const MAX_RETRIES = 3;
         const BASE_DELAY = 100; // 100ms base delay
-        
+
         try {
             const user = await this.getUserById(userId);
             if (!user) {
@@ -455,8 +492,8 @@ class UserService {
             if (updateData.coverFile) {
                 try {
                     logger.info('Processing cover image upload', { userId });
-                    const uploadedCoverUrl = await handleCoverPhotoUpload(updateData.coverFile, userId );
-                    
+                    const uploadedCoverUrl = await handleCoverPhotoUpload(updateData.coverFile, userId);
+
                     if (uploadedCoverUrl) {
                         // If user already has a cover, delete the old one
                         if (user.coverPhoto) {

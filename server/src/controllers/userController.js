@@ -466,19 +466,17 @@ class UserController {
             // Extract form data from request
             const formData = req.body;
             const userId = req.user.userId;
-            
+
             // Validate form data
             const { error, value } = userValidator.validateSetUserInfo(formData);
             if (error) {
-                const errorMessage = error.details.map(detail => detail.message).join(', ');
-                throw createError('1002', errorMessage);
+                throw createError('1002', error.details[0].message);
             }
 
             // Prepare update data
             const updateData = {
                 ...value,
-                version: (value.version || 0) + 1,
-                updatedAt: new Date().toISOString()
+                version: (value.version || 0) + 1
             };
 
             // Handle file uploads
@@ -491,31 +489,27 @@ class UserController {
                 }
             }
 
-            // Perform update with retry logic
+            // Perform update
             const updatedUser = await userService.setUserInfo(userId, updateData);
 
             // Log successful update
             await req.app.locals.auditLog.logAction(userId, null, 'update_profile', {
                 timestamp: new Date().toISOString(),
                 updatedFields: Object.keys(updateData),
-                version: updateData.version
-            });
-
-            // Prepare response
-            const responseData = {
-                userId: updatedUser.userId,
-                userName: updatedUser.userName,
-                avatar: updatedUser.avatar,
-                coverPhoto: updatedUser.coverPhoto,
-                bio: updatedUser.bio,
-                location: updatedUser.location,
                 version: updatedUser.version
-            };
+            });
 
             sendResponse(res, '1000', {
                 message: 'Profile updated successfully',
-                user: responseData,
-                version: updatedUser.version
+                user: {
+                    userId: updatedUser.userId,
+                    userName: updatedUser.userName,
+                    avatar: updatedUser.avatar,
+                    coverPhoto: updatedUser.coverPhoto,
+                    bio: updatedUser.bio,
+                    location: updatedUser.location,
+                    version: updatedUser.version
+                }
             });
         } catch (error) {
             logger.error('Set User Info Error:', error);
@@ -559,14 +553,10 @@ class UserController {
 
             const updatedUser = await userService.changeInfoAfterSignup(userId, userName, avatarFile);
 
-            res.status(200).json({
-                code: '1000',
-                message: 'Profile updated successfully',
-                data: {
-                    userId: updatedUser.userId,
-                    userName: updatedUser.userName,
-                    avatar: updatedUser.avatar
-                }
+            sendResponse(res, '1000', {
+                userId: updatedUser.userId,
+                userName: updatedUser.userName,
+                avatar: updatedUser.avatar
             });
         } catch (error) {
             logger.error('Change Info After Signup Error:', error);
