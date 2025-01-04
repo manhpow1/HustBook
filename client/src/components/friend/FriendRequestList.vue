@@ -28,7 +28,7 @@
             <!-- Friend Requests List -->
             <ScrollArea v-else className="h-[400px] rounded-md border p-4">
                 <TransitionGroup name="list" tag="ul" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    <li v-for="request in friendRequests" :key="request.id">
+                    <li v-for="request in friendRequests" :key="request.userId">
                         <Card>
                             <CardContent class="p-4">
                                 <div class="flex items-center space-x-4">
@@ -53,15 +53,15 @@
 
                                 <!-- Action Buttons -->
                                 <div class="mt-4 flex justify-between space-x-2">
-                                    <Button variant="default" :disabled="isProcessing(request.id)"
-                                        @click="acceptRequest(request.id)" class="flex-1">
-                                        <Loader2Icon v-if="isProcessing(request.id)"
+                                    <Button variant="default" :disabled="isProcessing(request.userId)"
+                                        @click="acceptRequest(request.userId)" class="flex-1">
+                                        <Loader2Icon v-if="isProcessing(request.userId)"
                                             class="mr-2 h-4 w-4 animate-spin" />
                                         Accept
                                     </Button>
 
-                                    <Button variant="outline" :disabled="isProcessing(request.id)"
-                                        @click="rejectRequest(request.id)" class="flex-1">
+                                    <Button variant="outline" :disabled="isProcessing(request.userId)"
+                                        @click="rejectRequest(request.userId)" class="flex-1">
                                         Reject
                                     </Button>
                                 </div>

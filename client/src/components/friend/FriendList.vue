@@ -49,7 +49,7 @@
 
                 <!-- Friend List -->
                 <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    <Card v-for="friend in limitedFriends" :key="friend.id" class="relative">
+                    <Card v-for="friend in limitedFriends" :key="friend.userId" class="relative">
                         <CardContent class="pt-6">
                             <div class="flex items-center gap-4 mb-4">
                                 <Avatar class="h-10 w-10">
@@ -70,12 +70,12 @@
                                         </Button>
                                     </DropdownMenuTrigger>
                                     <DropdownMenuContent align="end">
-                                        <DropdownMenuItem @click="viewProfile(friend.id)">
+                                        <DropdownMenuItem @click="viewProfile(friend.userId)">
                                             <UserIcon class="mr-2 h-4 w-4" />
                                             View Profile
                                         </DropdownMenuItem>
                                         <DropdownMenuSeparator />
-                                        <DropdownMenuItem @click="confirmBlock(friend.id)" class="text-red-600">
+                                        <DropdownMenuItem @click="confirmBlock(friend.userId)" class="text-red-600">
                                             <ShieldIcon class="mr-2 h-4 w-4" />
                                             Block User
                                         </DropdownMenuItem>
@@ -83,10 +83,10 @@
                                 </DropdownMenu>
                             </div>
                             <div class="flex justify-between">
-                                <Button variant="outline" size="sm" @click="viewProfile(friend.id)">
+                                <Button variant="outline" size="sm" @click="viewProfile(friend.userId)">
                                     View Profile
                                 </Button>
-                                <Button variant="secondary" size="sm" @click="sendMessage(friend.id)">
+                                <Button variant="secondary" size="sm" @click="sendMessage(friend.userId)">
                                     Message
                                 </Button>
                             </div>
@@ -217,7 +217,7 @@ const fetchFriends = async () => {
 };
 
 const viewProfile = (userId) => {
-    router.push({ name: 'Profile', params: { id: userId } });
+    router.push({ name: 'Profile', params: { userId: userId } });
 };
 
 const sendMessage = (userId) => {
@@ -239,7 +239,7 @@ const blockConfirmed = async () => {
             title: "Success",
             description: "User blocked successfully",
         });
-        friends.value = friends.value.filter(friend => friend.id !== userToBlock.value);
+        friends.value = friends.value.filter(friend => friend.userId !== userToBlock.value);
     } catch (err) {
         console.error(`Error blocking user with ID ${userToBlock.value}:`, err);
         toast({
