@@ -536,12 +536,10 @@ class PostService {
             if (!authorIds?.length) return authorsMap;
 
             // Process in chunks of 10 (Firestore limitation)
-            const chunks = [];
             for (let i = 0; i < authorIds.length; i += 10) {
-                chunks.push(authorIds.slice(i, i + 10));
-            }
+                const chunk = authorIds.slice(i, i + 10);
+                if (chunk.length === 0) continue;
 
-            await Promise.all(chunks.map(async chunk => {
                 try {
                     const snapshot = await db.collection(collections.users)
                         .where(admin.firestore.FieldPath.documentId(), 'in', chunk)
@@ -559,9 +557,9 @@ class PostService {
                     });
                 } catch (error) {
                     logger.error(`Error fetching author chunk: ${chunk}`, error);
-                    // Continue with other chunks even if one fails
+                    // Continue with next chunk even if one fails
                 }
-            }));
+            }
 
             return authorsMap;
         } catch (error) {
