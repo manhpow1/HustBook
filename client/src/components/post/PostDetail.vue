@@ -175,7 +175,20 @@ const mediaList = computed(() => {
 
 // Methods
 const fetchPost = async () => {
-    await postStore.fetchPost(post.value.postId);
+    try {
+        const postId = router.currentRoute.value.params.postId;
+        if (!postId) {
+            throw new Error('Post ID is required');
+        }
+        await postStore.fetchPost(postId);
+    } catch (err) {
+        toast({
+            title: "Error",
+            description: err.message || "Failed to fetch post",
+            variant: "destructive",
+        });
+        throw err;
+    }
 };
 
 const editPost = () => {
