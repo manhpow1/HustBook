@@ -15,6 +15,7 @@ const collections = {
     friendRequests: 'friendRequests',
     friends: 'friends',
     savedSearches: 'savedSearches',
+    blocks: 'blocks', 
 };
 
 const createDocument = async (collection, data) => {

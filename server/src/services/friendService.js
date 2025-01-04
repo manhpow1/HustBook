@@ -6,41 +6,61 @@ import logger from '../utils/logger.js';
 class FriendService {
     async getRequestedFriends(userId, index, count) {
         try {
-            const friendRequests = await queryDocuments(collections.friendRequests, (ref) =>
-                ref.where('recipientId', '==', userId)
-                    .where('status', '==', 'pending')
-                    .orderBy('createdAt', 'desc')
-                    .offset(index)
-                    .limit(count)
-            );
+            const friendRequestsRef = db.collection(collections.friendRequests)
+                .where('recipientId', '==', userId)
+                .where('status', '==', 'pending')
+                .orderBy('createdAt', 'desc')
+                .offset(index)
+                .limit(count);
 
-            if (!friendRequests.length) {
+            const snapshot = await friendRequestsRef.get();
+
+            if (snapshot.empty) {
                 return { requests: [], total: '0' };
             }
 
-            const senderIds = friendRequests.map(request => request.senderId);
-            const senderUsers = await queryDocuments(collections.users, (ref) =>
-                ref.where('__name__', 'in', senderIds)
+            const senderIds = snapshot.docs.map(doc => doc.data().senderId);
+
+            const userDocs = await Promise.all(
+                senderIds.map(id => db.collection(collections.users).doc(id).get())
             );
 
-            const userMap = new Map(senderUsers.map(user => [user.userId, user]));
+            // Tạo map cho thông tin người dùng
+            const userMap = new Map();
+            userDocs.forEach(doc => {
+                if (doc.exists) {
+                    const userData = doc.data();
+                    userMap.set(doc.id, {
+                        userName: userData.userName || '',
+                        avatar: userData.avatar || ''
+                    });
+                }
+            });
 
-            const formattedRequests = friendRequests.map(request => ({
-                id: request.senderId,
-                userName: userMap.get(request.senderId)?.userName || '',
-                avatar: userMap.get(request.senderId)?.avatar || '',
-                created: request.createdAt.toISOString(),
-            }));
+            // Format kết quả
+            const formattedRequests = snapshot.docs.map(doc => {
+                const requestData = doc.data();
+                const userData = userMap.get(requestData.senderId) || {};
 
-            const totalRequests = await queryDocuments(collections.friendRequests, (ref) =>
-                ref.where('recipientId', '==', userId)
-                    .where('status', '==', 'pending')
-            );
+                return {
+                    id: requestData.senderId,
+                    userName: userData.userName || '',
+                    avatar: userData.avatar || '',
+                    created: requestData.createdAt.toDate().toISOString()
+                };
+            });
+
+            const totalSnapshot = await db.collection(collections.friendRequests)
+                .where('recipientId', '==', userId)
+                .where('status', '==', 'pending')
+                .count()
+                .get();
 
             return {
                 requests: formattedRequests,
-                total: totalRequests.length.toString(),
+                total: totalSnapshot.data().count.toString()
             };
+
         } catch (error) {
             logger.error('Error in getRequestedFriends service:', error);
             throw createError('9999', 'Exception error');
@@ -69,8 +89,8 @@ class FriendService {
             const totalCountSnapshot = await db.collection(collections.friends)
                 .doc(userId)
                 .collection('userFriends')
-            .get();
-            
+                .get();
+
             return {
                 friends,
                 total: totalCountSnapshot.size.toString(),

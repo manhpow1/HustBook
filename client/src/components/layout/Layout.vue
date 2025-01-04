@@ -2,50 +2,73 @@
   <div class="min-h-screen flex flex-col bg-background">
     <header
       class="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <nav class="container flex h-16 items-center gap-4">
-        <div class="flex items-center gap-4 flex-shrink-0">
+      <nav class="container flex h-16 items-center">
+        <div class="flex items-center gap-4 flex-1 lg:flex-initial">
           <router-link to="/" aria-label="Home">
             <img class="h-8 w-auto" src="../../assets/logo.svg" alt="HUSTBOOK" />
           </router-link>
-
-          <SearchPosts class="hidden sm:block w-[300px]" />
+          <div class="flex-1 lg:w-auto">
+            <SearchPosts />
+          </div>
         </div>
 
-        <div class="flex-1 flex items-center justify-end gap-4">
-          <NavigationMenu v-if="isLoggedIn" class="hidden md:flex">
-            <NavigationMenuList>
+        <div class="flex items-center justify-end gap-4 ml-auto">
+          <NavigationMenu v-if="isLoggedIn" class="hidden xl:flex">
+            <NavigationMenuList class="flex items-center gap-2 xl:gap-4 2xl:gap-6">
               <NavigationMenuItem v-for="item in navItems" :key="item.path">
-                <NavigationMenuLink :href="item.path" :aria-label="item.name">
-                  <component :is="iconComponents[item.icon]" class="h-4 w-4 mr-2" aria-hidden="true" />
+                <NavigationMenuLink :href="item.path" :aria-label="item.name"
+                  class="group inline-flex items-center px-2 xl:px-3 py-2 text-sm font-medium hover:bg-accent hover:text-accent-foreground rounded-md transition-colors whitespace-nowrap"
+                  :class="{ 'bg-accent text-accent-foreground': $route.path === item.path }">
+                  <component :is="iconComponents[item.icon]"
+                    class="h-4 w-4 mr-1.5 xl:mr-2.5 group-hover:text-accent-foreground transition-colors"
+                    :class="{ 'text-accent-foreground': $route.path === item.path }" aria-hidden="true" />
                   {{ item.name }}
                 </NavigationMenuLink>
               </NavigationMenuItem>
             </NavigationMenuList>
           </NavigationMenu>
 
-          <NotificationTab v-if="isLoggedIn" />
+          <div class="hidden xl:flex items-center gap-2 xl:gap-4" v-if="isLoggedIn">
+            <NotificationTab />
 
-          <div class="hidden md:flex items-center gap-4" v-if="isLoggedIn">
             <DropdownMenu>
-              <DropdownMenuTrigger>
-                <Avatar>
+              <DropdownMenuTrigger class="focus:outline-none">
+                <Avatar class="h-8 w-8 lg:h-9 lg:w-9 hover:ring-2 hover:ring-primary/20 transition-all">
                   <AvatarImage :src="user?.avatar" :alt="user?.userName || 'User avatar'" />
-                  <AvatarFallback>
-                    <User class="h-4 w-4" aria-hidden="true" />
+                  <AvatarFallback class="bg-primary/10">
+                    <User class="h-4 w-4 text-primary" aria-hidden="true" />
                   </AvatarFallback>
                 </Avatar>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuLabel>Account</DropdownMenuLabel>
+              <DropdownMenuContent align="end" class="w-56">
+                <div class="flex items-center gap-2 p-2">
+                  <Avatar class="h-8 w-8">
+                    <AvatarImage :src="user?.avatar" :alt="user?.userName || 'User avatar'" />
+                    <AvatarFallback class="bg-primary/10">
+                      <User class="h-4 w-4 text-primary" aria-hidden="true" />
+                    </AvatarFallback>
+                  </Avatar>
+                  <div class="flex flex-col space-y-1">
+                    <p class="text-sm font-medium leading-none">{{ user?.userName }}</p>
+                    <p class="text-xs leading-none text-muted-foreground">{{ user?.email }}</p>
+                  </div>
+                </div>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem>
-                  <router-link to="/profile">Profile</router-link>
+                <DropdownMenuItem class="cursor-pointer" asChild>
+                  <router-link to="/profile" class="flex items-center">
+                    <UserIcon class="mr-2 h-4 w-4" />
+                    Profile
+                  </router-link>
                 </DropdownMenuItem>
-                <DropdownMenuItem>
-                  <router-link to="/settings">Settings</router-link>
+                <DropdownMenuItem class="cursor-pointer" asChild>
+                  <router-link to="/settings" class="flex items-center">
+                    <Settings class="mr-2 h-4 w-4" />
+                    Settings
+                  </router-link>
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem @click="handleLogout">
+                <DropdownMenuItem class="cursor-pointer text-red-600 focus:text-red-600" @click="handleLogout">
+                  <LogOut class="mr-2 h-4 w-4" />
                   Logout
                 </DropdownMenuItem>
               </DropdownMenuContent>
@@ -62,32 +85,38 @@
           </template>
 
           <Sheet>
-            <SheetTrigger class="md:hidden">
+            <SheetTrigger class="hidden md:block xl:hidden">
               <Button variant="ghost" size="icon" aria-label="Menu">
                 <Menu class="h-6 w-6" />
               </Button>
             </SheetTrigger>
-            <SheetContent side="right" class="w-72">
+            <SheetContent side="right" class="w-full max-w-xs">
               <SheetHeader>
                 <SheetTitle>Menu</SheetTitle>
               </SheetHeader>
               <nav class="flex flex-col space-y-4 mt-4">
-                <SearchPosts class="w-full mb-4 sm:hidden" />
+                <div class="mb-4">
+                  <SearchPosts />
+                </div>
                 <template v-if="isLoggedIn">
                   <router-link v-for="item in navItems" :key="item.path" :to="item.path"
-                    class="flex items-center p-2 hover:bg-accent rounded-md">
-                    <component :is="iconComponents[item.icon]" class="h-4 w-4 mr-2" />
+                    class="flex items-center px-3 py-2 hover:bg-accent rounded-md transition-colors text-sm"
+                    :class="{ 'bg-accent text-accent-foreground': $route.path === item.path }">
+                    <component :is="iconComponents[item.icon]" class="h-4 w-4 mr-2.5"
+                      :class="{ 'text-accent-foreground': $route.path === item.path }" />
                     {{ item.name }}
                   </router-link>
                   <NotificationTab />
                 </template>
                 <template v-else>
-                  <Button variant="outline" class="w-full" asChild>
-                    <router-link to="/login">Login</router-link>
-                  </Button>
-                  <Button class="w-full" asChild>
-                    <router-link to="/signup">Signup</router-link>
-                  </Button>
+                  <div class="space-y-2">
+                    <Button variant="outline" class="w-full" asChild>
+                      <router-link to="/login">Login</router-link>
+                    </Button>
+                    <Button class="w-full" asChild>
+                      <router-link to="/signup">Signup</router-link>
+                    </Button>
+                  </div>
                 </template>
               </nav>
             </SheetContent>
@@ -96,12 +125,10 @@
       </nav>
     </header>
 
-    <!-- Main Content -->
     <main class="flex-1 container py-6">
       <slot></slot>
     </main>
 
-    <!-- Footer -->
     <footer class="border-t bg-background">
       <div class="container py-8">
         <div class="grid gap-8 md:grid-cols-3">
@@ -153,62 +180,91 @@
 </template>
 
 <script setup>
-import { computed } from 'vue'
-import { useUserStore } from '@/stores/userStore'
-import { storeToRefs } from 'pinia'
-import { useHead } from '@unhead/vue'
-import { useRouter } from 'vue-router'
-import { navItems } from '@/config/navigation'
-import SearchPosts from '@/components/search/SearchPosts.vue'
-import NotificationTab from '@/components/notification/NotificationTab.vue'
-import { NavigationMenu, NavigationMenuList, NavigationMenuItem, NavigationMenuLink } from '@/components/ui/navigation-menu'
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet'
-import { Button } from '@/components/ui/button'
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
-import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar'
+import { computed } from "vue";
+import { useUserStore } from "@/stores/userStore";
+import { storeToRefs } from "pinia";
+import { useHead } from "@unhead/vue";
+import { useRouter } from "vue-router";
+import { navItems } from "@/config/navigation";
+import SearchPosts from "@/components/search/SearchPosts.vue";
+import NotificationTab from "@/components/notification/NotificationTab.vue";
+import {
+  NavigationMenu,
+  NavigationMenuList,
+  NavigationMenuItem,
+  NavigationMenuLink,
+} from "@/components/ui/navigation-menu";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "@/components/ui/sheet";
+import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 // Icons
-import { Home, User, Users, MessageCircle, Settings, Facebook, Twitter, Instagram, Menu } from 'lucide-vue-next'
+import {
+  Home,
+  User,
+  Users,
+  MessageCircle,
+  Settings,
+  Facebook,
+  Twitter,
+  Instagram,
+  Menu,
+} from "lucide-vue-next";
 
 const iconComponents = { Home, User, Users, MessageCircle, Settings };
 
-const userStore = useUserStore()
-const router = useRouter()
-const { isLoggedIn, user } = storeToRefs(userStore)
-const currentYear = computed(() => new Date().getFullYear())
+const userStore = useUserStore();
+const router = useRouter();
+const { isLoggedIn, user } = storeToRefs(userStore);
+const currentYear = computed(() => new Date().getFullYear());
 
 const handleLogout = async () => {
   try {
-    await userStore.logout()
-    router.push('/login')
+    await userStore.logout();
+    router.push("/login");
   } catch (error) {
-    console.error('Logout failed:', error)
+    console.error("Logout failed:", error);
   }
-}
+};
 
 // SEO
 useHead({
-  title: 'HUSTBOOK - Connecting HUST Students and Alumni',
+  title: "HUSTBOOK - Connecting HUST Students and Alumni",
   meta: [
     {
-      name: 'description',
-      content: 'HUSTBOOK is a social networking platform for students and alumni of Hanoi University of Science and Technology.'
+      name: "description",
+      content:
+        "HUSTBOOK is a social networking platform for students and alumni of Hanoi University of Science and Technology.",
     },
     {
-      property: 'og:title',
-      content: 'HUSTBOOK - Connecting HUST Students and Alumni'
+      property: "og:title",
+      content: "HUSTBOOK - Connecting HUST Students and Alumni",
     },
     {
-      property: 'og:description',
-      content: 'Join HUSTBOOK to connect with fellow HUST students and alumni.'
+      property: "og:description",
+      content: "Join HUSTBOOK to connect with fellow HUST students and alumni.",
     },
     {
-      property: 'og:image',
-      content: '/og-image.jpg'
+      property: "og:image",
+      content: "/og-image.jpg",
     },
     {
-      name: 'twitter:card',
-      content: 'summary_large_image'
-    }
-  ]
-})
+      name: "twitter:card",
+      content: "summary_large_image",
+    },
+  ],
+});
 </script>

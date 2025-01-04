@@ -51,6 +51,13 @@ class SearchService {
         try {
             const normalizedKeyword = keyword.trim().toLowerCase();
 
+            // Use the correct collection name from config
+            const query = await db.collection(collections.users)
+                .orderBy('userName')
+                .offset(index)
+                .limit(count)
+                .get();
+
             // Get blocked users list for current user
             const blockedUsersSnapshot = await db.collection(collections.blocks)
                 .where('userId', '==', currentUserId)
@@ -60,16 +67,9 @@ class SearchService {
                 blockedUsersSnapshot.docs.map(doc => doc.data().blockedUserId)
             );
 
-            // Query users
-            const usersSnapshot = await db.collection(collections.users)
-                .orderBy('userName')
-                .offset(index)
-                .limit(count)
-                .get();
-
             const matchingUsers = [];
 
-            for (const doc of usersSnapshot.docs) {
+            for (const doc of query.docs) {
                 const userData = doc.data();
                 const userId = doc.id;
 

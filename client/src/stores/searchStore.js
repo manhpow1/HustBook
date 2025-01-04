@@ -16,33 +16,33 @@ export const useSearchStore = defineStore('search', () => {
     const { handleError } = useErrorHandler();
 
     const searchPosts = async ({ keyword, index = 0, count = 20 }) => {
-        if (!keyword || keyword.trim() === '') {
-            error.value = 'Keyword cannot be empty.';
+        if (!keyword?.trim()) {
+            searchResults.value = [];
             return;
         }
 
         isLoading.value = true;
         error.value = null;
-        lastSearchParams.value = { keyword, index, count };
 
         try {
-            const response = await apiService.searchPosts(keyword, index, count)
-            const data = response.data
+            const response = await apiService.searchPosts(keyword, index, count);
+            const data = response.data;
 
             if (data.code === '1000') {
-                searchResults.value = [...searchResults.value, ...data.data]
-                hasMore.value = data.data.length === count
-            } else if (data.code === '9994') {
-                if (index === 0) searchResults.value = []
-                hasMore.value = false
-            } else {
-                throw new Error(data.message || 'An error occurred during search')
+                // Filter and sort results client-side for better matching
+                const filteredResults = data.data.filter(post =>
+                    partialMatch(post.content, keyword) ||
+                    partialMatch(post.author?.userName, keyword)
+                );
+
+                searchResults.value = filteredResults;
+                hasMore.value = data.data.length === count;
             }
         } catch (err) {
-            error.value = 'Failed to perform search'
-            await handleError(err)
+            error.value = 'Search failed';
+            await handleError(err);
         } finally {
-            isLoading.value = false
+            isLoading.value = false;
         }
     }
 
@@ -104,7 +104,7 @@ export const useSearchStore = defineStore('search', () => {
 
     const loadMoreUsers = async () => {
         if (!hasMoreUsers.value || !userSearchParams.value) return;
-        
+
         const nextIndex = userSearchResults.value.length;
         await searchUsers({
             ...userSearchParams.value,
