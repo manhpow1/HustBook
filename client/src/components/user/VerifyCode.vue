@@ -55,11 +55,6 @@
                             Verify Code
                         </Button>
 
-                        <Button v-if="verificationSuccess" variant="success" class="w-full"
-                            @click="router.push({ name: 'CompleteProfile', query: { phoneNumber } })">
-                            <UserPlus class="h-4 w-4 mr-2" />
-                            Complete Your Profile
-                        </Button>
 
                         <!-- Resend Code Button -->
                         <Button type="button" @click="handleResendCode" :disabled="cooldownRemaining > 0 || isLoading"
@@ -71,7 +66,13 @@
                             <span v-else>Resend Code</span>
                         </Button>
                     </div>
-                </form>
+                    </form>
+
+                    <Button v-if="verificationSuccess" variant="success" class="w-full mt-4"
+                            @click="router.push({ name: 'CompleteProfile', query: { phoneNumber } })">
+                            <UserPlus class="h-4 w-4 mr-2" />
+                            Complete Your Profile
+                        </Button>
 
                 <!-- Back Button -->
                 <div class="mt-4">

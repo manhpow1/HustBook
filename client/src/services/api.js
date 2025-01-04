@@ -90,7 +90,7 @@ const apiService = {
      * Change user info after signup (e.g., username, avatar) 
      */
     async changeInfoAfterSignup(data) {
-        return axiosInstance.post(API_ENDPOINTS.CHANGE_INFO_AFTER_SIGNUP, data);
+        return this.upload(API_ENDPOINTS.CHANGE_INFO_AFTER_SIGNUP, data);
     },
 
     // ─────────────────────────────────────────────────────────

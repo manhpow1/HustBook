@@ -43,7 +43,7 @@ export function useImageProcessing() {
                 lastModified: Date.now()
             });
 
-            if (compressedFile.size > 4 * 1024 * 1024) {
+            if (compressedFile.size > 5 * 1024 * 1024) {
                 toast({
                     title: "Error",
                     description: "File size too large even after compression",
@@ -69,10 +69,10 @@ export function useImageProcessing() {
     const validateImage = (file) => {
         if (!file) return false;
 
-        if (file.size > 4 * 1024 * 1024) {
+        if (file.size > 5 * 1024 * 1024) {
             toast({
                 title: "Error",
-                description: "File size must be less than 4MB",
+                description: "File size must be less than 5MB",
                 variant: "destructive"
             });
             return false;

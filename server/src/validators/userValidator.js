@@ -152,16 +152,7 @@ const changeInfoAfterSignupSchema = Joi.object({
         .optional()
         .messages({
             'alternatives.types': 'Avatar must be either a URL string or file object'
-        }),
-    coverPhoto: Joi.alternatives().try(
-        Joi.string().uri().messages({
-            'string.uri': 'Cover photo must be a valid URL'
-        }),
-        Joi.object().unknown(true).messages({
-            'object.base': 'Cover photo must be a valid file object'
-        }),
-        Joi.any().allow(null)
-    )
+        })
         .optional()
         .messages({
             'alternatives.types': 'Cover photo must be either a URL string or file object'

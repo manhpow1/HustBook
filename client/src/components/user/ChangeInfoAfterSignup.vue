@@ -184,13 +184,13 @@ const handleFileChange = async (event) => {
             });
         }
     } catch (error) {
-        logger.error('File handling error:', error);
-        removeAvatar();
-        toast({
-            type: 'error',
-            title: 'Error',
-            description: 'Failed to process image file. Please try again.'
-        });
+            logger.error('File handling error:', error);
+            removeAvatar();
+            toast({
+                type: 'error',
+                title: 'Error',
+                description: error.message || 'Failed to process image file. Please try again.'
+            });
     } finally {
         // Reset file input if there was an error
         if (!avatar.value) {

@@ -69,7 +69,7 @@
 </template>
 
 <script setup>
-import { ref, computed, watch } from 'vue';
+import { ref, computed, watch, onUnmounted } from 'vue';
 import { useDebounce } from '@/composables/useDebounce';
 import { useSearchStore } from '@/stores/searchStore';
 import { useFriendStore } from '@/stores/friendStore';
