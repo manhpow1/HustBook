@@ -5,6 +5,7 @@ import logger from '../utils/logger.js';
 const collections = {
     users: 'users',
     posts: 'posts',
+    likes: 'likes',
     comments: 'comments',
     reports: 'reports',
     auditLogs: 'auditLogs',
