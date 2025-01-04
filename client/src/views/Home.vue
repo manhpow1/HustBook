@@ -39,7 +39,7 @@
                 {{ postStore.error }}
                 <Button @click="retryFetchPosts" variant="outline" class="mt-3 w-full" :disabled="postStore.loading">
                   <RefreshCw v-if="postStore.loading" class="mr-2 h-4 w-4 animate-spin" />
-                  {{ postStore.loading ? 'Retrying...' : 'Try Again' }}
+                  {{ postStore.loading ? "Retrying..." : "Try Again" }}
                 </Button>
               </AlertDescription>
             </Alert>
@@ -53,7 +53,7 @@
                       <Avatar>
                         <AvatarImage :src="post.userAvatar" />
                         <AvatarFallback>
-                          {{ post.userName ? post.userName.charAt(0) : 'U' }}
+                          {{ post.userName ? post.userName.charAt(0) : "U" }}
                         </AvatarFallback>
                       </Avatar>
                       <div class="space-y-1">
@@ -76,8 +76,7 @@
                             class="w-full h-full object-cover" loading="lazy" />
 
                           <div v-else @click="goToWatchPage(post.postId, index)" class="relative h-full cursor-pointer">
-                            <video :src="media" class="w-full h-full object-cover" preload="metadata">
-                            </video>
+                            <video :src="media" class="w-full h-full object-cover" preload="metadata"></video>
                             <div class="absolute inset-0 flex items-center justify-center bg-black/50">
                               <Play class="w-12 h-12 text-white" />
                             </div>
@@ -92,13 +91,13 @@
                       :class="{ 'text-primary': post.isLiked === '1' }">
                       <ThumbsUp class="w-4 h-4 mr-2" />
                       {{ post.likes }}
-                      {{ post.likes === 1 ? 'Like' : 'Likes' }}
+                      {{ post.likes === 1 ? "Like" : "Likes" }}
                     </Button>
 
                     <Button @click="showComments(post.postId)" variant="outline">
                       <MessageCircle class="w-4 h-4 mr-2" />
                       {{ post.comments }}
-                      {{ post.comments === 1 ? 'Comment' : 'Comments' }}
+                      {{ post.comments === 1 ? "Comment" : "Comments" }}
                     </Button>
 
                     <RouterLink :to="{ name: 'PostDetail', params: { postId: post.postId } }" class="w-full sm:w-auto">
@@ -149,137 +148,112 @@
 </template>
 
 <script setup>
-import { onMounted, watch, computed, defineAsyncComponent } from 'vue'
-import { useRouter } from 'vue-router'
-import { AlertCircle, ThumbsUp, MessageCircle, Play, RefreshCw } from 'lucide-vue-next'
-import { formatDistanceToNow } from 'date-fns'
-import { vi } from 'date-fns/locale'
-import { usePostStore } from '../stores/postStore'
-import { useUserStore } from '../stores/userStore'
-import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert'
-import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar'
-import { Button } from '@/components/ui/button'
-import { Card, CardHeader, CardContent, CardFooter } from '@/components/ui/card'
-import { ScrollArea } from '@/components/ui/scroll-area'
-import { AspectRatio } from '@/components/ui/aspect-ratio'
-import { Skeleton } from '@/components/ui/skeleton'
+import { onMounted, watch, computed } from "vue";
+import { useRouter } from "vue-router";
+import { AlertCircle, ThumbsUp, MessageCircle, Play, RefreshCw } from "lucide-vue-next";
+import { formatDistanceToNow } from "date-fns";
+import { vi } from "date-fns/locale";
+import { usePostStore } from "../stores/postStore";
+import { useUserStore } from "../stores/userStore";
+import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
+import { Card, CardHeader, CardContent, CardFooter } from "@/components/ui/card";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { AspectRatio } from "@/components/ui/aspect-ratio";
+import { Skeleton } from "@/components/ui/skeleton";
+import { defineAsyncComponent } from "vue";
+import { sanitizeInput, sanitizeOutput } from "../utils/sanitize";
+import { useErrorHandler } from "@/utils/errorHandler";
 
-// Lazy loaded AddPost component
 const AddPost = defineAsyncComponent(() =>
-  import('../components/post/AddPost.vue')
-)
-// Utils
-import { sanitizeInput, sanitizeOutput } from '../utils/sanitize';
-import { useErrorHandler } from '@/utils/errorHandler'
+  import("../components/post/AddPost.vue")
+);
 
-const router = useRouter()
-const postStore = usePostStore()
-const userStore = useUserStore()
-const { handleError } = useErrorHandler()
+const router = useRouter();
+const postStore = usePostStore();
+const userStore = useUserStore();
+const { handleError } = useErrorHandler();
 
-/**
- * ==================
- * METHODS / HELPERS
- * ==================
- */
-
-// Merge images + video into a single array for the media gallery
 const getMediaArray = (post) => {
-  if (!post) return []
-  const imgArr = Array.isArray(post.images) ? post.images : []
-  const vidArr = post.video ? [post.video] : []
-  return [...imgArr, ...vidArr]
-}
+  if (!post) return [];
+  const imgArr = Array.isArray(post.images) ? post.images : [];
+  const vidArr = post.video ? [post.video] : [];
+  return [...imgArr, ...vidArr];
+};
 
-// Provide a computed version of posts that matches template expectations
-// e.g., rename `content -> described`, combine images/video into `media`, etc.
 const mappedPosts = computed(() =>
   postStore.posts.map((p) => ({
     postId: p.postId,
     created: p.created ?? p.createdAt ?? new Date().toISOString(),
-    userName: p.author?.userName || 'Unknown',
-    userAvatar: p.author?.avatar || '',
-    described: p.content || '',
+    userName: p.author?.userName || "Unknown",
+    userAvatar: p.author?.avatar || "",
+    described: p.content || "",
     media: getMediaArray(p),
     likes: p.likes || 0,
     comments: p.comments || 0,
-    isLiked: p.isLiked || '0'
+    isLiked: p.isLiked || "0",
   }))
-)
+);
 
-// Called after a new post is created
 const handlePostCreated = (newPost) => {
-  // If `newPost` is in the same shape as store posts, push it. Otherwise, adapt it first.
-  // For example, if `newPost` has .content, .images, .video, .author, etc.
-  postStore.posts.unshift(newPost)
-}
+  postStore.posts.unshift(newPost);
+};
 
-// Load more posts from store
 const loadMorePosts = () => {
-  postStore.fetchPosts({})
-}
+  postStore.fetchPosts();
+};
 
-const retryFetchPosts = () => {
-  postStore.resetPosts()
-  postStore.fetchPosts({})
-}
+const retryFetchPosts = async () => {
+  postStore.resetPosts();
+  await postStore.fetchPosts();
+};
 
 const mediaGridClass = (count) => ({
-  'grid-cols-1': count === 1,
-  'grid-cols-2': count === 2 || count === 4,
-  'grid-cols-3': count === 3,
-  'grid-rows-2': count === 4,
-  'aspect-square': count > 1,
-  'gap-1': count > 2
-})
+  "grid-cols-1": count === 1,
+  "grid-cols-2": count === 2 || count === 4,
+  "grid-cols-3": count === 3,
+  "grid-rows-2": count === 4,
+  "aspect-square": count > 1,
+  "gap-1": count > 2,
+});
 
-// Toggle post like
 const likePost = async (postId) => {
   try {
-    await postStore.toggleLike(postId)
+    await postStore.toggleLike(postId);
   } catch (err) {
-    console.error('Error toggling like:', err)
+    console.error("Error toggling like:", err);
   }
-}
+};
 
-// Show comments in PostDetail
 const showComments = (postId) => {
   router.push({
-    name: 'PostDetail',
+    name: "PostDetail",
     params: { postId: postId },
-    hash: '#comments'
-  })
-}
+    hash: "#comments",
+  });
+};
 
-// Format date using date-fns
 const formatDate = (date) => {
   return formatDistanceToNow(new Date(date), {
     addSuffix: true,
-    locale: vi
-  })
-}
+    locale: vi,
+  });
+};
 
-// Simple image detection
 const isImage = (fileUrl) => {
-  if (!fileUrl) return false
-  return /\.(jpg|jpeg|png|gif|webp|avif|tiff|svg)$/i.test(fileUrl)
-}
+  if (!fileUrl) return false;
+  return /\.(jpg|jpeg|png|gif|webp|avif|tiff|svg)$/i.test(fileUrl);
+};
 
-// Navigate to watch page for the selected video
 const goToWatchPage = (postId, mediaIndex) => {
   router.push({
-    name: 'PostDetail',
+    name: "PostDetail",
     params: { postId: postId },
-    // e.g., you can pass the mediaIndex in query or hash
-    query: { mediaIndex }
-  })
-}
+    query: { mediaIndex },
+  });
+};
 
-/**
- * ================
- * LIFECYCLE HOOKS
- * ================
- */
 onMounted(async () => {
   if (userStore.isLoggedIn) {
     try {
@@ -288,31 +262,26 @@ onMounted(async () => {
       handleError(error);
     }
   }
-})
+});
 
-// Watch user login status
 watch(
   () => userStore.isLoggedIn,
   async (newValue) => {
-    console.log('User login status changed:', newValue)
     if (newValue) {
-      console.log('User logged in. Resetting and fetching posts.')
-      postStore.resetPosts()
-      await postStore.fetchPosts({})
+      postStore.resetPosts();
+      await postStore.fetchPosts();
     } else {
-      console.log('User logged out. Resetting posts.')
-      postStore.resetPosts()
+      postStore.resetPosts();
     }
   }
-)
+);
 
-// Watch for store error
 watch(
   () => postStore.error,
   (newError) => {
-    if (newError) handleError(newError)
+    if (newError) handleError(newError);
   }
-)
+);
 </script>
 
 <style>
