@@ -7,7 +7,7 @@ import { passwordStrength } from '../validators/userValidator.js';
 import redis from '../utils/redis.js';
 import logger from '../utils/logger.js';
 import User from '../models/userModel.js';
-import { handleAvatarUpload } from '../utils/helpers.js';
+import { handleAvatarUpload, deleteFileFromStorage } from '../utils/helpers.js';
 
 // Constants
 const MAX_DEVICES_PER_USER = 5;
@@ -401,9 +401,21 @@ class UserService {
 
             // Handle avatar upload if provided
             if (avatarFile) {
-                const uploadedAvatarUrl = await handleAvatarUpload(avatarFile, userId);
-                if (uploadedAvatarUrl) {
-                    user.avatar = uploadedAvatarUrl;
+                try {
+                    logger.info('Processing avatar upload', { userId });
+                    const uploadedAvatarUrl = await handleAvatarUpload(avatarFile, userId);
+                    
+                    if (uploadedAvatarUrl) {
+                        // If user already has an avatar, delete the old one
+                        if (user.avatar) {
+                            await deleteFileFromStorage(user.avatar);
+                        }
+                        user.avatar = uploadedAvatarUrl;
+                        logger.info('Avatar updated successfully', { userId, url: uploadedAvatarUrl });
+                    }
+                } catch (uploadError) {
+                    logger.error('Avatar upload failed:', uploadError);
+                    throw createError('9999', 'Failed to upload avatar image');
                 }
             }
 
@@ -413,6 +425,7 @@ class UserService {
             user.updatedAt = new Date().toISOString();
 
             await user.save();
+            logger.info('User info updated after signup', { userId, userName });
 
             return user.toJSON();
         } catch (error) {
