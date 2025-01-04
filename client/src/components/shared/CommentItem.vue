@@ -112,7 +112,7 @@ const props = defineProps({
         type: Object,
         required: true,
         validator(comment) {
-            return ['id', 'content', 'user', 'created'].every(
+            return ['commentId', 'content', 'user', 'created'].every(
                 prop => prop in comment
             )
         }
@@ -181,7 +181,7 @@ const saveEdit = async () => {
     try {
         isSaveLoading.value = true
         await emit('update', {
-            id: props.comment.id,
+            commentId: props.comment.commentId,
             content: editedContent.value.trim()
         })
         isEditing.value = false
@@ -203,7 +203,7 @@ const closeDeleteDialog = () => {
 const confirmDelete = async () => {
     try {
         isDeleteLoading.value = true
-        await emit('delete', props.comment.id)
+        await emit('delete', props.comment.commentId)
         showDeleteDialog.value = false
     } catch (error) {
         console.error('Error deleting comment:', error)
@@ -218,7 +218,7 @@ const toggleLike = async () => {
     isLikeLoading.value = true
     try {
         await emit('update', {
-            id: props.comment.id,
+            commentId: props.comment.commentId,
             isLiked: !props.comment.isLiked,
             like: props.comment.like + (props.comment.isLiked ? -1 : 1)
         })

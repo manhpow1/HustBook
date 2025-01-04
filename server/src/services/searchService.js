@@ -28,14 +28,14 @@ class SearchService {
             });
 
             return matchingPosts.map(post => ({
-                id: post.id,
+                postId: post.postId,
                 image: post.images?.[0] || '',
                 video: post.video || '',
                 like: post.likes?.toString() || '0',
                 comment: post.comments?.toString() || '0',
                 isLiked: post.isLiked ? '1' : '0',
                 author: {
-                    id: post.userId,
+                    userId: post.userId,
                     userName: post.userName || '',
                     avatar: post.avatar || '',
                 },
@@ -82,7 +82,7 @@ class SearchService {
                 const userName = userData.userName?.toLowerCase() || '';
                 if (userName.includes(normalizedKeyword)) {
                     matchingUsers.push({
-                        id: userId,
+                        userId: userId,
                         userName: userData.userName || '',
                         avatar: userData.avatar || '',
                         same_friends: userData.mutualFriendsCount || 0

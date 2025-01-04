@@ -145,10 +145,10 @@ class FriendService {
             const mutualFriendsPromises = [];
 
             for (const userDoc of usersRef.docs) {
-                if (!userFriendIds.has(userDoc.id)) {
+                if (!userFriendIds.has(userDoc.userId)) {
                     const mutualFriendsPromise = async () => {
                         const theirFriendsRef = await db.collection(collections.friends)
-                            .doc(userDoc.id)
+                            .doc(userDoc.userId)
                             .collection('userFriends')
                             .get();
 
@@ -156,7 +156,7 @@ class FriendService {
                         const mutualFriends = [...userFriendIds].filter(id => theirFriendIds.has(id)).length;
 
                         return {
-                            id: userDoc.id,
+                            userId: userDoc.userId,
                             userData: userDoc.data(),
                             mutualFriends,
                         };
@@ -172,7 +172,7 @@ class FriendService {
 
             for (const result of mutualFriendsResults) {
                 suggestedFriends.push({
-                    userId: result.id,
+                    userId: result.userId,
                     userName: result.userData.userName,
                     avatar: result.userData.avatar,
                     same_friends: result.mutualFriends.toString(),

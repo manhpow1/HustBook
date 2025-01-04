@@ -124,7 +124,7 @@ const upload = multer({
  *                 data:
  *                   type: object
  *                   properties:
- *                     id:
+ *                     userId:
  *                       type: string
  *                     userName:
  *                       type: string
@@ -179,7 +179,7 @@ router.post('/login', userController.login);
  *                 data:
  *                   type: object
  *                   properties:
- *                     id:
+ *                     userId:
  *                       type: string
  *                     token:
  *                       type: string
@@ -347,7 +347,7 @@ router.post('/get_verify_code', verifyCodeLimiterMiddleware, userController.getV
  *                 data:
  *                   type: object
  *                   properties:
- *                     id:
+ *                     userId:
  *                       type: string
  *                     token:
  *                       type: string
@@ -425,7 +425,7 @@ router.get('/check', authenticateToken, userController.checkAuth);
  *                 data:
  *                   type: object
  *                   properties:
- *                     id:
+ *                     userId:
  *                       type: string
  *                     userName:
  *                       type: string

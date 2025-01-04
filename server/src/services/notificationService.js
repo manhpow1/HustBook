@@ -8,9 +8,9 @@ class NotificationService {
     async checkNewItems(lastId, categoryId) {
         try {
             const querySnapshot = await db.collection('posts')
-                .where('id', '>', lastId)
+                .where('postId', '>', lastId)
                 .where('categoryId', '==', categoryId)
-                .orderBy('id', 'asc')
+                .orderBy('postId', 'asc')
                 .get();
 
             return querySnapshot.size;

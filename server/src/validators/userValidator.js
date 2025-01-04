@@ -405,7 +405,7 @@ const setUserInfoSchema = Joi.object({
  * Get user info schema
  */
 const getUserInfoSchema = Joi.object({
-    id: Joi.string()
+    userId: Joi.string()
         .uuid()
         .optional()
         .messages({

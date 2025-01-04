@@ -17,7 +17,7 @@ export const useCommentStore = defineStore('comment', () => {
 
     const dbPromise = openDB('comments-store', 1, {
         upgrade(db) {
-            db.createObjectStore('comments', { keyPath: 'id' });
+            db.createObjectStore('comments', { keyPath: 'commentId' });
             db.createObjectStore('offline-comments', { keyPath: 'tempId' });
         },
     });
@@ -117,7 +117,7 @@ export const useCommentStore = defineStore('comment', () => {
             const updatedComment = response.data;
             // Validate and sanitize the updated comment
             const sanitizedComment = sanitizeComment(updatedComment);
-            const index = comments.value.findIndex(c => c.id === commentId);
+            const index = comments.value.findIndex(c => c.commentId === commentId);
             if (index !== -1) {
                 comments.value[index] = sanitizedComment;
             }
@@ -182,7 +182,7 @@ export const useCommentStore = defineStore('comment', () => {
             snapshot.docChanges().forEach((change) => {
                 if (change.type === 'added') {
                     const newComment = { id: change.doc.id, ...change.doc.data() };
-                    if (!comments.value.some(comment => comment.id === newComment.id)) {
+                    if (!comments.value.some(comment => comment.commentId === newComment.id)) {
                         comments.value.unshift(newComment);
                     }
                 }
@@ -195,7 +195,7 @@ export const useCommentStore = defineStore('comment', () => {
     };
 
     function sanitizeComment(comment) {
-        const allowedKeys = ['id', 'postId', 'content', 'createdAt', 'userId', 'isOffline'];
+        const allowedKeys = ['commentId', 'postId', 'content', 'createdAt', 'userId', 'isOffline'];
         return Object.keys(comment).reduce((sanitized, key) => {
             if (allowedKeys.includes(key)) {
                 sanitized[key] = comment[key];

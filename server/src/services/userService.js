@@ -47,7 +47,7 @@ class UserService {
                 isVerified: false,
                 deviceIds: [deviceId],
                 deviceDetails: [{
-                    id: deviceId,
+                    deviceId: deviceId,
                     token: deviceToken,
                     lastUsed: new Date().toISOString()
                 }],
@@ -86,9 +86,9 @@ class UserService {
             }
 
             // Update device details
-            const updatedDevices = user.deviceDetails.filter(d => d.id !== deviceId);
+            const updatedDevices = user.deviceDetails.filter(d => d.deviceId !== deviceId);
             updatedDevices.push({
-                id: deviceId,
+                deviceId: deviceId,
                 token: deviceToken,
                 lastUsed: new Date().toISOString(),
             });
@@ -264,7 +264,7 @@ class UserService {
             if (activeDevices.length !== user.deviceDetails.length) {
                 user.deviceDetails = activeDevices;
                 user.deviceTokens = activeDevices.map(d => d.token);
-                user.deviceIds = activeDevices.map(d => d.id);
+                user.deviceIds = activeDevices.map(d => d.deviceId);
 
                 await user.save();
                 await redis.setUserDevices(userId, activeDevices);
@@ -294,7 +294,7 @@ class UserService {
                 throw createError('1004', 'Invalid deviceDetails structure for user');
             }
 
-            const deviceIndex = user.deviceDetails.findIndex(d => d.id === deviceId);
+            const deviceIndex = user.deviceDetails.findIndex(d => d.deviceId === deviceId);
             if (deviceIndex === -1) {
                 logger.warn(`Device ${deviceId} not found for user ${userId}`);
                 return;

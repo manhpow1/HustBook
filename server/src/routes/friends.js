@@ -57,7 +57,7 @@ const router = express.Router();
  *                       items:
  *                         type: object
  *                         properties:
- *                           id:
+ *                           userId:
  *                             type: string
  *                           userName:
  *                             type: string
@@ -159,7 +159,7 @@ router.post('/set_request_friend', authenticateToken, friendController.setReques
  *                       items:
  *                         type: object
  *                         properties:
- *                           id:
+ *                           userId:
  *                             type: string
  *                           userName:
  *                             type: string
@@ -324,7 +324,7 @@ router.get('/get_list_suggested_friends', authenticateToken, friendController.ge
  *                       items:
  *                         type: object
  *                         properties:
- *                           id:
+ *                           userId:
  *                             type: string
  *                           name:
  *                             type: string

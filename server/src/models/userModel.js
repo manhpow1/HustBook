@@ -81,7 +81,7 @@ class User {
                 deviceIds: arrayRemove(deviceId)
             });
 
-            const updatedDevices = this.deviceIds.filter(id => id !== deviceId);
+            const updatedDevices = this.deviceIds.filter(deviceId => deviceId !== deviceId);
             await redis.setKey(`user:${this.userId}:devices`,
                 JSON.stringify(updatedDevices));
 

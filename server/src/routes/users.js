@@ -12,7 +12,7 @@ import { setBlockLimiter } from '../middleware/rateLimiter.js';
 const router = Router();
 /**
  * @swagger
- * /users/get_user_info/{id}:
+ * /users/get_user_info/{userId}:
  *   get:
  *     summary: Get user information by ID
  *     tags: [User]
@@ -20,7 +20,7 @@ const router = Router();
  *       - bearerAuth: []
  *     parameters:
  *       - in: path
- *         name: id
+ *         name: userId
  *         description: The user ID (optional). If not provided, the current user's info is returned.
  *         required: false
  *         schema:
@@ -40,7 +40,7 @@ const router = Router();
  *                 data:
  *                   type: object
  *                   properties:
- *                     id:
+ *                     userId:
  *                       type: string
  *                     userName:
  *                       type: string
@@ -75,7 +75,7 @@ const router = Router();
  *       404:
  *         description: User not found
  */
-router.get('/get_user_info/:id?', authenticateToken, userController.getUserInfo);
+router.get('/get_user_info/:userId?', authenticateToken, userController.getUserInfo);
 
 /**
  * @swagger
@@ -264,7 +264,7 @@ router.put('/set_block', authenticateToken, setBlockLimiter, userController.setB
  *                     User:
  *                       type: object
  *                       properties:
- *                         id:
+ *                         userId:
  *                           type: string
  *                         active:
  *                           type: string

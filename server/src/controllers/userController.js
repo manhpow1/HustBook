@@ -31,7 +31,7 @@ class UserController {
             sendResponse(res, '1000', {
                 isAuthenticated: true,
                 user: {
-                    id: user.userId,
+                    userId: user.userId,
                     userName: user.userName,
                     phoneNumber: user.phoneNumber,
                     avatar: user.avatar
@@ -231,7 +231,7 @@ class UserController {
             }
 
             sendResponse(res, '1000', {
-                id: userId,
+                userId: userId,
                 token: token,
                 deviceToken: deviceToken,
                 ...(process.env.NODE_ENV !== 'production' && { verifyCode: verificationCode }),
@@ -313,7 +313,7 @@ class UserController {
             }
 
             sendResponse(res, '1000', {
-                id: user.userId,
+                userId: user.userId,
                 userName: user.userName,
                 phoneNumber: user.phoneNumber,
                 token,
@@ -424,7 +424,7 @@ class UserController {
             sendResponse(res, '1000', {
                 verified: true,
                 exists: true,
-                id: user.userId,
+                userId: user.userId,
                 token,
                 deviceToken,
                 active: user.active ? "1" : "0"
