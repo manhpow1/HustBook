@@ -48,6 +48,11 @@ class FriendService {
     }
 
     async getUserFriends(userId, limit = 20, startAfterDoc = null) {
+        if (!userId || typeof userId !== 'string') {
+            // Log the invalid userId for debugging
+            logger.error('Invalid userId provided:', userId);
+            throw createError('1004', 'Invalid userId');
+        }
         try {
             let friendsRef = db.collection(collections.friends).doc(userId).collection('userFriends')
                 .orderBy('created', 'desc')
