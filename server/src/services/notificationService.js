@@ -44,10 +44,11 @@ class NotificationService {
 
     async getNotifications(userId, index, count) {
         try {
-            // Query notifications
+            // Thay đổi cách truy vấn
             const notificationsRef = db.collection(collections.notifications)
                 .where('userId', '==', userId)
                 .orderBy('created', 'desc')
+                .orderBy('__name__', 'desc')
                 .offset(index)
                 .limit(count);
 
@@ -71,7 +72,6 @@ class NotificationService {
                 };
             });
 
-            // Count unread notifications
             const unreadSnapshot = await db.collection(collections.notifications)
                 .where('userId', '==', userId)
                 .where('read', '==', false)
