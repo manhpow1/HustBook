@@ -7,6 +7,7 @@ const collections = {
     posts: 'posts',
     likes: 'likes',
     comments: 'comments',
+    conversations: 'conversations',
     reports: 'reports',
     auditLogs: 'auditLogs',
     blockedUsers: 'blockedUsers',
