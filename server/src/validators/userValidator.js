@@ -141,13 +141,31 @@ const changeInfoAfterSignupSchema = Joi.object({
         .pattern(/^[a-zA-Z0-9_]+$/)
         .required(),
     avatar: Joi.alternatives().try(
-        // Cho phép string URL
-        Joi.string(),
-        // Cho phép null/undefined
-        Joi.any().allow(null),
-        // Cho phép file upload object từ multer
-        Joi.object().unknown(true)
-    ).optional()
+        Joi.string().uri().messages({
+            'string.uri': 'Avatar must be a valid URL'
+        }),
+        Joi.object().unknown(true).messages({
+            'object.base': 'Avatar must be a valid file object'
+        }),
+        Joi.any().allow(null)
+    )
+        .optional()
+        .messages({
+            'alternatives.types': 'Avatar must be either a URL string or file object'
+        }),
+    coverPhoto: Joi.alternatives().try(
+        Joi.string().uri().messages({
+            'string.uri': 'Cover photo must be a valid URL'
+        }),
+        Joi.object().unknown(true).messages({
+            'object.base': 'Cover photo must be a valid file object'
+        }),
+        Joi.any().allow(null)
+    )
+        .optional()
+        .messages({
+            'alternatives.types': 'Cover photo must be either a URL string or file object'
+        })
 });
 
 /**
@@ -361,15 +379,15 @@ const validateGetVerifyCode = (data) => {
  * Set user info schema
  */
 const setUserInfoSchema = Joi.object({
-    fullName: Joi.string()
+    userName: Joi.string()
         .min(2)
         .max(50)
         .pattern(/^[a-zA-Z\s]*$/)
         .optional()
         .messages({
-            'string.min': 'Full name must be at least 2 characters.',
-            'string.max': 'Full name cannot exceed 50 characters.',
-            'string.pattern.base': 'Full name can only contain letters and spaces.'
+            'string.min': 'Username must be at least 2 characters.',
+            'string.max': 'Username cannot exceed 50 characters.',
+            'string.pattern.base': 'Username can only contain letters and spaces.'
         }),
     bio: Joi.string()
         .max(200)
@@ -378,26 +396,52 @@ const setUserInfoSchema = Joi.object({
         .messages({
             'string.max': 'Bio cannot exceed 200 characters.'
         }),
-    avatar: Joi.string()
-        .uri()
-        .optional()
-        .allow('')
-        .messages({
-            'string.uri': 'Avatar must be a valid URL.'
+    avatar: Joi.alternatives().try(
+        Joi.string().uri().messages({
+            'string.uri': 'Avatar must be a valid URL'
         }),
-    coverPhoto: Joi.string()
-        .uri()
-        .optional()
-        .allow('')
-        .messages({
-            'string.uri': 'Cover photo must be a valid URL.'
+        Joi.object().unknown(true).messages({
+            'object.base': 'Avatar must be a valid file object'
         }),
-    location: Joi.string()
+        Joi.any().allow(null)
+    )
+        .optional()
+        .messages({
+            'alternatives.types': 'Avatar must be either a URL string or file object'
+        }),
+    coverPhoto: Joi.alternatives().try(
+        Joi.string().uri().messages({
+            'string.uri': 'Cover photo must be a valid URL'
+        }),
+        Joi.object().unknown(true).messages({
+            'object.base': 'Cover photo must be a valid file object'
+        }),
+        Joi.any().allow(null)
+    )
+        .optional()
+        .messages({
+            'alternatives.types': 'Cover photo must be either a URL string or file object'
+        }),
+    address: Joi.string()
         .max(100)
         .optional()
         .allow('')
         .messages({
-            'string.max': 'Location cannot exceed 100 characters.'
+            'string.max': 'Address cannot exceed 100 characters.'
+        }),
+    city: Joi.string()
+        .max(50)
+        .optional()
+        .allow('')
+        .messages({
+            'string.max': 'City cannot exceed 50 characters.'
+        }),
+    country: Joi.string()
+        .max(50)
+        .optional()
+        .allow('')
+        .messages({
+            'string.max': 'Country cannot exceed 50 characters.'
         })
 }).min(1).required();
 
@@ -423,9 +467,11 @@ const validateCheckVerifyCode = (data) => {
 
 const validateSetUserInfo = (data) => {
     const sanitizedData = {
-        fullName: sanitizeInput(data.fullName),
+        userName: sanitizeInput(data.userName),
         bio: sanitizeInput(data.bio),
-        location: sanitizeInput(data.location),
+        address: sanitizeInput(data.address),
+        city: sanitizeInput(data.city),
+        country: sanitizeInput(data.country),
         avatar: data.avatar,
         coverPhoto: data.coverPhoto
     };

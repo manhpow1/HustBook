@@ -47,38 +47,33 @@ class FriendService {
         }
     }
 
-    async getUserFriends(userId, limit = 20, startAfterDoc = null) {
+    async getUserFriends(userId, count = 20, index = 0) {
         if (!userId || typeof userId !== 'string') {
-            // Log the invalid userId for debugging
             logger.error('Invalid userId provided:', userId);
             throw createError('1004', 'Invalid userId');
         }
         try {
-            let friendsRef = db.collection(collections.friends).doc(userId).collection('userFriends')
+            const friendsRef = db.collection(collections.friends)
+                .doc(userId)
+                .collection('userFriends')
                 .orderBy('created', 'desc')
-                .limit(limit);
-
-            if (startAfterDoc) {
-                friendsRef = friendsRef.startAfter(startAfterDoc);
-            }
+                .offset(index)
+                .limit(count);
 
             const snapshot = await friendsRef.get();
-
             const friends = snapshot.docs.map(doc => ({
-                id: doc.id,
+                userId: doc.id,
                 ...doc.data(),
             }));
 
-            const lastVisible = snapshot.docs.length > 0 ? snapshot.docs[snapshot.docs.length - 1] : null;
-
-            // Separate query to get the total count
-            const totalCountSnapshot = await db.collection(collections.friends).doc(userId).collection('userFriends').get();
-            const total = totalCountSnapshot.size;
-
+            const totalCountSnapshot = await db.collection(collections.friends)
+                .doc(userId)
+                .collection('userFriends')
+            .get();
+            
             return {
                 friends,
-                lastVisible,
-                total,
+                total: totalCountSnapshot.size.toString(),
             };
         } catch (error) {
             logger.error('Error in getUserFriends service:', error);

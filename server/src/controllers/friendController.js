@@ -38,24 +38,15 @@ class FriendController {
 
             const { index, count } = value;
 
-            let startAfterDoc = null;
-            if (index > 0) {
-                const snapshot = await friendService.getUserFriends(
-                    req.user.userId,
-                    index,
-                );
-                startAfterDoc = snapshot.lastVisible;
-            }
-
             const result = await friendService.getUserFriends(
                 req.user.userId,
-                startAfterDoc,
                 parseInt(count),
+                parseInt(index)
             );
 
             sendResponse(res, '1000', {
                 friends: result.friends,
-                total: result.total.toString(),
+                total: result.total.toString(),                
             });
         } catch (error) {
             next(error);

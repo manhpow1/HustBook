@@ -43,20 +43,6 @@
                     </div>
                 </div>
 
-                <div class="space-y-2">
-                    <Label for="link">Website</Label>
-                    <Input id="link" v-model="form.link" :disabled="isLoading" placeholder="Enter your website URL"
-                        :error="errors.link" />
-                    <p v-if="errors.link" class="text-sm text-destructive">{{ errors.link }}</p>
-                </div>
-
-                <div class="space-y-2">
-                    <Label for="coverImage">Cover Image URL</Label>
-                    <Input id="coverImage" v-model="form.cover_image" :disabled="isLoading"
-                        placeholder="Enter cover image URL" :error="errors.cover_image" />
-                    <p v-if="errors.cover_image" class="text-sm text-destructive">{{ errors.cover_image }}</p>
-                </div>
-
                 <Alert v-if="error" variant="destructive" class="mt-4">
                     <AlertCircle class="h-4 w-4" />
                     <AlertTitle>Error</AlertTitle>
