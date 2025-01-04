@@ -7,7 +7,7 @@ import { passwordStrength } from '../validators/userValidator.js';
 import redis from '../utils/redis.js';
 import logger from '../utils/logger.js';
 import User from '../models/userModel.js';
-import { handleAvatarUpload, deleteFileFromStorage } from '../utils/helpers.js';
+import { handleAvatarUpload, handleCoverPhotoUpload, deleteFileFromStorage } from '../utils/helpers.js';
 
 // Constants
 const MAX_DEVICES_PER_USER = 5;
@@ -404,7 +404,7 @@ class UserService {
                 try {
                     logger.info('Processing avatar upload', { userId });
                     const uploadedAvatarUrl = await handleAvatarUpload(avatarFile, userId);
-                    
+
                     if (uploadedAvatarUrl) {
                         // If user already has an avatar, delete the old one
                         if (user.avatar) {
@@ -434,7 +434,10 @@ class UserService {
         }
     }
 
-    async setUserInfo(userId, updateData) {
+    async setUserInfo(userId, updateData, retryCount = 0) {
+        const MAX_RETRIES = 3;
+        const BASE_DELAY = 100; // 100ms base delay
+        
         try {
             const user = await this.getUserById(userId);
             if (!user) {
@@ -448,28 +451,83 @@ class UserService {
                 throw createError('1003', 'Please wait a moment before updating again');
             }
 
-            const currentVersion = user.version || 0;
-            if (currentVersion !== updateData.version - 1) {
-                throw createError('9999', 'Data was modified by another request');
+            // Handle cover image upload if provided
+            if (updateData.coverFile) {
+                try {
+                    logger.info('Processing cover image upload', { userId });
+                    const uploadedCoverUrl = await handleCoverPhotoUpload(updateData.coverFile, userId );
+                    
+                    if (uploadedCoverUrl) {
+                        // If user already has a cover, delete the old one
+                        if (user.coverPhoto) {
+                            await deleteFileFromStorage(user.coverPhoto);
+                        }
+                        updateData.coverPhoto = uploadedCoverUrl;
+                        logger.info('Cover image updated successfully', { userId, url: uploadedCoverUrl });
+                    }
+                } catch (uploadError) {
+                    logger.error('Cover image upload failed:', uploadError);
+                    throw createError('9999', 'Failed to upload cover image');
+                }
             }
 
-            // Ensure avatar is always a string
-            const sanitizedData = {
-                ...updateData,
-                avatar: updateData.avatar || ''
-            };
-            Object.assign(user, sanitizedData);
-            user.version = currentVersion + 1;
-            user.lastModifiedAt = currentTime;
-            user.updatedAt = new Date().toISOString();
+            // Use Firestore's built-in version tracking
+            const userRef = db.collection(collections.users).doc(userId);
 
-            await user.save();
-            logger.info(`Updated user info for user ${userId}`);
+            return await db.runTransaction(async (transaction) => {
+                const userDoc = await transaction.get(userRef);
+                if (!userDoc.exists) {
+                    throw createError('9995', 'User not found');
+                }
 
-            return user.toJSON();
+                const currentVersion = userDoc.data().version || 0;
+                if (currentVersion !== updateData.version - 1) {
+                    if (retryCount < MAX_RETRIES) {
+                        const delay = BASE_DELAY * Math.pow(2, retryCount);
+                        await new Promise(resolve => setTimeout(resolve, delay));
+                        return this.setUserInfo(userId, updateData, retryCount + 1);
+                    }
+                    throw createError('9999', 'Data was modified by another request');
+                }
+
+                // Ensure avatar is always a string
+                const sanitizedData = {
+                    ...updateData,
+                    avatar: updateData.avatar || ''
+                };
+
+                const updatePayload = {
+                    ...sanitizedData,
+                    version: currentVersion + 1,
+                    lastModifiedAt: currentTime,
+                    updatedAt: new Date().toISOString()
+                };
+
+                transaction.update(userRef, updatePayload);
+                logger.info(`Updated user info for user ${userId}`, {
+                    userId,
+                    version: currentVersion + 1,
+                    retryCount
+                });
+
+                return updatePayload;
+            });
         } catch (error) {
-            logger.error('Error updating user info:', error);
-            throw error;
+            logger.error('Error updating user info:', {
+                error: error.message,
+                stack: error.stack,
+                userId,
+                retryCount,
+                updateData
+            });
+
+            if (retryCount < MAX_RETRIES && error.code === '9999') {
+                const delay = BASE_DELAY * Math.pow(2, retryCount);
+                await new Promise(resolve => setTimeout(resolve, delay));
+                return this.setUserInfo(userId, updateData, retryCount + 1);
+            }
+
+            throw createError('9999', 'Failed to update user info after multiple attempts');
         }
     }
 

@@ -6,6 +6,44 @@
         </CardHeader>
         <CardContent>
             <form @submit.prevent="handleSubmit" class="space-y-4">
+                <!-- Avatar Upload -->
+                <div class="space-y-2">
+                    <Label>Profile Picture</Label>
+                    <div class="flex items-center gap-4">
+                        <img v-if="form.avatar" :src="URL.createObjectURL(form.avatar)" class="w-16 h-16 rounded-full object-cover" />
+                        <img v-else-if="form.cover_image" :src="form.cover_image" class="w-16 h-16 rounded-full object-cover" />
+                        <div v-else class="w-16 h-16 rounded-full bg-gray-200"></div>
+                        <div class="flex-1">
+                            <Input 
+                                type="file"
+                                accept="image/*"
+                                @change="handleAvatarUpload"
+                                :disabled="isLoading"
+                                class="w-full"
+                            />
+                            <p class="text-xs text-muted-foreground mt-1">Recommended size: 400x400px</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Cover Photo Upload -->
+                <div class="space-y-2">
+                    <Label>Cover Photo</Label>
+                    <div class="relative">
+                        <img v-if="form.coverPhoto" :src="URL.createObjectURL(form.coverPhoto)" class="w-full h-48 object-cover rounded-lg" />
+                        <img v-else-if="form.cover_image" :src="form.cover_image" class="w-full h-48 object-cover rounded-lg" />
+                        <div v-else class="w-full h-48 bg-gray-200 rounded-lg"></div>
+                        <Input 
+                            type="file"
+                            accept="image/*"
+                            @change="handleCoverUpload"
+                            :disabled="isLoading"
+                            class="absolute inset-0 opacity-0 w-full h-full cursor-pointer"
+                        />
+                        <p class="text-xs text-muted-foreground mt-1">Recommended size: 1500x500px</p>
+                    </div>
+                </div>
+
                 <div class="space-y-2">
                     <Label for="userName">Username</Label>
                     <Input id="userName" v-model="form.userName" :disabled="isLoading" placeholder="Enter your username"
@@ -14,10 +52,10 @@
                 </div>
 
                 <div class="space-y-2">
-                    <Label for="description">Bio</Label>
-                    <Textarea id="description" v-model="form.description" :disabled="isLoading"
-                        placeholder="Tell us about yourself" :error="errors.description" />
-                    <p v-if="errors.description" class="text-sm text-destructive">{{ errors.description }}</p>
+                    <Label for="bio">Bio</Label>
+                    <Textarea id="bio" v-model="form.bio" :disabled="isLoading"
+                        placeholder="Tell us about yourself" :error="errors.bio" />
+                    <p v-if="errors.bio" class="text-sm text-destructive">{{ errors.bio }}</p>
                 </div>
 
                 <div class="space-y-2">
@@ -86,15 +124,15 @@ const router = useRouter()
 // Form state
 const form = ref({
     userName: '',
-    description: '',
+    bio: '',
     address: '',
-    city: '',
+    city: '', 
     country: '',
-    link: '',
-    cover_image: ''
+    coverPhoto: null,
+    avatar: null
 })
 
-const initialForm = { ...form.value }
+const initialForm = JSON.parse(JSON.stringify(form.value))
 const errors = ref({})
 const isLoading = ref(false)
 const error = ref(null)
@@ -103,18 +141,26 @@ const error = ref(null)
 const validators = {
     userName: (value) => {
         if (!value?.trim()) return 'Username is required'
-        if (value.length < 3) return 'Username must be at least 3 characters'
-        if (value.length > 30) return 'Username must be less than 30 characters'
+        if (value.length < 2) return 'Username must be at least 2 characters'
+        if (value.length > 50) return 'Username must be less than 50 characters'
+        if (!/^[a-zA-Z\s]*$/.test(value)) return 'Username can only contain letters and spaces'
         return null
     },
-    link: (value) => {
-        if (!value) return null
-        try {
-            new URL(value)
-            return null
-        } catch {
-            return 'Please enter a valid URL'
-        }
+    bio: (value) => {
+        if (value?.length > 200) return 'Bio cannot exceed 200 characters'
+        return null
+    },
+    address: (value) => {
+        if (value?.length > 100) return 'Address cannot exceed 100 characters'
+        return null
+    },
+    city: (value) => {
+        if (value?.length > 50) return 'City cannot exceed 50 characters'
+        return null
+    },
+    country: (value) => {
+        if (value?.length > 50) return 'Country cannot exceed 50 characters'
+        return null
     }
 }
 
@@ -147,6 +193,48 @@ const isFormValid = computed(() => {
 })
 
 // Methods
+const handleAvatarUpload = (event) => {
+    const file = event.target.files[0]
+    if (file) {
+        if (file.size > 5 * 1024 * 1024) { // 5MB limit
+            toast({
+                type: 'warning',
+                title: 'File too large',
+                description: 'Profile picture must be less than 5MB'
+            })
+            return
+        }
+        form.value.avatar = file
+    }
+}
+
+const handleCoverUpload = (event) => {
+    const file = event.target.files[0]
+    if (file) {
+        // Validate file type
+        if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
+            toast({
+                type: 'warning',
+                title: 'Invalid file type',
+                description: 'Only JPG, PNG and WEBP images are allowed'
+            })
+            return
+        }
+        
+        // Validate file size
+        if (file.size > 5 * 1024 * 1024) { // 5MB limit
+            toast({
+                type: 'warning',
+                title: 'File too large',
+                description: 'Cover photo must be less than 5MB'
+            })
+            return
+        }
+        
+        form.value.coverPhoto = file
+    }
+}
+
 const resetForm = () => {
     form.value = { ...initialForm }
     errors.value = {}
@@ -158,9 +246,22 @@ const handleSubmit = async () => {
         isLoading.value = true
         error.value = null
 
-        logger.debug('Submitting profile update', { formData: form.value })
+        const formData = new FormData()
+        Object.entries(form.value).forEach(([key, value]) => {
+            if (value !== null && value !== undefined) {
+                if (key === 'avatar' || key === 'coverPhoto') {
+                    if (value instanceof File) {
+                        formData.append(key, value)
+                    }
+                } else {
+                    formData.append(key, value)
+                }
+            }
+        })
 
-        const success = await userStore.updateUserProfile(form.value)
+        logger.debug('Submitting profile update', { formData: Object.fromEntries(formData) })
+
+        const success = await userStore.updateUserProfile(formData)
 
         if (success) {
             toast({
@@ -169,6 +270,8 @@ const handleSubmit = async () => {
                 description: 'Your profile has been updated successfully'
             })
             logger.info('Profile updated successfully')
+            // Update version after successful update
+            form.value.version = success.version
         } else {
             throw new Error('Failed to update profile')
         }
@@ -192,16 +295,16 @@ const loadUserData = async () => {
         isLoading.value = true
         const userData = await userStore.getUserProfile()
         if (userData) {
-            form.value = {
-                userName: userData.userName || '',
-                description: userData.description || '',
-                address: userData.address || '',
-                city: userData.city || '',
-                country: userData.country || '',
-                link: userData.link || '',
-                cover_image: userData.cover_image || ''
-            }
-            let initialForm = { ...form.value }
+form.value = {
+    userName: userData.userName || '',
+    bio: userData.bio || '',
+    address: userData.address || '',
+    city: userData.city || '',
+    country: userData.country || '',
+    avatar: null,
+    coverPhoto: null
+}
+            initialForm = { ...form.value }
             toast({
                 type: 'success',
                 title: 'Profile Loaded',

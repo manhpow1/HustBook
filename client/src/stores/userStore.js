@@ -700,12 +700,35 @@ export const useUserStore = defineStore('user', () => {
             isLoading.value = true;
             error.value = null;
 
+            // Prepare form data with version tracking
+            const formData = new FormData();
+            formData.append('version', profileData.version || 1);
+            
+            // Add profile fields
+            Object.entries(profileData).forEach(([key, value]) => {
+                if (value !== null && value !== undefined && key !== 'version') {
+                    formData.append(key, value);
+                }
+            });
+
+            // Handle file uploads
+            if (profileData.avatarFile) {
+                formData.append('avatar', profileData.avatarFile);
+            }
+            if (profileData.coverFile) {
+                formData.append('coverPhoto', profileData.coverFile);
+            }
+
             logger.debug('Updating user profile', { profileData });
-            const response = await apiService.setUserInfo(profileData);
+            const response = await apiService.setUserInfo(formData, {
+                headers: {
+                    'Content-Type': 'multipart/form-data'
+                }
+            });
 
             if (response.data?.code === '1000') {
                 // Update local user data
-                user.value = { ...user.value, ...response.data.data };
+                user.value = { ...user.value, ...response.data.user };
                 successMessage.value = 'Profile updated successfully';
                 logger.debug('User profile updated successfully');
                 return true;

@@ -132,7 +132,7 @@
                     <CardTitle>Posts</CardTitle>
                     <div class="flex items-center space-x-2">
                       <Input v-model="postSearchQuery" placeholder="Search posts..." class="max-w-sm" />
-                      <Button variant="outline" @click="searchPosts">
+                      <Button variant="outline" @click="searchStore.searchPosts">
                         <Search class="h-4 w-4" />
                       </Button>
                     </div>
@@ -274,6 +274,7 @@
 import { ref, onMounted, computed, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { useUserStore } from "@/stores/userStore";
+import { useSearchStore } from "@/stores/searchStore";
 import { useFriendStore } from "@/stores/friendStore";
 import { useVideoStore } from "@/stores/videoStore";
 import { usePostStore } from "@/stores/postStore";
@@ -327,6 +328,7 @@ const route = useRoute();
 const router = useRouter();
 const userStore = useUserStore();
 const videoStore = useVideoStore();
+const searchStore = useSearchStore();
 const friendStore = useFriendStore();
 const postStore = usePostStore();
 const { toast } = useToast();
@@ -415,10 +417,6 @@ const fetchPostsForUser = async () => {
 const loadMorePosts = () => {
   if (!postStore.hasMorePosts) return;
   postStore.getUserPosts(route.params.id);
-};
-
-const searchPosts = () => {
-  // Add search logic here
 };
 
 const handleFriendAction = async () => {

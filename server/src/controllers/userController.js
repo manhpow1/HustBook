@@ -463,37 +463,59 @@ class UserController {
 
     async setUserInfo(req, res, next) {
         try {
-            const { error, value } = userValidator.validateSetUserInfo(req.body);
+            // Extract form data from request
+            const formData = req.body;
+            const userId = req.user.userId;
+            
+            // Validate form data
+            const { error, value } = userValidator.validateSetUserInfo(formData);
             if (error) {
                 const errorMessage = error.details.map(detail => detail.message).join(', ');
                 throw createError('1002', errorMessage);
             }
 
-            const userId = req.user.userId;
+            // Prepare update data
+            const updateData = {
+                ...value,
+                version: (value.version || 0) + 1,
+                updatedAt: new Date().toISOString()
+            };
 
-            let updateData = { ...value };
+            // Handle file uploads
             if (req.files) {
-                if (req.files.avatar) {
-                    updateData.avatar = await handleAvatarUpload(req.files.avatar[0], userId);
-                }
                 if (req.files.coverPhoto) {
-                    updateData.coverPhoto = await handleCoverPhotoUpload(req.files.coverPhoto[0], userId);
+                    updateData.coverFile = req.files.coverPhoto[0];
+                }
+                if (req.files.avatar) {
+                    updateData.avatarFile = req.files.avatar[0];
                 }
             }
 
+            // Perform update with retry logic
             const updatedUser = await userService.setUserInfo(userId, updateData);
+
+            // Log successful update
+            await req.app.locals.auditLog.logAction(userId, null, 'update_profile', {
+                timestamp: new Date().toISOString(),
+                updatedFields: Object.keys(updateData),
+                version: updateData.version
+            });
+
+            // Prepare response
+            const responseData = {
+                userId: updatedUser.userId,
+                userName: updatedUser.userName,
+                avatar: updatedUser.avatar,
+                coverPhoto: updatedUser.coverPhoto,
+                bio: updatedUser.bio,
+                location: updatedUser.location,
+                version: updatedUser.version
+            };
 
             sendResponse(res, '1000', {
                 message: 'Profile updated successfully',
-                user: {
-                    userId: updatedUser.userId,
-                    userName: updatedUser.userName,
-                    fullName: updatedUser.fullName,
-                    avatar: updatedUser.avatar,
-                    coverPhoto: updatedUser.coverPhoto,
-                    bio: updatedUser.bio,
-                    location: updatedUser.location
-                }
+                user: responseData,
+                version: updatedUser.version
             });
         } catch (error) {
             logger.error('Set User Info Error:', error);
