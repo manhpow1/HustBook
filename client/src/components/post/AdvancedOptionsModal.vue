@@ -20,22 +20,12 @@
               <TrashIcon class="mr-2 h-4 w-4" />
               Delete Post
             </Button>
-
-            <Button variant="ghost" class="w-full justify-start" @click="handleAction('toggleComments')">
-              <MessageCircleIcon class="mr-2 h-4 w-4" />
-              {{ post.canComment === '1' ? 'Turn Off Comments' : 'Turn On Comments' }}
-            </Button>
           </div>
 
           <div v-if="!isOwnPost">
             <Button variant="ghost" class="w-full justify-start text-destructive" @click="handleAction('report')">
               <Flag class="mr-2 h-4 w-4" />
               Report Post
-            </Button>
-
-            <Button variant="ghost" class="w-full justify-start" @click="handleAction('hide')">
-              <EyeOffIcon class="mr-2 h-4 w-4" />
-              Hide Post
             </Button>
           </div>
         </div>
@@ -75,9 +65,7 @@ const emit = defineEmits([
   'update:isVisible',
   'edit',
   'delete',
-  'toggleComments',
   'report',
-  'hide'
 ])
 
 const handleAction = (action) => {

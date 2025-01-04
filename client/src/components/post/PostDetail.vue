@@ -1,155 +1,197 @@
 <template>
-    <main class="container mx-auto px-4 py-8">
-        <ErrorBoundary>
-            <!-- Loading State -->
-            <template v-if="loading">
-                <PostSkeleton avatarSize="w-16 h-16" nameWidth="w-40" :contentLines="['w-full', 'w-4/5', 'w-3/5']"
-                    :numberOfImages="2" imageHeight="h-64" buttonSize="w-24 h-10" commentBoxHeight="h-32" />
-            </template>
-
-            <!-- Error State -->
-            <div v-else-if="error" class="text-red-500 text-center" role="alert">
-                <AlertCircleIcon class="w-8 h-8 mx-auto mb-2" aria-hidden="true" />
-                <p>{{ error }}</p>
-                <button @click="fetchPost"
-                    class="mt-4 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors duration-200"
-                    aria-label="Retry Fetching Post" data-testid="retry-fetch-post-button">
-                    Retry
-                </button>
-            </div>
-
-            <!-- Post Content -->
-            <article v-else-if="post" class="bg-white shadow-lg rounded-lg overflow-hidden">
-                <div class="p-6">
-                    <!-- Post Header -->
-                    <PostHeader :post="post" :isOwnPost="isOwnPost" @editPost="editPost" @deletePost="confirmDeletePost"
-                        @reportPost="handleReportPost" @sharePost="sharePost" />
-
-                    <!-- Post Content -->
-                    <PostContent :post="post" :showFullContent="showFullContent" @toggleContent="toggleContent"
-                        @hashtagClick="handleHashtagClick" />
-
-                    <!-- Post Media -->
-                    <PostMedia :post="post" @uncoverMedia="handleUncoverMedia" @like="handleLike"
-                        @comment="focusCommentInput" />
-
-                    <!-- Post Actions -->
-                    <PostActions :post="post" :formattedLikes="formattedLikes" :formattedComments="formattedComments"
-                        @like="handleLike" @comment="focusCommentInput" />
-
-                    <!-- Ban Warning -->
-                    <PostBanWarning v-if="post.banned !== '0'" :banStatus="post.banned" />
-
-                    <!-- Comments Section (no Suspense) -->
-                    <div v-if="post.canComment === '1'">
-                        <!-- Loading comments UI -->
-                        <div v-if="loadingComments" class="text-center py-8">
-                            <svg class="animate-spin h-8 w-8 text-gray-500 mx-auto" xmlns="http://www.w3.org/2000/svg"
-                                fill="none" viewBox="0 0 24 24">
-                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor"
-                                    stroke-width="4"></circle>
-                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8h8a8 8 0 01-16 0z">
-                                </path>
-                            </svg>
-                            <p class="mt-2 text-gray-500">Loading comments...</p>
+    <div class="container mx-auto px-4 py-6">
+        <ErrorBoundary component-name="PostDetail">
+            <div v-if="loading" class="space-y-6">
+                <Card>
+                    <CardContent class="p-6 space-y-6">
+                        <div class="flex items-center space-x-4">
+                            <Skeleton class="h-12 w-12 rounded-full" />
+                            <div class="space-y-2">
+                                <Skeleton class="h-4 w-[200px]" />
+                                <Skeleton class="h-4 w-[140px]" />
+                            </div>
                         </div>
 
-                        <!-- Actual comments when not loading -->
-                        <CommentSection v-else :postId="post.postId" :comments="comments" @addComment="handleComment"
-                            @updateComment="handleCommentUpdate" @deleteComment="handleCommentDelete"
-                            @loadMore="loadMoreComments" :loading="loadingMoreComments" :error="commentError"
-                            @retry="retryLoadComments" />
-                    </div>
-                </div>
-            </article>
+                        <div class="space-y-3">
+                            <Skeleton class="h-4 w-full" />
+                            <Skeleton class="h-4 w-[90%]" />
+                            <Skeleton class="h-4 w-[80%]" />
+                        </div>
 
-            <!-- Media Viewer -->
+                        <Skeleton class="h-[300px] w-full rounded-lg" />
+
+                        <div class="flex items-center space-x-4">
+                            <Skeleton class="h-10 w-20" />
+                            <Skeleton class="h-10 w-20" />
+                            <Skeleton class="h-10 w-20" />
+                        </div>
+
+                        <div class="space-y-4">
+                            <div class="flex items-center space-x-4">
+                                <Skeleton class="h-10 w-10 rounded-full" />
+                                <div class="space-y-2 flex-1">
+                                    <Skeleton class="h-4 w-full" />
+                                    <Skeleton class="h-4 w-[90%]" />
+                                </div>
+                            </div>
+                            <div class="flex items-center space-x-4">
+                                <Skeleton class="h-10 w-10 rounded-full" />
+                                <div class="space-y-2 flex-1">
+                                    <Skeleton class="h-4 w-full" />
+                                    <Skeleton class="h-4 w-[90%]" />
+                                </div>
+                            </div>
+                        </div>
+                    </CardContent>
+                </Card>
+            </div>
+
+            <Alert v-else-if="error" variant="destructive" role="alert">
+                <AlertCircle class="h-4 w-4" />
+                <AlertTitle>Error</AlertTitle>
+                <AlertDescription class="flex flex-col gap-3">
+                    {{ error }}
+                    <Button @click="fetchPost" variant="outline" size="sm">
+                        <RefreshCw class="mr-2 h-4 w-4" />
+                        Retry
+                    </Button>
+                </AlertDescription>
+            </Alert>
+
+            <div v-else-if="post" class="space-y-6">
+                <Card>
+                    <CardContent class="p-6 space-y-6">
+                        <PostHeader :post="post" :isOwnPost="isOwnPost" @editPost="editPost"
+                            @deletePost="confirmDeletePost" @reportPost="handleReportPost" @sharePost="sharePost" />
+
+                        <Separator />
+
+                        <PostContent :post="post" :showFullContent="showFullContent" @toggleContent="toggleContent"
+                            @hashtagClick="handleHashtagClick" />
+
+                        <PostMedia v-if="post.media?.length || post.video" :post="post"
+                            @uncoverMedia="handleUncoverMedia" @like="handleLike" @comment="focusCommentInput" />
+
+                        <Separator />
+
+                        <PostActions :post="post" @like="handleLike" @comment="focusCommentInput" />
+
+                        <PostBanWarning v-if="post.banned !== '0'" :banStatus="post.banned" />
+
+                        <Separator />
+
+                        <div class="space-y-4">
+                            <div v-if="loadingComments" class="flex justify-center py-6">
+                                <Loader2 class="h-6 w-6 animate-spin text-muted-foreground" />
+                                <span class="sr-only">Loading comments...</span>
+                            </div>
+
+                            <CommentSection v-else :postId="post.postId" :comments="comments"
+                                @addComment="handleComment" @updateComment="handleCommentUpdate"
+                                @deleteComment="handleCommentDelete" @loadMore="loadMoreComments"
+                                :loading="loadingMoreComments" :error="commentError" @retry="retryLoadComments" />
+                        </div>
+                    </CardContent>
+                </Card>
+            </div>
+
             <MediaViewer v-if="showMediaViewer" :isOpen="showMediaViewer" :mediaList="mediaList"
-                :initialIndex="currentMediaIndex" :likes="post.like" :comments="post.comment"
-                :isLiked="post.isLiked === '1'" @close="closeMediaViewer" @like="handleLike" @comment="handleComment"
-                data-testid="media-viewer" />
+                :initialIndex="currentMediaIndex" :likes="post?.like" :comments="post?.comment"
+                :isLiked="post?.isLiked === '1'" @close="closeMediaViewer" @like="handleLike"
+                @comment="handleComment" />
 
-            <!-- Advanced Options Modal -->
-            <AdvancedOptionsModal v-if="showAdvancedOptionsModal" :isOwnPost="isOwnPost" :post="post"
-                @close="showAdvancedOptionsModal = false" @edit="editPost" @delete="confirmDeletePost"
-                @toggleComments="toggleComments" @report="handleReportPost" @hide="hidePost" />
+            <AdvancedOptionsModal v-model:isVisible="showAdvancedOptionsModal" :isOwnPost="isOwnPost" :post="post"
+                @edit="editPost" @delete="confirmDeletePost"
+                @report="handleReportPost" />
 
-            <!-- Delete Post Confirmation -->
-            <DeletePost v-if="showDeletePostModal" :postId="post.postId" @post-deleted="handlePostDeleted"
-                data-testid="delete-post-modal" />
+            <DeletePost v-if="showDeletePostModal" :postId="post?.postId" @post-deleted="handlePostDeleted" />
 
-            <!-- Report Post Modal -->
-            <ReportPostModal v-if="showReportPostModal" :postId="post.postId" @close="showReportPostModal = false"
+            <ReportPostModal v-if="showReportPostModal" :postId="post?.postId" @close="showReportPostModal = false"
                 @report-submitted="handleReportSubmitted" @post-removed="handlePostRemoved" />
         </ErrorBoundary>
-    </main>
+    </div>
 </template>
 
 <script setup>
-import { ref, computed, nextTick } from 'vue';
-import { defineAsyncComponent } from 'vue';
-import { useRoute, useRouter } from 'vue-router';
-import { usePostStore } from '../../stores/postStore';
-import { useUserStore } from '../../stores/userStore';
-import { AlertCircleIcon } from 'lucide-vue-next';
-import { formatNumber } from '../../utils/numberFormat';
-import { useConfirmDialog } from '@vueuse/core';
-import { useErrorHandler } from '@/utils/errorHandler';
+import { ref, computed, onMounted } from "vue";
+import { storeToRefs } from "pinia";
+import { useRouter } from "vue-router";
+import { usePostStore } from "@/stores/postStore";
+import { useUserStore } from "@/stores/userStore";
+import { useToast } from "@/components/ui/toast";
+import { AlertCircle, Loader2, RefreshCw } from "lucide-vue-next";
+import { Card, CardContent } from "@/components/ui/card";
+import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
+import { Separator } from "@/components/ui/separator";
+import { Skeleton } from "../ui/skeleton";
 
-// Asynchronously load components to reduce initial bundle size
-const DeletePost = defineAsyncComponent(() => import('./DeletePost.vue'));
-const PostSkeleton = defineAsyncComponent(() => import('../shared/PostSkeleton.vue'));
-const ErrorBoundary = defineAsyncComponent(() => import('../shared/ErrorBoundary.vue'));
-const PostHeader = defineAsyncComponent(() => import('./PostHeader.vue'));
-const PostContent = defineAsyncComponent(() => import('./PostContent.vue'));
-const PostMedia = defineAsyncComponent(() => import('./PostMedia.vue'));
-const PostActions = defineAsyncComponent(() => import('./PostActions.vue'));
-const PostBanWarning = defineAsyncComponent(() => import('./PostBanWarning.vue'));
-const CommentSection = defineAsyncComponent(() => import('./CommentSection.vue'));
-const MediaViewer = defineAsyncComponent(() => import('../shared/MediaViewer.vue'));
-const AdvancedOptionsModal = defineAsyncComponent(() => import('./AdvancedOptionsModal.vue'));
-const ReportPostModal = defineAsyncComponent(() => import('./ReportPostModal.vue'));
+const DeletePost = defineAsyncComponent(() => import("./DeletePost.vue"));
+const ErrorBoundary = defineAsyncComponent(() =>
+    import("../shared/ErrorBoundary.vue")
+);
+const PostHeader = defineAsyncComponent(() => import("./PostHeader.vue"));
+const PostContent = defineAsyncComponent(() => import("./PostContent.vue"));
+const PostMedia = defineAsyncComponent(() => import("./PostMedia.vue"));
+const PostActions = defineAsyncComponent(() => import("./PostActions.vue"));
+const PostBanWarning = defineAsyncComponent(() =>
+    import("./PostBanWarning.vue")
+);
+const CommentSection = defineAsyncComponent(() =>
+    import("./CommentSection.vue")
+);
+const MediaViewer = defineAsyncComponent(() =>
+    import("../shared/MediaViewer.vue")
+);
+const AdvancedOptionsModal = defineAsyncComponent(() =>
+    import("./AdvancedOptionsModal.vue")
+);
+const ReportPostModal = defineAsyncComponent(() =>
+    import("./ReportPostModal.vue")
+);
 
-// Composables and utilities
-const route = useRoute();
 const router = useRouter();
 const postStore = usePostStore();
 const userStore = useUserStore();
-const { confirm: confirmAction } = useConfirmDialog();
-const { handleError } = useErrorHandler();
+const { toast } = useToast();
 
-// Reactive state
+// State
+const showFullContent = ref(false);
 const showMediaViewer = ref(false);
 const currentMediaIndex = ref(0);
 const showAdvancedOptionsModal = ref(false);
 const showDeletePostModal = ref(false);
 const showReportPostModal = ref(false);
 
-// Computed properties
-const post = computed(() => postStore.currentPost);
-const comments = computed(() => postStore.comments);
-const loading = computed(() => postStore.loading);
-const error = computed(() => postStore.error);
-const loadingMoreComments = computed(() => postStore.loadingMoreComments);
-const commentError = computed(() => postStore.commentError);
-const isOwnPost = computed(() => post.value?.author?.userId === userStore.currentUser?.userId);
-const formattedLikes = computed(() => formatNumber(post.value?.like || 0));
-const formattedComments = computed(() => formatNumber(post.value?.comment || 0));
-const mediaList = computed(() => {
-    let media = [];
+// Store refs
+const { currentPost: post, loading, error } = storeToRefs(postStore);
+const { comments, loadingComments, commentError, loadingMoreComments } =
+    storeToRefs(postStore);
 
-    if (post.value?.image && post.value.image.length > 0) {
-        media = post.value.image.slice(0, 4).map((img) => ({
-            type: 'image',
-            url: img.url,
-            alt: post.value.described,
-            covered: img.covered,
-        }));
+// Computed
+const isOwnPost = computed(() => {
+    return post.value?.author?.userId === userStore.user?.userId;
+});
+
+const mediaList = computed(() => {
+    if (!post.value) return [];
+
+    const media = [];
+
+    if (post.value.image?.length) {
+        media.push(
+            ...post.value.image.slice(0, 4).map((img) => ({
+                type: "image",
+                url: img.url,
+                alt: post.value.described,
+                covered: img.covered,
+            }))
+        );
     }
 
-    if (post.value?.video && post.value.video.length > 0) {
+    if (post.value.video?.length) {
         media.push({
-            type: 'video',
+            type: "video",
             url: post.value.video[0].url,
             covered: post.value.video[0].covered,
         });
@@ -159,161 +201,166 @@ const mediaList = computed(() => {
 });
 
 // Methods
-
-// Fetch the post data
 const fetchPost = async () => {
     await postStore.fetchPost(route.params.postId);
 };
 
-// Load more comments
-const loadMoreComments = () => postStore.loadMoreComments(route.params.postId);
+const editPost = () => {
+    router.push({
+        name: "EditPost",
+        params: { postId: post.value.postId },
+    });
+};
 
-// Retry loading comments in case of an error
-const retryLoadComments = () => postStore.resetComments();
+const confirmDeletePost = () => {
+    showDeletePostModal.value = true;
+};
 
-// Handle like action
+const handlePostDeleted = () => {
+    router.push({ name: "Home" });
+};
+
 const handleLike = async () => {
     try {
         await postStore.toggleLike(post.value.postId);
-    } catch (error) {
-        console.error('Failed to like post:', error);
-        await handleError(error);
+    } catch (err) {
+        toast({
+            title: "Error",
+            description: "Failed to like post",
+            variant: "destructive",
+        });
     }
 };
 
-// Handle comment action
-const handleComment = () => {
-    focusCommentInput();
+const handleComment = async (content) => {
+    try {
+        await postStore.addComment(post.value.postId, content);
+    } catch (err) {
+        toast({
+            title: "Error",
+            description: "Failed to add comment",
+            variant: "destructive",
+        });
+    }
 };
 
-// Focus on the comment input field
+const handleCommentUpdate = async (commentId, content) => {
+    try {
+        await postStore.updateComment(post.value.postId, commentId, content);
+    } catch (err) {
+        toast({
+            title: "Error",
+            description: "Failed to update comment",
+            variant: "destructive",
+        });
+    }
+};
+
+const handleCommentDelete = async (commentId) => {
+    try {
+        await postStore.deleteComment(post.value.postId, commentId);
+        toast({
+            description: "Comment deleted successfully",
+        });
+    } catch (err) {
+        toast({
+            title: "Error",
+            description: "Failed to delete comment",
+            variant: "destructive",
+        });
+    }
+};
+
+const loadMoreComments = async () => {
+    await postStore.fetchComments(post.value.postId);
+};
+
+const retryLoadComments = () => {
+    postStore.resetComments();
+};
+
+const handleUncoverMedia = async (mediaId) => {
+    try {
+        await postStore.uncoverMedia(post.value.postId, mediaId);
+        toast({
+            description: "Media uncovered successfully",
+        });
+    } catch (err) {
+        toast({
+            title: "Error",
+            description: "Failed to uncover media",
+            variant: "destructive",
+        });
+    }
+};
+
+const handleReportPost = () => {
+    showReportPostModal.value = true;
+};
+
+const handleReportSubmitted = () => {
+    showReportPostModal.value = false;
+    toast({
+        description: "Report submitted successfully",
+    });
+};
+
+const handlePostRemoved = () => {
+    router.push({ name: "Home" });
+};
+
+const sharePost = async () => {
+    try {
+        if (navigator.share) {
+            await navigator.share({
+                title: post.value.author?.name,
+                text: post.value.described,
+                url: window.location.href,
+            });
+            toast({
+                description: "Post shared successfully",
+            });
+        } else {
+            await navigator.clipboard.writeText(window.location.href);
+            toast({
+                description: "Link copied to clipboard",
+            });
+        }
+    } catch (err) {
+        if (err.name !== "AbortError") {
+            toast({
+                title: "Error",
+                description: "Failed to share post",
+                variant: "destructive",
+            });
+        }
+    }
+};
+
+const toggleContent = () => {
+    showFullContent.value = !showFullContent.value;
+};
+
 const focusCommentInput = () => {
-    nextTick(() => document.querySelector('.comment-input')?.focus());
+    document.querySelector(".comment-input")?.focus();
 };
 
-// Open the media viewer (lightbox)
-const openLightbox = (index) => {
-    currentMediaIndex.value = index;
-    showMediaViewer.value = true;
-};
-
-// Close the media viewer
 const closeMediaViewer = () => {
     showMediaViewer.value = false;
 };
 
-// Toggle the visibility of the post content
-const toggleContent = () => {
-    // Implement logic to toggle content visibility, possibly using a ref
-};
-
-// Edit the post by navigating to the edit route
-const editPost = () => {
-    router.push({ name: 'EditPost', params: { postId: post.value.postId } });
-    showAdvancedOptionsModal.value = false;
-};
-
-// Confirm deletion of the post with a confirmation dialog
-const confirmDeletePost = async () => {
-    const isConfirmed = await confirmAction('Are you sure you want to delete this post? This action cannot be undone.');
-    if (isConfirmed) {
-        showDeletePostModal.value = true;
-    }
-};
-
-// Handle the actual deletion of the post
-const deletePost = async () => {
+const hidePost = async () => {
     try {
-        await postStore.removePost(post.value.postId);
-        toast({ type: 'success', message: 'Post deleted successfully.' });
-        router.push({ name: 'Home' });
-    } catch (error) {
-        console.error('Error deleting post:', error);
-        toast({ type: 'error', message: 'Failed to delete post. Please try again.' });
-        await handleError(error);
-    }
-    showDeletePostModal.value = false;
-};
-
-// Handle reporting the post
-const handleReportPost = () => {
-    showReportPostModal.value = true;
-    showAdvancedOptionsModal.value = false;
-};
-
-// Handle successful report submission
-const handleReportSubmitted = () => {
-    showReportPostModal.value = false;
-    toast({ type: 'success', message: 'Report submitted successfully.' });
-};
-
-// Handle post removal (e.g., if the post no longer exists)
-const handlePostRemoved = () => {
-    router.push({ name: 'Home' });
-};
-
-// Handle successful post deletion
-const handlePostDeleted = () => {
-    router.push({ name: 'Home' });
-};
-
-// Handle sharing the post
-const sharePost = () => {
-    // Implement sharing functionality, e.g., using the Web Share API
-    if (navigator.share) {
-        navigator.share({
-            title: post.value.author.name,
-            text: post.value.described,
-            url: window.location.href,
-        }).then(() => {
-            toast({ type: 'success', message: 'Post shared successfully.' });
-        }).catch((error) => {
-            console.error('Error sharing post:', error);
-            toast({ type: 'error', message: 'Failed to share post.' });
+        await postStore.hidePost(post.value.postId);
+        router.push({ name: "Home" });
+    } catch (err) {
+        toast({
+            title: "Error",
+            description: "Failed to hide post",
+            variant: "destructive",
         });
-    } else {
-        // Fallback for browsers that do not support the Web Share API
-        toast({ type: 'info', message: 'Sharing is not supported in your browser.' });
     }
 };
+
+onMounted(fetchPost);
 </script>
-
-<style scoped>
-.font-roboto {
-    font-family: 'Roboto', sans-serif;
-}
-
-@media (min-width: 640px) {
-    .container {
-        max-width: 640px;
-    }
-}
-
-@media (min-width: 768px) {
-    .container {
-        max-width: 768px;
-    }
-}
-
-@media (min-width: 1024px) {
-    .container {
-        max-width: 1024px;
-    }
-}
-
-@media (min-width: 1280px) {
-    .container {
-        max-width: 1280px;
-    }
-}
-
-.fade-enter-active,
-.fade-leave-active {
-    transition: opacity 0.3s ease;
-}
-
-.fade-enter-from,
-.fade-leave-to {
-    opacity: 0;
-}
-</style>
