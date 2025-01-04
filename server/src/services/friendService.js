@@ -71,9 +71,14 @@ class FriendService {
 
             const lastVisible = snapshot.docs.length > 0 ? snapshot.docs[snapshot.docs.length - 1] : null;
 
+            // Separate query to get the total count
+            const totalCountSnapshot = await db.collection(collections.friends).doc(userId).collection('userFriends').get();
+            const total = totalCountSnapshot.size;
+
             return {
                 friends,
                 lastVisible,
+                total,
             };
         } catch (error) {
             logger.error('Error in getUserFriends service:', error);

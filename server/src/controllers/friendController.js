@@ -36,12 +36,21 @@ class FriendController {
                 throw createError('1002', error.details.map(detail => detail.message).join(', '));
             }
 
-            const { userId, index, count } = value;
+            const { index, count } = value;
+
+            let startAfterDoc = null;
+            if (index > 0) {
+                const snapshot = await friendService.getUserFriends(
+                    req.user.userId,
+                    index,
+                );
+                startAfterDoc = snapshot.lastVisible;
+            }
 
             const result = await friendService.getUserFriends(
-                userId,
+                req.user.userId,
+                startAfterDoc,
                 parseInt(count),
-                parseInt(index),
             );
 
             sendResponse(res, '1000', {

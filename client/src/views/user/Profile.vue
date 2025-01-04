@@ -99,7 +99,7 @@
               </CardHeader>
               <CardContent>
                 <div class="grid grid-cols-3 gap-2">
-                  <div v-for="friend in friends.slice(0, 6)" :key="friend.id" class="flex flex-col items-center">
+                  <div v-for="friend in friends && friends.slice(0, 6)" :key="friend.id" class="flex flex-col items-center">
                     <Avatar class="h-16 w-16">
                       <AvatarImage :src="friend.avatar" :alt="friend.userName" />
                       <AvatarFallback>{{
