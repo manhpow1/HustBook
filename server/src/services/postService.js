@@ -312,7 +312,6 @@ class PostService {
             if (lastVisible) {
                 const decodedLastVisible = Buffer.from(lastVisible, 'base64').toString('utf-8');
                 const lastDoc = await postRef.collection('comments').doc(decodedLastVisible).get();
-
                 if (!lastDoc.exists) {
                     throw createError('1004', 'Invalid pagination token');
                 }
@@ -320,45 +319,66 @@ class PostService {
             }
 
             const snapshot = await query.get();
+
+            if (snapshot.empty) {
+                return {
+                    comments: [],
+                    lastVisible: null
+                };
+            }
+
             const commentUserIds = new Set();
             const comments = [];
 
             snapshot.docs.forEach(doc => {
                 const commentData = doc.data();
-                commentUserIds.add(commentData.userId);
+                if (commentData.userId) {
+                    commentUserIds.add(commentData.userId);
+                }
                 comments.push({
                     commentId: doc.id,
                     ...commentData
                 });
             });
 
-            // Get user data in parallel
-            const userDocs = await db.collection(collections.users)
-                .where('__name__', 'in', Array.from(commentUserIds))
-                .get();
-
+            // Chỉ thực hiện truy vấn users nếu có userIds
             const userMap = new Map();
-            userDocs.docs.forEach(doc => {
-                userMap.set(doc.id, {
-                    userId: doc.id,
-                    userName: doc.data().userName || '',
-                    avatar: doc.data().avatar || ''
-                });
-            });
+            if (commentUserIds.size > 0) {
+                const userIdsArray = Array.from(commentUserIds);
+                // Xử lý theo từng batch 10 users
+                for (let i = 0; i < userIdsArray.length; i += 10) {
+                    const batch = userIdsArray.slice(i, i + 10);
+                    const userDocs = await db.collection(collections.users)
+                        .where(admin.firestore.FieldPath.documentId(), 'in', batch)
+                        .get();
 
-            const enrichedComments = comments.map(comment => ({
-                commentId: comment.commentId,
-                content: comment.content,
-                createdAt: comment.createdAt.toDate().toISOString(),
-                author: userMap.get(comment.userId) || {
-                    userId: comment.userId,
-                    userName: comment.userName,
-                    avatar: ''
-                },
-                isAuthor: comment.userId === userId,
-                canEdit: comment.userId === userId || post.data().userId === userId,
-                canDelete: comment.userId === userId || post.data().userId === userId
-            }));
+                    userDocs.docs.forEach(doc => {
+                        const userData = doc.data();
+                        userMap.set(doc.id, {
+                            userId: doc.id,
+                            userName: userData.userName || doc.id.substring(0, 8),
+                            avatar: userData.avatar || ''
+                        });
+                    });
+                }
+            }
+
+            const enrichedComments = comments.map(comment => {
+                const user = userMap.get(comment.userId);
+                return {
+                    commentId: comment.commentId,
+                    content: comment.content,
+                    createdAt: comment.createdAt.toDate().toISOString(),
+                    author: user || {
+                        userId: comment.userId,
+                        userName: comment.userId ? comment.userId.substring(0, 8) : 'Deleted User',
+                        avatar: ''
+                    },
+                    isAuthor: comment.userId === userId,
+                    canEdit: comment.userId === userId || post.data().userId === userId,
+                    canDelete: comment.userId === userId || post.data().userId === userId
+                };
+            });
 
             // Cache comments
             await this.cacheComments(postId, enrichedComments);
@@ -368,6 +388,7 @@ class PostService {
                 lastVisible: snapshot.docs.length > 0 ?
                     snapshot.docs[snapshot.docs.length - 1].id : null
             };
+
         } catch (error) {
             logger.error('Error in getComments service:', error);
             throw error.code ? error : createError('9999', 'Exception error');
