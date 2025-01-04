@@ -47,7 +47,7 @@
                 <Avatar class="h-24 w-24">
                   <AvatarImage :src="user?.avatar" :alt="user?.userName" />
                   <AvatarFallback>
-                    {{ getInitials(user?.userName || '') }}
+                    {{ getInitials(user?.userName || "") }}
                   </AvatarFallback>
                 </Avatar>
                 <CardTitle class="mt-4">{{ user?.userName }}</CardTitle>
@@ -67,7 +67,7 @@
                   </Button>
                   <Button v-if="!isCurrentUser" variant="outline" @click="handleFriendAction">
                     <UserPlus class="h-4 w-4 mr-2" />
-                    {{ isFriend ? 'Unfriend' : 'Add Friend' }}
+                    {{ isFriend ? "Unfriend" : "Add Friend" }}
                   </Button>
                 </div>
 
@@ -100,9 +100,13 @@
                 <div v-for="friend in friends.slice(0, 6)" :key="friend.id" class="flex flex-col items-center">
                   <Avatar class="h-16 w-16">
                     <AvatarImage :src="friend.avatar" :alt="friend.userName" />
-                    <AvatarFallback>{{ getInitials(friend.userName) }}</AvatarFallback>
+                    <AvatarFallback>{{
+                      getInitials(friend.userName)
+                    }}</AvatarFallback>
                   </Avatar>
-                  <span class="text-sm mt-1 text-center line-clamp-1">{{ friend.userName }}</span>
+                  <span class="text-sm mt-1 text-center line-clamp-1">{{
+                    friend.userName
+                  }}</span>
                 </div>
               </div>
               <Button variant="ghost" class="w-full mt-4" @click="viewAllFriends">
@@ -147,18 +151,24 @@
                         <div class="flex items-center space-x-4">
                           <Avatar>
                             <AvatarImage :src="post.author?.avatar" :alt="post.author?.userName" />
-                            <AvatarFallback>{{ getInitials(post.author?.userName || '') }}</AvatarFallback>
+                            <AvatarFallback>{{
+                              getInitials(post.author?.userName || "")
+                            }}</AvatarFallback>
                           </Avatar>
                           <div>
-                            <CardTitle class="text-base">{{ post.author?.userName }}</CardTitle>
-                            <CardDescription>{{ formatDate(post.created) }}</CardDescription>
+                            <CardTitle class="text-base">{{
+                              post.author?.userName
+                            }}</CardTitle>
+                            <CardDescription>{{
+                              formatDate(post.created)
+                            }}</CardDescription>
                           </div>
                         </div>
                       </CardHeader>
                       <CardContent>
                         <p class="text-sm">{{ post.content }}</p>
                         <div v-if="post.media?.length" class="mt-4">
-                          <AspectRatio ratio={16/9}>
+                          <AspectRatio :ratio="16 / 9">
                             <img :src="post.media[0]" :alt="post.content"
                               class="rounded-md object-cover w-full h-full" />
                           </AspectRatio>
@@ -189,7 +199,7 @@
                     <Card v-for="video in userVideos" :key="video.id"
                       class="overflow-hidden cursor-pointer hover:shadow-lg transition-shadow"
                       @click="openVideoModal(video)">
-                      <AspectRatio ratio={16/9}>
+                      <AspectRatio :ratio="16 / 9">
                         <img :src="video.thumbnail" :alt="video.title" class="object-cover w-full h-full" />
                         <div
                           class="absolute bottom-2 right-2 bg-black bg-opacity-75 text-white text-xs px-2 py-1 rounded">
@@ -197,7 +207,9 @@
                         </div>
                       </AspectRatio>
                       <CardContent class="p-4">
-                        <h4 class="font-semibold line-clamp-2">{{ video.title }}</h4>
+                        <h4 class="font-semibold line-clamp-2">
+                          {{ video.title }}
+                        </h4>
                         <p class="text-sm text-muted-foreground mt-2">
                           {{ formatViews(video.views) }} views
                         </p>
@@ -256,26 +268,24 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, watch } from 'vue';
-import { useRoute, useRouter } from 'vue-router';
-import { useUserStore } from '@/stores/userStore';
-import { useFriendStore } from '@/stores/friendStore';
-import { useVideoStore } from '@/stores/videoStore';
-import { usePostStore } from '@/stores/postStore';
-import { useToast } from '@/components/ui/toast';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
-import { Skeleton } from '@/components/ui/skeleton';
-import { Separator } from '@/components/ui/separator';
-import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
-import { AspectRatio } from '@/components/ui/aspect-ratio';
-
-// Import icons
-import { AlertCircle, Search, MessageSquare, Settings, UserPlus, Video, MapPin, Globe, Pencil, Link } from 'lucide-vue-next';
+import { ref, computed, onMounted, watch } from "vue";
+import { useRoute, useRouter } from "vue-router";
+import { useUserStore } from "@/stores/userStore";
+import { useFriendStore } from "@/stores/friendStore";
+import { useVideoStore } from "@/stores/videoStore";
+import { usePostStore } from "@/stores/postStore";
+import { useToast } from "@/components/ui/toast";
+import { Button } from "../../components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "../../components/ui/card";
+import { Avatar, AvatarImage, AvatarFallback } from "../../components/ui/avatar";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "../../components/ui/tabs";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../../components/ui/dialog";
+import { Input } from "../../components/ui/input";
+import { Skeleton } from "../../components/ui/skeleton";
+import { Separator } from "../../components/ui/separator";
+import { Alert, AlertTitle, AlertDescription } from "../../components/ui/alert";
+import { AspectRatio } from "../../components/ui/aspect-ratio";
+import { AlertCircle, Search, MessageSquare, Settings, UserPlus, Video, MapPin, Globe, Pencil, Link } from "lucide-vue-next";
 
 // Route and stores setup
 const route = useRoute();
@@ -288,20 +298,24 @@ const { toast } = useToast();
 
 // State management
 const loading = ref(true);
+const loadingPosts = ref(false);
 const error = ref(null);
+const postError = ref(null);
 const user = ref({});
 const friends = ref([]);
 const userVideos = ref([]);
-const postSearchQuery = ref('');
+const postSearchQuery = ref("");
 const showVideoModal = ref(false);
 const selectedVideo = ref(null);
 
 // Computed properties
-const isCurrentUser = computed(() => userStore.user?.userId === route.params.userId);
+const isCurrentUser = computed(
+  () => userStore.user?.userId === route.params.userId
+);
 
 const truncatedDescription = computed(() => {
   const desc = user.value?.description;
-  if (!desc) return '';
+  if (!desc) return "";
   return desc.length > 150 ? `${desc.slice(0, 150)}...` : desc;
 });
 
@@ -309,57 +323,75 @@ const filteredPosts = computed(() => {
   let posts = postStore.posts;
   if (postSearchQuery.value) {
     const query = postSearchQuery.value.toLowerCase();
-    posts = posts.filter(post =>
-      post.content?.toLowerCase().includes(query) ||
-      post.author?.userName.toLowerCase().includes(query)
+    posts = posts.filter(
+      (post) =>
+        post.content?.toLowerCase().includes(query) ||
+        post.author?.userName.toLowerCase().includes(query)
     );
   }
   return posts;
 });
 
 const hasMorePosts = computed(() => postStore.hasMorePosts);
-const isFriend = computed(() => friends.value.some(friend => friend.id === userStore.user?.userId));
+const isFriend = computed(() =>
+  friends.value.some((friend) => friend.id === userStore.user?.userId)
+);
 
 // Methods
 const getInitials = (name) => {
-  if (!name) return '';
+  if (!name) return "";
   return name
-    .split(' ')
-    .map(word => word[0])
-    .join('')
+    .split(" ")
+    .map((word) => word[0])
+    .join("")
     .toUpperCase()
     .slice(0, 2);
 };
 
 const fetchUserData = async () => {
+  console.log("Fetching user data...");
   loading.value = true;
   error.value = null;
 
   try {
-    const userData = await userStore.getUserProfile(route.params.userId);
+    const userId = route.params.id || route.params.userId;
+    if (!userId) {
+      error.value = "No user ID provided";
+      return;
+    }
+
+    console.log("Fetching data for userId:", userId);
+    const userData = await userStore.getUserProfile(userId);
+    console.log("User Data:", userData);
     if (!userData) {
-      error.value = 'Failed to load user profile';
+      error.value = "Failed to load user profile";
       return;
     }
 
     user.value = userData;
-    friends.value = await friendStore.getUserFriends(route.params.userId);
-    userVideos.value = await videoStore.getUserVideos(route.params.id);
-    await fetchPostsForUser();
+    friends.value = await friendStore.getUserFriends(userId);
+    console.log("Friends:", friends.value);
+    userVideos.value = await videoStore.getUserVideos(userId);
+    console.log("User Videos:", userVideos.value);
+    await fetchPostsForUser(userId);
   } catch (err) {
-    error.value = 'An error occurred while loading the profile';
-    console.error('Error fetching user data:', err);
+    error.value = "An error occurred while loading the profile";
+    console.error("Error fetching user data:", err);
   } finally {
     loading.value = false;
   }
 };
 
-const fetchPostsForUser = async () => {
+const fetchPostsForUser = async (userId) => {
   try {
+    loadingPosts.value = true;
     await postStore.resetPosts();
-    await postStore.getUserPosts(route.params.userId);
+    await postStore.getUserPosts(userId);
   } catch (err) {
-    console.error('Error loading posts:', err);
+    console.error("Error loading posts:", err);
+    postError.value = "Failed to load posts";
+  } finally {
+    loadingPosts.value = false;
   }
 };
 
@@ -404,15 +436,15 @@ const handleFriendAction = async () => {
 
 const sendMessage = () => {
   router.push({
-    name: 'Messages',
-    query: { userId: route.params.userIdd }
+    name: "Messages",
+    query: { userId: route.params.userId },
   });
 };
 
 const viewAllFriends = () => {
   router.push({
-    name: 'Friends',
-    query: { userId: route.params.userId }
+    name: "Friends",
+    query: { userId: route.params.userId },
   });
 };
 
@@ -444,34 +476,36 @@ const openVideoModal = (video) => {
 };
 
 const formatViews = (views) => {
-  return new Intl.NumberFormat('en-US', { notation: 'compact' }).format(views);
+  return new Intl.NumberFormat("en-US", { notation: "compact" }).format(views);
 };
 
 const formatDuration = (seconds) => {
   const minutes = Math.floor(seconds / 60);
   const remainingSeconds = seconds % 60;
-  return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
+  return `${minutes}:${remainingSeconds.toString().padStart(2, "0")}`;
 };
 
 const formatDate = (date) => {
-  if (!date) return '';
-  return new Date(date).toLocaleDateString('en-US', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric'
+  if (!date) return "";
+  return new Date(date).toLocaleDateString("en-US", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
   });
 };
 
 // Lifecycle hooks
 onMounted(() => {
-  if (route.params.userId) {
-    fetchUserData();
-  }
+  console.log("Component mounted with route params:", route.params);
+  fetchUserData();
 });
 
-watch(() => route.params.userId, (newId) => {
-  if (newId) {
+watch(
+  () => route.params.id || route.params.userId,
+  (newId) => {
+    console.log("User ID changed to:", newId);
     fetchUserData();
-  }
-});
+  },
+  { immediate: true }
+);
 </script>
