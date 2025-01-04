@@ -39,7 +39,7 @@ class SearchService {
                     userName: post.userName || '',
                     avatar: post.avatar || '',
                 },
-                described: post.content || '',
+                content: post.content || '',
             }));
         } catch (error) {
             logger.error('Search service error:', error);

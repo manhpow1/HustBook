@@ -76,7 +76,7 @@
 
                         <PostActions :post="post" @like="handleLike" @comment="focusCommentInput" />
 
-                        <PostBanWarning v-if="post.banned !== '0'" :banStatus="post.banned" />
+                        <PostBanWarning v-if="post.banned && post.banned !== '0'" :banStatus="post.banned" />
 
                         <Separator />
 
@@ -170,7 +170,7 @@ const { createMediaList } = useMediaUtils();
 
 const mediaList = computed(() => {
     if (!post.value) return [];
-    return createMediaList(post.value.image, post.value.video, post.value.described);
+    return createMediaList(post.value.image, post.value.video, post.value.content);
 });
 
 // Methods
@@ -300,7 +300,7 @@ const sharePost = async () => {
         if (navigator.share) {
             await navigator.share({
                 title: post.value.author?.name,
-                text: post.value.described,
+                text: post.value.content,
                 url: window.location.href,
             });
             toast({

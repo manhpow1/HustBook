@@ -98,7 +98,7 @@ const handleShare = async () => {
         if (navigator.share) {
             await navigator.share({
                 title: 'Share Post',
-                text: props.post.described,
+                text: props.post.content,
                 url: window.location.href
             })
         } else {

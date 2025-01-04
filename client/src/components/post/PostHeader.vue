@@ -6,15 +6,15 @@
                 <div class="flex items-center space-x-4">
                     <Avatar>
                         <AvatarImage :src="post.author?.avatar || defaultAvatar"
-                            :alt="post.author?.name || 'Unknown Author'" />
+                            :alt="post.author?.userName || 'Unknown Author'" />
                         <AvatarFallback>
-                            {{ getInitials(post.author?.name || 'Unknown') }}
+                            {{ getInitials(post.author?.userName || 'Unknown') }}
                         </AvatarFallback>
                     </Avatar>
 
                     <div class="space-y-1">
                         <h2 class="text-lg font-semibold leading-none">
-                            {{ post.author?.name || 'Unknown Author' }}
+                            {{ post.author?.userName || 'Unknown Author' }}
                         </h2>
                         <time :datetime="post.created" class="text-sm text-muted-foreground">
                             {{ formattedDate }}
@@ -210,7 +210,7 @@ const sharePost = () => {
     if (navigator.share) {
         navigator.share({
             title: props.post.author?.name,
-            text: props.post.described,
+            text: props.post.content,
             url: window.location.href,
         }).catch((err) => {
             if (err.name !== 'AbortError') {
@@ -236,7 +236,7 @@ const copyShareUrl = async () => {
 
 const shareToSocial = (platform) => {
     const url = shareUrl.value
-    const text = encodeURIComponent(props.post.described || '')
+    const text = encodeURIComponent(props.post.content || '')
 
     const shareUrls = {
         twitter: `https://twitter.com/intent/tweet?url=${url}&text=${text}`,

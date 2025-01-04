@@ -82,7 +82,7 @@ const router = Router();
  *                             type: string
  *                           avatar:
  *                             type: string
- *                       described:
+ *                       content:
  *                         type: string
  *       400:
  *         description: Validation error

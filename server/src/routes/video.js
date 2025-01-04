@@ -94,7 +94,7 @@ const router = Router();
  *                                 type: string
  *                               thumb:
  *                                 type: string
- *                           described:
+ *                           content:
  *                             type: string
  *                           created:
  *                             type: string

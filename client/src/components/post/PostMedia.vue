@@ -8,7 +8,7 @@
                     <AspectRatio ratio={16/9}>
                         <div v-if="!post.image[0].covered" @click="openLightbox(0)"
                             class="relative w-full h-full cursor-pointer group">
-                            <img :src="post.image[0].url" :alt="post.described"
+                            <img :src="post.image[0].url" :alt="post.content"
                                 class="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
                                 loading="lazy" />
                         </div>
@@ -30,7 +30,7 @@
                     <AspectRatio ratio={1}>
                         <div v-if="!img.covered" @click="openLightbox(index)"
                             class="relative w-full h-full cursor-pointer group">
-                            <img :src="img.url" :alt="post.described"
+                            <img :src="img.url" :alt="post.content"
                                 class="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
                                 loading="lazy" />
                         </div>
@@ -52,7 +52,7 @@
                     <AspectRatio ratio={1}>
                         <div v-if="!post.image[0].covered" @click="openLightbox(0)"
                             class="relative w-full h-full cursor-pointer group">
-                            <img :src="post.image[0].url" :alt="post.described"
+                            <img :src="post.image[0].url" :alt="post.content"
                                 class="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
                                 loading="lazy" />
                         </div>
@@ -71,7 +71,7 @@
                     <AspectRatio ratio={1}>
                         <div v-if="!post.image[index].covered" @click="openLightbox(index)"
                             class="relative w-full h-full cursor-pointer group">
-                            <img :src="post.image[index].url" :alt="post.described"
+                            <img :src="post.image[index].url" :alt="post.content"
                                 class="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
                                 loading="lazy" />
                         </div>
@@ -93,7 +93,7 @@
                     <AspectRatio ratio={1}>
                         <div v-if="!img.covered" @click="openLightbox(index)"
                             class="relative w-full h-full cursor-pointer group">
-                            <img :src="img.url" :alt="post.described"
+                            <img :src="img.url" :alt="post.content"
                                 class="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
                                 loading="lazy" />
                             <div v-if="index === 3 && post.image.length > 4"
@@ -192,7 +192,7 @@ const mediaList = computed(() => {
         media = props.post.image.slice(0, 4).map((img) => ({
             type: 'image',
             url: img.url,
-            alt: props.post.described,
+            alt: props.post.content,
             covered: img.covered,
         }));
     }

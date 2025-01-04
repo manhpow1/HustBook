@@ -101,7 +101,7 @@
                                     </time>
                                 </div>
                             </div>
-                            <p class="text-sm mb-4">{{ post.described }}</p>
+                            <p class="text-sm mb-4">{{ post.content }}</p>
                             <Button variant="secondary" class="w-full" @click="viewPost(post.postId)">
                                 View Post
                             </Button>

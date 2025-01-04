@@ -59,7 +59,7 @@ class VideoService {
                         url: data.videoUrl,
                         thumb: data.thumbnailUrl,
                     },
-                    described: data.description,
+                    content: data.description,
                     created: data.createdAt.toDate().toISOString(),
                     like: data.likes.toString(),
                     comment: data.comments.toString(),

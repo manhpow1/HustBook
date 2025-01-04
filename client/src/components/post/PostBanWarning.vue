@@ -14,47 +14,52 @@
 </template>
 
 <script setup>
-import { computed } from 'vue'
-import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert'
-import { Button } from '@/components/ui/button'
-import { AlertCircleIcon } from 'lucide-vue-next'
-import { useToast } from '@/components/ui/toast'
+import { computed } from "vue";
+import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
+import { AlertCircleIcon } from "lucide-vue-next";
+import { useToast } from "@/components/ui/toast";
 
 const props = defineProps({
     banStatus: {
         type: String,
         required: true,
         validator(value) {
-            return ['0', '1', '2'].includes(value) || value.includes(',')
-        }
-    }
-})
+            return ["0", "1", "2"].includes(value) || value.includes(",");
+        },
+    },
+});
 
-const { toast } = useToast()
+const { toast } = useToast();
 
 // Computed
 const warningMessage = computed(() => {
-    switch (props.banStatus) {
-        case '1':
-            return 'Your account has been banned due to violations of our community guidelines.'
-        case '2':
-            return 'You have been blocked from interacting with this content.'
-        default:
-            return props.banStatus.includes(',')
-                ? 'Your account has partial restrictions in place.'
-                : 'Your account is under review.'
+    if (!props.banStatus) {
+        return "Unable to determine account status";
     }
-})
+
+    switch (props.banStatus) {
+        case "1":
+            return "Your account has been banned due to violations of our community guidelines.";
+        case "2":
+            return "You have been blocked from interacting with this content.";
+        default:
+            return typeof props.banStatus === "string" &&
+                props.banStatus.includes(",")
+                ? "Your account has partial restrictions in place."
+                : "Your account is under review.";
+    }
+});
 
 const showAppealLink = computed(() => {
-    return ['1', '2'].includes(props.banStatus)
-})
+    return ["1", "2"].includes(props.banStatus);
+});
 
 // Methods
 const handleAppeal = () => {
     // This would typically open an appeal form or redirect to appeal page
     toast({
         description: "Appeal system coming soon. Please contact support.",
-    })
-}
+    });
+};
 </script>

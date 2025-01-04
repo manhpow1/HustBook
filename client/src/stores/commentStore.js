@@ -13,6 +13,7 @@ export const useCommentStore = defineStore('comment', () => {
     const commentError = ref(null);
     const hasMoreComments = ref(true);
     const pageIndex = ref(0);
+    const lastVisible = ref(null);
     const { handleError } = useErrorHandler();
 
     const dbPromise = openDB('comments-store', 1, {

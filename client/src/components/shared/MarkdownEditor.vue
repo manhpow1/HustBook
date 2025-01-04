@@ -2,6 +2,7 @@
     <div class="markdown-editor" :class="{ 'fullscreen': isFullscreen }">
         <div class="space-y-2">
             <div class="flex flex-wrap gap-2 items-center border-b pb-2">
+                <TooltipProvider>
                 <Tooltip v-for="action in actions" :key="action.label" :delayDuration="0">
                     <TooltipTrigger asChild>
                         <Button variant="ghost" size="sm" @click="insertMarkdown(action.syntax)"
@@ -14,6 +15,7 @@
                         <p v-if="action.shortcut" class="text-xs text-muted-foreground">{{ action.shortcut }}</p>
                     </TooltipContent>
                 </Tooltip>
+            </TooltipProvider>
 
                 <Separator orientation="vertical" class="h-6" />
 
@@ -78,7 +80,7 @@ import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue';
 import { BoldIcon, ItalicIcon, CodeIcon, ListIcon, LinkIcon, ImageIcon, QuoteIcon, UndoIcon, RedoIcon, SmileIcon, MaximizeIcon, MinimizeIcon, EyeIcon, PencilIcon } from 'lucide-vue-next';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
+import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from '@/components/ui/tooltip';
 import { Separator } from '@/components/ui/separator';
 import EmojiPicker from './EmojiPicker.vue';
 import { useUndoRedo } from '../../composables/useUndoRedo';

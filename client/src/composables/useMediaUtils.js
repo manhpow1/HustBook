@@ -12,7 +12,7 @@ export function useMediaUtils() {
         return widths.map((w) => `${getOptimizedImageUrl(url, w)} ${w}w`).join(', ');
     };
 
-    const createMediaList = (images = [], videos = [], described = '') => {
+    const createMediaList = (images = [], videos = [], content = '') => {
         const media = [];
 
         if (images?.length) {
@@ -20,7 +20,7 @@ export function useMediaUtils() {
                 ...images.slice(0, 4).map((img) => ({
                     type: 'image',
                     url: img.url,
-                    alt: described,
+                    alt: content,
                     covered: img.covered,
                 }))
             );

@@ -6,7 +6,7 @@
                 <CardContent>
                     <p :class="[
                         'text-card-foreground whitespace-pre-wrap',
-                        { 'line-clamp-3': !showFullContent }
+                        { 'line-clamp-3': !showFullContent },
                     ]" data-testid="post-content">
                         <template v-for="(part, index) in parsedContent" :key="index">
                             <!-- Regular text content -->
@@ -24,12 +24,11 @@
             </Card>
             <!-- Toggle content button -->
             <Button v-if="shouldShowToggle" variant="ghost" @click="toggleContent" class="mt-2"
-                :aria-expanded="showFullContent.toString()"
-                :aria-label="showFullContent ? 'Show less content' : 'Show more content'"
-                data-testid="toggle-content-button">
+                :aria-expanded="showFullContent.toString()" :aria-label="showFullContent ? 'Show less content' : 'Show more content'
+                    " data-testid="toggle-content-button">
                 <ChevronDown v-if="!showFullContent" class="h-4 w-4 mr-2" aria-hidden="true" />
                 <ChevronUp v-else class="h-4 w-4 mr-2" aria-hidden="true" />
-                {{ showFullContent ? 'Show less' : 'Show more' }}
+                {{ showFullContent ? "Show less" : "Show more" }}
             </Button>
         </div>
         <!-- Error Alert -->
@@ -42,109 +41,141 @@
 </template>
 
 <script setup>
-import { computed, ref } from 'vue'
-import { ChevronDown, ChevronUp, AlertCircle } from 'lucide-vue-next'
-import { sanitizeOutput } from '../../utils/sanitize'
-import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert'
-import { Button } from '@/components/ui/button'
-import { Card, CardContent } from '@/components/ui/card'
+import { computed, ref } from "vue";
+import { ChevronDown, ChevronUp, AlertCircle } from "lucide-vue-next";
+import { sanitizeOutput } from "../../utils/sanitize";
+import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import logger from "@/services/logging";
 
 const props = defineProps({
     post: {
         type: Object,
         required: true,
         validator(post) {
-            return post && typeof post.described === 'string'
-        }
+            return post && typeof post.content === "string";
+        },
     },
     showFullContent: {
         type: Boolean,
-        default: false
-    }
-})
+        default: false,
+    },
+});
 
-const emit = defineEmits(['toggleContent', 'hashtagClick'])
+const emit = defineEmits(["toggleContent", "hashtagClick"]);
 
 // State
-const error = ref(null)
+const error = ref(null);
 
 // Computed
 const parsedContent = computed(() => {
     try {
-        const text = props.post.described
-        const regex = /(#\w+)|\s+/g
-        const parts = []
-        let lastIndex = 0
-        let match
+        const text = props.post?.content;
+        if (!text || typeof text !== "string") {
+            logger.warn("Invalid or missing post content");
+            return [
+                {
+                    type: "text",
+                    content: "",
+                },
+            ];
+        }
 
-        while ((match = regex.exec(text)) !== null) {
-            // Add text before match if exists
+        const sanitizedText = sanitizeOutput(text);
+        const parts = [];
+        // Regex để bắt hashtags và khoảng trắng
+        const regex = /(#[\w\u0400-\u04FF]+)|(\s+)/g;
+        let lastIndex = 0;
+        let match;
+
+        while ((match = regex.exec(sanitizedText)) !== null) {
+            // Thêm text trước match hiện tại
             if (lastIndex < match.index) {
-                parts.push({
-                    type: 'text',
-                    content: text.slice(lastIndex, match.index)
-                })
+                const content = sanitizedText.slice(lastIndex, match.index);
+                if (content) {
+                    parts.push({
+                        type: "text",
+                        content,
+                    });
+                }
             }
 
-            // Add hashtag or whitespace
             if (match[1]) {
+                // Hashtag
                 parts.push({
-                    type: 'hashtag',
-                    content: match[0]
-                })
-            } else {
+                    type: "hashtag",
+                    content: match[1],
+                });
+            } else if (match[2]) {
                 parts.push({
-                    type: 'text',
-                    content: match[0]
-                })
+                    type: "text",
+                    content: match[2],
+                });
             }
 
-            lastIndex = regex.lastIndex
+            lastIndex = regex.lastIndex;
         }
 
-        // Add remaining text if exists
-        if (lastIndex < text.length) {
-            parts.push({
-                type: 'text',
-                content: text.slice(lastIndex)
-            })
+        // Thêm phần text còn lại
+        if (lastIndex < sanitizedText.length) {
+            const remainingContent = sanitizedText.slice(lastIndex);
+            if (remainingContent) {
+                parts.push({
+                    type: "text",
+                    content: remainingContent,
+                });
+            }
         }
 
-        return parts
+        return parts.length > 0
+            ? parts
+            : [
+                {
+                    type: "text",
+                    content: sanitizedText,
+                },
+            ];
     } catch (err) {
-        error.value = 'Error parsing content'
-        return []
+        logger.error("Error parsing content:", err, {
+            post: props.post,
+            error: err.message,
+        });
+        return [
+            {
+                type: "text",
+                content: sanitizeOutput(props.post?.content || ""),
+            },
+        ];
     }
-})
+});
 
 const shouldShowToggle = computed(() => {
-    return props.post.described.length > 300
-})
+    return props.post?.content?.length > 300;
+});
 
 // Methods
 const preserveSpaces = (text) => {
     try {
-        const sanitizedText = sanitizeOutput(text)
-        return sanitizedText
-            .replace(/ /g, '&nbsp;')
-            .replace(/\n/g, '<br>')
+        const sanitizedText = sanitizeOutput(text);
+        return sanitizedText.replace(/ /g, "&nbsp;").replace(/\n/g, "<br>");
     } catch (err) {
-        error.value = 'Error formatting text'
-        return text
+        error.value = "Error formatting text";
+        return text;
     }
-}
+};
 
 const handleHashtagClick = (hashtag) => {
     try {
-        emit('hashtagClick', hashtag)
+        emit("hashtagClick", hashtag);
     } catch (err) {
-        error.value = 'Error handling hashtag click'
+        error.value = "Error handling hashtag click";
     }
-}
+};
 
 const toggleContent = () => {
-    emit('toggleContent')
-}
+    emit("toggleContent");
+};
 </script>
 
 <style scoped>

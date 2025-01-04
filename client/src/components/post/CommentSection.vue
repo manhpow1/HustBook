@@ -33,7 +33,7 @@
                     </p>
                 </div>
 
-                <Button @click.prevent="onAddComment" :disabled="!isCommentValid || isSubmitting"
+                <Button @click.prevent="onAddComment" :disabled="isSubmitting"
                     class="w-full sm:w-auto" data-testid="post-comment-button">
                     <Loader2Icon v-if="isSubmitting" class="mr-2 h-4 w-4 animate-spin" />
                     {{ isSubmitting ? 'Posting...' : 'Comment' }}
@@ -129,10 +129,6 @@ const syncError = ref(null)
 // Store refs
 const { comments, hasMoreComments, loadingComments, commentError } = storeToRefs(commentStore)
 
-// Form validation
-const { validateComment } = useFormValidation()
-const isCommentValid = computed(() => validateComment(newComment.value))
-
 // Debounced input validation
 const debouncedValidateInput = debounce((input, errorRef) => {
     if (input.length > 1000) {
@@ -150,11 +146,6 @@ const onInput = () => {
 }
 
 const onAddComment = async () => {
-    if (!isCommentValid.value) {
-        notificationStore.showNotification(inputError.value, 'error')
-        return
-    }
-
     isSubmitting.value = true
     try {
         await commentStore.addComment(props.postId, newComment.value.trim())

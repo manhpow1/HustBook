@@ -156,10 +156,10 @@
                         </div>
                       </CardHeader>
                       <CardContent>
-                        <p class="text-sm">{{ post.described }}</p>
+                        <p class="text-sm">{{ post.content }}</p>
                         <div v-if="post.media?.length" class="mt-4">
                           <AspectRatio ratio={16/9}>
-                            <img :src="post.media[0]" :alt="post.described"
+                            <img :src="post.media[0]" :alt="post.content"
                               class="rounded-md object-cover w-full h-full" />
                           </AspectRatio>
                         </div>
@@ -310,7 +310,7 @@ const filteredPosts = computed(() => {
   if (postSearchQuery.value) {
     const query = postSearchQuery.value.toLowerCase();
     posts = posts.filter(post =>
-      post.described?.toLowerCase().includes(query) ||
+      post.content?.toLowerCase().includes(query) ||
       post.author?.userName.toLowerCase().includes(query)
     );
   }

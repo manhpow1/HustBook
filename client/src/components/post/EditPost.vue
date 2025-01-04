@@ -169,7 +169,7 @@ const isFormValid = computed(() => {
 
 const hasUnsavedChanges = computed(() => {
     return (
-        form.value.description !== postStore.currentPost?.described ||
+        form.value.description !== postStore.currentPost?.content ||
         form.value.media.length !== initialMedia.value.length
     );
 });
@@ -235,7 +235,7 @@ const loadPostData = async () => {
         const post = await postStore.fetchPost(props.postId);
         if (!post) throw new Error("Post not found");
 
-        form.value.description = post.described || "";
+        form.value.description = post.content || "";
 
         if (post.media?.length) {
             initialMedia.value = post.media;
@@ -265,7 +265,7 @@ const handleSubmit = async () => {
         );
 
         const postData = {
-            described: sanitizeInput(form.value.description),
+            content: sanitizeInput(form.value.description),
             media: processedMedia.filter(Boolean),
         };
 
