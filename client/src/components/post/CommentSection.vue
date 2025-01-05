@@ -317,13 +317,7 @@ onMounted(async () => {
     try {
         await commentStore.resetComments();
 
-        const result = await commentStore.fetchComments(props.postId);
-
-        if (!result?.comments) {
-            throw new Error("Invalid response format");
-        }
-
-        comments.value = result.comments;
+        await commentStore.fetchComments(props.postId);
 
         logger.debug("Comments loaded successfully", {
             commentsCount: comments.value?.length,

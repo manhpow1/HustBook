@@ -101,7 +101,8 @@
                 @comment="handleComment" />
 
             <AdvancedOptionsModal v-model:isVisible="showAdvancedOptionsModal" :isOwnPost="isOwnPost" :post="post"
-                @edit="editPost" @delete="confirmDeletePost" @report="handleReportPost" />
+                @edit="editPost" @delete="confirmDeletePost"
+                @report="handleReportPost" />
 
             <DeletePost v-if="showDeletePostModal" :postId="post?.postId" @post-deleted="handlePostDeleted" />
 
@@ -157,7 +158,8 @@ const showReportPostModal = ref(false);
 
 // Store refs
 const { currentPost: post, loading, error } = storeToRefs(postStore);
-const { comments, loadingComments, commentError, loadingMoreComments } = storeToRefs(commentStore);
+const { comments, loadingComments, commentError, loadingMoreComments } =
+    storeToRefs(postStore);
 
 // Computed
 const isOwnPost = computed(() => {

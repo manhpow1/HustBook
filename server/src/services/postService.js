@@ -300,7 +300,7 @@ class PostService {
             // First verify the post exists
             const postRef = db.collection(collections.posts).doc(postId);
             const postDoc = await postRef.get();
-            
+
             if (!postDoc.exists) {
                 throw createError('9992', 'Post not found');
             }
@@ -308,7 +308,7 @@ class PostService {
             // Check cache first
             const cacheKey = `post:${postId}:comments`;
             const cachedComments = await redis.cache.get(cacheKey);
-            
+
             if (cachedComments) {
                 logger.debug('Returning cached comments');
                 return {
@@ -384,10 +384,10 @@ class PostService {
 
             // Get all unique user IDs from comments
             const userIds = [...new Set(comments.map(comment => comment.userId))];
-            
+
             // Fetch all user data in one batch
             const userDocs = await Promise.all(
-                userIds.map(userId => 
+                userIds.map(userId =>
                     db.collection(collections.users).doc(userId).get()
                 )
             );
@@ -402,19 +402,27 @@ class PostService {
 
             const enrichedComments = comments.map(comment => {
                 const userData = userDataMap.get(comment.userId);
-                return {
+                const commentData = {
                     commentId: comment.commentId,
                     content: comment.content,
-                    created: comment.createdAt.toDate().toISOString(),
-                    like: comment.likes || 0,
-                    isLiked: comment.isLiked || false,
+                    created: comment.createdAt?.toDate?.()?.toISOString() || new Date().toISOString(),
+                    like: parseInt(comment.likes || 0),
+                    isLiked: Boolean(comment.isLiked),
                     user: {
                         userId: comment.userId,
                         userName: userData?.userName || 'Anonymous User',
                         avatar: userData?.avatar || ''
                     }
                 };
-            });
+
+                // Validate required fields
+                if (!commentData.commentId || !commentData.content || !commentData.user.userId) {
+                    logger.warn('Invalid comment data:', { commentId: comment.commentId });
+                    return null;
+                }
+
+                return commentData;
+            }).filter(Boolean); // Remove any invalid comments
 
             // Cache comments
             await this.cacheComments(postId, enrichedComments);

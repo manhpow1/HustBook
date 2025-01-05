@@ -36,17 +36,30 @@ export const useCommentStore = defineStore('comment', () => {
                     limit,
                     lastVisible
                 }
-            })
+            });
 
-            if (response.data?.code !== '1000') {
-                throw new Error(response.data?.message || 'Failed to fetch comments')
+            if (!response?.data?.data) {
+                throw new Error('Invalid response format');
             }
 
-            const { comments, lastVisible: newLastVisible, totalComments } = response.data.data
+            const { comments = [], lastVisible: newLastVisible, totalComments = 0 } = response.data.data;
 
-            const validComments = comments?.filter(comment =>
-                comment && comment.commentId && comment.content && comment.user
-            ) || []
+            if (!Array.isArray(comments)) {
+                throw new Error('Invalid comments data format');
+            }
+
+            // Validate each comment object
+            const validComments = comments.filter(comment => {
+                if (!comment?.commentId || !comment?.content) return false
+                if (!comment?.user?.userId || !comment?.user?.userName) return false
+                return true
+            })
+
+            logger.debug('Fetched comments:', {
+                total: comments.length,
+                valid: validComments.length,
+                lastVisible: newLastVisible
+            })
 
             if (!lastVisible) {
                 state.comments = validComments
