@@ -456,10 +456,6 @@ class PostService {
     async getListPosts({
         postId,
         userId,
-        inCampaign,
-        campaignId,
-        latitude,
-        longitude,
         lastVisible,
         limit = 20,
     }) {
@@ -474,10 +470,6 @@ class PostService {
 
             if (userId) {
                 query = query.where('userId', '==', userId);
-            }
-
-            if (inCampaign === '1' && campaignId) {
-                query = query.where('campaignId', '==', campaignId);
             }
 
             // Handle pagination
@@ -528,18 +520,6 @@ class PostService {
 
             // Apply location filtering if coordinates provided
             let filteredPosts = enrichedPosts;
-            if (latitude && longitude) {
-                filteredPosts = enrichedPosts.filter(post => {
-                    if (!post.location) return false;
-                    const distance = getDistance(
-                        parseFloat(latitude),
-                        parseFloat(longitude),
-                        post.location.latitude,
-                        post.location.longitude
-                    );
-                    return distance <= 10; // 10km radius
-                });
-            }
 
             return {
                 posts: filteredPosts,

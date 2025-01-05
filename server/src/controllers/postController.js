@@ -251,10 +251,6 @@ class PostController {
             const {
                 postId,
                 userId,
-                in_campaign,
-                campaignId,
-                latitude,
-                longitude,
                 lastVisible,
                 limit = 20,
             } = value;
@@ -263,10 +259,6 @@ class PostController {
             const result = await postService.getListPosts({
                 postId,
                 userId: userId || currentUserId,
-                inCampaign: in_campaign,
-                campaignId,
-                latitude: latitude ? parseFloat(latitude) : undefined,
-                longitude: longitude ? parseFloat(longitude) : undefined,
                 lastVisible: lastVisible ? Buffer.from(lastVisible, 'base64').toString('utf-8') : null,
                 limit: parseInt(limit)
             });

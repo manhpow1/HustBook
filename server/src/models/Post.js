@@ -2,7 +2,16 @@ class Post {
     static MAX_IMAGES = 4;
     static ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/gif'];
 
-    constructor({ postId = null, userId, content, images = [], likes = 0, comments = 0, createdAt = new Date(), updatedAt = null }) {
+    constructor({
+        postId = null,
+        userId,
+        content,
+        images = [],
+        likes = 0,
+        comments = 0,
+        createdAt = new Date(),
+        updatedAt = null,
+    }) {
         if (!userId) throw new Error('userId is required');
         if (!content) throw new Error('content is required');
         if (!Array.isArray(images)) throw new Error('images must be an array');
@@ -23,11 +32,9 @@ class Post {
         if (!this.content || this.content.length < 1 || this.content.length > 1000) {
             throw new Error('Content length must be between 1 and 1000 characters');
         }
-
         if (this.images && this.images.length > this.MAX_IMAGES) {
             throw new Error(`Maximum ${this.MAX_IMAGES} images allowed`);
         }
-
         return true;
     }
 
@@ -41,7 +48,7 @@ class Post {
             comments: this.comments,
             createdAt: this.createdAt,
             updatedAt: this.updatedAt,
-            status: this.status
+            status: this.status,
         };
     }
 

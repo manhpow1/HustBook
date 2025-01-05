@@ -136,25 +136,6 @@ router.post('/', authenticateToken, upload.array('images', 4), postController.cr
  *         description: Filter posts by userId
  *         schema:
  *           type: string
- *       - in: query
- *         name: in_campaign
- *         description: Filter by campaign posts (0 or 1)
- *         schema:
- *           type: string
- *           enum: [0, 1]
- *       - in: query
- *         name: campaignId
- *         description: Campaign ID if in_campaign=1
- *         schema:
- *           type: string
- *       - in: query
- *         name: latitude
- *         description: Latitude for location-based filtering
- *         schema:
- *           type: number
- *       - in: query
- *         name: longitude
- *         description: Longitude for location-based filtering
  *         schema:
  *           type: number
  *       - in: query

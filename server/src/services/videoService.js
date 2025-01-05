@@ -7,10 +7,6 @@ import logger from '../utils/logger.js';
 class VideoService {
     async getListVideos({
         userId,
-        inCampaign,
-        campaignId,
-        latitude,
-        longitude,
         lastId,
         index,
         count,
@@ -19,19 +15,6 @@ class VideoService {
             let query = db.collection(collections.posts)
                 .where('type', '==', 'video')
                 .orderBy('createdAt', 'desc');
-
-            if (inCampaign === '1' && campaignId) {
-                query = query.where('campaignId', '==', campaignId);
-            }
-
-            if (latitude && longitude) {
-                const radiusKm = 10;
-                const box = getBoundingBox(latitude, longitude, radiusKm);
-
-                query = query.where('location.latitude', '>=', box.minLat)
-                    .where('location.latitude', '<=', box.maxLat);
-            }
-
             if (lastId) {
                 const lastPost = await db.collection(collections.posts).doc(lastId).get();
                 if (lastPost.exists) {
@@ -48,10 +31,6 @@ class VideoService {
             const posts = [];
             for (const doc of snapshot.docs) {
                 const data = doc.data();
-                if (latitude && longitude && data.location) {
-                    const distance = getDistance(latitude, longitude, data.location.latitude, data.location.longitude);
-                    if (distance > 10) continue;
-                }
                 posts.push({
                     id: doc.id,
                     name: data.name,
