@@ -70,18 +70,25 @@ class PostController {
             }
 
             const { postId } = req.params;
-            const { content } = req.body;
+            const { content, existingImages = [] } = req.body;
             const userId = req.user.userId;
 
-            // Process image uploads
+            // Validate total number of images (existing + new)
+            const totalImages = (req.files?.length || 0) + existingImages.length;
+            if (totalImages > Post.MAX_IMAGES) {
+                throw createError('1008', `Maximum ${Post.MAX_IMAGES} images allowed`);
+            }
+
+            // Process new image uploads
             let processedImages = [];
             if (req.files && req.files.length > 0) {
-                if (req.files.length > Post.MAX_IMAGES) {
-                    throw createError('1008', `Maximum ${Post.MAX_IMAGES} images allowed`);
-                }
                 try {
                     processedImages = await Promise.all(
-                        req.files.map(file => handleImageUpload(file, `posts/${userId}`))
+                        req.files.map(file => handleImageUpload(file, `posts/${userId}`, {
+                            width: 1920,
+                            height: 1080,
+                            fit: 'inside'
+                        }))
                     );
                 } catch (uploadError) {
                     await cleanupFiles(req.files);
@@ -89,7 +96,10 @@ class PostController {
                 }
             }
 
-            const updatedPost = await postService.updatePost(postId, userId, content, processedImages);
+            // Combine existing and new images
+            const allImages = [...existingImages, ...processedImages];
+
+            const updatedPost = await postService.updatePost(postId, userId, content, allImages);
 
             // Clean up temp files after successful update
             if (req.files) {

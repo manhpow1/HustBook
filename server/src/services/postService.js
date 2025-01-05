@@ -87,7 +87,7 @@ class PostService {
         }
     }
 
-    async updatePost(postId, userId, content, newImages) {
+    async updatePost(postId, userId, content, images) {
         try {
             const existingPost = await this.getPost(postId);
             if (!existingPost) {
@@ -98,22 +98,36 @@ class PostService {
                 throw createError('1009', 'Not authorized to update this post');
             }
 
+            // Identify which images are new vs existing
+            const existingImages = images.filter(url => url.startsWith('http'));
+            const newImages = images.filter(url => !url.startsWith('http'));
+
+            // Validate total image count
+            if (existingImages.length + newImages.length > Post.MAX_IMAGES) {
+                throw createError('1008', `Maximum ${Post.MAX_IMAGES} images allowed`);
+            }
+
             // Create updated post with validation
             const updatedPost = new Post({
                 ...existingPost,
                 content,
-                images: newImages,
+                images: [...existingImages, ...newImages],
                 updatedAt: new Date()
             });
 
             // Validate the updated post
             updatedPost.validate();
 
-            // Delete old images if they're being replaced
-            if (existingPost.images && existingPost.images.length > 0 && newImages.length > 0) {
+            // Find images to delete (images in existing post that aren't in existingImages)
+            const imagesToDelete = existingPost.images.filter(
+                url => !existingImages.includes(url)
+            );
+
+            // Delete old images that are no longer needed
+            if (imagesToDelete.length > 0) {
                 try {
                     await Promise.all(
-                        existingPost.images.map(url => deleteFileFromStorage(url))
+                        imagesToDelete.map(url => deleteFileFromStorage(url))
                     );
                 } catch (error) {
                     logger.error('Error deleting old images:', error);
@@ -127,6 +141,7 @@ class PostService {
             // Clear cache
             await redis.cache.del(`post:${postId}`);
             await redis.cache.del(`user:${userId}:posts`);
+            await redis.cache.del(`posts:recent`);
 
             return updatedPost.toJSON();
         } catch (error) {

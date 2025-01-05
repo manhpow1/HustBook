@@ -29,12 +29,46 @@ class Post {
     }
 
     validate() {
-        if (!this.content || this.content.length < 1 || this.content.length > 1000) {
+        // Content validation
+        if (!this.content || typeof this.content !== 'string') {
+            throw new Error('Content must be a string');
+        }
+        
+        const trimmedContent = this.content.trim();
+        if (trimmedContent.length < 1 || trimmedContent.length > 1000) {
             throw new Error('Content length must be between 1 and 1000 characters');
         }
-        if (this.images && this.images.length > this.MAX_IMAGES) {
-            throw new Error(`Maximum ${this.MAX_IMAGES} images allowed`);
+
+        // Images validation
+        if (!Array.isArray(this.images)) {
+            throw new Error('Images must be an array');
         }
+
+        if (this.images.length > Post.MAX_IMAGES) {
+            throw new Error(`Maximum ${Post.MAX_IMAGES} images allowed`);
+        }
+
+        // Validate each image URL
+        this.images.forEach((url, index) => {
+            if (typeof url !== 'string' || !url.trim()) {
+                throw new Error(`Invalid image URL at index ${index}`);
+            }
+            try {
+                new URL(url);
+            } catch (e) {
+                throw new Error(`Invalid image URL format at index ${index}`);
+            }
+        });
+
+        // Validate dates
+        if (!(this.createdAt instanceof Date) || isNaN(this.createdAt)) {
+            throw new Error('Invalid createdAt date');
+        }
+
+        if (this.updatedAt !== null && (!(this.updatedAt instanceof Date) || isNaN(this.updatedAt))) {
+            throw new Error('Invalid updatedAt date');
+        }
+
         return true;
     }
 

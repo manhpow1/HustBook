@@ -36,8 +36,36 @@ const createPostSchema = Joi.object({
 }).required();
 
 const updatePostSchema = Joi.object({
-    content: Joi.string().required().max(1000),
-    images: Joi.array().items(Joi.string().uri()).max(4)
+    content: Joi.string()
+        .required()
+        .min(1)
+        .max(1000)
+        .trim()
+        .pattern(/^[^<>]*$/)
+        .messages({
+            'string.empty': 'Content cannot be empty',
+            'string.min': 'Content must be at least 1 character long',
+            'string.max': 'Content cannot exceed 1000 characters',
+            'string.pattern.base': 'Content contains invalid characters'
+        }),
+    existingImages: Joi.array()
+        .items(Joi.string().uri())
+        .default([])
+        .messages({
+            'array.base': 'Existing images must be an array'
+        }),
+    images: Joi.array()
+        .items(Joi.string().uri())
+        .default([])
+        .messages({
+            'array.base': 'Images must be an array'
+        })
+}).custom((value, helpers) => {
+    const totalImages = (value.existingImages?.length || 0) + (value.images?.length || 0);
+    if (totalImages > 4) {
+        return helpers.error('array.max', { message: 'Maximum 4 images allowed in total' });
+    }
+    return value;
 });
 
 const commentSchema = Joi.object({

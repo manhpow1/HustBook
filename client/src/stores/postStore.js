@@ -140,18 +140,42 @@ export const usePostStore = defineStore("post", () => {
                 postData.images = processedImages.filter(Boolean);
             }
 
-            const response = await apiService.createPost(postData);
-            const data = response.data;
+            // Validate post data
+            if (!postData.content?.trim()) {
+                throw new Error("Post content cannot be empty");
+            }
 
-            if (data.code === "1000") {
-                const newPost = validateAndProcessPost(data.data);
+            if (postData.media?.length > 4) {
+                throw new Error("Maximum 4 images allowed");
+            }
+
+            // Create FormData for multipart request
+            const formData = new FormData();
+            formData.append("content", postData.content);
+
+            // Handle media files
+            if (postData.media?.length) {
+                postData.media.forEach((media, index) => {
+                    // If media is a string (URL), it's an existing image
+                    if (typeof media === "string") {
+                        formData.append("existingMedia", media);
+                    } else {
+                        formData.append("images", media);
+                    }
+                });
+            }
+
+            const response = await apiService.createPost(formData);
+
+            if (response.data.code === "1000") {
+                const newPost = validateAndProcessPost(response.data.data);
                 if (newPost) {
                     posts.value.unshift(newPost);
                 }
-                return data;
-            } else {
-                throw new Error(data.message || "Failed to create post");
+                return response.data.data;
             }
+
+            throw new Error(response.data.message || "Failed to create post");
         } catch (err) {
             await handleError(err);
             error.value = err.message || "Failed to create post";

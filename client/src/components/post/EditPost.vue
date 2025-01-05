@@ -138,6 +138,42 @@ const props = defineProps({
 const router = useRouter();
 const route = useRoute();
 const postStore = usePostStore();
+const { toast } = useToast();
+const { handleError } = useErrorHandler();
+const { compressImage } = useImageProcessing();
+
+// Form State
+const form = ref({
+    description: "",
+    media: [],
+});
+
+// UI State
+const isLoading = ref(false);
+const error = ref("");
+const successMessage = ref("");
+const showUnsavedDialog = ref(false);
+const initialMedia = ref([]);
+const mediaPreviews = ref([]);
+const descriptionError = ref("");
+const mediaError = ref("");
+
+// Form Validation
+const { validateDescription } = useFormValidation();
+
+const isFormValid = computed(() => {
+    return form.value.description.trim().length > 0 && !descriptionError.value;
+});
+
+const hasUnsavedChanges = computed(() => {
+    if (!currentPost.value) return false;
+    return (
+        form.value.description !== currentPost.value.content ||
+        form.value.media.length !== initialMedia.value.length
+    );
+});
+
+const currentPost = computed(() => postStore.currentPost);
 const { handleError } = useErrorHandler();
 const { compressImage } = useImageProcessing();
 const { toast } = useToast();
@@ -235,17 +271,19 @@ const loadPostData = async () => {
         const post = await postStore.fetchPost(props.postId);
         if (!post) throw new Error("Post not found");
 
+        // Initialize form with post data
         form.value.description = post.content || "";
 
         if (post.media?.length) {
             initialMedia.value = post.media;
-            mediaPreviews.value = post.media;
+            mediaPreviews.value = post.media.map(url => url);
         }
 
         logger.debug("Post data loaded successfully");
     } catch (err) {
         error.value = "Failed to load post";
         handleError(err);
+        router.push({ name: "Home" });
     } finally {
         isLoading.value = false;
     }
@@ -259,14 +297,29 @@ const handleSubmit = async () => {
         error.value = "";
         successMessage.value = "";
 
+        // Validate content
+        const sanitizedContent = sanitizeInput(form.value.description);
+        if (!sanitizedContent) {
+            error.value = "Post content cannot be empty";
+            return;
+        }
+
         // Process images if needed
-        const processedMedia = await Promise.all(
-            form.value.media.map((file) => compressImage(file))
-        );
+        let processedMedia = [];
+        if (form.value.media.length > 0) {
+            processedMedia = await Promise.all(
+                form.value.media.map(async (file) => {
+                    // Skip processing for existing image URLs
+                    if (typeof file === 'string') return file;
+                    return await compressImage(file);
+                })
+            );
+            processedMedia = processedMedia.filter(Boolean);
+        }
 
         const postData = {
-            content: sanitizeInput(form.value.description),
-            media: processedMedia.filter(Boolean),
+            content: sanitizedContent,
+            media: processedMedia,
         };
 
         await postStore.updatePost(props.postId, postData);
@@ -282,8 +335,13 @@ const handleSubmit = async () => {
             params: { postId: props.postId },
         });
     } catch (err) {
-        error.value = "Failed to update post";
+        error.value = err.message || "Failed to update post";
         handleError(err);
+        toast({
+            title: "Error",
+            description: error.value,
+            variant: "destructive",
+        });
     } finally {
         isLoading.value = false;
     }
