@@ -408,7 +408,7 @@ class PostService {
     async cacheComments(postId, comments) {
         try {
             const cacheKey = `post:${postId}:comments`;
-            await redis.setex(cacheKey, 300, JSON.stringify(comments));
+            await redis.cache.set(cacheKey, comments, 300);
         } catch (error) {
             logger.warn('Failed to cache comments:', error);
         }
