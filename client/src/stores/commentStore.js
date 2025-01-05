@@ -77,11 +77,13 @@ export const useCommentStore = defineStore('comment', () => {
             const newComment = {
                 commentId: response.data.commentId,
                 content: content,
-                createdAt: new Date().toISOString(),
-                author: {
+                created: new Date().toISOString(),
+                like: 0,
+                isLiked: false,
+                user: {
                     userId: response.data.userId,
                     userName: response.data.userName,
-                    avatar: response.data.avatar
+                    avatar: response.data.avatar || ''
                 }
             }
     
