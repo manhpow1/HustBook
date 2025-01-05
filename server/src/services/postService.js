@@ -297,18 +297,44 @@ class PostService {
 
     async getComments(postId, userId, limit = 20, lastVisible = null) {
         try {
+            // First verify the post exists
+            const postRef = db.collection(collections.posts).doc(postId);
+            const postDoc = await postRef.get();
+            
+            if (!postDoc.exists) {
+                throw createError('9992', 'Post not found');
+            }
+
+            // Check cache first
+            const cacheKey = `post:${postId}:comments`;
+            const cachedComments = await redis.cache.get(cacheKey);
+            
+            if (cachedComments) {
+                logger.debug('Returning cached comments');
+                return {
+                    comments: cachedComments,
+                    lastVisible: null,
+                    totalComments: cachedComments.length
+                };
+            }
+
             let query = db.collection(collections.comments)
                 .where('postId', '==', postId)
                 .orderBy('createdAt', 'desc')
                 .limit(limit);
 
             if (lastVisible) {
-                const decodedLastVisible = Buffer.from(lastVisible, 'base64').toString('utf-8');
-                const lastDoc = await db.collection(collections.comments).doc(decodedLastVisible).get();
-                if (!lastDoc.exists) {
+                try {
+                    const decodedLastVisible = Buffer.from(lastVisible, 'base64').toString('utf-8');
+                    const lastDoc = await db.collection(collections.comments).doc(decodedLastVisible).get();
+                    if (!lastDoc.exists) {
+                        throw createError('1004', 'Invalid pagination token');
+                    }
+                    query = query.startAfter(lastDoc);
+                } catch (error) {
+                    logger.error('Error decoding lastVisible token:', error);
                     throw createError('1004', 'Invalid pagination token');
                 }
-                query = query.startAfter(lastDoc);
             }
 
             const snapshot = await query.get();

@@ -283,28 +283,42 @@ onMounted(async () => {
     // Reset and fetch initial comments
     try {
         await commentStore.resetComments();
-        const { comments: initialComments } = await commentStore.fetchComments(props.postId);
         
-        if (!initialComments) {
-            throw new Error('No comments data received');
+        const result = await commentStore.fetchComments(props.postId);
+        
+        if (!result?.comments) {
+            throw new Error('Invalid response format');
         }
         
-        comments.value = initialComments;
+        comments.value = result.comments;
         
         logger.debug('Comments loaded successfully', {
             commentsCount: comments.value?.length,
             hasMore: hasMoreComments.value,
             totalComments: totalComments.value
         });
+
+        if (comments.value.length === 0) {
+            logger.info('No comments found for post');
+        }
+
     } catch (err) {
         logger.error('Error fetching initial comments:', err);
-        if (err.code === '9992') {
+        
+        if (err.response?.status === 404 || err.code === '9992') {
             notificationStore.showNotification('Post not found', 'error');
             emit('close');
             return;
         }
-        commentError.value = 'Failed to load comments';
-        notificationStore.showNotification('Failed to load comments', 'error');
+        
+        if (err.response?.status === 401) {
+            notificationStore.showNotification('Please login to view comments', 'error');
+            return;
+        }
+
+        const errorMessage = err.response?.data?.message || err.message || 'Failed to load comments';
+        commentError.value = errorMessage;
+        notificationStore.showNotification(errorMessage, 'error');
     }
 
     // Sync offline comments if online

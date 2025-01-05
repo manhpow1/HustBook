@@ -38,15 +38,28 @@ export const useCommentStore = defineStore('comment', () => {
                 }
             })
 
-            if (response.data?.code !== '1000') {
+            if (!response?.data) {
+                throw new Error('Invalid response from server')
+            }
+
+            if (response.data.code !== '1000') {
                 throw new Error(response.data?.message || 'Failed to fetch comments')
             }
 
-            const { comments, lastVisible: newLastVisible, totalComments } = response.data.data
+            const { comments = [], lastVisible: newLastVisible, totalComments = 0 } = response.data.data || {}
 
-            const validComments = comments?.filter(comment => 
-                comment && comment.commentId && comment.content && comment.user
-            ) || []
+            // Validate each comment object
+            const validComments = comments.filter(comment => {
+                if (!comment?.commentId || !comment?.content) return false
+                if (!comment?.user?.userId || !comment?.user?.userName) return false
+                return true
+            })
+
+            logger.debug('Fetched comments:', {
+                total: comments.length,
+                valid: validComments.length,
+                lastVisible: newLastVisible
+            })
 
             if (!lastVisible) {
                 state.comments = validComments
