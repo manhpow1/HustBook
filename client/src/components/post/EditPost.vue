@@ -143,6 +143,15 @@ const { handleError } = useErrorHandler();
 const { compressImage } = useImageProcessing();
 const currentPost = computed(() => postStore.currentPost);
 
+const initialMedia = ref([]);
+const mediaPreviews = ref([]);
+const isLoading = ref(false);
+const error = ref("");
+const successMessage = ref("");
+const showUnsavedDialog = ref(false);
+const descriptionError = ref("");
+const mediaError = ref("");
+
 // Form State
 const form = ref({
     description: "",
@@ -173,21 +182,6 @@ const hasUnsavedChanges = computed(() => {
         form.value.media.length !== initialMedia.value.length
     );
 });
-
-// Form State
-const form = ref({
-    description: "",
-    media: [],
-});
-
-const initialMedia = ref([]);
-const mediaPreviews = ref([]);
-const isLoading = ref(false);
-const error = ref("");
-const successMessage = ref("");
-const showUnsavedDialog = ref(false);
-const descriptionError = ref("");
-const mediaError = ref("");
 
 // Computed
 const isFormValid = computed(() => {
