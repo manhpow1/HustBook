@@ -10,7 +10,7 @@
 
       <div class="grid gap-4 py-4">
         <div class="space-y-2">
-          <div v-if="isOwnPost">
+          <div>
             <Button variant="ghost" class="w-full justify-start" @click="handleAction('edit')">
               <PencilIcon class="mr-2 h-4 w-4" />
               Edit Post
@@ -22,7 +22,7 @@
             </Button>
           </div>
 
-          <div v-if="!isOwnPost">
+          <div>
             <Button variant="ghost" class="w-full justify-start text-destructive" @click="handleAction('report')">
               <Flag class="mr-2 h-4 w-4" />
               Report Post
@@ -45,10 +45,6 @@ import { PencilIcon, TrashIcon, MessageCircleIcon, Flag, EyeOffIcon } from 'luci
 
 const props = defineProps({
   isVisible: {
-    type: Boolean,
-    required: true
-  },
-  isOwnPost: {
     type: Boolean,
     required: true
   },

@@ -1,5 +1,5 @@
 <template>
-    <div v-if="isOwnPost">
+    <div>
         <!-- Delete Trigger Button -->
         <Button variant="destructive" class="w-full flex items-center justify-center gap-2" @click="openModal"
             :disabled="isDeleting">
@@ -60,10 +60,6 @@ const props = defineProps({
             return value.length > 0
         }
     },
-    isOwnPost: {
-        type: Boolean,
-        required: true
-    }
 })
 
 const emit = defineEmits(['post-deleted'])

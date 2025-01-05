@@ -23,7 +23,7 @@
                 </div>
 
                 <!-- Action Menu -->
-                <DropdownMenu v-if="isOwnPost">
+                <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                         <Button variant="ghost" size="icon" aria-label="Post options" data-testid="post-options-button">
                             <MoreVertical class="h-5 w-5" aria-hidden="true" />
@@ -139,10 +139,6 @@ const props = defineProps({
                 typeof post.author === 'object'
         }
     },
-    isOwnPost: {
-        type: Boolean,
-        default: false
-    }
 })
 
 const emit = defineEmits(['editPost', 'deletePost', 'reportPost', 'sharePost'])

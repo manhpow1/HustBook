@@ -62,7 +62,7 @@
             <div v-else-if="post" class="space-y-6">
                 <Card>
                     <CardContent class="p-6 space-y-6">
-                        <PostHeader :post="post" :isOwnPost="isOwnPost" @editPost="editPost"
+                        <PostHeader :post="post" @editPost="editPost"
                             @deletePost="confirmDeletePost" @reportPost="handleReportPost" @sharePost="sharePost" />
 
                         <Separator />
@@ -100,7 +100,7 @@
                 :isLiked="post?.isLiked === '1'" @close="closeMediaViewer" @like="handleLike"
                 @comment="handleComment" />
 
-            <AdvancedOptionsModal v-model:isVisible="showAdvancedOptionsModal" :isOwnPost="isOwnPost" :post="post || {}"
+            <AdvancedOptionsModal v-model:isVisible="showAdvancedOptionsModal" :post="post || {}"
                 @edit="editPost" @delete="confirmDeletePost" @report="handleReportPost" />
 
             <DeletePost v-if="showDeletePostModal" :postId="post?.postId" @post-deleted="handlePostDeleted" />
@@ -163,9 +163,9 @@ const showFullContent = ref(false);
 const showMediaViewer = ref(false);
 const currentMediaIndex = ref(0);
 // Modal states
-const showAdvancedOptionsModal = ref(false);
-const showDeletePostModal = ref(false);
-const showReportPostModal = ref(false);
+const showAdvancedOptionsModal = ref(true);
+const showDeletePostModal = ref(true);
+const showReportPostModal = ref(true);
 
 // Methods to handle modal visibility
 const openAdvancedOptions = () => {
@@ -346,24 +346,6 @@ const sharePost = async () => {
 const toggleContent = () => {
     showFullContent.value = !showFullContent.value;
 };
-
-const isOwnPost = computed(() => {
-    // Check login state first to avoid unnecessary calculations
-    if (!userStore.isLoggedIn) return false;
-    
-    // Ensure post exists
-    if (!post.value) return false;
-    
-    // Get both possible user IDs
-    const currentUserId = userStore.user?.userId;
-    const postUserId = post.value.userId || post.value.author?.userId;
-    
-    // Only compare if both IDs exist
-    if (!currentUserId || !postUserId) return false;
-    
-    // Cache the result
-    return currentUserId === postUserId;
-});
 
 const focusCommentInput = () => {
     document.querySelector(".comment-input")?.focus();
