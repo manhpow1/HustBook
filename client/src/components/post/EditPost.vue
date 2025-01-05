@@ -141,6 +141,7 @@ const postStore = usePostStore();
 const { toast } = useToast();
 const { handleError } = useErrorHandler();
 const { compressImage } = useImageProcessing();
+const currentPost = computed(() => postStore.currentPost);
 
 // Form State
 const form = ref({
@@ -172,11 +173,6 @@ const hasUnsavedChanges = computed(() => {
         form.value.media.length !== initialMedia.value.length
     );
 });
-
-const currentPost = computed(() => postStore.currentPost);
-const { handleError } = useErrorHandler();
-const { compressImage } = useImageProcessing();
-const { toast } = useToast();
 
 // Form State
 const form = ref({
