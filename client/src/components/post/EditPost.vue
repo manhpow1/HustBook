@@ -173,23 +173,6 @@ const hasUnsavedChanges = computed(() => {
     );
 });
 
-// Computed
-const isFormValid = computed(() => {
-    return (
-        form.value.description.trim().length > 0 &&
-        form.value.description.length <= 1000 &&
-        !descriptionError.value &&
-        !mediaError.value
-    );
-});
-
-const hasUnsavedChanges = computed(() => {
-    return (
-        form.value.description !== postStore.currentPost?.content ||
-        form.value.media.length !== initialMedia.value.length
-    );
-});
-
 // Methods
 const validateDescription = () => {
     const content = form.value.description.trim();
@@ -377,3 +360,4 @@ router.beforeEach(handleBeforeRouteLeave);
     @apply opacity-0;
 }
 </style>
+
