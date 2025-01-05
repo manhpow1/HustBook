@@ -1,6 +1,5 @@
 import Post from '../models/Post.js';
 import admin from 'firebase-admin';
-import { getBoundingBox, getDistance } from '../utils/geoUtils.js';
 import { collections, createDocument, getDocument, updateDocument } from '../config/database.js';
 import { db } from '../config/firebase.js';
 import { createError } from '../utils/customError.js';
