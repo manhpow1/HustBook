@@ -23,78 +23,77 @@ export const useCommentStore = defineStore('comment', () => {
         },
     });
 
-    const fetchComments = async (postId, count = 10, router) => {
-        loadingComments.value = true;
-        commentError.value = null;
-
-        logger.debug('Fetching comments for postId:', postId);
-
+    const fetchComments = async (postId, limit = 20, lastVisible = null) => {
+        loadingComments.value = true
+        commentError.value = null
+    
         try {
-            const response = await apiService.getComments(postId, pageIndex.value, count);
-            const fetchedComments = Array.isArray(response?.data) ? response.data : [];
-
-            logger.debug('Fetched comments:', fetchedComments);
-
-            // Filter out comments from blocked users
-            const filteredComments = fetchedComments.filter(
-                (comment) => comment.user?.name !== 'Blocked User'
-            );
-
-            logger.debug('Filtered comments:', filteredComments);
-
-            if (filteredComments.length === 0) {
-                logger.debug('No more comments. Setting hasMoreComments to false.');
-                hasMoreComments.value = false;
-            } else {
-                comments.value.push(...filteredComments);
-                pageIndex.value += 1;
+            const response = await apiService.getComments(postId, { 
+                params: {
+                    limit,
+                    lastVisible
+                }
+            })
+    
+            if (!response.data?.code === '1000') {
+                throw new Error(response.data?.message || 'Failed to fetch comments')
             }
+    
+            const { comments: fetchedComments, lastVisible: newLastVisible } = response.data
 
-            const idb = await dbPromise;
-            const tx = idb.transaction('comments', 'readwrite');
-            filteredComments.forEach((comment) => tx.store.put(comment));
-            await tx.done;
-
-            return filteredComments;
+            if (!lastVisible) {
+                comments.value = fetchedComments
+            } else {
+                comments.value.push(...fetchedComments)
+            }
+    
+            lastVisible.value = newLastVisible
+            hasMoreComments.value = fetchedComments.length === limit
+    
+            return fetchedComments
         } catch (error) {
-            logger.error('Error in fetchComments:', error);
-            await handleError(error, router);
-            commentError.value = 'Failed to fetch comments';
-            return [];
+            logger.error('Error in fetchComments:', error)
+            commentError.value = 'Failed to fetch comments'
+            throw error
         } finally {
-            loadingComments.value = false;
+            loadingComments.value = false
         }
-    };
-
+    }
+    
     const addComment = async (postId, content) => {
         try {
             if (!navigator.onLine) {
-                return await addOfflineComment(postId, content);
+                return await addOfflineComment(postId, content)
             }
-
+    
             const response = await apiService.addComment(postId, content);
-            const newComment = response.data;
-
-            logger.debug('New comment from API:', newComment);
-
-            comments.value.unshift(newComment);
-            logger.debug('Updated comments in store:', comments.value);
-
-            const idb = await dbPromise;
-            await idb.add('comments', newComment);
-
-            // Add comment to Firestore
-            await addDoc(collection(db, 'comments', postId, 'commentList'), newComment);
-
-            return newComment;
+    
+            // Kiểm tra response code từ server
+            if (response.data.code !== '1000') {
+                throw new Error(response.data.message || 'Failed to add comment')
+            }
+    
+            // Tạo comment mới với dữ liệu từ response
+            const newComment = {
+                commentId: response.data.commentId,
+                content: content,
+                createdAt: new Date().toISOString(),
+                author: {
+                    userId: response.data.userId,
+                    userName: response.data.userName,
+                    avatar: response.data.avatar
+                }
+            }
+    
+            comments.value.unshift(newComment)
+            return newComment
         } catch (error) {
             if (!navigator.onLine) {
-                return await addOfflineComment(postId, content);
+                return await addOfflineComment(postId, content)
             }
-            logger.error('Failed to add comment:', error);
-            throw error;
+            throw error
         }
-    };
+    }
 
     const addOfflineComment = async (postId, content) => {
         const offlineComment = {

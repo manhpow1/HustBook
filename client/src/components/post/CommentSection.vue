@@ -33,8 +33,8 @@
                     </p>
                 </div>
 
-                <Button @click.prevent="onAddComment" :disabled="isSubmitting"
-                    class="w-full sm:w-auto" data-testid="post-comment-button">
+                <Button @click.prevent="onAddComment" :disabled="isSubmitting" class="w-full sm:w-auto"
+                    data-testid="post-comment-button">
                     <Loader2Icon v-if="isSubmitting" class="mr-2 h-4 w-4 animate-spin" />
                     {{ isSubmitting ? 'Posting...' : 'Comment' }}
                 </Button>
@@ -191,13 +191,19 @@ const onDeleteComment = async (comment) => {
 const onRetryLoadComments = async () => {
     commentStore.resetComments()
     try {
-        const result = await commentStore.fetchComments(props.postId, 10)
+        const result = await commentStore.fetchComments(props.postId)
         if (!result?.length) {
             notificationStore.showNotification('No comments found', 'warning')
         }
     } catch (error) {
-        notificationStore.showNotification('Failed to load comments', 'error')
-        await handleError(error)
+        if (error.code === '9992') {
+            notificationStore.showNotification('Post not found', 'error')
+        } else if (error.code === '1004') {
+            notificationStore.showNotification('Invalid pagination token', 'error')
+        } else {
+            notificationStore.showNotification('Failed to load comments', 'error')
+            await handleError(error)
+        }
     }
 }
 
@@ -205,7 +211,11 @@ const onLoadMoreComments = debounce(async () => {
     if (isLoadingMore.value) return
     isLoadingMore.value = true
     try {
-        const newComments = await commentStore.fetchComments(props.postId, 10)
+        const newComments = await commentStore.fetchComments(
+            props.postId, 
+            20,
+            commentStore.lastVisible
+        )
         if (newComments.length === 0) {
             commentStore.hasMoreComments = false
         }
@@ -222,6 +232,7 @@ const retrySyncComments = async () => {
         await commentStore.syncOfflineComments()
         syncError.value = null
         notificationStore.showNotification('Comments synced successfully', 'success')
+        await onRetryLoadComments()
     } catch (error) {
         syncError.value = 'Failed to sync comments. Please try again.'
         notificationStore.showNotification('Failed to sync comments', 'error')
