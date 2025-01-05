@@ -502,10 +502,27 @@ class UserService {
                 }
 
                 // Ensure avatar is always a string
-                const sanitizedData = {
-                    ...updateData,
-                    avatar: updateData.avatar || ''
+                // Ensure all string fields are properly encoded
+                const encodeUtf8 = (value) => {
+                    if (typeof value === 'string') {
+                        try {
+                            // Normalize to NFC form and encode
+                            return value.normalize('NFC');
+                        } catch (error) {
+                            logger.warn('Failed to normalize string', { value, error });
+                            return value;
+                        }
+                    }
+                    return value;
                 };
+
+                // Create sanitized data with proper encoding
+                const sanitizedData = Object.fromEntries(
+                    Object.entries({
+                        ...updateData,
+                        avatar: updateData.avatar || ''
+                    }).map(([key, value]) => [key, encodeUtf8(value)])
+                );
 
                 const updatePayload = {
                     ...sanitizedData,
@@ -513,6 +530,22 @@ class UserService {
                     lastModifiedAt: currentTime,
                     updatedAt: new Date().toISOString()
                 };
+
+                // Validate encoding of critical fields
+                const criticalFields = ['userName', 'fullName', 'bio', 'address', 'city', 'country'];
+                for (const field of criticalFields) {
+                    if (sanitizedData[field] && typeof sanitizedData[field] === 'string') {
+                        try {
+                            Buffer.from(sanitizedData[field], 'utf8').toString('utf8');
+                        } catch (error) {
+                            logger.warn('Invalid UTF-8 encoding in field - using original value', { 
+                                field, 
+                                value: sanitizedData[field],
+                                error: error.message
+                            });
+                        }
+                    }
+                }
 
                 transaction.update(userRef, updatePayload);
                 logger.info(`Updated user info for user ${userId}`, {

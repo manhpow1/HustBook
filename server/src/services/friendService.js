@@ -81,10 +81,43 @@ class FriendService {
                 .limit(count);
 
             const snapshot = await friendsRef.get();
-            const friends = snapshot.docs.map(doc => ({
-                userId: doc.id,
-                ...doc.data(),
-            }));
+            
+            // Return empty array if no friends
+            if (snapshot.empty) {
+                return {
+                    friends: [],
+                    total: '0'
+                };
+            }
+
+            // Get user documents for each friend
+            const userDocs = await Promise.all(
+                snapshot.docs.map(doc => 
+                    db.collection(collections.users).doc(doc.id).get()
+                )
+            );
+
+            // Create map of user data
+            const userMap = new Map();
+            userDocs.forEach(doc => {
+                if (doc.exists) {
+                    userMap.set(doc.id, {
+                        userName: doc.data().userName || ''
+                    });
+                }
+            });
+
+            // Format friends with user data
+            const friends = snapshot.docs.map(doc => {
+                const friendData = doc.data();
+                const userData = userMap.get(doc.id) || {};
+                
+                return {
+                    userId: doc.id,
+                    userName: userData.userName || '',
+                    ...friendData
+                };
+            });
 
             const totalCountSnapshot = await db.collection(collections.friends)
                 .doc(userId)
@@ -181,7 +214,7 @@ class FriendService {
                         const mutualFriends = [...userFriendIds].filter(id => theirFriendIds.has(id)).length;
 
                         return {
-                            userId: userDoc.userId,
+                            userId: userDoc.id,
                             userData: userDoc.data(),
                             mutualFriends,
                         };
