@@ -52,7 +52,7 @@
             </AlertDescription>
         </Alert>
 
-        <div v-if="comments.length > 0" class="space-y-4">
+        <div v-if="comments?.length > 0" class="space-y-4">
             <h3 class="text-lg font-semibold">Comments</h3>
             <ScrollArea class="h-[600px]">
                 <TransitionGroup name="comment-list" tag="div" class="space-y-4">
@@ -89,6 +89,8 @@ import { useFormValidation } from '@/composables/useFormValidation'
 import { debounce } from 'lodash-es'
 import logger from '@/services/logging'
 import { storeToRefs } from 'pinia'
+const commentStore = useCommentStore()
+const { comments, loadingComments, commentError, hasMoreComments, lastVisible } = storeToRefs(commentStore)
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
@@ -108,12 +110,10 @@ const props = defineProps({
         type: String,
         required: true
     }
-})
+});
 
 const emit = defineEmits(['close'])
 
-// Store initialization
-const commentStore = useCommentStore()
 const notificationStore = useNotificationStore()
 const { handleError } = useErrorHandler()
 
@@ -125,9 +125,6 @@ const isSubmitting = ref(false)
 const isLoadingMore = ref(false)
 const offlineMode = ref(!navigator.onLine)
 const syncError = ref(null)
-
-// Store refs
-const { comments, hasMoreComments, loadingComments, commentError } = storeToRefs(commentStore)
 
 // Debounced input validation
 const debouncedValidateInput = debounce((input, errorRef) => {
@@ -146,14 +143,23 @@ const onInput = () => {
 }
 
 const onAddComment = async () => {
+    if (!newComment.value.trim()) {
+        inputError.value = 'Comment cannot be empty'
+        return
+    }
     isSubmitting.value = true
     try {
-        await commentStore.addComment(props.postId, newComment.value.trim())
+        const comment = await commentStore.addComment(props.postId, newComment.value.trim())
+        // Add the new comment to the top of the list
+        if (comment) {
+            comments.value.unshift(comment)
+        }
         newComment.value = ''
         notificationStore.showNotification('Comment posted successfully', 'success')
         logger.info('Comment posted successfully', { postId: props.postId })
     } catch (error) {
         await handleError(error)
+        inputError.value = 'Failed to post comment'
     } finally {
         isSubmitting.value = false
     }
@@ -191,15 +197,20 @@ const onDeleteComment = async (comment) => {
 const onRetryLoadComments = async () => {
     commentStore.resetComments()
     try {
-        const result = await commentStore.fetchComments(props.postId)
-        if (!result?.length) {
+        const { comments: newComments } = await commentStore.fetchComments(props.postId, 20, lastVisible.value)
+        if (!newComments?.length) {
             notificationStore.showNotification('No comments found', 'warning')
         }
+        // Update comments reactively
+        comments.value = newComments || []
     } catch (error) {
         if (error.code === '9992') {
             notificationStore.showNotification('Post not found', 'error')
+            emit('close')
         } else if (error.code === '1004') {
             notificationStore.showNotification('Invalid pagination token', 'error')
+            commentStore.resetComments()
+            await commentStore.fetchComments(props.postId)
         } else {
             notificationStore.showNotification('Failed to load comments', 'error')
             await handleError(error)
@@ -212,9 +223,9 @@ const onLoadMoreComments = debounce(async () => {
     isLoadingMore.value = true
     try {
         const newComments = await commentStore.fetchComments(
-            props.postId, 
+            props.postId,
             20,
-            commentStore.lastVisible
+            lastVisible.value
         )
         if (newComments.length === 0) {
             commentStore.hasMoreComments = false
@@ -249,12 +260,25 @@ const checkOnlineStatus = () => {
 }
 
 // Lifecycle hooks
-onMounted(() => {
-    onRetryLoadComments()
-    commentStore.syncOfflineComments().catch((error) => {
-        syncError.value = 'Failed to sync offline comments'
-        notificationStore.showNotification('Failed to sync offline comments', 'error')
-    })
+onMounted(async () => {
+    try {
+        await commentStore.resetComments()
+        const { comments: initialComments } = await commentStore.fetchComments(props.postId)
+        comments.value = initialComments || []
+        
+        if (navigator.onLine) {
+            await commentStore.syncOfflineComments()
+        }
+    } catch (error) {
+        if (error.code === '9992') {
+            notificationStore.showNotification('Post not found', 'error')
+            emit('close')
+        } else {
+            syncError.value = 'Failed to sync offline comments'
+            notificationStore.showNotification('Failed to sync offline comments', 'error')
+            logger.error('Error in CommentSection mount:', error)
+        }
+    }
 
     window.addEventListener('online', checkOnlineStatus)
     window.addEventListener('offline', checkOnlineStatus)

@@ -99,14 +99,21 @@ export const useNotificationStore = defineStore('notification', () => {
         }
     }
 
-    async function removeNotification(id) {
+    async function removeNotification(notificationId) {
         try {
-            await apiService.deleteNotification(id);
-            notifications.value = notifications.value.filter((n) => n.id !== id);
-            toast({ type: 'success', message: 'Notification removed' });
+            await apiService.deleteNotification(notificationId);
+            notifications.value = notifications.value.filter((n) => n.notificationId !== notificationId);
+            toast({
+                title: "Success",
+                description: "Notification removed successfully"
+            });
         } catch (error) {
-            logger.error(`Failed to remove notification with ID ${id}:`, error);
-            toast({ type: 'error', message: 'Failed to remove notification' });
+            logger.error(`Failed to remove notification with ID ${notificationId}:`, error);
+            toast({
+                title: "Error",
+                description: "Failed to remove notification",
+                variant: "destructive"
+            });
         }
     }
 

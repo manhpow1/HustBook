@@ -158,8 +158,7 @@ const showReportPostModal = ref(false);
 
 // Store refs
 const { currentPost: post, loading, error } = storeToRefs(postStore);
-const { comments, loadingComments, commentError, loadingMoreComments } =
-    storeToRefs(postStore);
+const { comments, loadingComments, commentError, loadingMoreComments } = storeToRefs(commentStore);
 
 // Computed
 const isOwnPost = computed(() => {

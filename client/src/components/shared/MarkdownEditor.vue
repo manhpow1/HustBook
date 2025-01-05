@@ -76,7 +76,7 @@
 </template>
 
 <script setup>
-import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue';
+import { ref, computed, watch, onMounted, onBeforeUnmount, nextTick } from 'vue';
 import { BoldIcon, ItalicIcon, CodeIcon, ListIcon, LinkIcon, ImageIcon, QuoteIcon, UndoIcon, RedoIcon, SmileIcon, MaximizeIcon, MinimizeIcon, EyeIcon, PencilIcon } from 'lucide-vue-next';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -165,8 +165,11 @@ const insertMarkdown = (syntax) => {
 
     localContent.value = before + insertText + after;
     nextTick(() => {
-        textareaEl.focus();
-        textareaEl.setSelectionRange(newSelectionStart, newSelectionEnd);
+        const nativeTextarea = textareaEl.$el;
+        if (nativeTextarea) {
+            nativeTextarea.focus();
+            nativeTextarea.setSelectionRange(newSelectionStart, newSelectionEnd);
+        }
     });
     onInput();
 };
@@ -198,8 +201,11 @@ const insertEmoji = (emoji) => {
 
     localContent.value = before + emoji + after;
     nextTick(() => {
-        textareaEl.focus();
-        textareaEl.setSelectionRange(start + emoji.length, start + emoji.length);
+        const nativeTextarea = textareaEl.$el;
+        if (nativeTextarea) {
+            nativeTextarea.focus();
+            nativeTextarea.setSelectionRange(start + emoji.length, start + emoji.length);
+        }
     });
     onInput();
     showEmojiPicker.value = false;

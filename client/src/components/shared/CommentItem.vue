@@ -3,16 +3,16 @@
         <CardContent class="p-4">
             <div class="flex space-x-4">
                 <Avatar>
-                    <AvatarImage :src="comment.user.avatar" :alt="comment.user.userName" />
+                    <AvatarImage :src="commentData.user.avatar" :alt="commentData.user.userName" />
                     <AvatarFallback>
-                        {{ getInitials(comment.user.userName) }}
+                        {{ getInitials(commentData.user.userName) }}
                     </AvatarFallback>
                 </Avatar>
                 <div class="flex-1 space-y-2">
                     <div class="flex items-center justify-between">
                         <div class="flex items-center space-x-2">
                             <h4 class="font-semibold">
-                                {{ comment.user.userName }}
+                                {{ commentData.user.userName }}
                             </h4>
                             <span class="text-sm text-muted-foreground">
                                 {{ formattedDate }}
@@ -55,11 +55,11 @@
                         </div>
                     </div>
                     <div class="flex items-center space-x-4 pt-2">
-                        <Button variant="ghost" size="sm" :class="{ 'text-primary': comment.isLiked }"
+                        <Button variant="ghost" size="sm" :class="{ 'text-primary': commentData.isLiked }"
                             @click="toggleLike" :disabled="isLikeLoading">
-                            <ThumbsUpIcon class="h-4 w-4 mr-2" :class="{ 'fill-current': comment.isLiked }" />
-                            <span>{{ comment.like }}
-                                {{ comment.like === 1 ? "Like" : "Likes" }}</span>
+                            <ThumbsUpIcon class="h-4 w-4 mr-2" :class="{ 'fill-current': commentData.isLiked }" />
+                            <span>{{ commentData.like }}
+                                {{ commentData.like === 1 ? "Like" : "Likes" }}</span>
                             <Loader2Icon v-if="isLikeLoading" class="ml-2 h-4 w-4 animate-spin" />
                         </Button>
                         <Button variant="ghost" size="sm" @click="toggleReply">
@@ -133,18 +133,27 @@ const props = defineProps({
         type: Object,
         required: true,
         validator(comment) {
-            return [
-                "commentId",
-                "content",
-                "created",
-                "like",
-                "isLiked",
-                "user",
-            ].every((prop) => prop in comment) &&
-            ["userId", "userName", "avatar"].every((prop) => prop in comment.user);
+            return comment && typeof comment === 'object' && 
+                   comment.commentId && 
+                   typeof comment.content === 'string' &&
+                   comment.user && typeof comment.user === 'object';
         },
     },
 });
+
+// Computed properties for safe access to comment data
+const commentData = computed(() => ({
+    commentId: props.comment.commentId,
+    content: props.comment.content || '',
+    created: props.comment.createdAt?.toDate?.()?.toISOString() || props.comment.created || new Date().toISOString(),
+    like: parseInt(props.comment.likes || props.comment.like || 0),
+    isLiked: Boolean(props.comment.isLiked || false),
+    user: {
+        userId: props.comment.userId || props.comment.user?.userId || '',
+        userName: props.comment.userName || props.comment.user?.userName || 'Anonymous User',
+        avatar: props.comment.avatar || props.comment.user?.avatar || ''
+    }
+}));
 
 const emit = defineEmits(["update", "delete"]);
 const userStore = useUserStore();
@@ -158,15 +167,15 @@ const showDeleteDialog = ref(false);
 
 // Computed
 const canEditDelete = computed(
-    () => userStore?.userId === props.comment.userId
+    () => userStore?.userId === commentData.value.user.userId
 );
 const formattedDate = computed(() => {
-    const date = new Date(props.comment.created);
+    const date = new Date(commentData.value.created);
     return isNaN(date.getTime())
         ? "Invalid date"
         : formatDistanceToNow(date, { addSuffix: true });
 });
-const renderedContent = computed(() => renderMarkdown(props.comment.content));
+const renderedContent = computed(() => renderMarkdown(commentData.value.content));
 const getInitials = (name) => {
     if (!name) return "";
     return name

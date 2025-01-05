@@ -371,16 +371,13 @@ class PostService {
                     commentId: comment.commentId,
                     content: comment.content,
                     created: comment.createdAt.toDate().toISOString(),
-                    like: 0,
-                    isLiked: false,
+                    like: comment.likes || 0,
+                    isLiked: comment.isLiked || false,
                     user: {
                         userId: comment.userId,
                         userName: userData?.userName || 'Anonymous User',
                         avatar: userData?.avatar || ''
-                    },
-                    isAuthor: comment.userId === userId,
-                    canEdit: comment.userId === userId || post.data().userId === userId,
-                    canDelete: comment.userId === userId || post.data().userId === userId
+                    }
                 };
             }));
 

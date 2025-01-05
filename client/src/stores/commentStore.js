@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia';
-import { ref } from 'vue';
+import { ref, reactive, toRefs } from 'vue';
 import { openDB } from 'idb';
 import apiService from '../services/api';
 import { useErrorHandler } from '@/utils/errorHandler';
@@ -8,12 +8,14 @@ import { collection, addDoc, onSnapshot, query, orderBy, limit } from 'firebase/
 import logger from '../services/logging';
 
 export const useCommentStore = defineStore('comment', () => {
-    const comments = ref([]);
-    const loadingComments = ref(false);
-    const commentError = ref(null);
-    const hasMoreComments = ref(true);
-    const pageIndex = ref(0);
-    const lastVisible = ref(null);
+    const state = reactive({
+        comments: [],
+        loadingComments: false,
+        commentError: null,
+        hasMoreComments: true,
+        pageIndex: 0,
+        lastVisible: null
+    })
     const { handleError } = useErrorHandler();
 
     const dbPromise = openDB('comments-store', 1, {
@@ -24,55 +26,63 @@ export const useCommentStore = defineStore('comment', () => {
     });
 
     const fetchComments = async (postId, limit = 20, lastVisible = null) => {
-        loadingComments.value = true
-        commentError.value = null
-    
+        state.loadingComments = true
+        state.commentError = null
+
         try {
-            const response = await apiService.getComments(postId, { 
+            const response = await apiService.getComments(postId, {
                 params: {
                     limit,
                     lastVisible
                 }
             })
-    
+
             if (!response.data?.code === '1000') {
                 throw new Error(response.data?.message || 'Failed to fetch comments')
             }
-    
-            const { comments: fetchedComments, lastVisible: newLastVisible } = response.data
+
+            if (response.data?.code !== '1000') {
+                throw new Error(response.data?.message || 'Failed to fetch comments')
+            }
+
+            const { comments, lastVisible: newLastVisible } = response.data.data
+
+            const validComments = comments?.filter(comment => 
+                comment && comment.commentId && comment.content && comment.user
+            ) || []
 
             if (!lastVisible) {
-                comments.value = fetchedComments
+                state.comments = validComments
             } else {
-                comments.value.push(...fetchedComments)
+                state.comments.push(...validComments)
             }
-    
-            lastVisible.value = newLastVisible
-            hasMoreComments.value = fetchedComments.length === limit
-    
-            return fetchedComments
+
+            state.lastVisible = newLastVisible
+            state.hasMoreComments = comments.length === limit
+
+            return comments
         } catch (error) {
             logger.error('Error in fetchComments:', error)
-            commentError.value = 'Failed to fetch comments'
+            state.commentError = 'Failed to fetch comments'
             throw error
         } finally {
-            loadingComments.value = false
+            state.loadingComments = false
         }
     }
-    
+
     const addComment = async (postId, content) => {
         try {
             if (!navigator.onLine) {
                 return await addOfflineComment(postId, content)
             }
-    
+
             const response = await apiService.addComment(postId, content);
-    
+
             // Kiểm tra response code từ server
             if (response.data.code !== '1000') {
                 throw new Error(response.data.message || 'Failed to add comment')
             }
-    
+
             // Tạo comment mới với dữ liệu từ response
             const newComment = {
                 commentId: response.data.commentId,
@@ -86,8 +96,8 @@ export const useCommentStore = defineStore('comment', () => {
                     avatar: response.data.avatar || ''
                 }
             }
-    
-            comments.value.unshift(newComment)
+
+            state.comments.unshift(newComment)
             return newComment
         } catch (error) {
             if (!navigator.onLine) {
@@ -105,7 +115,7 @@ export const useCommentStore = defineStore('comment', () => {
             createdAt: new Date().toISOString(),
             isOffline: true
         };
-        comments.value.unshift(offlineComment);
+        state.comments.unshift(offlineComment);
 
         const idb = await dbPromise;
         await idb.add('offline-comments', offlineComment);
@@ -119,9 +129,9 @@ export const useCommentStore = defineStore('comment', () => {
             const updatedComment = response.data;
             // Validate and sanitize the updated comment
             const sanitizedComment = sanitizeComment(updatedComment);
-            const index = comments.value.findIndex(c => c.commentId === commentId);
+            const index = state.comments.findIndex(c => c.commentId === commentId);
             if (index !== -1) {
-                comments.value[index] = sanitizedComment;
+                state.comments[index] = sanitizedComment;
             }
             return sanitizedComment;
         } catch (error) {
@@ -133,7 +143,7 @@ export const useCommentStore = defineStore('comment', () => {
     const deleteComment = async (postId, commentId) => {
         try {
             await apiService.deleteComment(postId, commentId);
-            comments.value = comments.value.filter(c => c.commentId !== commentId);
+            state.comments = state.comments.filter(c => c.commentId !== commentId);
         } catch (error) {
             console.error('Failed to delete comment:', error);
             throw error;
@@ -141,15 +151,16 @@ export const useCommentStore = defineStore('comment', () => {
     };
 
     const resetComments = () => {
-        comments.value = [];
-        pageIndex.value = 0;
-        lastVisible.value = null;
-        hasMoreComments.value = true;
-        commentError.value = null;
+        state.comments = [];
+        state.pageIndex = 0;
+        state.lastVisible = null;
+        state.hasMoreComments = true;
+        state.commentError = null;
+        state.lastVisible = null;
     };
 
     const prefetchComments = async (postId) => {
-        if (comments.value.length === 0 && !loadingComments.value) {
+        if (state.comments.length === 0 && !state.loadingComments) {
             await fetchComments(postId);
         }
     };
@@ -165,9 +176,9 @@ export const useCommentStore = defineStore('comment', () => {
                 await idb.delete('offline-comments', comment.tempId);
                 await idb.add('comments', sanitizedComment);
 
-                const index = comments.value.findIndex(c => c.tempId === comment.tempId);
+                const index = state.comments.findIndex(c => c.tempId === comment.tempId);
                 if (index !== -1) {
-                    comments.value[index] = sanitizedComment; // Safely update the synced comment
+                    state.comments[index] = sanitizedComment; // Safely update the synced comment
                 }
                 // Add synced comment to Firestore
                 await addDoc(collection(db, 'comments', comment.postId, 'commentList'), sanitizedComment);
@@ -184,14 +195,14 @@ export const useCommentStore = defineStore('comment', () => {
             snapshot.docChanges().forEach((change) => {
                 if (change.type === 'added') {
                     const newComment = { commentId: change.doc.id, ...change.doc.data() };
-                    if (!comments.value.some(comment => comment.commentId === newComment.commentId)) {
-                        comments.value.unshift(newComment);
+                    if (!state.comments.some(comment => comment.commentId === newComment.commentId)) {
+                        state.comments.unshift(newComment);
                     }
                 }
             });
         }, (error) => {
             console.error('Error in realtime comments:', error);
-            commentError.value = 'Failed to setup realtime comments';
+            state.commentError = 'Failed to setup realtime comments';
         });
         return unsubscribe;
     };
@@ -207,10 +218,7 @@ export const useCommentStore = defineStore('comment', () => {
     }
 
     return {
-        comments,
-        loadingComments,
-        commentError,
-        hasMoreComments,
+        ...toRefs(state),
         fetchComments,
         addComment,
         updateComment,
@@ -219,5 +227,5 @@ export const useCommentStore = defineStore('comment', () => {
         prefetchComments,
         syncOfflineComments,
         setupRealtimeComments,
-    };
+    }
 });
