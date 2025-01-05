@@ -176,11 +176,6 @@ const openAdvancedOptions = () => {
 const { currentPost: post, loading, error } = storeToRefs(postStore);
 const { comments, loadingComments, commentError, loadingMoreComments } = storeToRefs(commentStore);
 
-// Computed
-const isOwnPost = computed(() => {
-    return post.value?.userId === userStore.user?.userId
-});
-
 const { createMediaList } = useMediaUtils();
 
 const mediaList = computed(() => {
@@ -351,6 +346,12 @@ const sharePost = async () => {
 const toggleContent = () => {
     showFullContent.value = !showFullContent.value;
 };
+
+const isOwnPost = computed(() => {
+    // Only compute once post data is loaded
+    if (!post.value) return false;
+    return post.value.userId === userStore.user?.userId;
+});
 
 const focusCommentInput = () => {
     document.querySelector(".comment-input")?.focus();
