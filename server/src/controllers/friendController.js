@@ -16,10 +16,6 @@ class FriendController {
 
             const result = await friendService.getRequestedFriends(userId, parseInt(index), parseInt(count));
 
-            if (result.requests.length === 0) {
-                throw createError('9994');
-            }
-
             sendResponse(res, '1000', {
                 request: result.requests,
                 total: result.total,
@@ -38,8 +34,13 @@ class FriendController {
 
             const { index, count } = value;
 
+            const userId = req.user.userId;
+            if (typeof userId !== 'string') {
+                throw createError('1002', '"userId" must be a string');
+            }
+
             const result = await friendService.getUserFriends(
-                req.user.userId,
+                userId,
                 parseInt(count),
                 parseInt(index)
             );
@@ -62,7 +63,7 @@ class FriendController {
 
             const { userId, isAccept } = req.body;
 
-            await friendService.setAcceptFriend(userId, userId, isAccept);
+            await friendService.setAcceptFriend(req.user.userId, userId, isAccept);
 
             sendResponse(res, '1000', {
                 message: isAccept === '1' ? 'Friend request accepted' : 'Friend request rejected',
