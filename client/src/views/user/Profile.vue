@@ -14,7 +14,12 @@
         <AlertTitle>Error</AlertTitle>
         <AlertDescription>
           {{ error }}
-          <Button variant="outline" size="sm" class="mt-2" @click="fetchUserData">
+          <Button
+            variant="outline"
+            size="sm"
+            class="mt-2"
+            @click="fetchUserData"
+          >
             Retry
           </Button>
         </AlertDescription>
@@ -24,10 +29,18 @@
         <!-- Cover Image Section -->
         <Card class="relative overflow-hidden">
           <div class="h-48 relative">
-            <img :src="user?.cover_image || '/default-cover.jpg'" :alt="`${user?.userName || 'User'}'s cover`"
-              class="w-full h-full object-cover" />
+            <img
+              :src="user?.cover_image || '/default-cover.jpg'"
+              :alt="`${user?.userName || 'User'}'s cover`"
+              class="w-full h-full object-cover"
+            />
             <div class="absolute top-4 right-4 flex space-x-2">
-              <Button v-if="isCurrentUser" variant="secondary" size="sm" @click="uploadCoverPhoto">
+              <Button
+                v-if="isCurrentUser"
+                variant="secondary"
+                size="sm"
+                @click="uploadCoverPhoto"
+              >
                 <Pencil class="h-4 w-4 mr-2" />
                 Edit Cover
               </Button>
@@ -58,7 +71,11 @@
               <CardContent>
                 <div class="space-y-4">
                   <div class="flex justify-center space-x-2">
-                    <Button v-if="isCurrentUser" variant="outline" @click="router.push('/settings')">
+                    <Button
+                      v-if="isCurrentUser"
+                      variant="outline"
+                      @click="router.push('/settings')"
+                    >
                       <Settings class="h-4 w-4 mr-2" />
                       Edit Profile
                     </Button>
@@ -66,7 +83,11 @@
                       <MessageSquare class="h-4 w-4 mr-2" />
                       Message
                     </Button>
-                    <Button v-if="!isCurrentUser" variant="outline" @click="handleFriendAction">
+                    <Button
+                      v-if="!isCurrentUser"
+                      variant="outline"
+                      @click="handleFriendAction"
+                    >
                       <UserPlus class="h-4 w-4 mr-2" />
                       {{ isFriend ? "Unfriend" : "Add Friend" }}
                     </Button>
@@ -81,8 +102,12 @@
                     </div>
                     <div v-if="user?.link" class="flex items-center text-sm">
                       <Globe class="h-4 w-4 mr-2" />
-                      <a :href="user.link" target="_blank" rel="noopener noreferrer"
-                        class="text-primary hover:underline">
+                      <a
+                        :href="user.link"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        class="text-primary hover:underline"
+                      >
                         External Link
                       </a>
                     </div>
@@ -95,14 +120,22 @@
             <Card class="mt-6">
               <CardHeader>
                 <CardTitle class="text-xl">Friends</CardTitle>
-                <CardDescription>{{ user?.friends_count || 0 }} friends</CardDescription>
+                <CardDescription
+                  >{{ user?.friends_count || 0 }} friends</CardDescription
+                >
               </CardHeader>
               <CardContent>
                 <div class="grid grid-cols-3 gap-2">
-                  <div v-for="friend in friends && friends.slice(0, 6)" :key="friend.id"
-                    class="flex flex-col items-center">
+                  <div
+                    v-for="friend in friends && friends.slice(0, 6)"
+                    :key="friend.id"
+                    class="flex flex-col items-center"
+                  >
                     <Avatar class="h-16 w-16">
-                      <AvatarImage :src="friend.avatar" :alt="friend.userName" />
+                      <AvatarImage
+                        :src="friend.avatar"
+                        :alt="friend.userName"
+                      />
                       <AvatarFallback>{{
                         getInitials(friend.userName)
                       }}</AvatarFallback>
@@ -112,7 +145,11 @@
                     }}</span>
                   </div>
                 </div>
-                <Button variant="ghost" class="w-full mt-4" @click="viewAllFriends">
+                <Button
+                  variant="ghost"
+                  class="w-full mt-4"
+                  @click="viewAllFriends"
+                >
                   View All Friends
                 </Button>
               </CardContent>
@@ -132,8 +169,15 @@
                   <CardHeader>
                     <CardTitle>Posts</CardTitle>
                     <div class="flex items-center space-x-2">
-                      <Input v-model="postSearchQuery" placeholder="Search posts..." class="max-w-sm" />
-                      <Button variant="outline" @click="searchStore.searchPosts">
+                      <Input
+                        v-model="postSearchQuery"
+                        placeholder="Search posts..."
+                        class="max-w-sm"
+                      />
+                      <Button
+                        variant="outline"
+                        @click="searchStore.searchPosts"
+                      >
                         <Search class="h-4 w-4" />
                       </Button>
                     </div>
@@ -142,18 +186,31 @@
                     <div v-if="loadingPosts" class="space-y-4">
                       <Skeleton v-for="i in 3" :key="i" class="h-32" />
                     </div>
-                    <div v-else-if="postError" class="text-center py-4 text-red-500">
+                    <div
+                      v-else-if="postError"
+                      class="text-center py-4 text-red-500"
+                    >
                       {{ postError }}
                     </div>
-                    <div v-else-if="filteredPosts.length === 0" class="text-center py-4">
+                    <div
+                      v-else-if="filteredPosts.length === 0"
+                      class="text-center py-4"
+                    >
                       No posts found
                     </div>
                     <div v-else class="space-y-4">
-                      <Card v-for="post in filteredPosts" :key="post.postId" class="overflow-hidden">
+                      <Card
+                        v-for="post in filteredPosts"
+                        :key="post.postId"
+                        class="overflow-hidden"
+                      >
                         <CardHeader>
                           <div class="flex items-center space-x-4">
                             <Avatar>
-                              <AvatarImage :src="post.author?.avatar" :alt="post.author?.userName" />
+                              <AvatarImage
+                                :src="post.author?.avatar"
+                                :alt="post.author?.userName"
+                              />
                               <AvatarFallback>{{
                                 getInitials(post.author?.userName || "")
                               }}</AvatarFallback>
@@ -172,16 +229,23 @@
                           <p class="text-sm">{{ post.content }}</p>
                           <div v-if="post.media?.length" class="mt-4">
                             <AspectRatio :ratio="16 / 9">
-                              <img :src="post.media[0]" :alt="post.content"
-                                class="rounded-md object-cover w-full h-full" />
+                              <img
+                                :src="post.media[0]"
+                                :alt="post.content"
+                                class="rounded-md object-cover w-full h-full"
+                              />
                             </AspectRatio>
                           </div>
                         </CardContent>
                       </Card>
                     </div>
 
-                    <Button v-if="hasMorePosts && !loadingPosts" variant="outline" class="w-full mt-4"
-                      @click="loadMorePosts">
+                    <Button
+                      v-if="hasMorePosts && !loadingPosts"
+                      variant="outline"
+                      class="w-full mt-4"
+                      @click="loadMorePosts"
+                    >
                       Load More
                     </Button>
                   </CardContent>
@@ -199,13 +263,21 @@
                       <p class="mt-4 text-muted-foreground">No videos found</p>
                     </div>
                     <div v-else class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      <Card v-for="video in userVideos" :key="video.id"
+                      <Card
+                        v-for="video in userVideos"
+                        :key="video.id"
                         class="overflow-hidden cursor-pointer hover:shadow-lg transition-shadow"
-                        @click="openVideoModal(video)">
+                        @click="openVideoModal(video)"
+                      >
                         <AspectRatio :ratio="16 / 9">
-                          <img :src="video.thumbnail" :alt="video.title" class="object-cover w-full h-full" />
+                          <img
+                            :src="video.thumbnail"
+                            :alt="video.title"
+                            class="object-cover w-full h-full"
+                          />
                           <div
-                            class="absolute bottom-2 right-2 bg-black bg-opacity-75 text-white text-xs px-2 py-1 rounded">
+                            class="absolute bottom-2 right-2 bg-black bg-opacity-75 text-white text-xs px-2 py-1 rounded"
+                          >
                             {{ formatDuration(video.duration) }}
                           </div>
                         </AspectRatio>
@@ -264,7 +336,12 @@
           <DialogHeader>
             <DialogTitle>{{ selectedVideo?.title }}</DialogTitle>
           </DialogHeader>
-          <video v-if="selectedVideo" :src="selectedVideo.url" controls class="w-full rounded-lg" />
+          <video
+            v-if="selectedVideo"
+            :src="selectedVideo.url"
+            controls
+            class="w-full rounded-lg"
+          />
         </DialogContent>
       </Dialog>
     </ErrorBoundary>
@@ -273,6 +350,7 @@
 
 <script setup>
 import { ref, onMounted, computed, watch } from "vue";
+import { storeToRefs } from "pinia";
 import { useRoute, useRouter } from "vue-router";
 import { useUserStore } from "@/stores/userStore";
 import { useSearchStore } from "@/stores/searchStore";
@@ -325,7 +403,6 @@ import {
 } from "lucide-vue-next";
 import ErrorBoundary from "@/components/shared/ErrorBoundary.vue";
 
-const route = useRoute();
 const router = useRouter();
 const userStore = useUserStore();
 const videoStore = useVideoStore();
@@ -343,10 +420,11 @@ const userVideos = ref([]);
 const postSearchQuery = ref("");
 const showVideoModal = ref(false);
 const selectedVideo = ref(null);
+const { userData } = storeToRefs(userStore);
 
 // Computed properties
 const isCurrentUser = computed(
-  () => userStore.user?.userId === route.params.userId
+  () => userStore.user?.userId === userData?.userId
 );
 const truncatedDescription = computed(() => {
   const desc = user.value?.description;
@@ -385,7 +463,7 @@ const fetchUserData = async () => {
   loading.value = true;
   error.value = null;
   try {
-    const userId = route.params.userId;
+    const userId = userData?.userId
     user.value = await userStore.getUserProfile(userId);
     if (user.value) {
       friends.value = await friendStore.getUserFriends({ userId });
@@ -406,7 +484,7 @@ const fetchPostsForUser = async () => {
   try {
     loadingPosts.value = true;
     postStore.resetPosts();
-    const userId = route.params.userId;
+    const userId = userData?.userId;
     await postStore.getUserPosts(userId);
   } catch (err) {
     postError.value = "Failed to load user posts.";
@@ -418,13 +496,13 @@ const fetchPostsForUser = async () => {
 
 const loadMorePosts = () => {
   if (!postStore.hasMorePosts) return;
-  const userId = route.params.userId;
+  const userId = userData?.userId;
   postStore.getUserPosts(userId);
 };
 
 const handleFriendAction = async () => {
   try {
-    const userId = route.params.userId;
+    const userId = userData?.userId;
     if (isFriend.value) {
       await friendStore.removeFriend(userId);
       toast({
@@ -448,21 +526,21 @@ const handleFriendAction = async () => {
 };
 
 const sendMessage = () => {
-  const userId = route.params.userId;
+  const userId = userData?.userId;
   router.push({ name: "Messages", query: { userId } });
 };
 
 const viewAllFriends = () => {
-  const userId = route.params.userId;
+  const userId = userData?.userId;
   router.push({ name: "Friends", params: { id: userId } });
 };
 
 const uploadCoverPhoto = async () => {
   try {
     // Tạo input element ẩn để chọn file
-    const input = document.createElement('input');
-    input.type = 'file';
-    input.accept = 'image/jpeg,image/png,image/gif';
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = "image/jpeg,image/png,image/gif";
 
     input.onchange = async (e) => {
       const file = e.target.files[0];
@@ -474,17 +552,17 @@ const uploadCoverPhoto = async () => {
         toast({
           title: "Error",
           description: "File size should not exceed 5MB",
-          variant: "destructive"
+          variant: "destructive",
         });
         return;
       }
 
       // Validate file type
-      if (!['image/jpeg', 'image/png', 'image/gif'].includes(file.type)) {
+      if (!["image/jpeg", "image/png", "image/gif"].includes(file.type)) {
         toast({
           title: "Error",
           description: "Only accepts image files in JPG, PNG or GIF format",
-          variant: "destructive"
+          variant: "destructive",
         });
         return;
       }
@@ -494,7 +572,7 @@ const uploadCoverPhoto = async () => {
 
         // Tạo FormData để upload
         const formData = new FormData();
-        formData.append('coverPhoto', file);
+        formData.append("coverPhoto", file);
 
         // Update profile qua userStore
         const response = await userStore.updateUserProfile(formData);
@@ -502,7 +580,7 @@ const uploadCoverPhoto = async () => {
         if (response) {
           user.value = {
             ...user.value,
-            coverPhoto: response.coverPhoto
+            coverPhoto: response.coverPhoto,
           };
 
           toast({
@@ -510,28 +588,26 @@ const uploadCoverPhoto = async () => {
             description: "Đã cập nhật ảnh bìa",
           });
         }
-
       } catch (err) {
-        const errorMessage = err.message || 'Failed to update cover photo';
+        const errorMessage = err.message || "Failed to update cover photo";
         toast({
           title: "Lỗi",
           description: errorMessage,
-          variant: "destructive"
+          variant: "destructive",
         });
-        console.error('Upload cover photo error:', err);
+        console.error("Upload cover photo error:", err);
       } finally {
         loading.value = false;
       }
     };
 
     input.click();
-
   } catch (err) {
-    console.error('Upload cover photo error:', err);
+    console.error("Upload cover photo error:", err);
     toast({
       title: "Error",
       description: "An error occurred while uploading the image",
-      variant: "destructive"
+      variant: "destructive",
     });
   }
 };
@@ -580,7 +656,7 @@ onMounted(fetchUserData);
 
 // Watch for changes in route parameters
 watch(
-  () => route.params.userId,
+  () => userData?.userId,
   (newUserId) => {
     if (newUserId) {
       fetchUserData();
