@@ -645,7 +645,7 @@ export const useUserStore = defineStore('user', () => {
             const response = await apiService.getUserInfo(userId);
 
             if (response.data?.code === '1000') {
-                userData = response.data.data;
+                const userData = response.data.data;
 
                 // If fetching current user's profile, update the store
                 if (!userId) {

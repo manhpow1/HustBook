@@ -350,7 +350,6 @@
 
 <script setup>
 import { ref, onMounted, computed, watch } from "vue";
-import { storeToRefs } from "pinia";
 import { useRoute, useRouter } from "vue-router";
 import { useUserStore } from "@/stores/userStore";
 import { useSearchStore } from "@/stores/searchStore";
@@ -403,6 +402,7 @@ import {
 } from "lucide-vue-next";
 import ErrorBoundary from "@/components/shared/ErrorBoundary.vue";
 
+// Computed properties
 const router = useRouter();
 const userStore = useUserStore();
 const videoStore = useVideoStore();
@@ -410,6 +410,7 @@ const searchStore = useSearchStore();
 const friendStore = useFriendStore();
 const postStore = usePostStore();
 const { toast } = useToast();
+// States
 const loading = ref(true);
 const loadingPosts = ref(false);
 const error = ref(null);
@@ -420,17 +421,15 @@ const userVideos = ref([]);
 const postSearchQuery = ref("");
 const showVideoModal = ref(false);
 const selectedVideo = ref(null);
-const { userData } = storeToRefs(userStore);
 
-// Computed properties
-const isCurrentUser = computed(
-  () => userStore.user?.userId === userData?.userId
-);
+// Computed
+const isCurrentUser = computed(() => true);
 const truncatedDescription = computed(() => {
   const desc = user.value?.description;
   if (!desc) return "";
   return desc.length > 150 ? `${desc.slice(0, 150)}...` : desc;
 });
+
 const filteredPosts = computed(() => {
   let posts = postStore.posts;
   if (postSearchQuery.value) {
@@ -443,10 +442,8 @@ const filteredPosts = computed(() => {
   }
   return posts;
 });
+
 const hasMorePosts = computed(() => postStore.hasMorePosts);
-const isFriend = computed(() =>
-  friends.value.some((friend) => friend.id === userStore.user?.userId)
-);
 
 // Methods
 const getInitials = (name) => {
@@ -463,18 +460,18 @@ const fetchUserData = async () => {
   loading.value = true;
   error.value = null;
   try {
-    const userId = userData?.userId
-    user.value = await userStore.getUserProfile(userId);
-    if (user.value) {
-      friends.value = await friendStore.getUserFriends({ userId });
-      userVideos.value = await videoStore.getUserVideos(userId);
+    const profileData = await userStore.getUserProfile();
+    if (profileData) {
+      user.value = profileData;
+      friends.value = await friendStore.getUserFriends();
+      userVideos.value = await videoStore.getUserVideos();
       await fetchPostsForUser();
     } else {
       error.value = "User not found.";
     }
   } catch (err) {
     error.value = "Failed to load user data.";
-    console.error(err); // Log the error for debugging
+    console.error(err);
   } finally {
     loading.value = false;
   }
@@ -484,11 +481,10 @@ const fetchPostsForUser = async () => {
   try {
     loadingPosts.value = true;
     postStore.resetPosts();
-    const userId = userData?.userId;
-    await postStore.getUserPosts(userId);
+    await postStore.getUserPosts();
   } catch (err) {
     postError.value = "Failed to load user posts.";
-    console.error(err); // Log the error for debugging
+    console.error(err);
   } finally {
     loadingPosts.value = false;
   }
@@ -496,58 +492,26 @@ const fetchPostsForUser = async () => {
 
 const loadMorePosts = () => {
   if (!postStore.hasMorePosts) return;
-  const userId = userData?.userId;
-  postStore.getUserPosts(userId);
-};
-
-const handleFriendAction = async () => {
-  try {
-    const userId = userData?.userId;
-    if (isFriend.value) {
-      await friendStore.removeFriend(userId);
-      toast({
-        title: "Success",
-        description: "Friend removed successfully",
-      });
-    } else {
-      await friendStore.sendFriendRequest(userId);
-      toast({
-        title: "Success",
-        description: "Friend request sent successfully",
-      });
-    }
-  } catch (err) {
-    toast({
-      title: "Error",
-      description: err.message || "Failed to update friend status",
-      variant: "destructive",
-    });
-  }
+  postStore.getUserPosts();
 };
 
 const sendMessage = () => {
-  const userId = userData?.userId;
-  router.push({ name: "Messages", query: { userId } });
+  router.push({ name: "Messages" });
 };
 
 const viewAllFriends = () => {
-  const userId = userData?.userId;
-  router.push({ name: "Friends", params: { id: userId } });
+  router.push({ name: "Friends" });
 };
 
 const uploadCoverPhoto = async () => {
   try {
-    // Tạo input element ẩn để chọn file
     const input = document.createElement("input");
     input.type = "file";
     input.accept = "image/jpeg,image/png,image/gif";
-
     input.onchange = async (e) => {
       const file = e.target.files[0];
-
       if (!file) return;
 
-      // Validate file size (5MB)
       if (file.size > 5 * 1024 * 1024) {
         toast({
           title: "Error",
@@ -557,7 +521,6 @@ const uploadCoverPhoto = async () => {
         return;
       }
 
-      // Validate file type
       if (!["image/jpeg", "image/png", "image/gif"].includes(file.type)) {
         toast({
           title: "Error",
@@ -569,29 +532,23 @@ const uploadCoverPhoto = async () => {
 
       try {
         loading.value = true;
-
-        // Tạo FormData để upload
         const formData = new FormData();
         formData.append("coverPhoto", file);
-
-        // Update profile qua userStore
         const response = await userStore.updateUserProfile(formData);
-
         if (response) {
           user.value = {
             ...user.value,
             coverPhoto: response.coverPhoto,
           };
-
           toast({
-            title: "Thành công",
-            description: "Đã cập nhật ảnh bìa",
+            title: "Success",
+            description: "Cover photo updated successfully",
           });
         }
       } catch (err) {
         const errorMessage = err.message || "Failed to update cover photo";
         toast({
-          title: "Lỗi",
+          title: "Error",
           description: errorMessage,
           variant: "destructive",
         });
@@ -600,7 +557,6 @@ const uploadCoverPhoto = async () => {
         loading.value = false;
       }
     };
-
     input.click();
   } catch (err) {
     console.error("Upload cover photo error:", err);
@@ -616,14 +572,14 @@ const copyProfileLink = async () => {
   try {
     await navigator.clipboard.writeText(window.location.href);
     toast({
-      title: "Copied",
-      description: "Profile link copied to clipboard.",
+      title: "Success",
+      description: "Profile link copied to clipboard",
     });
   } catch (err) {
     toast({
       title: "Error",
-      description: "Failed to copy profile link.",
-      type: "destructive",
+      description: "Failed to copy profile link",
+      variant: "destructive",
     });
   }
 };
@@ -653,14 +609,4 @@ const formatDate = (date) => {
 };
 
 onMounted(fetchUserData);
-
-// Watch for changes in route parameters
-watch(
-  () => userData?.userId,
-  (newUserId) => {
-    if (newUserId) {
-      fetchUserData();
-    }
-  }
-);
 </script>
