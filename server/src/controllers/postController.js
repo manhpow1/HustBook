@@ -257,7 +257,7 @@ class PostController {
                 longitude,
                 lastVisible,
                 limit = 20,
-            } = req.query;
+            } = value;
 
             const currentUserId = req.user.userId;
             const result = await postService.getListPosts({
@@ -267,22 +267,20 @@ class PostController {
                 campaignId,
                 latitude: latitude ? parseFloat(latitude) : undefined,
                 longitude: longitude ? parseFloat(longitude) : undefined,
-                lastVisible: lastVisible ?
-                    Buffer.from(lastVisible, 'base64').toString('utf-8') : null,
+                lastVisible: lastVisible ? Buffer.from(lastVisible, 'base64').toString('utf-8') : null,
                 limit: parseInt(limit)
             });
 
-            if (!result || !result.posts || result.posts.length === 0) {
-                return sendResponse(res, '9994', {
-                    message: 'No data or end of list data'
-                });
+            if (!result) {
+                throw createError('9999', 'Failed to fetch posts');
             }
 
-            return sendResponse(res, '1000', {
-                posts: result.posts,
-                lastVisible: result.lastVisible ?
-                    Buffer.from(result.lastVisible).toString('base64') : null
-            });
+            const response = {
+                posts: result.posts || [],
+                lastVisible: result.lastVisible ? Buffer.from(result.lastVisible).toString('base64') : null
+            };
+
+            return sendResponse(res, '1000', response);
         } catch (error) {
             next(error);
         }
