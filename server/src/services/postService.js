@@ -408,27 +408,40 @@ class PostService {
             );
 
             const enrichedComments = comments.map(comment => {
-                const userData = userDataMap.get(comment.userId);
-                const commentData = {
-                    commentId: comment.commentId,
-                    content: comment.content,
-                    created: comment.createdAt?.toDate?.()?.toISOString() || new Date().toISOString(),
-                    like: parseInt(comment.likes || 0),
-                    isLiked: Boolean(comment.isLiked),
-                    user: {
-                        userId: comment.userId,
-                        userName: userData?.userName || 'Anonymous User',
-                        avatar: userData?.avatar || ''
-                    }
-                };
+                try {
+                    const userData = userDataMap.get(comment.userId);
+                    const commentData = {
+                        commentId: comment.commentId,
+                        content: comment.content,
+                        created: comment.createdAt?.toDate?.()?.toISOString() || new Date().toISOString(),
+                        like: parseInt(comment.likes || 0),
+                        isLiked: Boolean(comment.isLiked),
+                        user: {
+                            userId: comment.userId,
+                            userName: userData?.userName || 'Anonymous User',
+                            avatar: userData?.avatar || ''
+                        }
+                    };
 
-                // Validate required fields
-                if (!commentData.commentId || !commentData.content || !commentData.user.userId) {
-                    logger.warn('Invalid comment data:', { commentId: comment.commentId });
+                    // Strict validation of required fields
+                    if (!commentData.commentId || typeof commentData.commentId !== 'string') {
+                        throw new Error('Invalid commentId');
+                    }
+                    if (!commentData.content || typeof commentData.content !== 'string') {
+                        throw new Error('Invalid content');
+                    }
+                    if (!commentData.user.userId || typeof commentData.user.userId !== 'string') {
+                        throw new Error('Invalid userId');
+                    }
+
+                    return commentData;
+                } catch (error) {
+                    logger.warn('Invalid comment data:', { 
+                        commentId: comment.commentId,
+                        error: error.message 
+                    });
                     return null;
                 }
-
-                return commentData;
             }).filter(Boolean); // Remove any invalid comments
 
             // Cache comments with timestamp
@@ -440,7 +453,13 @@ class PostService {
             };
             await this.cacheComments(postId, cacheData);
 
-            return cacheData;
+            // Ensure comments is always an array
+            return {
+                comments: Array.isArray(enrichedComments) ? enrichedComments : [],
+                lastVisible: snapshot.docs.length > 0 ? 
+                    snapshot.docs[snapshot.docs.length - 1].id : null,
+                totalComments: enrichedComments.length
+            };
 
         } catch (error) {
             logger.error('Error in getComments service:', error);

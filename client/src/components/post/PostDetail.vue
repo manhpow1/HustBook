@@ -51,7 +51,7 @@
                 <AlertTitle>Error</AlertTitle>
                 <AlertDescription>
                     {{ error }}
-                    <Button @click="fetchPost" variant="outline" size="sm">
+                    <Button @click="getPost" variant="outline" size="sm">
                         <RefreshCw class="mr-2 h-4 w-4" />
                         Retry
                     </Button>
@@ -182,7 +182,7 @@ const mediaList = computed(() => {
 });
 
 // Methods
-const fetchPost = async () => {
+const getPost = async () => {
     try {
         const postId = router.currentRoute.value.params.postId;
         if (!postId) {
@@ -190,12 +190,12 @@ const fetchPost = async () => {
         }
         await postStore.fetchPost(postId);
     } catch (err) {
+        logger.error('Failed to fetch post', { error: err });
         toast({
             title: "Error",
             description: err.message || "Failed to fetch post",
             variant: "destructive",
         });
-        throw err;
     }
 };
 
@@ -215,19 +215,6 @@ const handlePostDeleted = () => {
     router.push({ name: "Home" });
 };
 
-const handleReportSubmitted = () => {
-    toast({
-        description: "Report submitted successfully",
-    });
-};
-
-const handlePostRemoved = () => {
-    router.push({ name: "Home" });
-};
-
-const handlePostDeleted = () => {
-    router.push({ name: "Home" });
-};
 
 const handleLike = async () => {
     try {
@@ -362,5 +349,5 @@ const closeMediaViewer = () => {
     showMediaViewer.value = false;
 };
 
-onMounted(fetchPost);
+onMounted(getPost);
 </script>

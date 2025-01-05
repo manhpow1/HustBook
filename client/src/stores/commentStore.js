@@ -38,22 +38,105 @@ export const useCommentStore = defineStore('comment', () => {
                 }
             });
 
-            if (!response?.data?.data) {
-                throw new Error('Invalid response format');
+            const responseData = response?.data?.data;
+            
+            // Validate response structure
+            if (!responseData || typeof responseData !== 'object') {
+                logger.error('Invalid response format:', { responseData });
+                throw new Error('Invalid response format: missing data object');
             }
 
-            const { comments = [], lastVisible: newLastVisible, totalComments = 0 } = response.data.data;
-
-            if (!Array.isArray(comments)) {
-                throw new Error('Invalid comments data format');
+            // Ensure comments is an array, even if empty
+            const comments = Array.isArray(responseData.comments) ? responseData.comments : [];
+            
+            if (!Array.isArray(responseData.comments)) {
+                logger.warn('Comments field is not an array, defaulting to empty array', {
+                    type: typeof responseData.comments,
+                    value: responseData.comments
+                });
             }
 
-            // Validate each comment object
-            const validComments = comments.filter(comment => {
-                if (!comment?.commentId || !comment?.content) return false
-                if (!comment?.user?.userId || !comment?.user?.userName) return false
-                return true
-            })
+            const newLastVisible = responseData.lastVisible;
+            const totalComments = responseData.totalComments || 0;
+
+            // Validate and sanitize each comment
+            const validComments = [];
+            const invalidComments = [];
+
+            for (const comment of comments) {
+                try {
+                    // Basic structure check
+                    if (!comment || typeof comment !== 'object') {
+                        throw new Error('Comment must be an object');
+                    }
+
+                    // Required fields validation
+                    const requiredFields = {
+                        commentId: 'string',
+                        content: 'string',
+                        created: 'string',
+                        user: 'object'
+                    };
+
+                    for (const [field, type] of Object.entries(requiredFields)) {
+                        if (!comment[field]) {
+                            throw new Error(`Missing required field: ${field}`);
+                        }
+                        if (type === 'object' && typeof comment[field] !== 'object') {
+                            throw new Error(`Invalid ${field}: must be an object`);
+                        }
+                        if (type === 'string' && typeof comment[field] !== 'string') {
+                            throw new Error(`Invalid ${field}: must be a string`);
+                        }
+                    }
+
+                    // User object validation
+                    if (!comment.user.userId || typeof comment.user.userId !== 'string') {
+                        throw new Error('Invalid or missing user.userId');
+                    }
+                    if (!comment.user.userName || typeof comment.user.userName !== 'string') {
+                        throw new Error('Invalid or missing user.userName');
+                    }
+
+                    // Sanitize and normalize the comment object
+                    const sanitizedComment = {
+                        commentId: comment.commentId,
+                        content: comment.content.trim(),
+                        created: comment.created,
+                        like: parseInt(comment.like || 0),
+                        isLiked: Boolean(comment.isLiked),
+                        user: {
+                            userId: comment.user.userId,
+                            userName: comment.user.userName,
+                            avatar: comment.user.avatar || ''
+                        }
+                    };
+
+                    validComments.push(sanitizedComment);
+                } catch (error) {
+                    invalidComments.push({
+                        comment,
+                        error: error.message
+                    });
+                    logger.warn('Invalid comment data:', { 
+                        error: error.message,
+                        comment: JSON.stringify(comment)
+                    });
+                }
+            }
+
+            if (invalidComments.length > 0) {
+                logger.warn('Found invalid comments:', { 
+                    total: comments.length,
+                    invalid: invalidComments.length,
+                    details: invalidComments
+                });
+            }
+
+            if (validComments.length === 0 && comments.length > 0) {
+                logger.error('No valid comments found in response');
+                throw new Error('No valid comments found in response data');
+            }
 
             logger.debug('Fetched comments:', {
                 total: comments.length,
@@ -179,24 +262,46 @@ export const useCommentStore = defineStore('comment', () => {
     const syncOfflineComments = async () => {
         const idb = await dbPromise;
         const offlineComments = await idb.getAll('offline-comments');
+        
+        if (offlineComments.length === 0) {
+            return [];
+        }
+
+        logger.debug('Syncing offline comments:', { count: offlineComments.length });
+        const syncResults = [];
+
         for (const comment of offlineComments) {
             try {
                 const response = await apiService.addComment(comment.postId, comment.content);
-                const syncedComment = response.data;
-                const sanitizedComment = sanitizeComment(syncedComment);
-                await idb.delete('offline-comments', comment.tempId);
-                await idb.add('comments', sanitizedComment);
-
-                const index = state.comments.findIndex(c => c.tempId === comment.tempId);
-                if (index !== -1) {
-                    state.comments[index] = sanitizedComment; // Safely update the synced comment
+                if (!response?.data) {
+                    throw new Error('Invalid response format');
                 }
-                // Add synced comment to Firestore
-                await addDoc(collection(db, 'comments', comment.postId, 'commentList'), sanitizedComment);
+
+                const syncedComment = sanitizeComment(response.data);
+                
+                // Remove from offline storage
+                await idb.delete('offline-comments', comment.tempId);
+                
+                // Store in local cache
+                await idb.add('comments', syncedComment);
+                
+                // Add to Firestore
+                await addDoc(collection(db, 'comments', comment.postId, 'commentList'), syncedComment);
+                
+                syncResults.push(syncedComment);
+                
+                logger.debug('Comment synced successfully:', { commentId: syncedComment.commentId });
             } catch (error) {
-                console.error('Failed to sync comment:', error);
+                logger.error('Failed to sync comment:', error);
             }
         }
+
+        // Batch update state after all syncs complete
+        if (syncResults.length > 0) {
+            state.comments = [...syncResults, ...state.comments];
+        }
+
+        return syncResults;
     };
 
     const setupRealtimeComments = (postId) => {

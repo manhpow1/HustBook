@@ -224,35 +224,6 @@ export const usePostStore = defineStore("post", () => {
         }
     }
 
-    // Fetch Comments
-    async function fetchComments(postId) {
-        if (!hasMoreComments.value) return;
-
-        loadingComments.value = true;
-        try {
-            const response = await apiService.getComments(postId, {
-                lastVisible: lastVisible.value,
-                limit: 10,
-            });
-
-            if (response.data.code === "1000") {
-                comments.value.push(...response.data.data.comments);
-                lastVisible.value = response.data.data.lastVisible;
-                hasMoreComments.value = response.data.data.comments.length === 10;
-            } else if (response.data.code === "9994") {
-                hasMoreComments.value = false;
-            } else {
-                throw new Error(response.data.message);
-            }
-        } catch (err) {
-            await handleError(err);
-            commentError.value = err.message;
-            throw err;
-        } finally {
-            loadingComments.value = false;
-        }
-    }
-
     // Remove Post
     async function removePost(postId) {
         try {
@@ -387,7 +358,6 @@ export const usePostStore = defineStore("post", () => {
         fetchPost,
         createPost,
         toggleLike,
-        fetchComments,
         updatePost,
         removePost,
         setLastKnownCoordinates,

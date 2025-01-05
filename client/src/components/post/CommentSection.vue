@@ -228,16 +228,39 @@ const onRetryLoadComments = async () => {
     commentStore.resetComments();
     try {
         logger.debug("Retrying to load comments");
-        const { comments: newComments } = await commentStore.fetchComments(
-            props.postId,
-            20,
-            lastVisible.value
-        );
-
-        if (!newComments?.length) {
-            notificationStore.showNotification("No comments found", "warning");
+        const response = await commentStore.fetchComments(props.postId, 20, lastVisible.value);
+        
+        // Handle empty or invalid response gracefully
+        if (!response) {
+            logger.warn('Empty response from fetchComments');
+            comments.value = [];
+            return;
         }
-        comments.value = newComments || [];
+
+        // Ensure we have a valid comments array
+        const commentsList = Array.isArray(response.comments) ? response.comments : [];
+
+        // Validate each comment before updating state
+        const validComments = response.comments.filter(comment => {
+            if (!comment || typeof comment !== 'object') return false;
+            if (!comment.commentId || typeof comment.commentId !== 'string') return false;
+            if (!comment.content || typeof comment.content !== 'string') return false;
+            if (!comment.user || typeof comment.user !== 'object') return false;
+            if (!comment.user.userId || typeof comment.user.userId !== 'string') return false;
+            if (!comment.user.userName || typeof comment.user.userName !== 'string') return false;
+            return true;
+        });
+
+        if (validComments.length === 0) {
+            notificationStore.showNotification("No valid comments found", "warning");
+        } else if (validComments.length < response.comments.length) {
+            logger.warn('Some comments were filtered out due to invalid format', {
+                total: response.comments.length,
+                valid: validComments.length
+            });
+        }
+
+        comments.value = validComments;
     } catch (error) {
         logger.error("Error retrying to load comments:", error);
         if (error.code === "9992") {
@@ -303,19 +326,13 @@ const checkOnlineStatus = () => {
 };
 
 onMounted(async () => {
-    let hasSynced = false;
-
     try {
         await commentStore.resetComments();
-        await commentStore.fetchComments(props.postId);
-
-        // Only sync once and only if needed
-        if (!hasSynced && navigator.onLine) {
-            hasSynced = true;
+        
+        // First sync offline comments if needed
+        if (navigator.onLine) {
             try {
                 await commentStore.syncOfflineComments();
-                // Fetch once more after sync to get latest
-                await commentStore.fetchComments(props.postId);
             } catch (err) {
                 logger.error("Error syncing offline comments:", err);
                 syncError.value = "Failed to sync offline comments";
@@ -326,7 +343,13 @@ onMounted(async () => {
             }
         }
 
-        if (comments.value.length === 0) {
+        // Then fetch comments once
+        const response = await commentStore.fetchComments(props.postId);
+        if (!response?.comments) {
+            throw new Error('Invalid comments data format');
+        }
+
+        if (response.comments.length === 0) {
             logger.info("No comments found for post");
         }
     } catch (err) {
