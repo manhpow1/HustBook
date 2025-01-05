@@ -136,8 +136,6 @@ router.post('/', authenticateToken, upload.array('images', 4), postController.cr
  *         description: Filter posts by userId
  *         schema:
  *           type: string
- *         schema:
- *           type: number
  *       - in: query
  *         name: lastVisible
  *         description: Base64 encoded lastVisible id for pagination
