@@ -132,7 +132,7 @@ export const useCommentStore = defineStore('comment', () => {
     const deleteComment = async (postId, commentId) => {
         try {
             await apiService.deleteComment(postId, commentId);
-            comments.value = comments.value.filter(c => c.id !== commentId);
+            comments.value = comments.value.filter(c => c.commentId !== commentId);
         } catch (error) {
             console.error('Failed to delete comment:', error);
             throw error;
@@ -182,8 +182,8 @@ export const useCommentStore = defineStore('comment', () => {
         const unsubscribe = onSnapshot(q, (snapshot) => {
             snapshot.docChanges().forEach((change) => {
                 if (change.type === 'added') {
-                    const newComment = { id: change.doc.id, ...change.doc.data() };
-                    if (!comments.value.some(comment => comment.commentId === newComment.id)) {
+                    const newComment = { commentId: change.doc.id, ...change.doc.data() };
+                    if (!comments.value.some(comment => comment.commentId === newComment.commentId)) {
                         comments.value.unshift(newComment);
                     }
                 }

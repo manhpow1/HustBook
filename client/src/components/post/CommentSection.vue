@@ -161,17 +161,28 @@ const onAddComment = async () => {
 
 const onUpdateComment = async (updatedComment) => {
     try {
-        await commentStore.updateComment(props.postId, updatedComment.commentId, updatedComment.content)
+        // Validate comment content before update
+        if (!updatedComment.content?.trim()) {
+            notificationStore.showNotification('Comment cannot be empty', 'error')
+            return
+        }
+        if (updatedComment.content.length > 1000) {
+            notificationStore.showNotification('Comment is too long', 'error')
+            return
+        }
+        await commentStore.updateComment(props.postId, updatedComment.commentId, updatedComment.content.trim())
         notificationStore.showNotification('Comment updated successfully', 'success')
+        logger.debug('Comment updated:', { commentId: updatedComment.commentId })
     } catch (error) {
         await handleError(error)
     }
 }
 
-const onDeleteComment = async (commentId) => {
+const onDeleteComment = async (comment) => {
     try {
-        await commentStore.deleteComment(props.postId, commentId)
+        await commentStore.deleteComment(props.postId, comment.commentId)
         notificationStore.showNotification('Comment deleted successfully', 'success')
+        logger.debug('Comment deleted:', { commentId: comment.commentId, postId: props.postId })
     } catch (error) {
         await handleError(error)
     }
