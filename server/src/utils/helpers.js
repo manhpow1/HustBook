@@ -133,18 +133,115 @@ async function handleAvatarUpload(file, userId) {
 
 async function handleCoverPhotoUpload(file, userId) {
     try {
-        if (!file) return null;
+        if (!file || !file.buffer) {
+            throw createError('1002', 'Invalid file');
+        }
 
-        const processedImage = await handleImageUpload(file, `covers/${userId}`);
+        if (!ALLOWED_MIME_TYPES.includes(file.mimetype)) {
+            throw createError('1004', 'Invalid file type. Allowed types: JPG, PNG, GIF');
+        }
 
-        await cleanupFiles(file);
+        if (file.size > MAX_IMAGE_SIZE) {
+            throw createError('1006', 'File size exceeds 5MB limit');
+        }
 
-        return processedImage;
+        const image = sharp(file.buffer);
+        const metadata = await image.metadata();
+
+        let processedBuffer;
+        let fileExtension;
+
+        const resizedImage = await image
+            .resize(1200, 600, { // Different size for cover photo
+                fit: 'cover',
+                withoutEnlargement: true
+            })
+            .rotate();
+
+        // Process based on image format
+        switch (metadata.format) {
+            case 'jpeg':
+            case 'jpg':
+                processedBuffer = await resizedImage
+                    .jpeg({
+                        quality: IMAGE_QUALITY,
+                        progressive: true,
+                        mozjpeg: true,
+                        chromaSubsampling: '4:4:4'
+                    })
+                    .toBuffer();
+                fileExtension = 'jpg';
+                break;
+            case 'png':
+                processedBuffer = await resizedImage
+                    .png({
+                        compressionLevel: 9,
+                        palette: true,
+                        quality: IMAGE_QUALITY,
+                        adaptiveFiltering: true
+                    })
+                    .toBuffer();
+                fileExtension = 'png';
+                break;
+            case 'gif':
+                processedBuffer = await resizedImage
+                    .gif({
+                        reoptimize: true,
+                        colors: 256
+                    })
+                    .toBuffer();
+                fileExtension = 'gif';
+                break;
+            default:
+                processedBuffer = await resizedImage
+                    .jpeg({ quality: IMAGE_QUALITY })
+                    .toBuffer();
+                fileExtension = 'jpg';
+        }
+
+        const timestamp = Date.now();
+        const randomString = Math.random().toString(36).substring(2, 15);
+        const filename = `covers/${userId}/${timestamp}-${randomString}.${fileExtension}`;
+
+        // Upload to Firebase Storage
+        try {
+            const bucket = admin.storage().bucket();
+            const fileUpload = bucket.file(filename);
+
+            await fileUpload.save(processedBuffer, {
+                metadata: {
+                    contentType: `image/${fileExtension}`,
+                    metadata: {
+                        originalName: file.originalname,
+                        processed: true,
+                        userId: userId
+                    },
+                    cacheControl: 'public, max-age=31536000'
+                }
+            });
+
+            await fileUpload.makePublic();
+
+            const [url] = await fileUpload.getSignedUrl({
+                action: 'read',
+                expires: '03-01-2500'
+            });
+
+            logger.info(`Successfully uploaded cover photo to Firebase Storage: ${url}`, {
+                userId,
+                filename
+            });
+
+            return url;
+
+        } catch (uploadError) {
+            logger.error('Firebase cover photo upload failed:', uploadError);
+            throw createError('1007', 'Failed to upload cover photo to storage');
+        }
 
     } catch (error) {
-        await cleanupFiles(file);
-        logger.error('Cover photo upload error:', error);
-        throw createError('9999', 'Failed to process cover photo upload');
+        logger.error('Cover photo processing error:', error);
+        throw createError('9999', 'Failed to process cover photo image');
     }
 }
 

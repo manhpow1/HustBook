@@ -99,7 +99,8 @@
               </CardHeader>
               <CardContent>
                 <div class="grid grid-cols-3 gap-2">
-                  <div v-for="friend in friends && friends.slice(0, 6)" :key="friend.id" class="flex flex-col items-center">
+                  <div v-for="friend in friends && friends.slice(0, 6)" :key="friend.id"
+                    class="flex flex-col items-center">
                     <Avatar class="h-16 w-16">
                       <AvatarImage :src="friend.avatar" :alt="friend.userName" />
                       <AvatarFallback>{{
@@ -384,7 +385,7 @@ const fetchUserData = async () => {
   loading.value = true;
   error.value = null;
   try {
-    const userId = route.params.id;
+    const userId = route.params.userId;
     user.value = await userStore.getUserProfile(userId);
     if (user.value) {
       friends.value = await friendStore.getUserFriends({ userId });
@@ -405,7 +406,8 @@ const fetchPostsForUser = async () => {
   try {
     loadingPosts.value = true;
     postStore.resetPosts();
-    await postStore.getUserPosts(route.params.id);
+    const userId = route.params.userId;
+    await postStore.getUserPosts(userId);
   } catch (err) {
     postError.value = "Failed to load user posts.";
     console.error(err); // Log the error for debugging
@@ -416,12 +418,13 @@ const fetchPostsForUser = async () => {
 
 const loadMorePosts = () => {
   if (!postStore.hasMorePosts) return;
-  postStore.getUserPosts(route.params.id);
+  const userId = route.params.userId;
+  postStore.getUserPosts(userId);
 };
 
 const handleFriendAction = async () => {
-  const userId = route.params.id;
   try {
+    const userId = route.params.userId;
     if (isFriend.value) {
       await friendStore.removeFriend(userId);
       toast({
@@ -435,25 +438,102 @@ const handleFriendAction = async () => {
         description: "Friend request sent successfully",
       });
     }
-  } catch (error) {
+  } catch (err) {
     toast({
       title: "Error",
-      description: error.message || "Failed to update friend status",
+      description: err.message || "Failed to update friend status",
       variant: "destructive",
     });
   }
 };
 
 const sendMessage = () => {
-  router.push({ name: "Messages", query: { userId: route.params.id } });
+  const userId = route.params.userId;
+  router.push({ name: "Messages", query: { userId } });
 };
 
 const viewAllFriends = () => {
-  router.push({ name: "Friends", params: { id: route.params.id } });
+  const userId = route.params.userId;
+  router.push({ name: "Friends", params: { id: userId } });
 };
 
-const uploadCoverPhoto = () => {
-  // Add cover photo upload logic here
+const uploadCoverPhoto = async () => {
+  try {
+    // Tạo input element ẩn để chọn file
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/jpeg,image/png,image/gif';
+
+    input.onchange = async (e) => {
+      const file = e.target.files[0];
+
+      if (!file) return;
+
+      // Validate file size (5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        toast({
+          title: "Error",
+          description: "File size should not exceed 5MB",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      // Validate file type
+      if (!['image/jpeg', 'image/png', 'image/gif'].includes(file.type)) {
+        toast({
+          title: "Error",
+          description: "Only accepts image files in JPG, PNG or GIF format",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      try {
+        loading.value = true;
+
+        // Tạo FormData để upload
+        const formData = new FormData();
+        formData.append('coverPhoto', file);
+
+        // Update profile qua userStore
+        const response = await userStore.updateUserProfile(formData);
+
+        if (response) {
+          user.value = {
+            ...user.value,
+            coverPhoto: response.coverPhoto
+          };
+
+          toast({
+            title: "Thành công",
+            description: "Đã cập nhật ảnh bìa",
+          });
+        }
+
+      } catch (err) {
+        const errorMessage = err.message || 'Failed to update cover photo';
+        toast({
+          title: "Lỗi",
+          description: errorMessage,
+          variant: "destructive"
+        });
+        console.error('Upload cover photo error:', err);
+      } finally {
+        loading.value = false;
+      }
+    };
+
+    input.click();
+
+  } catch (err) {
+    console.error('Upload cover photo error:', err);
+    toast({
+      title: "Error",
+      description: "An error occurred while uploading the image",
+      variant: "destructive"
+    });
+  }
 };
 
 const copyProfileLink = async () => {
@@ -500,9 +580,9 @@ onMounted(fetchUserData);
 
 // Watch for changes in route parameters
 watch(
-  () => route.params.id,
-  (newId) => {
-    if (newId) {
+  () => route.params.userId,
+  (newUserId) => {
+    if (newUserId) {
       fetchUserData();
     }
   }

@@ -125,8 +125,8 @@ class PostService {
             await updateDocument(collections.posts, postId, updatedPost.toJSON());
 
             // Clear cache
-            await redis.del(`post:${postId}`);
-            await redis.del(`user:${userId}:posts`);
+            await redis.cache.del(`post:${postId}`);
+            await redis.cache.del(`user:${userId}:posts`);
 
             return updatedPost.toJSON();
         } catch (error) {
@@ -179,10 +179,10 @@ class PostService {
 
             // Clear caches
             await Promise.all([
-                redis.del(`post:${postId}`),
-                redis.del(`user:${post.userId}:posts`),
-                redis.del(`post:${postId}:comments`),
-                redis.del(`post:${postId}:likes`)
+                redis.cache.del(`post:${postId}`),
+                redis.cache.del(`user:${post.userId}:posts`),
+                redis.cache.del(`post:${postId}:comments`),
+                redis.cache.del(`post:${postId}:likes`)
             ]);
 
             return true;
@@ -237,9 +237,9 @@ class PostService {
 
             // Invalidate caches
             await Promise.all([
-                redis.del(`post:${postId}`),
-                redis.del(`user:${userId}:likes`),
-                redis.del(`post:${postId}:likeCount`)
+                redis.cache.del(`post:${postId}`),
+                redis.cache.del(`user:${userId}:likes`),
+                redis.cache.del(`post:${postId}:likeCount`)
             ]);
 
             // Log activity
