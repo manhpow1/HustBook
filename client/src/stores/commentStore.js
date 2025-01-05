@@ -30,120 +30,16 @@ export const useCommentStore = defineStore('comment', () => {
         state.loadingComments = true
         state.commentError = null
 
-        try {
-            const response = await apiService.getComments(postId, {
-                params: {
-                    limit,
-                    lastVisible
-                }
-            });
-
-<<<<<<< HEAD
-            const responseData = response?.data?.data;
-            
-            // Validate response structure
-            if (!responseData || typeof responseData !== 'object') {
-                logger.error('Invalid response format:', { responseData });
-                throw new Error('Invalid response format: missing data object');
+            if (response.data?.code !== '1000') {
+                throw new Error(response.data?.message || 'Failed to fetch comments')
             }
 
-            // Ensure comments is an array, even if empty
-            const comments = Array.isArray(responseData.comments) ? responseData.comments : [];
-            
-            if (!Array.isArray(responseData.comments)) {
-                logger.warn('Comments field is not an array, defaulting to empty array', {
-                    type: typeof responseData.comments,
-                    value: responseData.comments
-                });
-            }
+            const { comments, lastVisible: newLastVisible, totalComments } = response.data.data
 
-            const newLastVisible = responseData.lastVisible;
-            const totalComments = responseData.totalComments || 0;
-
-            // Validate and sanitize each comment
-            const validComments = [];
-            const invalidComments = [];
-
-            for (const comment of comments) {
-                try {
-                    // Basic structure check
-                    if (!comment || typeof comment !== 'object') {
-                        throw new Error('Comment must be an object');
-                    }
-
-                    // Required fields validation
-                    const requiredFields = {
-                        commentId: 'string',
-                        content: 'string',
-                        created: 'string',
-                        user: 'object'
-                    };
-
-                    for (const [field, type] of Object.entries(requiredFields)) {
-                        if (!comment[field]) {
-                            throw new Error(`Missing required field: ${field}`);
-                        }
-                        if (type === 'object' && typeof comment[field] !== 'object') {
-                            throw new Error(`Invalid ${field}: must be an object`);
-                        }
-                        if (type === 'string' && typeof comment[field] !== 'string') {
-                            throw new Error(`Invalid ${field}: must be a string`);
-                        }
-                    }
-
-                    // User object validation
-                    if (!comment.user.userId || typeof comment.user.userId !== 'string') {
-                        throw new Error('Invalid or missing user.userId');
-                    }
-                    if (!comment.user.userName || typeof comment.user.userName !== 'string') {
-                        throw new Error('Invalid or missing user.userName');
-                    }
-
-                    // Sanitize and normalize the comment object
-                    const sanitizedComment = {
-                        commentId: comment.commentId,
-                        content: comment.content.trim(),
-                        created: comment.created,
-                        like: parseInt(comment.like || 0),
-                        isLiked: Boolean(comment.isLiked),
-                        user: {
-                            userId: comment.user.userId,
-                            userName: comment.user.userName,
-                            avatar: comment.user.avatar || ''
-                        }
-                    };
-
-                    validComments.push(sanitizedComment);
-                } catch (error) {
-                    invalidComments.push({
-                        comment,
-                        error: error.message
-                    });
-                    logger.warn('Invalid comment data:', { 
-                        error: error.message,
-                        comment: JSON.stringify(comment)
-                    });
-                }
-            }
-
-            if (invalidComments.length > 0) {
-                logger.warn('Found invalid comments:', { 
-                    total: comments.length,
-                    invalid: invalidComments.length,
-                    details: invalidComments
-                });
-            }
-
-            if (validComments.length === 0 && comments.length > 0) {
-                logger.error('No valid comments found in response');
-                throw new Error('No valid comments found in response data');
-            }
-
-            logger.debug('Fetched comments:', {
-                total: comments.length,
-                valid: validComments.length,
-                lastVisible: newLastVisible
-            })
+            const validComments = comments?.filter(comment => 
+                comment && comment.commentId && comment.content && comment.user
+            ) || []
+>>>>>>> parent of ccbdb56 (debug)
 =======
             if (response.data?.code !== '1000') {
                 throw new Error(response.data?.message || 'Failed to fetch comments')

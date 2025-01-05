@@ -331,47 +331,27 @@ onMounted(async () => {
         const { comments: initialComments } = await commentStore.fetchComments(props.postId);
         
 <<<<<<< HEAD
-        // First sync offline comments if needed
-        if (navigator.onLine) {
-            try {
-                await commentStore.syncOfflineComments();
-            } catch (err) {
-                logger.error("Error syncing offline comments:", err);
-                syncError.value = "Failed to sync offline comments";
-                notificationStore.showNotification(
-                    "Failed to sync offline comments",
-                    "error"
-                );
-            }
+        if (!initialComments) {
+            throw new Error('No comments data received');
         }
-
-        // Then fetch comments once
-        const response = await commentStore.fetchComments(props.postId);
-        if (!response?.comments) {
-            throw new Error('Invalid comments data format');
-        }
-
-        if (response.comments.length === 0) {
-            logger.info("No comments found for post");
-        }
+        
+        comments.value = initialComments;
+        
+        logger.debug('Comments loaded successfully', {
+            commentsCount: comments.value?.length,
+            hasMore: hasMoreComments.value,
+            totalComments: totalComments.value
+        });
     } catch (err) {
-        logger.error("Error fetching initial comments:", err);
-        if (err.response?.status === 404 || err.code === "9992") {
-            notificationStore.showNotification("Post not found", "error");
-            emit("close");
+        logger.error('Error fetching initial comments:', err);
+        if (err.code === '9992') {
+            notificationStore.showNotification('Post not found', 'error');
+            emit('close');
             return;
         }
-        if (err.response?.status === 401) {
-            notificationStore.showNotification(
-                "Please login to view comments",
-                "error"
-            );
-            return;
-        }
-        const errorMessage =
-            err.response?.data?.message || err.message || "Failed to load comments";
-        commentError.value = errorMessage;
-        notificationStore.showNotification(errorMessage, "error");
+        commentError.value = 'Failed to load comments';
+        notificationStore.showNotification('Failed to load comments', 'error');
+>>>>>>> parent of ccbdb56 (debug)
 =======
         if (!initialComments) {
             throw new Error('No comments data received');
