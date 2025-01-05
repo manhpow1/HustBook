@@ -379,7 +379,8 @@ class UserService {
         }
     }
 
-    async changeInfoAfterSignup(userId, userName, avatarFile) {
+    // In userService.js
+    async changeInfoAfterSignup(userId, userName, avatarUrl) {
         try {
             const user = await this.getUserById(userId);
             if (!user) {
@@ -396,57 +397,36 @@ class UserService {
                 throw createError('1003', 'Please wait before updating again');
             }
 
-            // Update user information
+            // Update user data
             user.userName = userName;
-            let uploadedAvatarUrl = null;
 
-            // Handle avatar upload if provided
-            if (avatarFile) {
-                try {
-                    logger.info('Processing avatar upload', {
-                        userId,
-                        fileName: avatarFile.originalname
-                    });
-
-                    uploadedAvatarUrl = await handleAvatarUpload(avatarFile, userId);
-
-                    if (uploadedAvatarUrl) {
-                        // If user already has an avatar, delete the old one
-                        if (user.avatar) {
-                            try {
-                                await deleteFileFromStorage(user.avatar);
-                                logger.info('Deleted old avatar', { userId });
-                            } catch (deleteError) {
-                                logger.warn('Failed to delete old avatar', {
-                                    userId,
-                                    error: deleteError.message
-                                });
-                            }
-                        }
-                        user.avatar = uploadedAvatarUrl;
-                        logger.info('Avatar updated successfully', {
+            // Update avatar if new one was uploaded
+            if (avatarUrl) {
+                // Delete old avatar if it exists
+                if (user.avatar) {
+                    try {
+                        await deleteFileFromStorage(user.avatar);
+                        logger.info('Deleted old avatar', { userId });
+                    } catch (deleteError) {
+                        logger.warn('Failed to delete old avatar', {
                             userId,
-                            url: uploadedAvatarUrl
+                            error: deleteError.message
                         });
                     }
-                } catch (uploadError) {
-                    logger.error('Avatar upload failed:', uploadError, { userId });
-                    throw createError('9999', 'Failed to upload avatar image: ' + uploadError.message);
                 }
+                user.avatar = avatarUrl;
             }
 
-            // Update metadata
             user.lastModifiedAt = currentTime;
             user.version = (user.version || 0) + 1;
             user.updatedAt = new Date().toISOString();
 
-            // Save changes to database
             await user.save();
 
             logger.info('User info updated after signup', {
                 userId,
                 userName,
-                hasAvatar: !!uploadedAvatarUrl
+                hasAvatar: !!avatarUrl
             });
 
             return {
@@ -459,14 +439,6 @@ class UserService {
 
         } catch (error) {
             logger.error('Error updating user info after signup:', error, { userId });
-
-            // Add specific error handling for different scenarios
-            if (error.code === '1007') {
-                throw createError('9999', 'Avatar upload failed - storage error');
-            } else if (error.code === '1006') {
-                throw createError('9999', 'Avatar file too large');
-            }
-
             throw error;
         }
     }

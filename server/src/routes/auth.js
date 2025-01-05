@@ -39,48 +39,26 @@ const MAX_RANDOM_VALUE = 1_000_000_000;
 //     res.json({ csrfToken: token });
 // });
 
-const storage = multer.diskStorage({
-    destination: (req, file, cb) => {
-        cb(null, 'uploads/avatars/');
+const upload = multer({
+    storage: multer.memoryStorage(),
+    limits: {
+        fileSize: 5 * 1024 * 1024, // 5MB limit
+        files: 1 // Chỉ cho phép upload 1 file avatar
     },
-    filename: (req, file, cb) => {
-        // Generate unique filename with original extension
-        const uniqueSuffix = `${Date.now()}-${Math.round(Math.random() * MAX_RANDOM_VALUE)}`;
-        const ext = file.originalname.split('.').pop();
-        cb(null, `avatar-${uniqueSuffix}.${ext}`);
+    fileFilter: (req, file, cb) => {
+        if (!file.mimetype.match(/^image\/(jpeg|png|gif)$/)) {
+            cb(createError('1004', 'Invalid file type. Only jpg, jpeg, png, and gif are allowed'), false);
+            return;
+        }
+        cb(null, true);
     }
 });
-
-const fileFilter = (req, file, cb) => {
-    // Accept only image files
-    if (!file.mimetype.startsWith('image/')) {
-        return cb(new Error('Only image files are allowed'), false);
-    }
-
-    // List of allowed extensions
-    const allowedExtensions = ['jpg', 'jpeg', 'png', 'gif'];
-    const ext = file.originalname.split('.').pop().toLowerCase();
-
-    if (!allowedExtensions.includes(ext)) {
-        return cb(new Error('Invalid file type. Only jpg, jpeg, png, and gif are allowed'), false);
-    }
-
-    cb(null, true);
-};
 
 const profileUpdateLimiter = rateLimit({
     windowMs: 5 * 60 * 1000, // 5 minutes
     max: 3, // 3 updates per window
     message: 'Too many profile updates, please try again later',
     keyGenerator: (req) => `${req.user.userId}:profile_update`
-});
-
-const upload = multer({
-    storage,
-    limits: {
-        fileSize: 4 * 1024 * 1024 // 4MB limit
-    },
-    fileFilter
 });
 
 /**

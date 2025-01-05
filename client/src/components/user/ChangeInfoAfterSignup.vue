@@ -327,7 +327,7 @@ const handleSubmit = async () => {
       }
     }
   } catch (err) {
-    error.value = err.message || "Failed to update profile";
+    errorMessage.value = err.message || "Failed to update profile";
     logger.error("Profile update error:", err);
 
     let errorMessage = "Failed to update profile";

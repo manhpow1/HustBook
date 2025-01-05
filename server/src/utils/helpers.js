@@ -19,28 +19,21 @@ const IMAGE_QUALITY = 80;
  */
 async function handleAvatarUpload(file, userId) {
     try {
-        if (!file) return null;
-
-        // Validate file
-        if (!file.buffer) {
+        if (!file || !file.buffer) {
             throw createError('1002', 'Invalid file');
         }
 
-        // Validate mime type
         if (!ALLOWED_MIME_TYPES.includes(file.mimetype)) {
             throw createError('1004', 'Invalid file type. Allowed types: JPG, PNG, GIF');
         }
 
-        // Validate file size
         if (file.size > MAX_IMAGE_SIZE) {
             throw createError('1006', 'File size exceeds 5MB limit');
         }
 
-        // Process image with sharp
         const image = sharp(file.buffer);
         const metadata = await image.metadata();
 
-        // Resize and optimize avatar
         let processedBuffer;
         let fileExtension;
 
@@ -49,8 +42,9 @@ async function handleAvatarUpload(file, userId) {
                 fit: 'cover',
                 withoutEnlargement: true
             })
-            .rotate(); // Auto-rotate based on EXIF
+            .rotate();
 
+        // Process based on image format
         switch (metadata.format) {
             case 'jpeg':
             case 'jpg':
@@ -64,7 +58,6 @@ async function handleAvatarUpload(file, userId) {
                     .toBuffer();
                 fileExtension = 'jpg';
                 break;
-
             case 'png':
                 processedBuffer = await resizedImage
                     .png({
@@ -76,7 +69,6 @@ async function handleAvatarUpload(file, userId) {
                     .toBuffer();
                 fileExtension = 'png';
                 break;
-
             case 'gif':
                 processedBuffer = await resizedImage
                     .gif({
@@ -86,7 +78,6 @@ async function handleAvatarUpload(file, userId) {
                     .toBuffer();
                 fileExtension = 'gif';
                 break;
-
             default:
                 processedBuffer = await resizedImage
                     .jpeg({ quality: IMAGE_QUALITY })
@@ -94,16 +85,13 @@ async function handleAvatarUpload(file, userId) {
                 fileExtension = 'jpg';
         }
 
-        // Generate unique filename
         const timestamp = Date.now();
         const randomString = Math.random().toString(36).substring(2, 15);
         const filename = `avatars/${userId}/${timestamp}-${randomString}.${fileExtension}`;
 
+        // Upload to Firebase Storage
         try {
-            // Get Firebase Storage bucket
             const bucket = admin.storage().bucket();
-
-            // Upload with proper content type and metadata
             const fileUpload = bucket.file(filename);
 
             await fileUpload.save(processedBuffer, {
@@ -118,10 +106,8 @@ async function handleAvatarUpload(file, userId) {
                 }
             });
 
-            // Make the file publicly accessible
             await fileUpload.makePublic();
 
-            // Get the public URL with a long expiration
             const [url] = await fileUpload.getSignedUrl({
                 action: 'read',
                 expires: '03-01-2500'
@@ -142,16 +128,6 @@ async function handleAvatarUpload(file, userId) {
     } catch (error) {
         logger.error('Avatar processing error:', error);
         throw createError('9999', 'Failed to process avatar image');
-    } finally {
-        // Clean up temporary file if it exists
-        if (file?.path) {
-            try {
-                await unlink(file.path);
-                logger.debug('Cleaned up temporary avatar file');
-            } catch (cleanupError) {
-                logger.warn('Failed to clean up temporary avatar file:', cleanupError);
-            }
-        }
     }
 }
 

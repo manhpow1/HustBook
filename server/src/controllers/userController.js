@@ -540,7 +540,7 @@ class UserController {
         try {
             const { error, value } = userValidator.validateChangeInfoAfterSignup({
                 userName: req.body.userName,
-                avatar: req.files?.avatar?.[0] || null
+                avatar: req.file || null
             });
 
             if (error) {
@@ -549,15 +549,40 @@ class UserController {
 
             const userId = req.user.userId;
             const { userName } = value;
-            const avatarFile = req.files?.avatar?.[0];
+            let avatarUrl = null;
 
-            const updatedUser = await userService.changeInfoAfterSignup(userId, userName, avatarFile);
+            // Handle avatar upload if file exists
+            if (req.file) {
+                try {
+                    logger.info('Processing avatar upload', {
+                        userId,
+                        fileName: req.file.originalname
+                    });
+
+                    avatarUrl = await handleAvatarUpload(req.file, userId);
+
+                    logger.info('Avatar uploaded successfully', {
+                        userId,
+                        url: avatarUrl
+                    });
+                } catch (uploadError) {
+                    logger.error('Avatar upload failed:', uploadError, { userId });
+                    throw createError('9999', 'Failed to process avatar image');
+                }
+            }
+
+            const updatedUser = await userService.changeInfoAfterSignup(
+                userId,
+                userName,
+                avatarUrl
+            );
 
             sendResponse(res, '1000', {
                 userId: updatedUser.userId,
                 userName: updatedUser.userName,
                 avatar: updatedUser.avatar
             });
+
         } catch (error) {
             logger.error('Change Info After Signup Error:', error);
             next(error);
