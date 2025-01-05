@@ -154,18 +154,13 @@ const onAddComment = async () => {
 
     isSubmitting.value = true;
     try {
-        logger.debug('Adding comment:', { postId: props.postId, commentContent: newComment.value });
-
         const comment = await commentStore.addComment(props.postId, newComment.value.trim());
         if (comment) {
             comments.value.unshift(comment);
             newComment.value = '';
             notificationStore.showNotification('Comment posted successfully', 'success');
         }
-
-        logger.info('Comment posted successfully', { postId: props.postId });
     } catch (error) {
-        logger.error('Error posting comment:', error);
         await handleError(error);
         inputError.value = 'Failed to post comment';
     } finally {
@@ -277,20 +272,12 @@ const checkOnlineStatus = () => {
     }
 };
 
-onMounted(async () => {
-    logger.debug('Mounting CommentSection', { postId: props.postId });
-    
+onMounted(async () => {    
     // Reset and fetch initial comments
     try {
         await commentStore.resetComments();
         
         await commentStore.fetchComments(props.postId);
-        
-        logger.debug('Comments loaded successfully', {
-            commentsCount: comments.value?.length,
-            hasMore: hasMoreComments.value,
-            totalComments: totalComments.value
-        });
 
         if (comments.value.length === 0) {
             logger.info('No comments found for post');

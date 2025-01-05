@@ -53,12 +53,12 @@ const props = defineProps({
         type: Object,
         required: true,
         validator(post) {
-            return ['postId', 'isLiked', 'like', 'comment'].every(prop => post && prop in post)
+            return post && typeof post === 'object' && 'postId' in post
         }
     }
 })
 
-const emit = defineEmits(['comment'])
+const emit = defineEmits(['comment', 'like'])
 
 const postStore = usePostStore()
 const { toast } = useToast()
@@ -81,7 +81,7 @@ const handleLike = async () => {
             description: "Failed to like post. Please try again.",
             variant: "destructive"
         })
-        console.error('Error toggling like:', error)
+        logger.error('Error toggling like:', error)
     } finally {
         isLiking.value = false
     }

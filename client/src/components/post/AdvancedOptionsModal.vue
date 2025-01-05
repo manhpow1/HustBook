@@ -56,7 +56,7 @@ const props = defineProps({
     type: Object,
     required: true,
     validator(post) {
-      return post && post.postId
+      return post && typeof post === 'object'
     }
   }
 })
