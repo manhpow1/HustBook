@@ -162,6 +162,11 @@ const onAddComment = async () => {
 
     isSubmitting.value = true;
     try {
+        logger.debug("Adding comment:", {
+            postId: props.postId,
+            commentContent: newComment.value,
+        });
+
         const comment = await commentStore.addComment(
             props.postId,
             newComment.value.trim()
@@ -174,7 +179,10 @@ const onAddComment = async () => {
                 "success"
             );
         }
+
+        logger.info("Comment posted successfully", { postId: props.postId });
     } catch (error) {
+        logger.error("Error posting comment:", error);
         await handleError(error);
         inputError.value = "Failed to post comment";
     } finally {
@@ -228,39 +236,16 @@ const onRetryLoadComments = async () => {
     commentStore.resetComments();
     try {
         logger.debug("Retrying to load comments");
-        const response = await commentStore.fetchComments(props.postId, 20, lastVisible.value);
-        
-        // Handle empty or invalid response gracefully
-        if (!response) {
-            logger.warn('Empty response from fetchComments');
-            comments.value = [];
-            return;
+        const { comments: newComments } = await commentStore.fetchComments(
+            props.postId,
+            20,
+            lastVisible.value
+        );
+
+        if (!newComments?.length) {
+            notificationStore.showNotification("No comments found", "warning");
         }
-
-        // Ensure we have a valid comments array
-        const commentsList = Array.isArray(response.comments) ? response.comments : [];
-
-        // Validate each comment before updating state
-        const validComments = response.comments.filter(comment => {
-            if (!comment || typeof comment !== 'object') return false;
-            if (!comment.commentId || typeof comment.commentId !== 'string') return false;
-            if (!comment.content || typeof comment.content !== 'string') return false;
-            if (!comment.user || typeof comment.user !== 'object') return false;
-            if (!comment.user.userId || typeof comment.user.userId !== 'string') return false;
-            if (!comment.user.userName || typeof comment.user.userName !== 'string') return false;
-            return true;
-        });
-
-        if (validComments.length === 0) {
-            notificationStore.showNotification("No valid comments found", "warning");
-        } else if (validComments.length < response.comments.length) {
-            logger.warn('Some comments were filtered out due to invalid format', {
-                total: response.comments.length,
-                valid: validComments.length
-            });
-        }
-
-        comments.value = validComments;
+        comments.value = newComments || [];
     } catch (error) {
         logger.error("Error retrying to load comments:", error);
         if (error.code === "9992") {
@@ -326,55 +311,70 @@ const checkOnlineStatus = () => {
 };
 
 onMounted(async () => {
+    logger.debug("Mounting CommentSection", { postId: props.postId });
+
+    // Reset and fetch initial comments
     try {
         await commentStore.resetComments();
-        const { comments: initialComments } = await commentStore.fetchComments(props.postId);
-        
-<<<<<<< HEAD
-        if (!initialComments) {
-            throw new Error('No comments data received');
+
+        const result = await commentStore.fetchComments(props.postId);
+
+        if (!result?.comments) {
+            throw new Error("Invalid response format");
         }
-        
-        comments.value = initialComments;
-        
-        logger.debug('Comments loaded successfully', {
+
+        comments.value = result.comments;
+
+        logger.debug("Comments loaded successfully", {
             commentsCount: comments.value?.length,
             hasMore: hasMoreComments.value,
-            totalComments: totalComments.value
+            totalComments: totalComments.value,
         });
+
+        if (comments.value.length === 0) {
+            logger.info("No comments found for post");
+        }
     } catch (err) {
-        logger.error('Error fetching initial comments:', err);
-        if (err.code === '9992') {
-            notificationStore.showNotification('Post not found', 'error');
-            emit('close');
+        logger.error("Error fetching initial comments:", err);
+
+        if (err.response?.status === 404 || err.code === "9992") {
+            notificationStore.showNotification("Post not found", "error");
+            emit("close");
             return;
         }
-        commentError.value = 'Failed to load comments';
-        notificationStore.showNotification('Failed to load comments', 'error');
->>>>>>> parent of ccbdb56 (debug)
-=======
-        if (!initialComments) {
-            throw new Error('No comments data received');
-        }
-        
-        comments.value = initialComments;
-        
-        logger.debug('Comments loaded successfully', {
-            commentsCount: comments.value?.length,
-            hasMore: hasMoreComments.value,
-            totalComments: totalComments.value
-        });
-    } catch (err) {
-        logger.error('Error fetching initial comments:', err);
-        if (err.code === '9992') {
-            notificationStore.showNotification('Post not found', 'error');
-            emit('close');
+
+        if (err.response?.status === 401) {
+            notificationStore.showNotification(
+                "Please login to view comments",
+                "error"
+            );
             return;
         }
-        commentError.value = 'Failed to load comments';
-        notificationStore.showNotification('Failed to load comments', 'error');
->>>>>>> parent of ccbdb56 (debug)
+
+        const errorMessage =
+            err.response?.data?.message || err.message || "Failed to load comments";
+        commentError.value = errorMessage;
+        notificationStore.showNotification(errorMessage, "error");
     }
+
+    // Sync offline comments if online
+    if (navigator.onLine) {
+        try {
+            await commentStore.syncOfflineComments();
+            logger.debug("Offline comments synced successfully");
+        } catch (err) {
+            logger.error("Error syncing offline comments:", err);
+            syncError.value = "Failed to sync offline comments";
+            notificationStore.showNotification(
+                "Failed to sync offline comments",
+                "error"
+            );
+        }
+    }
+
+    // Set up online/offline listeners
+    window.addEventListener("online", checkOnlineStatus);
+    window.addEventListener("offline", checkOnlineStatus);
 });
 
 onUnmounted(() => {

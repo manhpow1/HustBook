@@ -30,27 +30,36 @@ export const useCommentStore = defineStore('comment', () => {
         state.loadingComments = true
         state.commentError = null
 
-            if (response.data?.code !== '1000') {
+        try {
+            const response = await apiService.getComments(postId, {
+                params: {
+                    limit,
+                    lastVisible
+                }
+            })
+
+            if (!response?.data) {
+                throw new Error('Invalid response from server')
+            }
+
+            if (response.data.code !== '1000') {
                 throw new Error(response.data?.message || 'Failed to fetch comments')
             }
 
-            const { comments, lastVisible: newLastVisible, totalComments } = response.data.data
+            const { comments = [], lastVisible: newLastVisible, totalComments = 0 } = response.data.data || {}
 
-            const validComments = comments?.filter(comment => 
-                comment && comment.commentId && comment.content && comment.user
-            ) || []
->>>>>>> parent of ccbdb56 (debug)
-=======
-            if (response.data?.code !== '1000') {
-                throw new Error(response.data?.message || 'Failed to fetch comments')
-            }
+            // Validate each comment object
+            const validComments = comments.filter(comment => {
+                if (!comment?.commentId || !comment?.content) return false
+                if (!comment?.user?.userId || !comment?.user?.userName) return false
+                return true
+            })
 
-            const { comments, lastVisible: newLastVisible, totalComments } = response.data.data
-
-            const validComments = comments?.filter(comment => 
-                comment && comment.commentId && comment.content && comment.user
-            ) || []
->>>>>>> parent of ccbdb56 (debug)
+            logger.debug('Fetched comments:', {
+                total: comments.length,
+                valid: validComments.length,
+                lastVisible: newLastVisible
+            })
 
             if (!lastVisible) {
                 state.comments = validComments
@@ -170,46 +179,24 @@ export const useCommentStore = defineStore('comment', () => {
     const syncOfflineComments = async () => {
         const idb = await dbPromise;
         const offlineComments = await idb.getAll('offline-comments');
-        
-        if (offlineComments.length === 0) {
-            return [];
-        }
-
-        logger.debug('Syncing offline comments:', { count: offlineComments.length });
-        const syncResults = [];
-
         for (const comment of offlineComments) {
             try {
                 const response = await apiService.addComment(comment.postId, comment.content);
-                if (!response?.data) {
-                    throw new Error('Invalid response format');
-                }
-
-                const syncedComment = sanitizeComment(response.data);
-                
-                // Remove from offline storage
+                const syncedComment = response.data;
+                const sanitizedComment = sanitizeComment(syncedComment);
                 await idb.delete('offline-comments', comment.tempId);
-                
-                // Store in local cache
-                await idb.add('comments', syncedComment);
-                
-                // Add to Firestore
-                await addDoc(collection(db, 'comments', comment.postId, 'commentList'), syncedComment);
-                
-                syncResults.push(syncedComment);
-                
-                logger.debug('Comment synced successfully:', { commentId: syncedComment.commentId });
+                await idb.add('comments', sanitizedComment);
+
+                const index = state.comments.findIndex(c => c.tempId === comment.tempId);
+                if (index !== -1) {
+                    state.comments[index] = sanitizedComment; // Safely update the synced comment
+                }
+                // Add synced comment to Firestore
+                await addDoc(collection(db, 'comments', comment.postId, 'commentList'), sanitizedComment);
             } catch (error) {
-                logger.error('Failed to sync comment:', error);
+                console.error('Failed to sync comment:', error);
             }
         }
-
-        // Batch update state after all syncs complete
-        if (syncResults.length > 0) {
-            state.comments = [...syncResults, ...state.comments];
-        }
-
-        return syncResults;
     };
 
     const setupRealtimeComments = (postId) => {

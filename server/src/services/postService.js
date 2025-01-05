@@ -297,30 +297,49 @@ class PostService {
 
     async getComments(postId, userId, limit = 20, lastVisible = null) {
         try {
+            // First verify the post exists
+            const postRef = db.collection(collections.posts).doc(postId);
+            const postDoc = await postRef.get();
+            
+            if (!postDoc.exists) {
+                throw createError('9992', 'Post not found');
+            }
+
+            // Check cache first
+            const cacheKey = `post:${postId}:comments`;
+            const cachedComments = await redis.cache.get(cacheKey);
+            
+            if (cachedComments) {
+                logger.debug('Returning cached comments');
+                return {
+                    comments: cachedComments,
+                    lastVisible: null,
+                    totalComments: cachedComments.length
+                };
+            }
+
             let query = db.collection(collections.comments)
                 .where('postId', '==', postId)
                 .orderBy('createdAt', 'desc')
                 .limit(limit);
 
             if (lastVisible) {
-                const decodedLastVisible = Buffer.from(lastVisible, 'base64').toString('utf-8');
-                const lastDoc = await db.collection(collections.comments).doc(decodedLastVisible).get();
-                if (!lastDoc.exists) {
+                try {
+                    const decodedLastVisible = Buffer.from(lastVisible, 'base64').toString('utf-8');
+                    const lastDoc = await db.collection(collections.comments).doc(decodedLastVisible).get();
+                    if (!lastDoc.exists) {
+                        throw createError('1004', 'Invalid pagination token');
+                    }
+                    query = query.startAfter(lastDoc);
+                } catch (error) {
+                    logger.error('Error decoding lastVisible token:', error);
                     throw createError('1004', 'Invalid pagination token');
                 }
-                query = query.startAfter(lastDoc);
             }
 
             const snapshot = await query.get();
-            
-            // Only log if this is the initial comments fetch (no lastVisible)
-            if (snapshot.empty && !lastVisible) {
-                logger.info('No comments found for post');
-                return {
-                    comments: [],
-                    lastVisible: null
-                };
-            } else if (snapshot.empty) {
+
+            if (snapshot.empty) {
                 return {
                     comments: [],
                     lastVisible: null
@@ -382,57 +401,28 @@ class PostService {
             );
 
             const enrichedComments = comments.map(comment => {
-                try {
-                    const userData = userDataMap.get(comment.userId);
-                    const commentData = {
-                        commentId: comment.commentId,
-                        content: comment.content,
-                        created: comment.createdAt?.toDate?.()?.toISOString() || new Date().toISOString(),
-                        like: parseInt(comment.likes || 0),
-                        isLiked: Boolean(comment.isLiked),
-                        user: {
-                            userId: comment.userId,
-                            userName: userData?.userName || 'Anonymous User',
-                            avatar: userData?.avatar || ''
-                        }
-                    };
-
-                    // Strict validation of required fields
-                    if (!commentData.commentId || typeof commentData.commentId !== 'string') {
-                        throw new Error('Invalid commentId');
+                const userData = userDataMap.get(comment.userId);
+                return {
+                    commentId: comment.commentId,
+                    content: comment.content,
+                    created: comment.createdAt.toDate().toISOString(),
+                    like: comment.likes || 0,
+                    isLiked: comment.isLiked || false,
+                    user: {
+                        userId: comment.userId,
+                        userName: userData?.userName || 'Anonymous User',
+                        avatar: userData?.avatar || ''
                     }
-                    if (!commentData.content || typeof commentData.content !== 'string') {
-                        throw new Error('Invalid content');
-                    }
-                    if (!commentData.user.userId || typeof commentData.user.userId !== 'string') {
-                        throw new Error('Invalid userId');
-                    }
+                };
+            });
 
-                    return commentData;
-                } catch (error) {
-                    logger.warn('Invalid comment data:', { 
-                        commentId: comment.commentId,
-                        error: error.message 
-                    });
-                    return null;
-                }
-            }).filter(Boolean); // Remove any invalid comments
+            // Cache comments
+            await this.cacheComments(postId, enrichedComments);
 
-            // Cache comments with timestamp
-            const cacheData = {
-                comments: enrichedComments,
-                timestamp: Date.now(),
-                lastVisible: snapshot.docs.length > 0 ? 
-                    snapshot.docs[snapshot.docs.length - 1].id : null
-            };
-            await this.cacheComments(postId, cacheData);
-
-            // Ensure comments is always an array
             return {
-                comments: Array.isArray(enrichedComments) ? enrichedComments : [],
-                lastVisible: snapshot.docs.length > 0 ? 
-                    snapshot.docs[snapshot.docs.length - 1].id : null,
-                totalComments: enrichedComments.length
+                comments: enrichedComments,
+                lastVisible: snapshot.docs.length > 0 ?
+                    snapshot.docs[snapshot.docs.length - 1].id : null
             };
 
         } catch (error) {
@@ -441,16 +431,10 @@ class PostService {
         }
     }
 
-    async cacheComments(postId, data) {
+    async cacheComments(postId, comments) {
         try {
             const cacheKey = `post:${postId}:comments`;
-            const ttl = 300; // 5 minutes
-            await redis.cache.set(cacheKey, data, ttl);
-            
-            // Set a shorter TTL for subsequent requests within 10 seconds
-            if (Date.now() - (data.timestamp || 0) < 10000) {
-                await redis.cache.expire(cacheKey, 10);
-            }
+            await redis.cache.set(cacheKey, comments, 300);
         } catch (error) {
             logger.warn('Failed to cache comments:', error);
         }
