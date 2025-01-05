@@ -61,8 +61,7 @@
             <div v-else-if="post" class="space-y-6">
                 <Card>
                     <CardContent class="p-6 space-y-6">
-                        <PostHeader :post="post" :isOwnPost="isOwnPost" @editPost="editPost"
-                            @deletePost="confirmDeletePost" @reportPost="handleReportPost" @sharePost="sharePost" />
+                        <PostHeader :post="post" />
 
                         <Separator />
 
@@ -99,15 +98,6 @@
                 :initialIndex="currentMediaIndex" :likes="post?.like" :comments="post?.comment"
                 :isLiked="post?.isLiked === '1'" @close="closeMediaViewer" @like="handleLike"
                 @comment="handleComment" />
-
-            <AdvancedOptionsModal v-model:isVisible="showAdvancedOptionsModal" :isOwnPost="isOwnPost" :post="post"
-                @edit="editPost" @delete="confirmDeletePost"
-                @report="handleReportPost" />
-
-            <DeletePost v-if="showDeletePostModal" :postId="post?.postId" @post-deleted="handlePostDeleted" />
-
-            <ReportPostModal v-if="showReportPostModal" :postId="post?.postId" @close="showReportPostModal = false"
-                @report-submitted="handleReportSubmitted" @post-removed="handlePostRemoved" />
         </ErrorBoundary>
     </div>
 </template>
@@ -128,7 +118,6 @@ import { Skeleton } from "../ui/skeleton";
 import { useMediaUtils } from '@/composables/useMediaUtils';
 import { useCommentStore } from "@/stores/commentStore";
 
-const DeletePost = defineAsyncComponent(() => import("./DeletePost.vue"));
 const ErrorBoundary = defineAsyncComponent(() =>
     import("../shared/ErrorBoundary.vue")
 );
@@ -139,8 +128,6 @@ const PostActions = defineAsyncComponent(() => import("./PostActions.vue"));
 const PostBanWarning = defineAsyncComponent(() => import("./PostBanWarning.vue"));
 const CommentSection = defineAsyncComponent(() => import("./CommentSection.vue"));
 const MediaViewer = defineAsyncComponent(() => import("../shared/MediaViewer.vue"));
-const AdvancedOptionsModal = defineAsyncComponent(() => import("./AdvancedOptionsModal.vue"));
-const ReportPostModal = defineAsyncComponent(() => import("./ReportPostModal.vue"));
 
 const router = useRouter();
 const postStore = usePostStore();
@@ -152,19 +139,11 @@ const { toast } = useToast();
 const showFullContent = ref(false);
 const showMediaViewer = ref(false);
 const currentMediaIndex = ref(0);
-const showAdvancedOptionsModal = ref(false);
-const showDeletePostModal = ref(false);
-const showReportPostModal = ref(false);
 
 // Store refs
 const { currentPost: post, loading, error } = storeToRefs(postStore);
 const { comments, loadingComments, commentError, loadingMoreComments } =
     storeToRefs(postStore);
-
-// Computed
-const isOwnPost = computed(() => {
-    return post.value?.author?.userId === userStore.user?.userId;
-});
 
 const { createMediaList } = useMediaUtils();
 
@@ -280,20 +259,6 @@ const handleUncoverMedia = async (mediaId) => {
     }
 };
 
-const handleReportPost = () => {
-    showReportPostModal.value = true;
-};
-
-const handleReportSubmitted = () => {
-    showReportPostModal.value = false;
-    toast({
-        description: "Report submitted successfully",
-    });
-};
-
-const handlePostRemoved = () => {
-    router.push({ name: "Home" });
-};
 
 const sharePost = async () => {
     try {

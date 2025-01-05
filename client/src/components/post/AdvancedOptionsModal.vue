@@ -11,7 +11,7 @@
       <div class="grid gap-4 py-4">
         <div class="space-y-2">
           <div>
-            <Button variant="ghost" class="w-full justify-start" @click="handleEdit">
+            <Button variant="ghost" class="w-full justify-start" @click="navigateToEdit">
               <PencilIcon class="mr-2 h-4 w-4" />
               Edit Post
             </Button>
@@ -82,12 +82,12 @@ const emit = defineEmits([
   'post-removed'
 ])
 
-const handleEdit = () => {
+const navigateToEdit = () => {
   router.push({
     name: 'EditPost',
     params: { postId: props.post.postId }
   })
-  closeModal()
+  emit('update:isVisible', false)
 }
 
 const handlePostDeleted = () => {
