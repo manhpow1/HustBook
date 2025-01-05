@@ -158,16 +158,6 @@ const form = ref({
     media: [],
 });
 
-// UI State
-const isLoading = ref(false);
-const error = ref("");
-const successMessage = ref("");
-const showUnsavedDialog = ref(false);
-const initialMedia = ref([]);
-const mediaPreviews = ref([]);
-const descriptionError = ref("");
-const mediaError = ref("");
-
 // Form Validation
 const { validateDescription } = useFormValidation();
 
