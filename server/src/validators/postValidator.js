@@ -63,6 +63,7 @@ const getListPostsSchema = Joi.object({
 });
 
 const getPostCommentsSchema = Joi.object({
+    postId: Joi.string().required(),
     limit: Joi.number().integer().min(1).max(100).default(20).optional(),
     lastVisible: Joi.string().optional(),
 });

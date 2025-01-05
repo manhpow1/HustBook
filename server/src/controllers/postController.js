@@ -145,7 +145,10 @@ class PostController {
 
     async getComments(req, res, next) {
         try {
-            const { error } = postValidator.validateGetPostComments(req.query);
+            const { error } = postValidator.validateGetPostComments({
+                ...req.query,
+                postId: req.params.postId
+            });
             if (error) throw createError('1002', error.details.map(detail => detail.message).join(', '));
 
             const { postId } = req.params;
