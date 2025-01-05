@@ -348,9 +348,21 @@ const toggleContent = () => {
 };
 
 const isOwnPost = computed(() => {
-    // Only compute once post data is loaded
+    // Check login state first to avoid unnecessary calculations
+    if (!userStore.isLoggedIn) return false;
+    
+    // Ensure post exists
     if (!post.value) return false;
-    return post.value.userId === userStore.user?.userId;
+    
+    // Get both possible user IDs
+    const currentUserId = userStore.user?.userId;
+    const postUserId = post.value.userId || post.value.author?.userId;
+    
+    // Only compare if both IDs exist
+    if (!currentUserId || !postUserId) return false;
+    
+    // Cache the result
+    return currentUserId === postUserId;
 });
 
 const focusCommentInput = () => {
