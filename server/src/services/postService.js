@@ -454,7 +454,6 @@ class PostService {
 
     async getListPosts({
         postId,
-        userId,
         lastVisible,
         limit = 20,
     }) {
@@ -465,11 +464,6 @@ class PostService {
             // Add filters
             if (postId) {
                 query = query.where('__name__', '==', postId);
-            }
-
-            // Only filter by userId if explicitly provided
-            if (userId && typeof userId === 'string' && userId.trim() !== '') {
-                query = query.where('userId', '==', userId);
             }
 
             // Handle pagination

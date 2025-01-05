@@ -250,15 +250,12 @@ class PostController {
 
             const {
                 postId,
-                userId,
                 lastVisible,
                 limit = 20,
             } = value;
 
-            const currentUserId = req.user.userId;
             const result = await postService.getListPosts({
                 postId,
-                userId: userId || currentUserId,
                 lastVisible: lastVisible ? Buffer.from(lastVisible, 'base64').toString('utf-8') : null,
                 limit: parseInt(limit)
             });

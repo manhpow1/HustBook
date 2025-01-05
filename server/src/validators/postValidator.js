@@ -54,7 +54,6 @@ const getPostSchema = Joi.object({
 
 const getListPostsSchema = Joi.object({
     postId: Joi.string().allow('').optional(),
-    userId: Joi.string().optional(),
     lastVisible: Joi.alternatives().try(
         Joi.string(),
         Joi.allow(null)

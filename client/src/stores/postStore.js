@@ -46,10 +46,6 @@ export const usePostStore = defineStore("post", () => {
                 ...params,
             };
 
-            if (params.userId) {
-                queryParams.userId = params.userId;
-            }
-
             const response = await apiService.getListPosts(queryParams);
 
             if (response.data.code === "1000") {
