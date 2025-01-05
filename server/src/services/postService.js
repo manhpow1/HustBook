@@ -362,22 +362,27 @@ class PostService {
                 }
             }
 
-            const enrichedComments = comments.map(comment => {
-                const user = userMap.get(comment.userId);
+            const enrichedComments = await Promise.all(comments.map(async comment => {
+                // Get user data from users collection
+                const userDoc = await db.collection(collections.users).doc(comment.userId).get();
+                const userData = userDoc.exists ? userDoc.data() : null;
+                
                 return {
                     commentId: comment.commentId,
                     content: comment.content,
-                    createdAt: comment.createdAt.toDate().toISOString(),
-                    author: user || {
+                    created: comment.createdAt.toDate().toISOString(),
+                    like: 0,
+                    isLiked: false,
+                    user: {
                         userId: comment.userId,
-                        userName: comment.userId ? comment.userId.substring(0, 8) : 'Deleted User',
-                        avatar: ''
+                        userName: userData?.userName || 'Anonymous User',
+                        avatar: userData?.avatar || ''
                     },
                     isAuthor: comment.userId === userId,
                     canEdit: comment.userId === userId || post.data().userId === userId,
                     canDelete: comment.userId === userId || post.data().userId === userId
                 };
-            });
+            }));
 
             // Cache comments
             await this.cacheComments(postId, enrichedComments);
@@ -505,7 +510,7 @@ class PostService {
                     ...post,
                     author: {
                         userId: post.userId,
-                        userName: author.userName || 'Unknown User',
+                        userName: author.userName || 'Anonymous User',
                         avatar: author.avatar || '',
                         online: author.online || '0'
                     }

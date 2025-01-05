@@ -136,13 +136,12 @@ const props = defineProps({
             return [
                 "commentId",
                 "content",
-                "userId",
                 "created",
-                "userName",
                 "like",
                 "isLiked",
                 "user",
-            ].every((prop) => prop in comment);
+            ].every((prop) => prop in comment) &&
+            ["userId", "userName", "avatar"].every((prop) => prop in comment.user);
         },
     },
 });
