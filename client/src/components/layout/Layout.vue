@@ -55,7 +55,7 @@
                 </div>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem class="cursor-pointer" asChild>
-                  <router-link to="/profile" class="flex items-center">
+                  <router-link :to="`/profile/${userData?.userId}`" class="flex items-center">
                     <UserIcon class="mr-2 h-4 w-4" />
                     Profile
                   </router-link>
@@ -181,6 +181,7 @@
 
 <script setup>
 import { computed } from "vue";
+import { storeToRefs } from "pinia";
 import { useUserStore } from "@/stores/userStore";
 import { storeToRefs } from "pinia";
 import { useHead } from "@unhead/vue";
