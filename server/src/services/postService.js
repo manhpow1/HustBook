@@ -402,19 +402,27 @@ class PostService {
 
             const enrichedComments = comments.map(comment => {
                 const userData = userDataMap.get(comment.userId);
-                return {
+                const commentData = {
                     commentId: comment.commentId,
                     content: comment.content,
-                    created: comment.createdAt.toDate().toISOString(),
-                    like: comment.likes || 0,
-                    isLiked: comment.isLiked || false,
+                    created: comment.createdAt?.toDate?.()?.toISOString() || new Date().toISOString(),
+                    like: parseInt(comment.likes || 0),
+                    isLiked: Boolean(comment.isLiked),
                     user: {
                         userId: comment.userId,
                         userName: userData?.userName || 'Anonymous User',
                         avatar: userData?.avatar || ''
                     }
                 };
-            });
+
+                // Validate required fields
+                if (!commentData.commentId || !commentData.content || !commentData.user.userId) {
+                    logger.warn('Invalid comment data:', { commentId: comment.commentId });
+                    return null;
+                }
+
+                return commentData;
+            }).filter(Boolean); // Remove any invalid comments
 
             // Cache comments
             await this.cacheComments(postId, enrichedComments);

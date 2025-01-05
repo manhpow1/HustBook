@@ -1,5 +1,5 @@
 <template>
-    <Dialog :open="isOpen" @update:open="handleClose">
+    <Dialog :open="isOpen" @update:open="handleClose" :closeOnOutsideClick="!isSubmitting">
         <DialogContent class="sm:max-w-[425px]">
             <DialogHeader>
                 <DialogTitle>Report Post</DialogTitle>

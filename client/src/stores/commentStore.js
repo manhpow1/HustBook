@@ -36,17 +36,17 @@ export const useCommentStore = defineStore('comment', () => {
                     limit,
                     lastVisible
                 }
-            })
+            });
 
-            if (!response?.data) {
-                throw new Error('Invalid response from server')
+            if (!response?.data?.data) {
+                throw new Error('Invalid response format');
             }
 
-            if (response.data.code !== '1000') {
-                throw new Error(response.data?.message || 'Failed to fetch comments')
-            }
+            const { comments = [], lastVisible: newLastVisible, totalComments = 0 } = response.data.data;
 
-            const { comments = [], lastVisible: newLastVisible, totalComments = 0 } = response.data.data || {}
+            if (!Array.isArray(comments)) {
+                throw new Error('Invalid comments data format');
+            }
 
             // Validate each comment object
             const validComments = comments.filter(comment => {

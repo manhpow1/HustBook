@@ -100,9 +100,8 @@
                 :isLiked="post?.isLiked === '1'" @close="closeMediaViewer" @like="handleLike"
                 @comment="handleComment" />
 
-            <AdvancedOptionsModal v-model:isVisible="showAdvancedOptionsModal" :isOwnPost="isOwnPost" :post="post"
-                @edit="editPost" @delete="confirmDeletePost"
-                @report="handleReportPost" />
+            <AdvancedOptionsModal v-model:isVisible="showAdvancedOptionsModal" :isOwnPost="isOwnPost" :post="post || {}"
+                @edit="editPost" @delete="confirmDeletePost" @report="handleReportPost" />
 
             <DeletePost v-if="showDeletePostModal" :postId="post?.postId" @post-deleted="handlePostDeleted" />
 
@@ -152,9 +151,15 @@ const { toast } = useToast();
 const showFullContent = ref(false);
 const showMediaViewer = ref(false);
 const currentMediaIndex = ref(0);
+// Modal states
 const showAdvancedOptionsModal = ref(false);
 const showDeletePostModal = ref(false);
 const showReportPostModal = ref(false);
+
+// Methods to handle modal visibility
+const openAdvancedOptions = () => {
+    showAdvancedOptionsModal.value = true;
+};
 
 // Store refs
 const { currentPost: post, loading, error } = storeToRefs(postStore);
@@ -198,6 +203,7 @@ const editPost = () => {
 };
 
 const confirmDeletePost = () => {
+    showAdvancedOptionsModal.value = false;
     showDeletePostModal.value = true;
 };
 
@@ -280,11 +286,16 @@ const handleUncoverMedia = async (mediaId) => {
 };
 
 const handleReportPost = () => {
+    showAdvancedOptionsModal.value = false;
     showReportPostModal.value = true;
 };
 
-const handleReportSubmitted = () => {
+const closeReportModal = () => {
     showReportPostModal.value = false;
+};
+
+const handleReportSubmitted = () => {
+    closeReportModal();
     toast({
         description: "Report submitted successfully",
     });

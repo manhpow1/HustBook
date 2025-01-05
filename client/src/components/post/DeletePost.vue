@@ -1,5 +1,5 @@
 <template>
-    <div>
+    <div v-if="isOwnPost">
         <!-- Delete Trigger Button -->
         <Button variant="destructive" class="w-full flex items-center justify-center gap-2" @click="openModal"
             :disabled="isDeleting">
@@ -8,7 +8,7 @@
         </Button>
 
         <!-- Delete Confirmation Dialog -->
-        <AlertDialog :open="showConfirmation" @update:open="handleDialogChange">
+        <AlertDialog :open="showConfirmation" @update:open="handleDialogChange" :closeOnOutsideClick="!isDeleting">
             <AlertDialogContent>
                 <AlertDialogHeader>
                     <AlertDialogTitle>Delete Post</AlertDialogTitle>
@@ -59,6 +59,10 @@ const props = defineProps({
         validator(value) {
             return value.length > 0
         }
+    },
+    isOwnPost: {
+        type: Boolean,
+        required: true
     }
 })
 

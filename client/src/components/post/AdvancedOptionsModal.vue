@@ -56,7 +56,7 @@ const props = defineProps({
     type: Object,
     required: true,
     validator(post) {
-      return ['id', 'canComment'].every(prop => prop in post)
+      return post && post.postId
     }
   }
 })
