@@ -328,7 +328,9 @@ const checkOnlineStatus = () => {
 onMounted(async () => {
     try {
         await commentStore.resetComments();
+        const { comments: initialComments } = await commentStore.fetchComments(props.postId);
         
+<<<<<<< HEAD
         // First sync offline comments if needed
         if (navigator.onLine) {
             try {
@@ -370,6 +372,28 @@ onMounted(async () => {
             err.response?.data?.message || err.message || "Failed to load comments";
         commentError.value = errorMessage;
         notificationStore.showNotification(errorMessage, "error");
+=======
+        if (!initialComments) {
+            throw new Error('No comments data received');
+        }
+        
+        comments.value = initialComments;
+        
+        logger.debug('Comments loaded successfully', {
+            commentsCount: comments.value?.length,
+            hasMore: hasMoreComments.value,
+            totalComments: totalComments.value
+        });
+    } catch (err) {
+        logger.error('Error fetching initial comments:', err);
+        if (err.code === '9992') {
+            notificationStore.showNotification('Post not found', 'error');
+            emit('close');
+            return;
+        }
+        commentError.value = 'Failed to load comments';
+        notificationStore.showNotification('Failed to load comments', 'error');
+>>>>>>> parent of ccbdb56 (debug)
     }
 });
 

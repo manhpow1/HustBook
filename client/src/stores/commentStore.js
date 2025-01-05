@@ -38,6 +38,7 @@ export const useCommentStore = defineStore('comment', () => {
                 }
             });
 
+<<<<<<< HEAD
             const responseData = response?.data?.data;
             
             // Validate response structure
@@ -143,6 +144,17 @@ export const useCommentStore = defineStore('comment', () => {
                 valid: validComments.length,
                 lastVisible: newLastVisible
             })
+=======
+            if (response.data?.code !== '1000') {
+                throw new Error(response.data?.message || 'Failed to fetch comments')
+            }
+
+            const { comments, lastVisible: newLastVisible, totalComments } = response.data.data
+
+            const validComments = comments?.filter(comment => 
+                comment && comment.commentId && comment.content && comment.user
+            ) || []
+>>>>>>> parent of ccbdb56 (debug)
 
             if (!lastVisible) {
                 state.comments = validComments
