@@ -155,7 +155,7 @@ class PostService {
 
             // Get associated resources
             const [commentsSnapshot, likesSnapshot] = await Promise.all([
-                transaction.get(postRef.collection('comments')),
+                transaction.get(db.collection(collections.comments).where('postId', '==', postId)),
                 transaction.get(db.collection(collections.likes).where('postId', '==', postId))
             ]);
 
@@ -297,20 +297,14 @@ class PostService {
 
     async getComments(postId, userId, limit = 20, lastVisible = null) {
         try {
-            const postRef = db.collection(collections.posts).doc(postId);
-            const post = await postRef.get();
-
-            if (!post.exists) {
-                throw createError('9992', 'Post not found');
-            }
-
-            let query = postRef.collection('comments')
+            let query = db.collection(collections.comments)
+                .where('postId', '==', postId)
                 .orderBy('createdAt', 'desc')
                 .limit(limit);
 
             if (lastVisible) {
                 const decodedLastVisible = Buffer.from(lastVisible, 'base64').toString('utf-8');
-                const lastDoc = await postRef.collection('comments').doc(decodedLastVisible).get();
+                const lastDoc = await db.collection(collections.comments).doc(decodedLastVisible).get();
                 if (!lastDoc.exists) {
                     throw createError('1004', 'Invalid pagination token');
                 }
@@ -362,11 +356,26 @@ class PostService {
                 }
             }
 
-            const enrichedComments = await Promise.all(comments.map(async comment => {
-                // Get user data from users collection
-                const userDoc = await db.collection(collections.users).doc(comment.userId).get();
-                const userData = userDoc.exists ? userDoc.data() : null;
-                
+            // Get all unique user IDs from comments
+            const userIds = [...new Set(comments.map(comment => comment.userId))];
+            
+            // Fetch all user data in one batch
+            const userDocs = await Promise.all(
+                userIds.map(userId => 
+                    db.collection(collections.users).doc(userId).get()
+                )
+            );
+
+            // Create a map of user data
+            const userDataMap = new Map(
+                userDocs.map(doc => [
+                    doc.id,
+                    doc.exists ? doc.data() : null
+                ])
+            );
+
+            const enrichedComments = comments.map(comment => {
+                const userData = userDataMap.get(comment.userId);
                 return {
                     commentId: comment.commentId,
                     content: comment.content,
@@ -379,7 +388,7 @@ class PostService {
                         avatar: userData?.avatar || ''
                     }
                 };
-            }));
+            });
 
             // Cache comments
             await this.cacheComments(postId, enrichedComments);

@@ -33,15 +33,19 @@
                     </p>
                 </div>
 
-                <Button @click.prevent="onAddComment" :disabled="isSubmitting" class="w-full sm:w-auto"
-                    data-testid="post-comment-button">
+                <Button @click.prevent="onAddComment" :disabled="isSubmitting || !newComment.trim()"
+                    class="w-full sm:w-auto" data-testid="post-comment-button">
                     <Loader2Icon v-if="isSubmitting" class="mr-2 h-4 w-4 animate-spin" />
                     {{ isSubmitting ? 'Posting...' : 'Comment' }}
                 </Button>
             </CardContent>
         </Card>
 
-        <Alert v-if="commentError" variant="destructive">
+        <div v-if="loadingComments" class="flex justify-center py-4">
+            <Loader2Icon class="h-6 w-6 animate-spin text-muted-foreground" />
+            <span class="sr-only">Loading comments...</span>
+        </div>
+        <Alert v-else-if="commentError" variant="destructive">
             <AlertCircleIcon class="h-4 w-4" />
             <AlertTitle>Error</AlertTitle>
             <AlertDescription>
@@ -52,8 +56,9 @@
             </AlertDescription>
         </Alert>
 
-        <div v-if="comments?.length > 0" class="space-y-4">
-            <h3 class="text-lg font-semibold">Comments</h3>
+        <div v-else-if="comments?.length > 0" class="space-y-4">
+            <h3 class="text-lg font-semibold">Comments ({{ comments.length }})</h3>
+
             <ScrollArea class="h-[600px]">
                 <TransitionGroup name="comment-list" tag="div" class="space-y-4">
                     <CommentItem v-for="comment in comments" :key="comment.commentId" :comment="comment"
@@ -81,7 +86,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useCommentStore } from '@/stores/commentStore'
 import { useNotificationStore } from '@/stores/notificationStore'
 import { useErrorHandler } from '@/utils/errorHandler'
@@ -129,165 +134,191 @@ const syncError = ref(null)
 // Debounced input validation
 const debouncedValidateInput = debounce((input, errorRef) => {
     if (input.length > 1000) {
-        errorRef.value = 'Comment is too long'
+        errorRef.value = 'Comment is too long';
     } else if (input.trim() === '') {
-        errorRef.value = 'Comment cannot be empty'
+        errorRef.value = 'Comment cannot be empty';
     } else {
-        errorRef.value = ''
+        errorRef.value = '';
     }
-}, 300)
+}, 300);
 
-// Event handlers
 const onInput = () => {
-    debouncedValidateInput(newComment.value, inputError)
-}
+    debouncedValidateInput(newComment.value, inputError);
+};
 
 const onAddComment = async () => {
     if (!newComment.value.trim()) {
-        inputError.value = 'Comment cannot be empty'
-        return
+        inputError.value = 'Comment cannot be empty';
+        return;
     }
-    isSubmitting.value = true
+
+    isSubmitting.value = true;
     try {
-        const comment = await commentStore.addComment(props.postId, newComment.value.trim())
-        // Add the new comment to the top of the list
+        logger.debug('Adding comment:', { postId: props.postId, commentContent: newComment.value });
+
+        const comment = await commentStore.addComment(props.postId, newComment.value.trim());
         if (comment) {
-            comments.value.unshift(comment)
+            comments.value.unshift(comment);
+            newComment.value = '';
+            notificationStore.showNotification('Comment posted successfully', 'success');
         }
-        newComment.value = ''
-        notificationStore.showNotification('Comment posted successfully', 'success')
-        logger.info('Comment posted successfully', { postId: props.postId })
+
+        logger.info('Comment posted successfully', { postId: props.postId });
     } catch (error) {
-        await handleError(error)
-        inputError.value = 'Failed to post comment'
+        logger.error('Error posting comment:', error);
+        await handleError(error);
+        inputError.value = 'Failed to post comment';
     } finally {
-        isSubmitting.value = false
+        isSubmitting.value = false;
     }
-}
+};
 
 const onUpdateComment = async (updatedComment) => {
     try {
-        // Validate comment content before update
         if (!updatedComment.content?.trim()) {
-            notificationStore.showNotification('Comment cannot be empty', 'error')
-            return
+            notificationStore.showNotification('Comment cannot be empty', 'error');
+            return;
         }
+
         if (updatedComment.content.length > 1000) {
-            notificationStore.showNotification('Comment is too long', 'error')
-            return
+            notificationStore.showNotification('Comment is too long', 'error');
+            return;
         }
-        await commentStore.updateComment(props.postId, updatedComment.commentId, updatedComment.content.trim())
-        notificationStore.showNotification('Comment updated successfully', 'success')
-        logger.debug('Comment updated:', { commentId: updatedComment.commentId })
+
+        logger.debug('Updating comment:', { commentId: updatedComment.commentId });
+        await commentStore.updateComment(props.postId, updatedComment.commentId, updatedComment.content.trim());
+        notificationStore.showNotification('Comment updated successfully', 'success');
     } catch (error) {
-        await handleError(error)
+        logger.error('Error updating comment:', error);
+        await handleError(error);
     }
-}
+};
 
 const onDeleteComment = async (comment) => {
     try {
-        await commentStore.deleteComment(props.postId, comment.commentId)
-        notificationStore.showNotification('Comment deleted successfully', 'success')
-        logger.debug('Comment deleted:', { commentId: comment.commentId, postId: props.postId })
+        logger.debug('Deleting comment:', { commentId: comment.commentId });
+        await commentStore.deleteComment(props.postId, comment.commentId);
+        notificationStore.showNotification('Comment deleted successfully', 'success');
     } catch (error) {
-        await handleError(error)
+        logger.error('Error deleting comment:', error);
+        await handleError(error);
     }
-}
+};
 
 const onRetryLoadComments = async () => {
-    commentStore.resetComments()
+    commentStore.resetComments();
     try {
-        const { comments: newComments } = await commentStore.fetchComments(props.postId, 20, lastVisible.value)
+        logger.debug('Retrying to load comments');
+        const { comments: newComments } = await commentStore.fetchComments(props.postId, 20, lastVisible.value);
+
         if (!newComments?.length) {
-            notificationStore.showNotification('No comments found', 'warning')
+            notificationStore.showNotification('No comments found', 'warning');
         }
-        // Update comments reactively
-        comments.value = newComments || []
+        comments.value = newComments || [];
+
     } catch (error) {
+        logger.error('Error retrying to load comments:', error);
         if (error.code === '9992') {
-            notificationStore.showNotification('Post not found', 'error')
-            emit('close')
+            notificationStore.showNotification('Post not found', 'error');
+            emit('close');
         } else if (error.code === '1004') {
-            notificationStore.showNotification('Invalid pagination token', 'error')
-            commentStore.resetComments()
-            await commentStore.fetchComments(props.postId)
+            notificationStore.showNotification('Invalid pagination token', 'error');
+            commentStore.resetComments();
+            await commentStore.fetchComments(props.postId);
         } else {
-            notificationStore.showNotification('Failed to load comments', 'error')
-            await handleError(error)
+            notificationStore.showNotification('Failed to load comments', 'error');
+            await handleError(error);
         }
     }
-}
+};
 
 const onLoadMoreComments = debounce(async () => {
-    if (isLoadingMore.value) return
-    isLoadingMore.value = true
+    if (isLoadingMore.value) return;
+    isLoadingMore.value = true;
+
     try {
+        logger.debug('Loading more comments', { lastVisible: lastVisible.value });
         const newComments = await commentStore.fetchComments(
             props.postId,
             20,
             lastVisible.value
-        )
+        );
+
         if (newComments.length === 0) {
-            commentStore.hasMoreComments = false
+            commentStore.hasMoreComments = false;
         }
     } catch (error) {
-        notificationStore.showNotification('Failed to load more comments', 'error')
-        await handleError(error)
+        logger.error('Error loading more comments:', error);
+        notificationStore.showNotification('Failed to load more comments', 'error');
+        await handleError(error);
     } finally {
-        isLoadingMore.value = false
+        isLoadingMore.value = false;
     }
-}, 300)
+}, 300);
 
 const retrySyncComments = async () => {
     try {
-        await commentStore.syncOfflineComments()
-        syncError.value = null
-        notificationStore.showNotification('Comments synced successfully', 'success')
-        await onRetryLoadComments()
+        logger.debug('Retrying to sync comments');
+        await commentStore.syncOfflineComments();
+        syncError.value = null;
+        notificationStore.showNotification('Comments synced successfully', 'success');
+        await onRetryLoadComments();
     } catch (error) {
-        syncError.value = 'Failed to sync comments. Please try again.'
-        notificationStore.showNotification('Failed to sync comments', 'error')
-        logger.error('Sync comments error:', error)
+        logger.error('Sync comments error:', error);
+        syncError.value = 'Failed to sync comments. Please try again.';
+        notificationStore.showNotification('Failed to sync comments', 'error');
     }
-}
+};
 
-// Network status handling
 const checkOnlineStatus = () => {
-    offlineMode.value = !navigator.onLine
+    offlineMode.value = !navigator.onLine;
     if (navigator.onLine) {
-        retrySyncComments()
+        retrySyncComments();
     }
-}
+};
 
-// Lifecycle hooks
 onMounted(async () => {
     try {
-        await commentStore.resetComments()
-        const { comments: initialComments } = await commentStore.fetchComments(props.postId)
-        comments.value = initialComments || []
-        
+        logger.debug('Mounting CommentSection', { postId: props.postId });
+
+        await commentStore.resetComments();
+        const { comments: initialComments } = await commentStore.fetchComments(props.postId);
+        comments.value = initialComments || [];
+
         if (navigator.onLine) {
-            await commentStore.syncOfflineComments()
+            await commentStore.syncOfflineComments();
         }
-    } catch (error) {
-        if (error.code === '9992') {
-            notificationStore.showNotification('Post not found', 'error')
-            emit('close')
+
+        logger.debug('Comments loaded successfully', {
+            commentsCount: comments.value?.length,
+            hasMore: hasMoreComments.value
+        });
+    } catch (err) {
+        logger.error('Error in CommentSection mount:', err);
+        if (err.code === '9992') {
+            notificationStore.showNotification('Post not found', 'error');
+            emit('close');
         } else {
-            syncError.value = 'Failed to sync offline comments'
-            notificationStore.showNotification('Failed to sync offline comments', 'error')
-            logger.error('Error in CommentSection mount:', error)
+            syncError.value = 'Failed to sync offline comments';
+            notificationStore.showNotification('Failed to sync offline comments', 'error');
         }
     }
 
-    window.addEventListener('online', checkOnlineStatus)
-    window.addEventListener('offline', checkOnlineStatus)
-})
+    window.addEventListener('online', checkOnlineStatus);
+    window.addEventListener('offline', checkOnlineStatus);
+});
 
 onUnmounted(() => {
-    window.removeEventListener('online', checkOnlineStatus)
-    window.removeEventListener('offline', checkOnlineStatus)
-})
+    window.removeEventListener('online', checkOnlineStatus);
+    window.removeEventListener('offline', checkOnlineStatus);
+});
+
+// Watch for errors
+watch(() => commentError.value, (newError) => {
+    if (newError) {
+        logger.error('Comment error occurred:', newError);
+    }
+});
 </script>
 
 <style scoped>

@@ -37,10 +37,6 @@ export const useCommentStore = defineStore('comment', () => {
                 }
             })
 
-            if (!response.data?.code === '1000') {
-                throw new Error(response.data?.message || 'Failed to fetch comments')
-            }
-
             if (response.data?.code !== '1000') {
                 throw new Error(response.data?.message || 'Failed to fetch comments')
             }
