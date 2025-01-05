@@ -467,7 +467,8 @@ class PostService {
                 query = query.where('__name__', '==', postId);
             }
 
-            if (userId) {
+            // Only filter by userId if explicitly provided
+            if (userId && typeof userId === 'string' && userId.trim() !== '') {
                 query = query.where('userId', '==', userId);
             }
 

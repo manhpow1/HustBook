@@ -18,7 +18,9 @@ class SearchService {
 
             const matchingPosts = posts.filter(post => {
                 const content = post.content?.toLowerCase() || '';
-                return content.includes(normalizedKeyword);
+                const username = post.userName?.toLowerCase() || '';
+                return content.includes(normalizedKeyword) || 
+                       username.includes(normalizedKeyword);
             });
 
             await createDocument(collections.savedSearches, {
@@ -51,44 +53,40 @@ class SearchService {
         try {
             const normalizedKeyword = keyword.trim().toLowerCase();
 
-            // Use the correct collection name from config
-            const query = await db.collection(collections.users)
+            // Create a query that searches usernames starting with the keyword
+            const usersQuery = db.collection(collections.users)
+                .where('userName', '>=', normalizedKeyword)
+                .where('userName', '<=', normalizedKeyword + '\uf8ff')
                 .orderBy('userName')
                 .offset(index)
-                .limit(count)
-                .get();
+                .limit(count);
 
-            // Get blocked users list for current user
-            const blockedUsersSnapshot = await db.collection(collections.blocks)
-                .where('userId', '==', currentUserId)
-                .get();
+            // Get blocked users in parallel
+            const [usersSnapshot, blockedUsersSnapshot] = await Promise.all([
+                usersQuery.get(),
+                db.collection(collections.blocks)
+                    .where('userId', '==', currentUserId)
+                    .get()
+            ]);
 
             const blockedUserIds = new Set(
                 blockedUsersSnapshot.docs.map(doc => doc.data().blockedUserId)
             );
 
-            const matchingUsers = [];
-
-            for (const doc of query.docs) {
-                const userData = doc.data();
-                const userId = doc.id;
-
-                // Skip if user is blocked or is current user
-                if (blockedUserIds.has(userId) || userId === currentUserId) {
-                    continue;
-                }
-
-                // Check if username matches search
-                const userName = userData.userName?.toLowerCase() || '';
-                if (userName.includes(normalizedKeyword)) {
-                    matchingUsers.push({
-                        userId: userId,
+            const matchingUsers = usersSnapshot.docs
+                .filter(doc => {
+                    const userId = doc.id;
+                    return !blockedUserIds.has(userId) && userId !== currentUserId;
+                })
+                .map(doc => {
+                    const userData = doc.data();
+                    return {
+                        userId: doc.id,
                         userName: userData.userName || '',
                         avatar: userData.avatar || '',
                         same_friends: userData.mutualFriendsCount || 0
-                    });
-                }
-            }
+                    };
+                });
 
             return matchingUsers;
 
