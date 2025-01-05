@@ -507,7 +507,9 @@ class UserController {
                     avatar: updatedUser.avatar,
                     coverPhoto: updatedUser.coverPhoto,
                     bio: updatedUser.bio,
-                    location: updatedUser.location,
+                    address: updatedUser.address,
+                    city: updatedUser.city,
+                    country: updatedUser.country,
                     version: updatedUser.version
                 }
             });

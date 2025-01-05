@@ -34,7 +34,7 @@
             <DropdownMenu>
               <DropdownMenuTrigger class="focus:outline-none">
                 <Avatar class="h-8 w-8 lg:h-9 lg:w-9 hover:ring-2 hover:ring-primary/20 transition-all">
-                  <AvatarImage :src="user?.avatar" :alt="user?.userName || 'User avatar'" />
+                  <AvatarImage :src="userData?.avatar" :alt="userData?.userName || 'User avatar'" />
                   <AvatarFallback class="bg-primary/10">
                     <User class="h-4 w-4 text-primary" aria-hidden="true" />
                   </AvatarFallback>
@@ -43,14 +43,14 @@
               <DropdownMenuContent align="end" class="w-56">
                 <div class="flex items-center gap-2 p-2">
                   <Avatar class="h-8 w-8">
-                    <AvatarImage :src="user?.avatar" :alt="user?.userName || 'User avatar'" />
+                    <AvatarImage :src="userData?.avatar" :alt="userData?.userName || 'User avatar'" />
                     <AvatarFallback class="bg-primary/10">
                       <User class="h-4 w-4 text-primary" aria-hidden="true" />
                     </AvatarFallback>
                   </Avatar>
                   <div class="flex flex-col space-y-1">
-                    <p class="text-sm font-medium leading-none">{{ user?.userName }}</p>
-                    <p class="text-xs leading-none text-muted-foreground">{{ user?.email }}</p>
+                    <p class="text-sm font-medium leading-none">{{ userData?.userName }}</p>
+                    <p class="text-xs leading-none text-muted-foreground">{{ userData?.email }}</p>
                   </div>
                 </div>
                 <DropdownMenuSeparator />
@@ -228,7 +228,7 @@ const iconComponents = { Home, User, Users, MessageCircle, Settings };
 
 const userStore = useUserStore();
 const router = useRouter();
-const { isLoggedIn, user } = storeToRefs(userStore);
+const { isLoggedIn, userData } = storeToRefs(userStore);
 const currentYear = computed(() => new Date().getFullYear());
 
 const handleLogout = async () => {

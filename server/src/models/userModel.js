@@ -9,6 +9,9 @@ class User {
         this.userId = data.userId;  // Updated to use userId consistently
         this.userName = data.userName || null;
         this.phoneNumber = data.phoneNumber;
+        this.address = data.address || null;
+        this.city = data.city || null;
+        this.country = data.country || null;
         this.avatar = data.avatar || '';  // Initialize as empty string instead of null
         this.createdAt = data.createdAt || new Date().toISOString();
         this.isVerified = data.isVerified || false;
@@ -33,9 +36,12 @@ class User {
     toJSON() {
         return {
             userId: this.userId,  // Updated to use userId consistently
-            ...(this.userName && { userName: this.userName }),
+            usernName: this.userName,
             phoneNumber: this.phoneNumber,
             avatar: this.avatar,
+            address: this.address,
+            city: this.city,
+            country: this.country,
             createdAt: this.createdAt,
             isVerified: this.isVerified,
             isBlocked: this.isBlocked,

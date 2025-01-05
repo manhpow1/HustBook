@@ -103,6 +103,7 @@
 
 <script setup>
 import { ref, computed, onMounted, watch } from 'vue'
+import { storeToRefs } from 'pinia'
 import { onBeforeRouteLeave } from 'vue-router'
 import { useUserStore } from '@/stores/userStore'
 import { useToast } from '@/components/ui/toast'

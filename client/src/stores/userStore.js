@@ -54,7 +54,7 @@ export const useUserStore = defineStore('user', () => {
         const hasUser = !!user.value || !!localStorage.getItem('user');
         return hasToken && hasUser;
     });
-    const userInfo = computed(() => user.value);
+    const userData = computed(() => user.value);
     const hasVerifiedPhone = computed(() => user.value?.isVerified);
     const isSessionExpired = computed(() => !Cookies.get('accessToken') && !Cookies.get('refreshToken'));
     const deviceCount = computed(() => user.value?.deviceIds?.length || 0);
@@ -645,7 +645,7 @@ export const useUserStore = defineStore('user', () => {
             const response = await apiService.getUserInfo(userId);
 
             if (response.data?.code === '1000') {
-                const userData = response.data.data;
+                userData = response.data.data;
 
                 // If fetching current user's profile, update the store
                 if (!userId) {
@@ -778,7 +778,7 @@ export const useUserStore = defineStore('user', () => {
 
         // Computed
         isLoggedIn,
-        userInfo,
+        userData,
         hasVerifiedPhone,
         isSessionExpired,
         deviceCount,
