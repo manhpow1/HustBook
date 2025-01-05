@@ -338,8 +338,15 @@ class PostService {
             }
 
             const snapshot = await query.get();
-
-            if (snapshot.empty) {
+            
+            // Only log if this is the initial comments fetch (no lastVisible)
+            if (snapshot.empty && !lastVisible) {
+                logger.info('No comments found for post');
+                return {
+                    comments: [],
+                    lastVisible: null
+                };
+            } else if (snapshot.empty) {
                 return {
                     comments: [],
                     lastVisible: null
