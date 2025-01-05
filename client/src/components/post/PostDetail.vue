@@ -49,9 +49,9 @@
             <Alert v-else-if="error" variant="destructive" role="alert">
                 <AlertCircle class="h-4 w-4" />
                 <AlertTitle>Error</AlertTitle>
-                <AlertDescription>
+                <AlertDescription class="flex flex-col gap-3">
                     {{ error }}
-                    <Button @click="getPost" variant="outline" size="sm">
+                    <Button @click="fetchPost" variant="outline" size="sm">
                         <RefreshCw class="mr-2 h-4 w-4" />
                         Retry
                     </Button>
@@ -61,11 +61,13 @@
             <div v-else-if="post" class="space-y-6">
                 <Card>
                     <CardContent class="p-6 space-y-6">
-                        <PostHeader :post="post" @editPost="editPost" @sharePost="sharePost" />
+                        <PostHeader :post="post" :isOwnPost="isOwnPost" @editPost="editPost"
+                            @deletePost="confirmDeletePost" @reportPost="handleReportPost" @sharePost="sharePost" />
 
                         <Separator />
 
-                        <PostContent :post="post" :showFullContent="showFullContent" @toggleContent="toggleContent" />
+                        <PostContent :post="post" :showFullContent="showFullContent" @toggleContent="toggleContent"
+                            @hashtagClick="handleHashtagClick" />
 
                         <PostMedia v-if="post.media?.length || post.video" :post="post"
                             @uncoverMedia="handleUncoverMedia" @like="handleLike" @comment="focusCommentInput" />
@@ -98,15 +100,13 @@
                 :isLiked="post?.isLiked === '1'" @close="closeMediaViewer" @like="handleLike"
                 @comment="handleComment" />
 
-            <DeletePost v-if="showDeletePostModal" :postId="post?.postId" 
-                @post-deleted="handlePostDeleted" 
-                @close="showDeletePostModal = false" />
+            <AdvancedOptionsModal v-model:isVisible="showAdvancedOptionsModal" :isOwnPost="isOwnPost" :post="post"
+                @edit="editPost" @delete="confirmDeletePost" @report="handleReportPost" />
 
-            <ReportPostModal v-if="showReportPostModal" :postId="post?.postId" 
-                :isOpen="showReportPostModal"
-                @close="showReportPostModal = false"
-                @report-submitted="handleReportSubmitted" 
-                @post-removed="handlePostRemoved" />
+            <DeletePost v-if="showDeletePostModal" :postId="post?.postId" @post-deleted="handlePostDeleted" />
+
+            <ReportPostModal v-if="showReportPostModal" :postId="post?.postId" @close="showReportPostModal = false"
+                @report-submitted="handleReportSubmitted" @post-removed="handlePostRemoved" />
         </ErrorBoundary>
     </div>
 </template>
@@ -124,9 +124,8 @@ import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "../ui/skeleton";
-import { useMediaUtils } from "@/composables/useMediaUtils";
+import { useMediaUtils } from '@/composables/useMediaUtils';
 import { useCommentStore } from "@/stores/commentStore";
-import logger from "@/services/logging";
 
 const DeletePost = defineAsyncComponent(() => import("./DeletePost.vue"));
 const ErrorBoundary = defineAsyncComponent(() =>
@@ -136,33 +135,23 @@ const PostHeader = defineAsyncComponent(() => import("./PostHeader.vue"));
 const PostContent = defineAsyncComponent(() => import("./PostContent.vue"));
 const PostMedia = defineAsyncComponent(() => import("./PostMedia.vue"));
 const PostActions = defineAsyncComponent(() => import("./PostActions.vue"));
-const PostBanWarning = defineAsyncComponent(() =>
-    import("./PostBanWarning.vue")
-);
-const CommentSection = defineAsyncComponent(() =>
-    import("./CommentSection.vue")
-);
-const MediaViewer = defineAsyncComponent(() =>
-    import("../shared/MediaViewer.vue")
-);
-const AdvancedOptionsModal = defineAsyncComponent(() =>
-    import("./AdvancedOptionsModal.vue")
-);
-const ReportPostModal = defineAsyncComponent(() =>
-    import("./ReportPostModal.vue")
-);
+const PostBanWarning = defineAsyncComponent(() => import("./PostBanWarning.vue"));
+const CommentSection = defineAsyncComponent(() => import("./CommentSection.vue"));
+const MediaViewer = defineAsyncComponent(() => import("../shared/MediaViewer.vue"));
+const AdvancedOptionsModal = defineAsyncComponent(() => import("./AdvancedOptionsModal.vue"));
+const ReportPostModal = defineAsyncComponent(() => import("./ReportPostModal.vue"));
 
 const router = useRouter();
 const postStore = usePostStore();
 const userStore = useUserStore();
-const commentStore = useCommentStore();
+const commentStore = useCommentStore
 const { toast } = useToast();
 
 // State
 const showFullContent = ref(false);
 const showMediaViewer = ref(false);
 const currentMediaIndex = ref(0);
-// Modal states
+const showAdvancedOptionsModal = ref(false);
 const showDeletePostModal = ref(false);
 const showReportPostModal = ref(false);
 
@@ -170,32 +159,33 @@ const showReportPostModal = ref(false);
 const { currentPost: post, loading, error } = storeToRefs(postStore);
 const { comments, loadingComments, commentError, loadingMoreComments } = storeToRefs(commentStore);
 
+// Computed
+const isOwnPost = computed(() => {
+    return post.value?.author?.userId === userStore.user?.userId;
+});
+
 const { createMediaList } = useMediaUtils();
 
 const mediaList = computed(() => {
     if (!post.value) return [];
-    return createMediaList(
-        post.value.image,
-        post.value.video,
-        post.value.content
-    );
+    return createMediaList(post.value.image, post.value.video, post.value.content);
 });
 
 // Methods
-const getPost = async () => {
+const fetchPost = async () => {
     try {
         const postId = router.currentRoute.value.params.postId;
         if (!postId) {
-            throw new Error("Post ID is required");
+            throw new Error('Post ID is required');
         }
         await postStore.fetchPost(postId);
     } catch (err) {
-        logger.error('Failed to fetch post', { error: err });
         toast({
             title: "Error",
             description: err.message || "Failed to fetch post",
             variant: "destructive",
         });
+        throw err;
     }
 };
 
@@ -211,10 +201,8 @@ const confirmDeletePost = () => {
 };
 
 const handlePostDeleted = () => {
-    showDeletePostModal.value = false;
     router.push({ name: "Home" });
 };
-
 
 const handleLike = async () => {
     try {
@@ -294,12 +282,8 @@ const handleReportPost = () => {
     showReportPostModal.value = true;
 };
 
-const closeReportModal = () => {
-    showReportPostModal.value = false;
-};
-
 const handleReportSubmitted = () => {
-    closeReportModal();
+    showReportPostModal.value = false;
     toast({
         description: "Report submitted successfully",
     });
@@ -349,5 +333,5 @@ const closeMediaViewer = () => {
     showMediaViewer.value = false;
 };
 
-onMounted(getPost);
+onMounted(fetchPost);
 </script>
