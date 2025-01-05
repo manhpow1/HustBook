@@ -14,7 +14,8 @@ export const useCommentStore = defineStore('comment', () => {
         commentError: null,
         hasMoreComments: true,
         pageIndex: 0,
-        lastVisible: null
+        lastVisible: null,
+        totalComments: 0
     })
     const { handleError } = useErrorHandler();
 
@@ -41,7 +42,7 @@ export const useCommentStore = defineStore('comment', () => {
                 throw new Error(response.data?.message || 'Failed to fetch comments')
             }
 
-            const { comments, lastVisible: newLastVisible } = response.data.data
+            const { comments, lastVisible: newLastVisible, totalComments } = response.data.data
 
             const validComments = comments?.filter(comment => 
                 comment && comment.commentId && comment.content && comment.user
@@ -55,6 +56,7 @@ export const useCommentStore = defineStore('comment', () => {
 
             state.lastVisible = newLastVisible
             state.hasMoreComments = comments.length === limit
+            state.totalComments = totalComments || 0
 
             return comments
         } catch (error) {

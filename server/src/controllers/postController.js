@@ -160,7 +160,8 @@ class PostController {
             sendResponse(res, '1000', {
                 comments: result.comments,
                 lastVisible: result.lastVisible ?
-                    Buffer.from(result.lastVisible).toString('base64') : null
+                    Buffer.from(result.lastVisible).toString('base64') : null,
+                totalComments: result.totalComments
             });
         } catch (error) {
             next(error);

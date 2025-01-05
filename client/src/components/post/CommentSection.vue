@@ -57,7 +57,7 @@
         </Alert>
 
         <div v-else-if="comments?.length > 0" class="space-y-4">
-            <h3 class="text-lg font-semibold">Comments ({{ comments.length }})</h3>
+            <h3 class="text-lg font-semibold">Comments ({{ totalComments }})</h3>
 
             <ScrollArea class="h-[600px]">
                 <TransitionGroup name="comment-list" tag="div" class="space-y-4">
@@ -95,7 +95,7 @@ import { debounce } from 'lodash-es'
 import logger from '@/services/logging'
 import { storeToRefs } from 'pinia'
 const commentStore = useCommentStore()
-const { comments, loadingComments, commentError, hasMoreComments, lastVisible } = storeToRefs(commentStore)
+const { comments, loadingComments, commentError, hasMoreComments, lastVisible, totalComments } = storeToRefs(commentStore)
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
@@ -278,32 +278,48 @@ const checkOnlineStatus = () => {
 };
 
 onMounted(async () => {
+    logger.debug('Mounting CommentSection', { postId: props.postId });
+    
+    // Reset and fetch initial comments
     try {
-        logger.debug('Mounting CommentSection', { postId: props.postId });
-
         await commentStore.resetComments();
         const { comments: initialComments } = await commentStore.fetchComments(props.postId);
-        comments.value = initialComments || [];
-
-        if (navigator.onLine) {
-            await commentStore.syncOfflineComments();
+        
+        if (!initialComments) {
+            throw new Error('No comments data received');
         }
-
+        
+        comments.value = initialComments;
+        
         logger.debug('Comments loaded successfully', {
             commentsCount: comments.value?.length,
-            hasMore: hasMoreComments.value
+            hasMore: hasMoreComments.value,
+            totalComments: totalComments.value
         });
     } catch (err) {
-        logger.error('Error in CommentSection mount:', err);
+        logger.error('Error fetching initial comments:', err);
         if (err.code === '9992') {
             notificationStore.showNotification('Post not found', 'error');
             emit('close');
-        } else {
+            return;
+        }
+        commentError.value = 'Failed to load comments';
+        notificationStore.showNotification('Failed to load comments', 'error');
+    }
+
+    // Sync offline comments if online
+    if (navigator.onLine) {
+        try {
+            await commentStore.syncOfflineComments();
+            logger.debug('Offline comments synced successfully');
+        } catch (err) {
+            logger.error('Error syncing offline comments:', err);
             syncError.value = 'Failed to sync offline comments';
             notificationStore.showNotification('Failed to sync offline comments', 'error');
         }
     }
 
+    // Set up online/offline listeners
     window.addEventListener('online', checkOnlineStatus);
     window.addEventListener('offline', checkOnlineStatus);
 });
