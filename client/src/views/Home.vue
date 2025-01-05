@@ -332,8 +332,12 @@ const formatDate = (date) => {
 };
 
 const isImage = (fileUrl) => {
-  if (!fileUrl) return false;
-  return /\.(jpg|jpeg|png|gif|webp|avif|tiff|svg)$/i.test(fileUrl);
+  try {
+    if (!fileUrl) return false;
+    return /(jpg|jpeg|png|gif)/i.test(fileUrl);
+  } catch {
+    return false;
+  }
 };
 
 const goToWatchPage = (postId, mediaIndex) => {
