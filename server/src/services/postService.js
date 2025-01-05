@@ -431,14 +431,16 @@ class PostService {
                 return commentData;
             }).filter(Boolean); // Remove any invalid comments
 
-            // Cache comments
-            await this.cacheComments(postId, enrichedComments);
-
-            return {
+            // Cache comments with timestamp
+            const cacheData = {
                 comments: enrichedComments,
-                lastVisible: snapshot.docs.length > 0 ?
+                timestamp: Date.now(),
+                lastVisible: snapshot.docs.length > 0 ? 
                     snapshot.docs[snapshot.docs.length - 1].id : null
             };
+            await this.cacheComments(postId, cacheData);
+
+            return cacheData;
 
         } catch (error) {
             logger.error('Error in getComments service:', error);
@@ -446,10 +448,16 @@ class PostService {
         }
     }
 
-    async cacheComments(postId, comments) {
+    async cacheComments(postId, data) {
         try {
             const cacheKey = `post:${postId}:comments`;
-            await redis.cache.set(cacheKey, comments, 300);
+            const ttl = 300; // 5 minutes
+            await redis.cache.set(cacheKey, data, ttl);
+            
+            // Set a shorter TTL for subsequent requests within 10 seconds
+            if (Date.now() - (data.timestamp || 0) < 10000) {
+                await redis.cache.expire(cacheKey, 10);
+            }
         } catch (error) {
             logger.warn('Failed to cache comments:', error);
         }

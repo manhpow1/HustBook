@@ -49,8 +49,7 @@
             <Alert v-else-if="error" variant="destructive" role="alert">
                 <AlertCircle class="h-4 w-4" />
                 <AlertTitle>Error</AlertTitle>
-                <AlertDescription class="flex flex-col gap-3">
-                    {{ error }}
+                <AlertDescription>
                     {{ error }}
                     <Button @click="fetchPost" variant="outline" size="sm">
                         <RefreshCw class="mr-2 h-4 w-4" />
@@ -62,8 +61,7 @@
             <div v-else-if="post" class="space-y-6">
                 <Card>
                     <CardContent class="p-6 space-y-6">
-                        <PostHeader :post="post" @editPost="editPost"
-                            @deletePost="confirmDeletePost" @reportPost="handleReportPost" @sharePost="sharePost" />
+                        <PostHeader :post="post" @editPost="editPost" @sharePost="sharePost" />
 
                         <Separator />
 
@@ -100,13 +98,15 @@
                 :isLiked="post?.isLiked === '1'" @close="closeMediaViewer" @like="handleLike"
                 @comment="handleComment" />
 
-            <AdvancedOptionsModal v-model:isVisible="showAdvancedOptionsModal" :post="post || {}"
-                @edit="editPost" @delete="confirmDeletePost" @report="handleReportPost" />
+            <DeletePost v-if="showDeletePostModal" :postId="post?.postId" 
+                @post-deleted="handlePostDeleted" 
+                @close="showDeletePostModal = false" />
 
-            <DeletePost v-if="showDeletePostModal" :postId="post?.postId" @post-deleted="handlePostDeleted" />
-
-            <ReportPostModal v-if="showReportPostModal" :postId="post?.postId" @close="showReportPostModal = false"
-                @report-submitted="handleReportSubmitted" @post-removed="handlePostRemoved" />
+            <ReportPostModal v-if="showReportPostModal" :postId="post?.postId" 
+                :isOpen="showReportPostModal"
+                @close="showReportPostModal = false"
+                @report-submitted="handleReportSubmitted" 
+                @post-removed="handlePostRemoved" />
         </ErrorBoundary>
     </div>
 </template>
@@ -163,14 +163,8 @@ const showFullContent = ref(false);
 const showMediaViewer = ref(false);
 const currentMediaIndex = ref(0);
 // Modal states
-const showAdvancedOptionsModal = ref(true);
-const showDeletePostModal = ref(true);
-const showReportPostModal = ref(true);
-
-// Methods to handle modal visibility
-const openAdvancedOptions = () => {
-    showAdvancedOptionsModal.value = true;
-};
+const showDeletePostModal = ref(false);
+const showReportPostModal = ref(false);
 
 // Store refs
 const { currentPost: post, loading, error } = storeToRefs(postStore);
@@ -213,8 +207,22 @@ const editPost = () => {
 };
 
 const confirmDeletePost = () => {
-    showAdvancedOptionsModal.value = false;
     showDeletePostModal.value = true;
+};
+
+const handlePostDeleted = () => {
+    showDeletePostModal.value = false;
+    router.push({ name: "Home" });
+};
+
+const handleReportSubmitted = () => {
+    toast({
+        description: "Report submitted successfully",
+    });
+};
+
+const handlePostRemoved = () => {
+    router.push({ name: "Home" });
 };
 
 const handlePostDeleted = () => {
@@ -296,7 +304,6 @@ const handleUncoverMedia = async (mediaId) => {
 };
 
 const handleReportPost = () => {
-    showAdvancedOptionsModal.value = false;
     showReportPostModal.value = true;
 };
 

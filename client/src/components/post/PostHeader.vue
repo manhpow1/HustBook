@@ -22,87 +22,23 @@
                     </div>
                 </div>
 
-                <!-- Action Menu -->
-                <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon" aria-label="Post options" data-testid="post-options-button">
-                            <MoreVertical class="h-5 w-5" aria-hidden="true" />
-                        </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" class="w-48">
-                        <DropdownMenuItem @click="editPost">
-                            <Pencil class="mr-2 h-4 w-4" aria-hidden="true" />
-                            <span>Edit Post</span>
-                        </DropdownMenuItem>
+                <!-- Advanced Options Trigger -->
+                <Button variant="ghost" size="icon" aria-label="Post options" @click="showAdvancedOptions = true">
+                    <MoreVertical class="h-5 w-5" aria-hidden="true" />
+                </Button>
 
-                        <DropdownMenuSeparator />
-
-                        <DropdownMenuItem @click="confirmDeletePost" class="text-destructive">
-                            <Trash class="mr-2 h-4 w-4" aria-hidden="true" />
-                            <span>Delete Post</span>
-                        </DropdownMenuItem>
-
-                        <DropdownMenuItem @click="reportPost">
-                            <Flag class="mr-2 h-4 w-4" aria-hidden="true" />
-                            <span>Report Post</span>
-                        </DropdownMenuItem>
-
-                        <DropdownMenuItem @click="sharePost">
-                            <Share class="mr-2 h-4 w-4" aria-hidden="true" />
-                            <span>Share Post</span>
-                        </DropdownMenuItem>
-                    </DropdownMenuContent>
-                </DropdownMenu>
+                <!-- Advanced Options Modal -->
+                <AdvancedOptionsModal
+                    :is-visible="showAdvancedOptions"
+                    :post="post"
+                    @update:is-visible="showAdvancedOptions = $event"
+                    @edit="editPost"
+                    @delete="confirmDeletePost"
+                    @report="reportPost"
+                />
             </div>
         </CardHeader>
 
-        <!-- Delete Confirmation Dialog -->
-        <AlertDialog :open="showDeleteDialog">
-            <AlertDialogContent>
-                <AlertDialogHeader>
-                    <AlertDialogTitle>Delete Post</AlertDialogTitle>
-                    <AlertDialogDescription>
-                        Are you sure you want to delete this post? This action cannot be undone.
-                    </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                    <AlertDialogCancel @click="closeDeleteDialog">Cancel</AlertDialogCancel>
-                    <AlertDialogAction @click="handleDelete"
-                        class="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-                        Delete
-                    </AlertDialogAction>
-                </AlertDialogFooter>
-            </AlertDialogContent>
-        </AlertDialog>
-
-        <!-- Share Dialog -->
-        <Dialog :open="showShareDialog">
-            <DialogContent>
-                <DialogHeader>
-                    <DialogTitle>Share Post</DialogTitle>
-                    <DialogDescription>
-                        Share this post with others
-                    </DialogDescription>
-                </DialogHeader>
-                <div class="grid gap-4 py-4">
-                    <div class="flex items-center space-x-4">
-                        <Input ref="shareUrlInput" :value="shareUrl" readonly class="flex-1" />
-                        <Button @click="copyShareUrl" size="sm">
-                            <Copy class="mr-2 h-4 w-4" />
-                            Copy
-                        </Button>
-                    </div>
-                    <div class="flex justify-center space-x-4">
-                        <Button variant="outline" @click="shareToSocial('twitter')">
-                            Twitter
-                        </Button>
-                        <Button variant="outline" @click="shareToSocial('facebook')">
-                            Facebook
-                        </Button>
-                    </div>
-                </div>
-            </DialogContent>
-        </Dialog>
 
         <!-- Error Alert -->
         <Alert v-if="error" variant="destructive" class="mt-4">
@@ -118,7 +54,8 @@ import { ref, computed } from 'vue'
 import { useToast } from '@/components/ui/toast'
 import { format, formatDistanceToNow } from 'date-fns'
 import defaultAvatar from '@/assets/avatar-default.svg'
-import { MoreVertical, Pencil, Trash, Flag, Share, Copy, AlertCircle } from 'lucide-vue-next'
+import { MoreVertical, AlertCircle } from 'lucide-vue-next'
+import AdvancedOptionsModal from './AdvancedOptionsModal.vue'
 
 import { Card, CardHeader } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -147,6 +84,7 @@ const emit = defineEmits(['editPost', 'deletePost', 'reportPost', 'sharePost'])
 const error = ref(null)
 const showDeleteDialog = ref(false)
 const showShareDialog = ref(false)
+const showAdvancedOptions = ref(false)
 const shareUrlInput = ref(null)
 
 // Computed

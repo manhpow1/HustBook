@@ -11,19 +11,19 @@
       <div class="grid gap-4 py-4">
         <div class="space-y-2">
           <div>
-            <Button variant="ghost" class="w-full justify-start" @click="handleAction('edit')">
+            <Button variant="ghost" class="w-full justify-start" @click="handleEdit">
               <PencilIcon class="mr-2 h-4 w-4" />
               Edit Post
             </Button>
 
-            <Button variant="ghost" class="w-full justify-start" @click="handleAction('delete')">
+            <Button variant="ghost" class="w-full justify-start" @click="showDeleteModal = true">
               <TrashIcon class="mr-2 h-4 w-4" />
               Delete Post
             </Button>
           </div>
 
           <div>
-            <Button variant="ghost" class="w-full justify-start text-destructive" @click="handleAction('report')">
+            <Button variant="ghost" class="w-full justify-start text-destructive" @click="showReportModal = true">
               <Flag class="mr-2 h-4 w-4" />
               Report Post
             </Button>
@@ -36,12 +36,30 @@
       </DialogFooter>
     </DialogContent>
   </Dialog>
+
+  <DeletePost v-if="showDeleteModal" :postId="post.postId" @post-deleted="handlePostDeleted" />
+  
+  <ReportPostModal 
+    v-if="showReportModal" 
+    :postId="post.postId" 
+    @close="showReportModal = false"
+    @report-submitted="handleReportSubmitted" 
+    @post-removed="handlePostRemoved" 
+  />
 </template>
 
 <script setup>
+import { ref } from 'vue'
+import { useRouter } from 'vue-router'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
-import { PencilIcon, TrashIcon, MessageCircleIcon, Flag, EyeOffIcon } from 'lucide-vue-next'
+import { PencilIcon, TrashIcon, Flag } from 'lucide-vue-next'
+import DeletePost from './DeletePost.vue'
+import ReportPostModal from './ReportPostModal.vue'
+
+const router = useRouter()
+const showDeleteModal = ref(false)
+const showReportModal = ref(false)
 
 const props = defineProps({
   isVisible: {
@@ -60,13 +78,33 @@ const props = defineProps({
 const emit = defineEmits([
   'update:isVisible',
   'edit',
-  'delete',
-  'report',
+  'post-deleted',
+  'post-removed'
 ])
 
-const handleAction = (action) => {
-  emit(action)
+const handleEdit = () => {
+  router.push({
+    name: 'EditPost',
+    params: { postId: props.post.postId }
+  })
   closeModal()
+}
+
+const handlePostDeleted = () => {
+  showDeleteModal.value = false
+  closeModal()
+  emit('post-deleted')
+}
+
+const handleReportSubmitted = () => {
+  showReportModal.value = false
+  closeModal()
+}
+
+const handlePostRemoved = () => {
+  showReportModal.value = false
+  closeModal()
+  emit('post-removed')
 }
 
 const closeModal = () => {
