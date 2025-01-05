@@ -145,7 +145,7 @@ const ReportPostModal = defineAsyncComponent(() => import("./ReportPostModal.vue
 const router = useRouter();
 const postStore = usePostStore();
 const userStore = useUserStore();
-const commentStore = useCommentStore
+const commentStore = useCommentStore();
 const { toast } = useToast();
 
 // State
