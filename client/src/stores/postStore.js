@@ -141,14 +141,17 @@ export const usePostStore = defineStore("post", () => {
             }
 
             // Validate post data
-            const hasContent = postData.content?.trim()?.length > 0;
-            const hasImages = postData.images?.length > 0;
+            const content = postData.get('content');
+            const images = postData.getAll('images');
+            
+            const hasContent = content?.trim()?.length > 0;
+            const hasImages = images?.length > 0;
             
             if (!hasContent && !hasImages) {
                 throw new Error("Post must have either text content or images");
             }
 
-            if (postData.images?.length > 4) {
+            if (images?.length > 4) {
                 throw new Error("Maximum 4 images allowed");
             }
 
