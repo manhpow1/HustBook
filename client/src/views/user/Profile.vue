@@ -402,20 +402,21 @@ import {
 } from "lucide-vue-next";
 import ErrorBoundary from "@/components/shared/ErrorBoundary.vue";
 
-// Computed properties
 const router = useRouter();
+const route = useRoute();
 const userStore = useUserStore();
 const videoStore = useVideoStore();
 const searchStore = useSearchStore();
 const friendStore = useFriendStore();
 const postStore = usePostStore();
 const { toast } = useToast();
+
 // States
 const loading = ref(true);
 const loadingPosts = ref(false);
 const error = ref(null);
 const postError = ref(null);
-const user = ref({});
+const user = ref(null);
 const friends = ref([]);
 const userVideos = ref([]);
 const postSearchQuery = ref("");
@@ -423,7 +424,11 @@ const showVideoModal = ref(false);
 const selectedVideo = ref(null);
 
 // Computed
-const isCurrentUser = computed(() => true);
+const isCurrentUser = computed(() => {
+    const currentUserId = userStore.user?.userId;
+    const profileUserId = route.params.userId || currentUserId;
+    return currentUserId === profileUserId;
+});
 const truncatedDescription = computed(() => {
   const desc = user.value?.description;
   if (!desc) return "";
@@ -457,37 +462,59 @@ const getInitials = (name) => {
 };
 
 const fetchUserData = async () => {
-  loading.value = true;
-  error.value = null;
-  try {
-    const profileData = await userStore.getUserProfile();
-    if (profileData) {
-      user.value = profileData;
-      friends.value = await friendStore.getUserFriends();
-      userVideos.value = await videoStore.getUserVideos();
-      await fetchPostsForUser();
-    } else {
-      error.value = "User not found.";
+    loading.value = true;
+    error.value = null;
+    try {
+        const userId = route.params.userId || userStore.user?.userId;
+        if (!userId) {
+            throw new Error('No user ID available');
+        }
+
+        const [profileData, friendsData, videosData] = await Promise.all([
+            userStore.getUserProfile(userId),
+            friendStore.getUserFriends(userId),
+            videoStore.getUserVideos(userId)
+        ]);
+
+        if (!profileData) {
+            throw new Error('User not found');
+        }
+
+        user.value = profileData;
+        friends.value = friendsData || [];
+        userVideos.value = videosData || [];
+        
+        await fetchPostsForUser(userId);
+        
+    } catch (err) {
+        error.value = err.message || 'Failed to load user data';
+        logger.error('Error fetching user data:', err);
+        toast({
+            title: 'Error',
+            description: error.value,
+            variant: 'destructive'
+        });
+    } finally {
+        loading.value = false;
     }
-  } catch (err) {
-    error.value = "Failed to load user data.";
-    console.error(err);
-  } finally {
-    loading.value = false;
-  }
 };
 
-const fetchPostsForUser = async () => {
-  try {
-    loadingPosts.value = true;
-    postStore.resetPosts();
-    await postStore.getUserPosts();
-  } catch (err) {
-    postError.value = "Failed to load user posts.";
-    console.error(err);
-  } finally {
-    loadingPosts.value = false;
-  }
+const fetchPostsForUser = async (userId) => {
+    try {
+        loadingPosts.value = true;
+        postStore.resetPosts();
+        await postStore.getUserPosts(userId);
+    } catch (err) {
+        postError.value = "Failed to load user posts";
+        logger.error('Error fetching user posts:', err);
+        toast({
+            title: 'Error',
+            description: postError.value,
+            variant: 'destructive'
+        });
+    } finally {
+        loadingPosts.value = false;
+    }
 };
 
 const loadMorePosts = () => {
