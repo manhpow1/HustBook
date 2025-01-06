@@ -167,18 +167,15 @@ const onAddComment = async () => {
             commentContent: newComment.value,
         });
 
-        const comment = await commentStore.addComment(
+        await commentStore.addComment(
             props.postId,
             newComment.value.trim()
         );
-        if (comment) {
-            comments.value.unshift(comment);
-            newComment.value = "";
-            notificationStore.showNotification(
-                "Comment posted successfully",
-                "success"
-            );
-        }
+        newComment.value = "";
+        notificationStore.showNotification(
+            "Comment posted successfully",
+            "success"
+        );
 
         logger.info("Comment posted successfully", { postId: props.postId });
     } catch (error) {
