@@ -202,18 +202,6 @@ const hasUnsavedChanges = computed(() => {
     );
 });
 
-// Methods
-const validateDescription = () => {
-    const content = form.value.description.trim();
-    if (!content) {
-        descriptionError.value = "Description cannot be empty";
-    } else if (content.length > 1000) {
-        descriptionError.value = "Description must not exceed 1000 characters";
-    } else {
-        descriptionError.value = "";
-    }
-};
-
 const handleMediaChange = async (files) => {
     try {
         if (files.length > 4) {
