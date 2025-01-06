@@ -32,8 +32,8 @@
                             <FormLabel>Media</FormLabel>
                             <FormControl>
                                 <FileUpload v-model="form.media" :maxFiles="4" accept="image/*"
-                                    :initialFiles="initialMedia" @change="handleMediaChange" @error="handleUploadError"
-                                    class="h-32" />
+                                    :initialFiles="initialMedia" mode="edit" @change="handleMediaChange"
+                                    @error="handleUploadError" class="h-32" />
                             </FormControl>
                             <FormMessage>{{ mediaError }}</FormMessage>
                             <FormDescription>
@@ -169,7 +169,6 @@ const { toast } = useToast();
 const { handleError } = useErrorHandler();
 const { compressImage } = useImageProcessing();
 const currentPost = computed(() => postStore.currentPost);
-
 
 // Form State
 const form = ref({

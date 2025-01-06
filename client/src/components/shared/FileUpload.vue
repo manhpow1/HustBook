@@ -80,6 +80,11 @@ const props = defineProps({
     className: {
         type: String,
         default: 'h-24'
+    },
+    mode: {
+        type: String,
+        default: 'add', // 'add' or 'edit'
+        validator: (value) => ['add', 'edit'].includes(value)
     }
 })
 
@@ -102,7 +107,8 @@ const allowedTypesText = computed(() => {
 const validateFiles = (files) => {
     if (!files?.length) return false
 
-    if (files.length + props.modelValue.length > props.maxFiles) {
+    const totalFiles = props.mode === 'edit' ? files.length : files.length + props.modelValue.length
+    if (totalFiles > props.maxFiles) {
         error.value = `Maximum ${props.maxFiles} files allowed`
         return false
     }

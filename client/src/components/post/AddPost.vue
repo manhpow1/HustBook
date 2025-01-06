@@ -19,7 +19,7 @@
                 <div class="flex items-center gap-2">
                     <div class="flex-1">
                         <FileUpload v-model="files" :maxFiles="4" accept="image/jpeg,image/png,image/gif" class="h-24"
-                            @change="handleFilesChange">
+                            mode="add" @change="handleFilesChange">
                             <template #trigger>
                                 <Button variant="outline" size="sm">
                                     <ImageIcon class="h-4 w-4 mr-2" />
