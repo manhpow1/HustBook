@@ -159,14 +159,14 @@ export const usePostStore = defineStore("post", () => {
             const formData = new FormData();
             formData.append("content", content);
 
-            // Handle media files
-            if (postData.media?.length) {
-                postData.media.forEach((media, index) => {
-                    // If media is a string (URL), it's an existing image
-                    if (typeof media === "string") {
-                        formData.append("existingMedia", media);
+            // Handle image files
+            if (postData.images?.length) {
+                postData.images.forEach((image, index) => {
+                    // If image is a string (URL), it's an existing image
+                    if (typeof image === "string") {
+                        formData.append("existingImages", image);
                     } else {
-                        formData.append("images", media);
+                        formData.append("images", image);
                     }
                 });
             }
