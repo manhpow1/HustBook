@@ -89,7 +89,7 @@ const isLoading = ref(false)
 const showEmojiPicker = ref(false)
 
 const isValid = computed(() => {
-    return description.value.trim().length > 0 &&
+    return (description.value.trim().length > 0 || files.value.length > 0) &&
         description.value.length <= 1000 &&
         files.value.length <= 4 &&
         !descriptionError.value
@@ -97,8 +97,8 @@ const isValid = computed(() => {
 
 const validateDescription = () => {
     const content = description.value.trim()
-    if (content.length === 0) {
-        descriptionError.value = 'Description cannot be empty'
+    if (content.length === 0 && files.value.length === 0) {
+        descriptionError.value = 'Post must have either text or images'
     } else if (content.length > 1000) {
         descriptionError.value = 'Description must not exceed 1000 characters'
     } else {
