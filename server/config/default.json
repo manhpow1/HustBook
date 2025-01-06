@@ -6,9 +6,7 @@
     },
     "jwt": {
         "secret": "${JWT_SECRET}",
-        "refreshSecret": "${JWT_REFRESH_SECRET}",
-        "expiration": "1h",
-        "refreshExpiration": "7d"
+        "expiration": "1h"
     },
     "auth": {
         "saltRounds": 10

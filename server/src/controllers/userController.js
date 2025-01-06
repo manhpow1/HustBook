@@ -1,7 +1,7 @@
 import crypto from 'crypto';
 import userService from '../services/userService.js';
 import userValidator from '../validators/userValidator.js';
-import { comparePassword, generateJWT, generateRefreshToken, generateRandomCode, verifyRefreshToken, generateDeviceToken, generateTokenFamily } from '../utils/authHelper.js';
+import { comparePassword, generateJWT, generateRandomCode, generateDeviceToken, generateTokenFamily } from '../utils/authHelper.js';
 import { handleAvatarUpload, handleCoverPhotoUpload } from '../utils/helpers.js';
 import { sendResponse } from '../utils/responseHandler.js';
 import { createError } from '../utils/customError.js';
@@ -11,9 +11,7 @@ import logger from '../utils/logger.js';
 class UserController {
     constructor() {
         this.sessionDuration = 15 * 60; // 15 minutes in seconds
-        this.refreshTokenDuration = 7 * 24 * 60 * 60; // 7 days in seconds
         this.verifyCodeDuration = 5 * 60; // 5 minutes in seconds
-        this.refreshToken = this.refreshToken.bind(this);
         this.signup = this.signup.bind(this);
         this.login = this.login.bind(this);
         this.forgotPassword = this.forgotPassword.bind(this);
@@ -69,70 +67,6 @@ class UserController {
             });
         } catch (error) {
             logger.error('Change Password Error:', error);
-            next(error);
-        }
-    }
-
-    async refreshToken(req, res, next) {
-        try {
-            const { error, value } = userValidator.validateRefreshToken(req.body);
-            if (error) {
-                const errorMessage = error.details.map(detail => detail.message).join(', ');
-                throw createError('1002', errorMessage);
-            }
-
-            const { refreshToken } = value;
-            const decoded = await verifyRefreshToken(refreshToken);
-            if (!decoded) {
-                throw createError('1006', 'Invalid refresh token');
-            }
-
-            const userId = decoded.userId;
-            const user = await userService.getUserById(userId);
-            if (!user) {
-                throw createError('9995', 'User not found');
-            }
-
-            if (decoded.tokenFamily !== user.tokenFamily) {
-                throw createError('1006', 'Invalid token family');
-            }
-
-            const tokenPayload = {
-                userId: user.userId,
-                phone: user.phoneNumber,
-                tokenVersion: user.tokenVersion,
-                tokenFamily: user.tokenFamily,
-                deviceId: decoded.deviceId
-            };
-
-            const [newToken, newRefreshToken] = await Promise.all([
-                generateJWT(tokenPayload),
-                generateRefreshToken({ ...user, deviceId: decoded.deviceId })
-            ]);
-
-            if (process.env.NODE_ENV === 'production') {
-                res.cookie('auth_token', newToken, {
-                    httpOnly: true,
-                    secure: true,
-                    sameSite: 'strict',
-                    maxAge: this.sessionDuration * 1000
-                });
-
-                res.cookie('refresh_token', newRefreshToken, {
-                    httpOnly: true,
-                    secure: true,
-                    sameSite: 'strict',
-                    maxAge: this.refreshTokenDuration * 1000
-                });
-            }
-
-            sendResponse(res, '1000', {
-                token: newToken,
-                refreshToken: newRefreshToken,
-                expiresIn: this.sessionDuration
-            });
-        } catch (error) {
-            logger.error('Refresh Token Error:', error);
             next(error);
         }
     }
@@ -291,9 +225,8 @@ class UserController {
                 deviceId
             };
 
-            const [token, refreshToken] = await Promise.all([
+            const [token] = await Promise.all([
                 generateJWT(tokenPayload),
-                generateRefreshToken({ ...user, deviceId })
             ]);
 
             if (process.env.NODE_ENV === 'production') {
@@ -303,13 +236,6 @@ class UserController {
                     sameSite: 'strict',
                     maxAge: this.sessionDuration * 1000
                 });
-
-                res.cookie('refresh_token', refreshToken, {
-                    httpOnly: true,
-                    secure: true,
-                    sameSite: 'strict',
-                    maxAge: this.refreshTokenDuration * 1000
-                });
             }
 
             sendResponse(res, '1000', {
@@ -317,7 +243,6 @@ class UserController {
                 userName: user.userName,
                 phoneNumber: user.phoneNumber,
                 token,
-                refreshToken,
                 deviceToken,
                 expiresIn: this.sessionDuration
             });
@@ -343,7 +268,6 @@ class UserController {
 
             if (process.env.NODE_ENV === 'production') {
                 res.clearCookie('auth_token');
-                res.clearCookie('refresh_token');
             }
 
             sendResponse(res, '1000', { message: 'Logout successful.' });

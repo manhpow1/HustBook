@@ -10,7 +10,6 @@ import { initSocket } from '../services/socket';
 
 // Constants
 const INACTIVITY_THRESHOLD = 30 * 60 * 1000; // 30 minutes
-const TOKEN_REFRESH_MARGIN = 60 * 1000; // 1 minute before expiry
 const VERIFICATION_CODE_COOLDOWN = 60 * 1000; // 1 minute
 const LOCKOUT_DURATION = 5 * 60 * 1000; // 5 minutes
 const DEVICE_CLEANUP_INTERVAL = 24 * 60 * 60 * 1000; // 24 hours
@@ -41,7 +40,6 @@ export const useUserStore = defineStore('user', () => {
     const forgotPasswordCode = ref('');
     const securityLevel = ref('standard');
     const lastActivity = ref(Date.now());
-    const pendingRefresh = ref(false);
     const verificationAttempts = ref(0);
     const lastVerificationRequest = ref(0);
     const verifyCodeError = ref('');
@@ -56,7 +54,7 @@ export const useUserStore = defineStore('user', () => {
     });
     const userData = computed(() => user.value);
     const hasVerifiedPhone = computed(() => user.value?.isVerified);
-    const isSessionExpired = computed(() => !Cookies.get('accessToken') && !Cookies.get('refreshToken'));
+    const isSessionExpired = computed(() => !Cookies.get('accessToken'));
     const deviceCount = computed(() => user.value?.deviceIds?.length || 0);
     const canAddDevice = computed(() => deviceCount.value < 5);
     const formattedLastActivity = computed(() => new Date(lastActivity.value).toLocaleString());
@@ -172,7 +170,6 @@ export const useUserStore = defineStore('user', () => {
     const clearAuthState = () => {
         user.value = null;
         Cookies.remove('accessToken');
-        Cookies.remove('refreshToken');
         error.value = null;
         successMessage.value = '';
         failedAttempts.value = 0;
@@ -192,27 +189,13 @@ export const useUserStore = defineStore('user', () => {
 
                 if (timeUntilExpiry > 0) {
                     sessionTimeout.value = setTimeout(async () => {
-                        if (!pendingRefresh.value) {
-                            await refreshSession();
-                        }
-                    }, timeUntilExpiry - TOKEN_REFRESH_MARGIN);
+                        await handleSessionExpired();
+                    }, timeUntilExpiry);
                 }
             } catch (error) {
                 logger.error('Error parsing token:', error);
                 clearAuthState();
             }
-        }
-    };
-
-    const refreshSession = async () => {
-        pendingRefresh.value = true;
-        try {
-            const success = await refreshToken();
-            if (!success) {
-                await handleSessionExpired();
-            }
-        } finally {
-            pendingRefresh.value = false;
         }
     };
 
@@ -227,49 +210,18 @@ export const useUserStore = defineStore('user', () => {
     };
 
     // Token Management Methods
-    const setAuthCookies = (token, refreshToken, rememberMe = false) => {
+    const setAuthCookies = (token, rememberMe = false) => {
         const secure = window.location.protocol === 'https:';
         const cookieOptions = {
             secure,
             sameSite: 'strict',
-            path: '/'
+            path: '/',
+            expires: rememberMe ? 7 : 1 // 7 days if remember me, else 1 day
         };
 
-        Cookies.set('accessToken', token, {
-            ...cookieOptions,
-            expires: 1 / 96 // 15 minutes
-        });
-
-        if (refreshToken) {
-            Cookies.set('refreshToken', refreshToken, {
-                ...cookieOptions,
-                expires: rememberMe ? 30 : 7
-            });
-        }
+        Cookies.set('accessToken', token, cookieOptions);
     };
 
-    const refreshToken = async () => {
-        try {
-            const currentRefreshToken = Cookies.get('refreshToken');
-            if (!currentRefreshToken) return false;
-
-            const response = await apiService.refreshToken({
-                refreshToken: currentRefreshToken,
-                deviceId: deviceId.value
-            });
-
-            if (response.data.code === '1000') {
-                const { token, refreshToken } = response.data.data;
-                setAuthCookies(token, refreshToken);
-                setupSessionTimeout();
-                return true;
-            }
-            return false;
-        } catch (err) {
-            logger.error('Token refresh error:', err);
-            return false;
-        }
-    };
 
     // Auth Methods
     const register = async (phoneNumber, password) => {
@@ -329,8 +281,8 @@ export const useUserStore = defineStore('user', () => {
 
             if (response.data?.code === '1000') {
                 failedAttempts.value = 0;
-                const { token, refreshToken, userId, userName, phoneNumber: userPhone, deviceToken } = response.data.data;
-                setAuthCookies(token, refreshToken, rememberMe);
+                const { token, userId, userName, phoneNumber: userPhone, deviceToken } = response.data.data;
+                setAuthCookies(token, null, rememberMe);
                 user.value = {
                     userId: userId,
                     userName,
@@ -387,22 +339,15 @@ export const useUserStore = defineStore('user', () => {
     const handleAuthError = async (err) => {
         logger.error('Authentication error:', err);
 
-        const errorCode = err.response?.data?.code;
         const errorMessage = err.response?.data?.message || 'An unexpected error occurred';
-
-        if (errorCode === '9998' && isLoggedIn.value) {
-            if (!pendingRefresh.value) {
-                const refreshSuccess = await refreshToken();
-                if (!refreshSuccess) {
-                    await handleSessionExpired();
-                }
-            }
-            return;
-        }
-
         error.value = errorMessage;
         handleError(err);
         toast({ type: 'error', message: errorMessage });
+
+        // If unauthorized, handle session expiry
+        if (err.response?.status === 401) {
+            await handleSessionExpired();
+        }
     };
 
     // Verification Methods

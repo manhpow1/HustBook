@@ -303,7 +303,6 @@ class UserService {
             const updatedDevice = {
                 ...user.deviceDetails[deviceIndex],
                 token: null,
-                refreshToken: null,
                 lastUsed: new Date().toISOString(),
             };
 

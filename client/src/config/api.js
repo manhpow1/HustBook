@@ -8,7 +8,6 @@ export const API_ENDPOINTS = {
     GET_VERIFY_CODE: `${API_BASE_URL}/api/auth/get_verify_code`,
     CHECK_VERIFY_CODE: `${API_BASE_URL}/api/auth/check_verify_code`,
     CHANGE_INFO_AFTER_SIGNUP: `${API_BASE_URL}/api/auth/change_info_after_signup`,
-    REFRESH_TOKEN: `${API_BASE_URL}/api/auth/refresh-token`,
     AUTH_CHECK: `${API_BASE_URL}/api/auth/check`,
     CHANGE_PASSWORD: `${API_BASE_URL}/api/auth/change_password`,
     FORGOT_PASSWORD: `${API_BASE_URL}/api/auth/forgot-password`,

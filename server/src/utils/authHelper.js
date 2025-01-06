@@ -7,7 +7,6 @@ import crypto from 'crypto';
 
 const SALT_ROUNDS = 12; // Increased from default 10
 export const TOKEN_EXPIRY = '15m'; // Shorter access token lifetime
-export const REFRESH_TOKEN_EXPIRY = '7d';
 const VERIFICATION_CODE_LENGTH = 6;
 export const MIN_PASSWORD_LENGTH = 8;
 
@@ -74,53 +73,6 @@ export const generateJWT = (payload) => {
     } catch (error) {
         logger.error('Error generating JWT:', error);
         throw new Error('Token generation failed');
-    }
-};
-
-/**
- * Generate a refresh token with family tracking
- */
-export const generateRefreshToken = (user) => {
-    try {
-        const tokenFamily = user.tokenFamily || generateTokenFamily();
-
-        const token = jwt.sign(
-            {
-                userId: user.userId,
-                tokenVersion: user.tokenVersion,
-                family: tokenFamily,
-                type: 'refresh',
-                jti: generateSecureToken(16)
-            },
-            config.get('jwt.refreshSecret'),
-            {
-                expiresIn: REFRESH_TOKEN_EXPIRY,
-                algorithm: 'HS256',
-                audience: config.has('app.domain') ? config.get('app.domain') : undefined,
-                issuer: config.has('app.name') ? config.get('app.name') : 'HustBook'
-            }
-        );
-        logger.info(`Refresh token generated for user ${user.userId}`);
-        return token;
-    } catch (error) {
-        logger.error('Error generating refresh token:', error);
-        throw new Error('Refresh token generation failed');
-    }
-};
-
-/**
- * Verify a refresh token
- */
-export const verifyRefreshToken = async (token) => {
-    try {
-        return jwt.verify(token, config.get('jwt.refreshSecret'), {
-            algorithms: ['HS256'],
-            audience: config.get('app.domain'),
-            issuer: config.get('app.name')
-        });
-    } catch (error) {
-        logger.error('Error verifying refresh token:', error);
-        throw error;
     }
 };
 

@@ -8,9 +8,7 @@ export const firebase = {
 
 export const jwt = {
     secret: config.get('jwt.secret'),
-    refreshSecret: config.get('jwt.refreshSecret'),
     expiration: config.get('jwt.expiration'),
-    refreshExpiration: config.get('jwt.refreshExpiration'),
 };
 
 export const auth = {

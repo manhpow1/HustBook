@@ -5,9 +5,7 @@ export default {
     port: env.server.port,
     env: env.nodeEnv,
     jwtSecret: env.jwt.secret,
-    refreshSecret: env.jwt.refreshSecret,
     jwtExpiration: env.jwt.expiration,
-    refreshTokenExpiration: env.jwt.refreshExpiration,
     
     // CORS configuration
     cors: {

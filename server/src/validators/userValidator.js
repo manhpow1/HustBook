@@ -197,20 +197,6 @@ const setBlockSchema = Joi.object({
 }).required();
 
 /**
- * Refresh token schema
- */
-const refreshTokenSchema = Joi.object({
-    refreshToken: Joi.string()
-        .required()
-        .pattern(/^[A-Za-z0-9-_]+\.[A-Za-z0-9-_]+\.[A-Za-z0-9-_.+/=]*$/) // JWT format
-        .messages({
-            'string.empty': 'Refresh token cannot be empty.',
-            'string.pattern.base': 'Invalid refresh token format.',
-            'any.required': 'Refresh token is required.',
-        }),
-}).required();
-
-/**
  * Get verify code schema
  */
 const getVerifyCodeSchema = Joi.object({
@@ -355,9 +341,6 @@ const validateSetBlock = (data) => {
     return setBlockSchema.validate(data, { abortEarly: false });
 };
 
-const validateRefreshToken = (data) => {
-    return refreshTokenSchema.validate(data, { abortEarly: false });
-};
 
 const validateGetVerifyCode = (data) => {
     const sanitizedData = {
@@ -492,7 +475,6 @@ export default {
     validateChangeInfoAfterSignup,
     validateChangePassword,
     validateSetBlock,
-    validateRefreshToken,
     validateGetVerifyCode,
     validateForgotPassword,
     validateCheckVerifyCode,

@@ -110,8 +110,6 @@ const profileUpdateLimiter = rateLimit({
  *                       type: string
  *                     token:
  *                       type: string
- *                     refreshToken:
- *                       type: string
  *                     deviceToken:
  *                       type: string
  *       '400':
@@ -419,47 +417,6 @@ router.get('/check', authenticateToken, userController.checkAuth);
  *                       type: string
  */
 router.post('/change_info_after_signup', authenticateToken, profileUpdateLimiter, upload.single('avatar'), userController.changeInfoAfterSignup);
-
-/**
- * @swagger
- * /auth/refresh-token:
- *   post:
- *     summary: Refresh access token using a refresh token
- *     tags: [Auth]
- *     requestBody:
- *       description: Refresh token
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required: [refreshToken]
- *             properties:
- *               refreshToken:
- *                 type: string
- *                 example: "eyJhbGciOi..."
- *     responses:
- *       '200':
- *         description: New access token and refresh token generated
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 code:
- *                   type: string
- *                   example: "1000"
- *                 data:
- *                   type: object
- *                   properties:
- *                     token:
- *                       type: string
- *                     refreshToken:
- *                       type: string
- *       '400':
- *         description: Invalid refresh token
- */
-router.post('/refresh-token', userController.refreshToken);
 
 /**
  * @swagger

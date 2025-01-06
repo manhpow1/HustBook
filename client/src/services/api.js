@@ -59,10 +59,6 @@ const apiService = {
         return axiosInstance.post(API_ENDPOINTS.CHECK_VERIFY_CODE, data);
     },
 
-    async refreshToken(refreshToken) {
-        return axiosInstance.post(API_ENDPOINTS.REFRESH_TOKEN, { refreshToken });
-    },
-
     async changePassword(currentPassword, newPassword) {
         return axiosInstance.post(API_ENDPOINTS.CHANGE_PASSWORD, {
             password: currentPassword,
