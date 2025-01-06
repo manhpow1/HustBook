@@ -466,25 +466,41 @@ const fetchUserData = async () => {
     loading.value = true;
     error.value = null;
     try {
+        // Check if user is logged in
+        if (!userStore.isLoggedIn) {
+            router.push({ name: 'Login' });
+            toast({
+                title: 'Authentication Required',
+                description: 'Please login to view profiles',
+                variant: 'destructive'
+            });
+            return;
+        }
+
+        // Get user ID from route or current user
         const userId = route.params.userId || userStore.user?.userId;
         if (!userId) {
             throw new Error('No user ID available');
         }
 
+        // Fetch all profile data in parallel
         const [profileData, friendsData, videosData] = await Promise.all([
             userStore.getUserProfile(userId),
             friendStore.getUserFriends(userId),
             videoStore.getUserVideos(userId)
         ]);
 
+        // Handle case where profile is not found
         if (!profileData) {
             throw new Error('User not found');
         }
 
+        // Update state with fetched data
         user.value = profileData;
         friends.value = friendsData || [];
         userVideos.value = videosData || [];
         
+        // Fetch user posts
         await fetchPostsForUser(userId);
         
     } catch (err) {
@@ -495,6 +511,11 @@ const fetchUserData = async () => {
             description: error.value,
             variant: 'destructive'
         });
+
+        // Redirect to home if profile not found
+        if (error.value.includes('not found')) {
+            router.push({ name: 'Home' });
+        }
     } finally {
         loading.value = false;
     }
