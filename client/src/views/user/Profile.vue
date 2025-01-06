@@ -350,6 +350,7 @@
 
 <script setup>
 import { ref, onMounted, computed, watch } from "vue";
+import logger from "@/services/logging";
 import { useRoute, useRouter } from "vue-router";
 import { useUserStore } from "@/stores/userStore";
 import { useSearchStore } from "@/stores/searchStore";
