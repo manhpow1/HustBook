@@ -743,7 +743,6 @@ export const useUserStore = defineStore('user', () => {
         changePassword,
         updateLastActivity,
         clearAuthState,
-        refreshSession,
         startCooldown,
         forgotPassword,
         verifyAuthState,
