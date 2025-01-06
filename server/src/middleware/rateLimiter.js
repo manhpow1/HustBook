@@ -13,7 +13,7 @@ const createLimiter = (points, duration, prefix) => {
 };
 
 // Rate-limiters for various endpoints/actions
-const authRateLimiter = createLimiter(20, 60, 'rl:auth');
+const authRateLimiter = createLimiter(200, 30, 'rl:auth');
 const verifyCodeRateLimiter = createLimiter(50, 60, 'rl:verify');
 const pushSettingsRateLimiter = createLimiter(300, 60, 'rl:push');
 const setBlockRateLimiter = createLimiter(50, 60, 'rl:block');

@@ -84,9 +84,9 @@ const authenticateToken = async (req, res, next) => {
 
             // Rate limiting check from Redis
             const requestCount = await cache.incr(`auth:${userId}:requests`);
-            await cache.expire(`auth:${userId}:requests`, 60); // Expire after 60 seconds
+            await cache.expire(`auth:${userId}:requests`, 90); // Expire after 60 seconds
 
-            if (requestCount > 100) { // 100 requests per minute limit
+            if (requestCount > 10000) { // 100 requests per minute limit
                 throw createError('1009', 'Too many requests');
             }
 
