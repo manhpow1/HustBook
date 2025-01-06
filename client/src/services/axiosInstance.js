@@ -98,8 +98,6 @@ if (newCsrfToken) {
         }
 
         // Handle 401 Unauthorized
-        const { useUserStore } = await import('@/stores/userStore');
-        const userStore = useUserStore();
         await userStore.logout();
         handleError(error);
         return Promise.reject(error);
