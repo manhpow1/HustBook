@@ -404,7 +404,9 @@ router.get('/user/:userId', authenticateToken, postController.getUserPosts);
  *       404:
  *         description: Post not found
  */
-router.post('/:postId/report-post', authenticateToken, reportLimiter, postController.reportPost);
+router.patch('/:postId', authenticateToken, upload.array('images', 4), postController.updatePost);
+
+// router.post('/:postId/report-post', authenticateToken, reportLimiter, postController.reportPost);
 
 /**
  * @swagger

@@ -116,10 +116,37 @@ import { useFormValidation } from "@/composables/useFormValidation";
 import { useToast } from "@/components/ui/toast";
 import { sanitizeInput } from "@/utils/sanitize";
 import logger from "@/services/logging";
-import { PencilIcon, XIcon, AlertCircle, CheckCircleIcon, Loader2Icon } from "lucide-vue-next";
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
-import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage, FormDescription } from "@/components/ui/form";
+import {
+    PencilIcon,
+    XIcon,
+    AlertCircle,
+    CheckCircleIcon,
+    Loader2Icon,
+} from "lucide-vue-next";
+import {
+    Card,
+    CardHeader,
+    CardTitle,
+    CardDescription,
+    CardContent,
+} from "@/components/ui/card";
+import {
+    Dialog,
+    DialogContent,
+    DialogHeader,
+    DialogTitle,
+    DialogDescription,
+    DialogFooter,
+} from "@/components/ui/dialog";
+import {
+    Form,
+    FormField,
+    FormItem,
+    FormLabel,
+    FormControl,
+    FormMessage,
+    FormDescription,
+} from "@/components/ui/form";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { AspectRatio } from "@/components/ui/aspect-ratio";
@@ -143,20 +170,22 @@ const { handleError } = useErrorHandler();
 const { compressImage } = useImageProcessing();
 const currentPost = computed(() => postStore.currentPost);
 
-const initialMedia = ref([]);
-const mediaPreviews = ref([]);
-const isLoading = ref(false);
-const error = ref("");
-const successMessage = ref("");
-const showUnsavedDialog = ref(false);
-const descriptionError = ref("");
-const mediaError = ref("");
 
 // Form State
 const form = ref({
     description: "",
     media: [],
 });
+
+// UI State
+const isLoading = ref(false);
+const error = ref("");
+const successMessage = ref("");
+const showUnsavedDialog = ref(false);
+const initialMedia = ref([]);
+const mediaPreviews = ref([]);
+const descriptionError = ref("");
+const mediaError = ref("");
 
 // Form Validation
 const { validateDescription } = useFormValidation();
@@ -239,7 +268,7 @@ const loadPostData = async () => {
 
         if (post.media?.length) {
             initialMedia.value = post.media;
-            mediaPreviews.value = post.media.map(url => url);
+            mediaPreviews.value = post.media.map((url) => url);
         }
 
         logger.debug("Post data loaded successfully");
@@ -273,7 +302,7 @@ const handleSubmit = async () => {
             processedMedia = await Promise.all(
                 form.value.media.map(async (file) => {
                     // Skip processing for existing image URLs
-                    if (typeof file === 'string') return file;
+                    if (typeof file === "string") return file;
                     return await compressImage(file);
                 })
             );
@@ -360,4 +389,3 @@ router.beforeEach(handleBeforeRouteLeave);
     @apply opacity-0;
 }
 </style>
-

@@ -130,11 +130,26 @@ const apiService = {
 
     async updatePost(postId, postData) {
         const formData = new FormData();
-        if (postData.content) formData.append('content', postData.content);
-        if (postData.images) {
-            postData.images.forEach(img => formData.append('images', img));
+        formData.append('content', postData.content);
+        
+        // Handle existing images
+        if (postData.existingImages?.length) {
+            formData.append('existingImages', JSON.stringify(postData.existingImages));
         }
-        return this.upload(API_ENDPOINTS.UPDATE_POST(postId), formData);
+        
+        // Handle new image files
+        if (postData.media?.length) {
+            postData.media.forEach(file => {
+                if (typeof file === 'string') return; // Skip existing image URLs
+                formData.append('images', file);
+            });
+        }
+        
+        return this.patch(API_ENDPOINTS.UPDATE_POST(postId), formData, {
+            headers: {
+                'Content-Type': 'multipart/form-data'
+            }
+        });
     },
 
     async deletePost(postId) {
