@@ -157,7 +157,7 @@ export const usePostStore = defineStore("post", () => {
 
             // Create FormData for multipart request
             const formData = new FormData();
-            formData.append("content", postData.content);
+            formData.append("content", content);
 
             // Handle media files
             if (postData.media?.length) {
