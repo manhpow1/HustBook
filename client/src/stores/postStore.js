@@ -141,11 +141,14 @@ export const usePostStore = defineStore("post", () => {
             }
 
             // Validate post data
-            if (!postData.content?.trim()) {
-                throw new Error("Post content cannot be empty");
+            const hasContent = postData.content?.trim()?.length > 0;
+            const hasImages = postData.images?.length > 0;
+            
+            if (!hasContent && !hasImages) {
+                throw new Error("Post must have either text content or images");
             }
 
-            if (postData.media?.length > 4) {
+            if (postData.images?.length > 4) {
                 throw new Error("Maximum 4 images allowed");
             }
 
