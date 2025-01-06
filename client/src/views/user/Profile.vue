@@ -14,12 +14,7 @@
         <AlertTitle>Error</AlertTitle>
         <AlertDescription>
           {{ error }}
-          <Button
-            variant="outline"
-            size="sm"
-            class="mt-2"
-            @click="fetchUserData"
-          >
+          <Button variant="outline" size="sm" class="mt-2" @click="fetchUserData">
             Retry
           </Button>
         </AlertDescription>
@@ -29,18 +24,10 @@
         <!-- Cover Image Section -->
         <Card class="relative overflow-hidden">
           <div class="h-48 relative">
-            <img
-              :src="user?.cover_image || '/default-cover.jpg'"
-              :alt="`${user?.userName || 'User'}'s cover`"
-              class="w-full h-full object-cover"
-            />
+            <img :src="user?.cover_image || '/default-cover.jpg'" :alt="`${user?.userName || 'User'}'s cover`"
+              class="w-full h-full object-cover" />
             <div class="absolute top-4 right-4 flex space-x-2">
-              <Button
-                v-if="isCurrentUser"
-                variant="secondary"
-                size="sm"
-                @click="uploadCoverPhoto"
-              >
+              <Button v-if="isCurrentUser" variant="secondary" size="sm" @click="uploadCoverPhoto">
                 <Pencil class="h-4 w-4 mr-2" />
                 Edit Cover
               </Button>
@@ -71,11 +58,7 @@
               <CardContent>
                 <div class="space-y-4">
                   <div class="flex justify-center space-x-2">
-                    <Button
-                      v-if="isCurrentUser"
-                      variant="outline"
-                      @click="router.push('/settings')"
-                    >
+                    <Button v-if="isCurrentUser" variant="outline" @click="router.push('/settings')">
                       <Settings class="h-4 w-4 mr-2" />
                       Edit Profile
                     </Button>
@@ -83,11 +66,7 @@
                       <MessageSquare class="h-4 w-4 mr-2" />
                       Message
                     </Button>
-                    <Button
-                      v-if="!isCurrentUser"
-                      variant="outline"
-                      @click="handleFriendAction"
-                    >
+                    <Button v-if="!isCurrentUser" variant="outline" @click="handleFriendAction">
                       <UserPlus class="h-4 w-4 mr-2" />
                       {{ isFriend ? "Unfriend" : "Add Friend" }}
                     </Button>
@@ -102,12 +81,8 @@
                     </div>
                     <div v-if="user?.link" class="flex items-center text-sm">
                       <Globe class="h-4 w-4 mr-2" />
-                      <a
-                        :href="user.link"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        class="text-primary hover:underline"
-                      >
+                      <a :href="user.link" target="_blank" rel="noopener noreferrer"
+                        class="text-primary hover:underline">
                         External Link
                       </a>
                     </div>
@@ -120,36 +95,24 @@
             <Card class="mt-6">
               <CardHeader>
                 <CardTitle class="text-xl">Friends</CardTitle>
-                <CardDescription
-                  >{{ user?.friends_count || 0 }} friends</CardDescription
-                >
+                <CardDescription>{{ user?.friends_count || 0 }} friends</CardDescription>
               </CardHeader>
               <CardContent>
                 <div class="grid grid-cols-3 gap-2">
-                  <div
-                    v-for="friend in friends && friends.slice(0, 6)"
-                    :key="friend.id"
-                    class="flex flex-col items-center"
-                  >
+                  <div v-for="friend in friends && friends.slice(0, 6)" :key="friend.id"
+                    class="flex flex-col items-center">
                     <Avatar class="h-16 w-16">
-                      <AvatarImage
-                        :src="friend.avatar"
-                        :alt="friend.userName"
-                      />
+                      <AvatarImage :src="friend.avatar" :alt="friend.userName" />
                       <AvatarFallback>{{
                         getInitials(friend.userName)
-                      }}</AvatarFallback>
+                        }}</AvatarFallback>
                     </Avatar>
                     <span class="text-sm mt-1 text-center line-clamp-1">{{
                       friend.userName
-                    }}</span>
+                      }}</span>
                   </div>
                 </div>
-                <Button
-                  variant="ghost"
-                  class="w-full mt-4"
-                  @click="viewAllFriends"
-                >
+                <Button variant="ghost" class="w-full mt-4" @click="viewAllFriends">
                   View All Friends
                 </Button>
               </CardContent>
@@ -169,15 +132,8 @@
                   <CardHeader>
                     <CardTitle>Posts</CardTitle>
                     <div class="flex items-center space-x-2">
-                      <Input
-                        v-model="postSearchQuery"
-                        placeholder="Search posts..."
-                        class="max-w-sm"
-                      />
-                      <Button
-                        variant="outline"
-                        @click="searchStore.searchPosts"
-                      >
+                      <Input v-model="postSearchQuery" placeholder="Search posts..." class="max-w-sm" />
+                      <Button variant="outline" @click="searchStore.searchPosts">
                         <Search class="h-4 w-4" />
                       </Button>
                     </div>
@@ -186,42 +142,29 @@
                     <div v-if="loadingPosts" class="space-y-4">
                       <Skeleton v-for="i in 3" :key="i" class="h-32" />
                     </div>
-                    <div
-                      v-else-if="postError"
-                      class="text-center py-4 text-red-500"
-                    >
+                    <div v-else-if="postError" class="text-center py-4 text-red-500">
                       {{ postError }}
                     </div>
-                    <div
-                      v-else-if="filteredPosts.length === 0"
-                      class="text-center py-4"
-                    >
+                    <div v-else-if="filteredPosts.length === 0" class="text-center py-4">
                       No posts found
                     </div>
                     <div v-else class="space-y-4">
-                      <Card
-                        v-for="post in filteredPosts"
-                        :key="post.postId"
-                        class="overflow-hidden"
-                      >
+                      <Card v-for="post in filteredPosts" :key="post.postId" class="overflow-hidden">
                         <CardHeader>
                           <div class="flex items-center space-x-4">
                             <Avatar>
-                              <AvatarImage
-                                :src="post.author?.avatar"
-                                :alt="post.author?.userName"
-                              />
+                              <AvatarImage :src="post.author?.avatar" :alt="post.author?.userName" />
                               <AvatarFallback>{{
                                 getInitials(post.author?.userName || "")
-                              }}</AvatarFallback>
+                                }}</AvatarFallback>
                             </Avatar>
                             <div>
                               <CardTitle class="text-base">{{
                                 post.author?.userName
-                              }}</CardTitle>
+                                }}</CardTitle>
                               <CardDescription>{{
                                 formatDate(post.created)
-                              }}</CardDescription>
+                                }}</CardDescription>
                             </div>
                           </div>
                         </CardHeader>
@@ -229,23 +172,16 @@
                           <p class="text-sm">{{ post.content }}</p>
                           <div v-if="post.media?.length" class="mt-4">
                             <AspectRatio :ratio="16 / 9">
-                              <img
-                                :src="post.media[0]"
-                                :alt="post.content"
-                                class="rounded-md object-cover w-full h-full"
-                              />
+                              <img :src="post.media[0]" :alt="post.content"
+                                class="rounded-md object-cover w-full h-full" />
                             </AspectRatio>
                           </div>
                         </CardContent>
                       </Card>
                     </div>
 
-                    <Button
-                      v-if="hasMorePosts && !loadingPosts"
-                      variant="outline"
-                      class="w-full mt-4"
-                      @click="loadMorePosts"
-                    >
+                    <Button v-if="hasMorePosts && !loadingPosts" variant="outline" class="w-full mt-4"
+                      @click="loadMorePosts">
                       Load More
                     </Button>
                   </CardContent>
@@ -263,21 +199,13 @@
                       <p class="mt-4 text-muted-foreground">No videos found</p>
                     </div>
                     <div v-else class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      <Card
-                        v-for="video in userVideos"
-                        :key="video.id"
+                      <Card v-for="video in userVideos" :key="video.id"
                         class="overflow-hidden cursor-pointer hover:shadow-lg transition-shadow"
-                        @click="openVideoModal(video)"
-                      >
+                        @click="openVideoModal(video)">
                         <AspectRatio :ratio="16 / 9">
-                          <img
-                            :src="video.thumbnail"
-                            :alt="video.title"
-                            class="object-cover w-full h-full"
-                          />
+                          <img :src="video.thumbnail" :alt="video.title" class="object-cover w-full h-full" />
                           <div
-                            class="absolute bottom-2 right-2 bg-black bg-opacity-75 text-white text-xs px-2 py-1 rounded"
-                          >
+                            class="absolute bottom-2 right-2 bg-black bg-opacity-75 text-white text-xs px-2 py-1 rounded">
                             {{ formatDuration(video.duration) }}
                           </div>
                         </AspectRatio>
@@ -336,12 +264,7 @@
           <DialogHeader>
             <DialogTitle>{{ selectedVideo?.title }}</DialogTitle>
           </DialogHeader>
-          <video
-            v-if="selectedVideo"
-            :src="selectedVideo.url"
-            controls
-            class="w-full rounded-lg"
-          />
+          <video v-if="selectedVideo" :src="selectedVideo.url" controls class="w-full rounded-lg" />
         </DialogContent>
       </Dialog>
     </ErrorBoundary>
@@ -426,9 +349,9 @@ const selectedVideo = ref(null);
 
 // Computed
 const isCurrentUser = computed(() => {
-    const currentUserId = userStore.user?.userId;
-    const profileUserId = route.params.userId || currentUserId;
-    return currentUserId === profileUserId;
+  const currentUserId = userStore.user?.userId;
+  const profileUserId = route.params.userId || currentUserId;
+  return currentUserId === profileUserId;
 });
 const truncatedDescription = computed(() => {
   const desc = user.value?.description;
@@ -463,80 +386,81 @@ const getInitials = (name) => {
 };
 
 const fetchUserData = async () => {
-    loading.value = true;
-    error.value = null;
-    try {
-        // Check if user is logged in
-        if (!userStore.isLoggedIn) {
-            router.push({ name: 'Login' });
-            toast({
-                title: 'Authentication Required',
-                description: 'Please login to view profiles',
-                variant: 'destructive'
-            });
-            return;
-        }
-
-        // Get user ID from route or current user
-        const userId = route.params.userId || userStore.user?.userId;
-        if (!userId) {
-            throw new Error('No user ID available');
-        }
-
-        // Fetch all profile data in parallel
-        const [profileData, friendsData, videosData] = await Promise.all([
-            userStore.getUserProfile(userId),
-            friendStore.getUserFriends(userId),
-            videoStore.getUserVideos(userId)
-        ]);
-
-        // Handle case where profile is not found
-        if (!profileData) {
-            throw new Error('User not found');
-        }
-
-        // Update state with fetched data
-        user.value = profileData;
-        friends.value = friendsData || [];
-        userVideos.value = videosData || [];
-        
-        // Fetch user posts
-        await fetchPostsForUser(userId);
-        
-    } catch (err) {
-        error.value = err.message || 'Failed to load user data';
-        logger.error('Error fetching user data:', err);
-        toast({
-            title: 'Error',
-            description: error.value,
-            variant: 'destructive'
-        });
-
-        // Redirect to home if profile not found
-        if (error.value.includes('not found')) {
-            router.push({ name: 'Home' });
-        }
-    } finally {
-        loading.value = false;
+  loading.value = true;
+  error.value = null;
+  try {
+    // Check if user is logged in
+    if (!userStore.isLoggedIn) {
+      router.push({ name: 'Login' });
+      toast({
+        title: 'Authentication Required',
+        description: 'Please login to view profiles',
+        variant: 'destructive'
+      });
+      return;
     }
+
+    // Get user ID from route or current user
+    const userId = route.params.userId || userStore.user?.userId;
+    if (!userId) {
+      throw new Error('No user ID available');
+    }
+
+    // Fetch all profile data in parallel
+    const [profileData, friendsData, videosData] = await Promise.all([
+      userStore.getUserProfile(userId),
+      friendStore.getUserFriends(userId),
+      videoStore.getUserVideos(userId)
+    ]);
+
+    // Handle case where profile is not found
+    if (!profileData) {
+      throw new Error('User not found');
+    }
+
+    // Update state with fetched data
+    user.value = profileData;
+    friends.value = friendsData || [];
+    userVideos.value = videosData || [];
+
+    // Fetch user posts
+    await fetchPostsForUser(userId);
+
+  } catch (err) {
+    error.value = err.message || 'Failed to load user data';
+    logger.error('Error fetching user data:', err);
+    toast({
+      title: 'Error',
+      description: error.value,
+      variant: 'destructive'
+    });
+
+    // Redirect to home if profile not found
+    if (error.value.includes('not found')) {
+      router.push({ name: 'Home' });
+    }
+
+  } finally {
+    loading.value = false;
+  }
 };
 
 const fetchPostsForUser = async (userId) => {
-    try {
-        loadingPosts.value = true;
-        postStore.resetPosts();
-        await postStore.getUserPosts(userId);
-    } catch (err) {
-        postError.value = "Failed to load user posts";
-        logger.error('Error fetching user posts:', err);
-        toast({
-            title: 'Error',
-            description: postError.value,
-            variant: 'destructive'
-        });
-    } finally {
-        loadingPosts.value = false;
-    }
+  try {
+    loadingPosts.value = true;
+    postStore.resetPosts();
+    await postStore.getUserPosts(userId);
+  } catch (err) {
+    postError.value = "Failed to load user posts";
+    logger.error('Error fetching user posts:', err);
+    toast({
+      title: 'Error',
+      description: postError.value,
+      variant: 'destructive'
+    });
+  } finally {
+    loadingPosts.value = false;
+  }
 };
 
 const loadMorePosts = () => {
