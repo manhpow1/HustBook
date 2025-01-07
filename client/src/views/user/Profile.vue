@@ -400,11 +400,16 @@ const fetchUserData = async () => {
       return;
     }
 
-    // Get user ID from route or current user
-    const userId = route.params.userId || userStore.user?.userId;
-    if (!userId) {
+    // Get user ID from route params
+    const userId = route.params.userId;
+    
+    // If no route userId, try to get current user's profile
+    if (!userId && !userStore.user?.userId) {
       throw new Error('No user ID available');
     }
+
+    // Use route userId or fall back to current user's ID
+    const targetUserId = userId || userStore.user.userId;
 
     // Fetch all profile data in parallel
     const [profileData, friendsData, videosData] = await Promise.all([

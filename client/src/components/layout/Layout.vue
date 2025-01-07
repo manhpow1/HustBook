@@ -129,48 +129,8 @@
     </main>
 
     <footer class="border-t bg-background">
-      <div class="container py-8">
-        <div class="grid gap-8 md:grid-cols-3">
-          <div>
-            <h3 class="font-semibold mb-4">About HUSTBOOK</h3>
-            <p class="text-muted-foreground">Connecting students and alumni from HUST.</p>
-          </div>
-          <div>
-            <h3 class="font-semibold mb-4">Quick Links</h3>
-            <ul class="space-y-2">
-              <li>
-                <router-link to="/privacy" class="hover:underline">Privacy Policy</router-link>
-              </li>
-              <li>
-                <router-link to="/terms" class="hover:underline">Terms of Service</router-link>
-              </li>
-              <li>
-                <router-link to="/contact" class="hover:underline">Contact Us</router-link>
-              </li>
-            </ul>
-          </div>
-          <div>
-            <h3 class="font-semibold mb-4">Follow Us</h3>
-            <div class="flex space-x-4">
-              <Button variant="ghost" size="icon" asChild>
-                <a href="https://facebook.com/hustbook" target="_blank" rel="noopener noreferrer">
-                  <Facebook class="h-5 w-5" />
-                </a>
-              </Button>
-              <Button variant="ghost" size="icon" asChild>
-                <a href="https://twitter.com/hustbook" target="_blank" rel="noopener noreferrer">
-                  <Twitter class="h-5 w-5" />
-                </a>
-              </Button>
-              <Button variant="ghost" size="icon" asChild>
-                <a href="https://instagram.com/hustbook" target="_blank" rel="noopener noreferrer">
-                  <Instagram class="h-5 w-5" />
-                </a>
-              </Button>
-            </div>
-          </div>
-        </div>
-        <div class="mt-8 pt-8 border-t text-center text-muted-foreground">
+      <div class="container py-8">        
+        <div class="text-center text-muted-foreground">
           <p>&copy; {{ currentYear }} HUSTBOOK. All rights reserved.</p>
         </div>
       </div>
