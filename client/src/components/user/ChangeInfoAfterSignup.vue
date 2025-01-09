@@ -322,9 +322,7 @@ const handleSubmit = async () => {
         variant: "success",
       });
 
-      if (response.redirectUrl) {
-        router.push(response.redirectUrl);
-      }
+      router.push({ name: "Home" });
     }
   } catch (err) {
     errorMessage.value = err.message || "Failed to update profile";
