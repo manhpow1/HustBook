@@ -7,8 +7,8 @@ import { sendResponse } from '../utils/responseHandler.js';
 import { createError } from '../utils/customError.js';
 import { db } from '../config/firebase.js';
 import logger from '../utils/logger.js';
-import getFriendsCount from '../services/friendService.js';
-import getUserPostsCount from '../services/postService.js';
+import { getFriendsCount } from '../services/friendService.js';
+import { getUserPostsCount } from '../services/postService.js';
 
 class UserController {
     constructor() {
