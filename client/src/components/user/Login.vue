@@ -125,7 +125,7 @@ const sessionTimeout = ref(null);
 const showSessionWarning = ref(false);
 const remainingAttempts = ref(5);
 
-const { isLoading, successMessage, error, isSessionExpired } = storeToRefs(userStore);
+const { isLoading, successMessage, error, isSessionExpired, userData } = storeToRefs(userStore);
 
 const validateForm = () => {
   errors.value = {};
@@ -207,7 +207,7 @@ watch(
   (val) => {
     if (val) {
       setTimeout(async () => {
-        if (userStore.isLoggedIn) {
+        if (userStore.isLoggedIn && userData.value?.userId) {
           await userStore.fetchUserProfile();
           router.push({ name: 'Home' });
         }

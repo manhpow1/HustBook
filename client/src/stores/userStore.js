@@ -23,7 +23,7 @@ export const useUserStore = defineStore('user', () => {
     const { toast } = useToast();
 
     // State
-    const user = ref(null);
+    const user = ref(JSON.parse(localStorage.getItem('user')) || null);
     const error = ref(null);
     const successMessage = ref('');
     const isLoading = ref(false);
@@ -102,7 +102,9 @@ export const useUserStore = defineStore('user', () => {
 
             const response = await apiService.authCheck();
             if (response.data?.code === '1000') {
-                user.value = response.data.user;
+                // Update user state with the authenticated user data
+                user.value = response.data.data.user;
+                localStorage.setItem('user', JSON.stringify(user.value));
                 return true;
             }
 
@@ -203,14 +205,12 @@ export const useUserStore = defineStore('user', () => {
     // Token Management Methods
     const setAuthCookies = (token, rememberMe = false) => {
         const secure = window.location.protocol === 'https:';
-        const cookieOptions = {
+        Cookies.set('accessToken', token, {
             secure,
             sameSite: 'strict',
             path: '/',
-            expires: rememberMe ? 7 : 1 // 7 days if remember me, else 1 day
-        };
-
-        Cookies.set('accessToken', token, cookieOptions);
+            expires: rememberMe ? 7 : 1,
+        });
     };
 
 
@@ -572,40 +572,43 @@ export const useUserStore = defineStore('user', () => {
  * @param {string|null} userId - Optional user ID. If not provided, fetches current user's profile
  * @returns {Promise<Object|null>} User profile data or null if error occurs
  */
-    const getUserProfile = async (targetUserId = null) => {
+    const getUserProfile = async (userId = null) => {
         try {
             isLoading.value = true;
             error.value = null;
 
-            if (!targetUserId && isLoggedIn.value) {
-                targetUserId = user.value?.userId;
+            // If no targetUserId provided and we have userData, use that
+            if (!userId) {
+                if (!userData.value?.userId) {
+                    throw new Error('No user ID available');
+                }
+                userId = userData.value.userId;
             }
 
-            if (!targetUserId) {
-                throw new Error('No user ID available');
-            }
-
-            const response = await apiService.getProfile(targetUserId);
+            logger.debug('Fetching profile for user:', { userId });
+            const response = await apiService.getProfile(userId);
 
             if (response.data?.code === '1000') {
-                const userData = response.data.data.user;
+                const profileData = response.data.data.user;
 
-                // Nếu là current user, update store state
-                if (targetUserId === user.value?.userId) {
+                // If this is the current user's profile, update the store
+                if (userId === userData.value?.userId) {
                     user.value = {
                         ...user.value,
-                        ...userData
+                        ...profileData
                     };
+                    logger.debug('Updated current user profile:', user.value);
                 }
 
-                return userData;
+                return profileData;
             }
 
             throw new Error(response.data?.message || 'Failed to fetch user profile');
         } catch (err) {
             logger.error('Get user profile failed:', {
-                targetUserId,
-                error: err
+                userId,
+                error: err,
+                currentUser: userData.value
             });
             throw err;
         } finally {
@@ -654,7 +657,16 @@ export const useUserStore = defineStore('user', () => {
     };
 
     const fetchUserProfile = async () => {
-        return await getUserProfile();
+        try {
+            const userData = await getUserProfile();
+            if (!userData) {
+                throw new Error('Failed to fetch user profile');
+            }
+            return userData;
+        } catch (err) {
+            logger.error('Failed to fetch user profile:', err);
+            throw err;
+        }
     };
 
     const forgotPassword = async ({ phoneNumber, code, newPassword }) => {

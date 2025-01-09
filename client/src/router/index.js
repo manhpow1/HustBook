@@ -1,8 +1,11 @@
-import { createRouter, createWebHistory } from 'vue-router'
+import { createRouter, createWebHistory } from 'vue-router';
 import { useUserStore } from '../stores/userStore';
 import { useCommentStore } from '../stores/commentStore';
 import logger from '../services/logging';
 
+/**
+ * Route definitions
+ */
 const routes = [
     {
         path: '/',
@@ -11,66 +14,16 @@ const routes = [
         meta: { allowWithoutAuth: true }
     },
     {
-        path: '/profile',  
+        path: '/profile',
         name: 'CurrentUserProfile',
         component: () => import('../views/user/Profile.vue'),
         meta: { requiresAuth: true },
-        beforeEnter: async (to, from, next) => {
-            const userStore = useUserStore();
-            try {
-                logger.debug('Checking auth state for profile access');
-                const isAuthenticated = await userStore.verifyAuthState();
-                
-                if (!isAuthenticated) {
-                    next({ 
-                        name: 'Login',
-                        query: { redirect: to.fullPath }  
-                    });
-                    return;
-                }
-    
-                if (userStore.userData?.userId) {
-                    next({ 
-                        name: 'UserProfile',
-                        params: { userId: userStore.userData.userId }
-                    });
-                    return;
-                }
-    
-                next();
-            } catch (error) {
-                logger.error('Profile route error:', error);
-                next({ name: 'Login' });
-            }
-        }
     },
     {
         path: '/profile/:userId',
-        name: 'UserProfile', 
+        name: 'UserProfile',
         component: () => import('../views/user/Profile.vue'),
         meta: { requiresAuth: true },
-        beforeEnter: async (to, from, next) => {
-            const userStore = useUserStore();
-            try {
-                // Nếu không có userId trong params
-                if (!to.params.userId) {
-                    next({ name: 'CurrentUserProfile' });
-                    return;
-                }
-    
-                // Nếu đang xem profile của chính mình
-                if (userStore.userData?.userId === to.params.userId) {
-                    // Vẫn cho phép xem nhưng cập nhật URL
-                    next();
-                    return;
-                }
-    
-                next();
-            } catch (error) {
-                logger.error('UserProfile route error:', error);
-                next({ name: 'CurrentUserProfile' });
-            }
-        }
     },
     {
         path: '/friends',
@@ -139,6 +92,7 @@ const routes = [
             requiresAuth: true,
             analytics: 'PostDetail'
         },
+        // We keep this per-route guard to prefetch comments
         beforeEnter: (to, from, next) => {
             const commentStore = useCommentStore();
             commentStore.prefetchComments(to.params.postId);
@@ -155,7 +109,7 @@ const routes = [
         path: '/watch/:postId',
         name: 'Watch',
         component: () => import('../views/Watch.vue'),
-        meta: { requiresAuth: true },
+        meta: { requiresAuth: true }
     },
     {
         path: '/delete-post/:postId',
@@ -173,63 +127,54 @@ const routes = [
         path: '/search',
         name: 'Search',
         component: () => import('../components/search/SearchPosts.vue'),
-        meta: { requiresAuth: true },
+        meta: { requiresAuth: true }
     },
-]
+];
 
 const router = createRouter({
     history: createWebHistory(),
     routes,
 });
 
-// Global navigation guard
+/**
+ * Global Navigation Guard:
+ * - Checks auth state for protected routes
+ * - Redirects /profile to /profile/:userId if user is valid
+ * - Fetches user profile if needed
+ */
 router.beforeEach(async (to, from, next) => {
-    logger.debug(`Navigation started: ${from.path} -> ${to.path}`);
-    const userStore = useUserStore();
+    // If route is public, just proceed
+    if (to.meta.allowWithoutAuth) return next();
 
-    if (to.meta.allowWithoutAuth) {
-        next();
-        return;
+    // Otherwise, verify auth
+    const userStore = useUserStore();
+    const isAuthenticated = await userStore.verifyAuthState();
+    if (!isAuthenticated) {
+        // If not authenticated, go to login
+        return next({ name: 'Login', query: { redirect: to.fullPath } });
     }
 
-    // Check auth for protected routes
-    if (to.meta.requiresAuth) {
-        logger.debug('Route requires authentication');
-
-        // Verify auth state
-        const isAuthenticated = await userStore.verifyAuthState();
-
-        if (!isAuthenticated) {
-            logger.debug('User not authenticated, redirecting to login');
-            next({
-                name: 'Login',
-                query: {
-                    redirect: to.fullPath,
-                    message: 'Please login to continue'
-                }
-            });
-            return;
-        }
-
-        // Special handling for profile routes
-        if (to.name === 'CurrentUserProfile' && !userStore.user.userId) {
-            logger.error('No user ID available for profile page');
-            next({ name: 'Home' });
-            return;
-        }
+    // Optionally fetch user profile only if userData is missing
+    if (!userStore.userData?.userId) {
+        await userStore.fetchUserProfile(); // Make sure userId is available
     }
 
     next();
 });
 
-// Navigation guard for AddPost component
+/**
+ * Optional guard to log or track "resolving" step
+ */
 router.beforeResolve((to, from, next) => {
     logger.debug(`Resolving navigation from ${from.name} to ${to.name}`);
     next();
 });
 
+/**
+ * Optional guard to log or track "after each" step
+ */
 router.afterEach((to, from) => {
     logger.debug(`Navigation completed to: ${to.name}`);
 });
 
-export default router
+export default router;

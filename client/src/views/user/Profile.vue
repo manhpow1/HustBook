@@ -356,7 +356,12 @@ const initializeProfile = async () => {
       return;
     }
 
-    // Fetch profile data
+    // Wait for user data to be available
+    if (isLoggedIn.value && userData.value?.userId) {
+      await userStore.fetchUserProfile();
+    }
+
+    // Fetch profile data for the target user
     const userData = await userStore.getUserProfile(targetUserId.value);
     if (!userData) {
       throw new Error("Failed to fetch user data");
@@ -364,10 +369,17 @@ const initializeProfile = async () => {
 
     user.value = userData;
 
-    // Fetch additional data
+    // Fetch additional data in parallel
     await Promise.all([fetchFriendsData(), fetchPostsData()]);
   } catch (err) {
     handleError(err);
+    if (err.response?.status === 401) {
+      await userStore.logout(true);
+      router.push({
+        name: "Login",
+        query: { redirect: route.fullPath },
+      });
+    }
   } finally {
     loading.value = false;
   }
