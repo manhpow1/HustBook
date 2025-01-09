@@ -7,8 +7,8 @@ import { sendResponse } from '../utils/responseHandler.js';
 import { createError } from '../utils/customError.js';
 import { db } from '../config/firebase.js';
 import logger from '../utils/logger.js';
-import { getFriendsCount } from '../services/friendService.js';
-import { getUserPostsCount } from '../services/postService.js';
+import friendService from '../services/friendService.js';
+import postService from '../services/postService.js';
 
 class UserController {
     constructor() {
@@ -456,8 +456,8 @@ class UserController {
 
             // Add additional profile data
             const [friendsCount, postsCount] = await Promise.all([
-                getFriendsCount(targetUserId),
-                getUserPostsCount(targetUserId)
+                friendService.getFriendsCount(targetUserId),
+                postService.getUserPostsCount(targetUserId)
             ]);
 
             sendResponse(res, '1000', {
