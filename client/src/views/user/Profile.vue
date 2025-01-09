@@ -105,11 +105,11 @@
                       <AvatarImage :src="friend.avatar" :alt="friend.userName" />
                       <AvatarFallback>{{
                         getInitials(friend.userName)
-                        }}</AvatarFallback>
+                      }}</AvatarFallback>
                     </Avatar>
                     <span class="text-sm mt-1 text-center line-clamp-1">{{
                       friend.userName
-                      }}</span>
+                    }}</span>
                   </div>
                 </div>
                 <Button variant="ghost" class="w-full mt-4" @click="viewAllFriends">
@@ -156,15 +156,15 @@
                               <AvatarImage :src="post.author?.avatar" :alt="post.author?.userName" />
                               <AvatarFallback>{{
                                 getInitials(post.author?.userName || "")
-                                }}</AvatarFallback>
+                              }}</AvatarFallback>
                             </Avatar>
                             <div>
                               <CardTitle class="text-base">{{
                                 post.author?.userName
-                                }}</CardTitle>
+                              }}</CardTitle>
                               <CardDescription>{{
                                 formatDate(post.created)
-                                }}</CardDescription>
+                              }}</CardDescription>
                             </div>
                           </div>
                         </CardHeader>
@@ -350,6 +350,9 @@ const selectedVideo = ref(null);
 // Computed
 const isCurrentUser = computed(() => {
   const currentUserId = userStore.user?.userId;
+  if (!currentUserId) {
+    throw new Error('User session invalid');
+  }
   const profileUserId = route.params.userId || currentUserId;
   return currentUserId === profileUserId;
 });
@@ -388,52 +391,84 @@ const getInitials = (name) => {
 const fetchUserData = async () => {
   loading.value = true;
   error.value = null;
+
   try {
-    // Check if user is logged in
-    if (!userStore.isLoggedIn) {
-      router.push({ name: 'Login' });
+    // Verify authentication state first
+    const isAuthenticated = await userStore.verifyAuthState();
+    if (!isAuthenticated) {
+      router.push({
+        name: 'Login',
+        query: { redirect: router.currentRoute.value.fullPath }
+      });
       toast({
-        title: 'Authentication Required',
-        description: 'Please login to view profiles',
+        title: 'Login required',
+        description: 'Please login to view profile information',
         variant: 'destructive'
       });
       return;
     }
 
-    // Get user ID from route params
-    const userId = route.params.userId;
-    
-    // If no route userId, try to get current user's profile
-    if (!userId && !userStore.user?.userId) {
-      throw new Error('No user ID available');
+    // Get current user ID from store
+    const currentUserId = userStore.user?.userId;
+    if (!currentUserId) {
+      throw new Error('Invalid login session');
     }
 
-    // Use route userId or fall back to current user's ID
-    const targetUserId = userId || userStore.user.userId;
+    // Get target user ID from route params or use current user ID
+    const targetUserId = route.params.userId || currentUserId;
 
-    // Fetch all profile data in parallel
-    const [profileData, friendsData, videosData] = await Promise.all([
-      userStore.getUserProfile(userId),
-      friendStore.getUserFriends(userId),
-      videoStore.getUserVideos(userId)
-    ]);
+    // Start loading state for all async operations
+    loadingPosts.value = true;
 
-    // Handle case where profile is not found
-    if (!profileData) {
-      throw new Error('User not found');
+    try {
+      // Fetch all profile data in parallel for better performance
+      const [profileData, friendsData, videosData] = await Promise.all([
+        userStore.getUserProfile(targetUserId),
+        friendStore.getUserFriends(targetUserId),
+        videoStore.getUserVideos(targetUserId)
+      ]);
+
+      // Handle case where profile is not found
+      if (!profileData) {
+        throw new Error('Profile not found');
+      }
+
+      // Update state with fetched data
+      user.value = profileData;
+      friends.value = friendsData || [];
+      userVideos.value = videosData || [];
+
+      // Reset posts store and fetch user posts
+      postStore.resetPosts();
+      await postStore.getUserPosts(targetUserId);
+
+    } catch (err) {
+      // Handle specific error cases
+      if (err.response?.status === 404) {
+        error.value = 'Profile not found';
+        router.push({ name: 'Home' });
+      } else if (err.response?.status === 403) {
+        error.value = 'You do not have permission to view this profile';
+      } else {
+        error.value = 'An error occurred while fetching user data';
+      }
+
+      logger.error('Error fetching user data:', {
+        error: err,
+        userId: targetUserId
+      });
+
+      toast({
+        title: 'Error',
+        description: error.value,
+        variant: 'destructive'
+      });
     }
-
-    // Update state with fetched data
-    user.value = profileData;
-    friends.value = friendsData || [];
-    userVideos.value = videosData || [];
-
-    // Fetch user posts
-    await fetchPostsForUser(userId);
 
   } catch (err) {
-    error.value = err.message || 'Failed to load user data';
-    logger.error('Error fetching user data:', err);
+    error.value = err.message || 'An error occurred';
+    logger.error('Error in fetchUserData:', err);
+
     toast({
       title: 'Error',
       description: error.value,
@@ -447,6 +482,7 @@ const fetchUserData = async () => {
 
   } finally {
     loading.value = false;
+    loadingPosts.value = false;
   }
 };
 
@@ -587,4 +623,13 @@ const formatDate = (date) => {
 };
 
 onMounted(fetchUserData);
+
+watch(
+  () => route.params.userId,
+  (newId, oldId) => {
+    if (newId !== oldId) {
+      fetchUserData();
+    }
+  }
+);
 </script>
