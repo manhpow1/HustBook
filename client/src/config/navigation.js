@@ -1,6 +1,6 @@
 import { useUserStore } from '../stores/userStore';
 
-export const navItems = () => {
+export const getNavItems = () => {
     const userStore = useUserStore();
     const userId = userStore.userData?.userId;
 

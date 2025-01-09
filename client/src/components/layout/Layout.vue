@@ -166,7 +166,7 @@ import { computed } from "vue";
 import { storeToRefs } from "pinia";
 import { useUserStore } from "@/stores/userStore";
 import { useRouter, useRoute } from "vue-router";
-import { navItems } from "@/config/navigation";
+import { getNavItems } from "@/config/navigation";
 import SearchPosts from "@/components/search/SearchPosts.vue";
 import NotificationTab from "@/components/notification/NotificationTab.vue";
 import {
@@ -208,6 +208,7 @@ const route = useRoute();
 
 const { isLoggedIn, userData } = storeToRefs(userStore);
 const currentYear = computed(() => new Date().getFullYear());
+const navItems = computed(() => getNavItems());
 
 const handleLogout = async () => {
   try {
