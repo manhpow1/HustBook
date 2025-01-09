@@ -3,16 +3,10 @@
     <main class="container mx-auto p-4 md:p-6 lg:p-8">
       <ScrollArea class="w-full">
         <div v-if="userStore.isLoggedIn">
-          <!-- Post Creation -->
           <AddPost @post-created="handlePostCreated" />
-
-          <!-- Recent Posts -->
           <section class="mt-8" aria-labelledby="recent-posts-heading">
-            <h2 id="recent-posts-heading" class="scroll-m-20 text-2xl font-semibold tracking-tight mb-4">
-              Recent Posts
+            <h2 id="recent-posts-heading" class="scroll-m-20 text-2xl font-semibold tracking-tight mb-4">Recent Posts
             </h2>
-
-            <!-- Loading State -->
             <div v-if="postStore.loading && !postStore.posts.length" class="space-y-4">
               <Skeleton v-for="i in 3" :key="i">
                 <div class="space-y-3">
@@ -30,8 +24,6 @@
                 </div>
               </Skeleton>
             </div>
-
-            <!-- Error State -->
             <Alert v-else-if="postStore.error" variant="destructive" class="animate-in fade-in-50">
               <AlertCircle class="h-4 w-4" />
               <AlertTitle>Unable to load posts</AlertTitle>
@@ -43,8 +35,6 @@
                 </Button>
               </AlertDescription>
             </Alert>
-
-            <!-- Posts List -->
             <TransitionGroup v-else-if="mappedPosts.length > 0" name="post-list" tag="ul" class="space-y-4">
               <li v-for="post in mappedPosts" :key="post.postId">
                 <Card>
@@ -69,12 +59,10 @@
                       </RouterLink>
                     </div>
                   </CardHeader>
-
                   <CardContent>
                     <p class="text-card-foreground whitespace-pre-wrap break-words">
                       {{ sanitizeOutput(post.described) }}
                     </p>
-
                     <div v-if="post.media.length" class="mt-4">
                       <div class="grid gap-2 media-grid" :class="mediaGridClass(post.media.length)">
                         <div v-for="(media, index) in post.media" :key="index"
@@ -95,7 +83,6 @@
                       </div>
                     </div>
                   </CardContent>
-
                   <CardFooter class="flex flex-wrap gap-2">
                     <Button @click="likePost(post.postId)" variant="outline"
                       :class="{ 'text-primary': post.isLiked === '1' }">
@@ -103,53 +90,37 @@
                       {{ post.likes }}
                       {{ post.likes === 1 ? "Like" : "Likes" }}
                     </Button>
-
                     <Button @click="showComments(post.postId)" variant="outline">
                       <MessageCircle class="w-4 h-4 mr-2" />
                       {{ post.comments }}
                       {{ post.comments === 1 ? "Comment" : "Comments" }}
                     </Button>
-
                     <RouterLink :to="{
                       name: 'PostDetail',
                       params: { postId: post.postId },
                     }" class="w-full sm:w-auto">
-                      <Button variant="default" class="w-full">
-                        View Full Post
-                      </Button>
+                      <Button variant="default" class="w-full">View Full Post</Button>
                     </RouterLink>
                   </CardFooter>
                 </Card>
               </li>
             </TransitionGroup>
-
-            <!-- Empty State -->
             <Alert v-else>
-              <AlertDescription>
-                No posts to display yet. Be the first to create a post!
-              </AlertDescription>
+              <AlertDescription>No posts to display yet. Be the first to create a post!</AlertDescription>
             </Alert>
           </section>
-
-          <!-- Load More -->
           <div v-if="postStore.hasMorePosts && !postStore.loading" class="mt-6 text-center">
             <Button @click="loadMorePosts" variant="outline">Load More</Button>
           </div>
-
-          <!-- Spinner if loading more -->
           <div v-if="postStore.loading && postStore.posts.length > 0" class="mt-6 flex justify-center">
             <div class="flex justify-center">
               <div class="loading loading-spinner loading-md"></div>
             </div>
           </div>
         </div>
-
-        <!-- Auth State -->
         <Card v-else class="text-center p-6">
           <CardContent class="space-y-4">
-            <p class="text-muted-foreground">
-              Please log in to view and create posts.
-            </p>
+            <p class="text-muted-foreground">Please log in to view and create posts.</p>
             <RouterLink to="/login">
               <Button>Log In</Button>
             </RouterLink>
@@ -164,13 +135,7 @@
 import { onMounted, watch, computed } from "vue";
 import { useRouter, RouterLink } from "vue-router";
 import ErrorBoundary from "@/components/shared/ErrorBoundary.vue";
-import {
-  AlertCircle,
-  ThumbsUp,
-  MessageCircle,
-  Play,
-  RefreshCw,
-} from "lucide-vue-next";
+import { AlertCircle, ThumbsUp, MessageCircle, Play, RefreshCw } from "lucide-vue-next";
 import { formatDistanceToNow } from "date-fns";
 import { vi } from "date-fns/locale";
 import { usePostStore } from "../stores/postStore";
@@ -178,12 +143,7 @@ import { useUserStore } from "../stores/userStore";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardHeader,
-  CardContent,
-  CardFooter,
-} from "@/components/ui/card";
+import { Card, CardHeader, CardContent, CardFooter } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { AspectRatio } from "@/components/ui/aspect-ratio";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -191,21 +151,13 @@ import { defineAsyncComponent } from "vue";
 import { sanitizeInput, sanitizeOutput } from "../utils/sanitize";
 import { useErrorHandler } from "@/utils/errorHandler";
 
-const AddPost = defineAsyncComponent(() =>
-  import("../components/post/AddPost.vue")
-);
-
+const AddPost = defineAsyncComponent(() => import("../components/post/AddPost.vue"));
 const router = useRouter();
 const postStore = usePostStore();
 const userStore = useUserStore();
 const { handleError } = useErrorHandler();
 
-const getMediaArray = (post) => {
-  if (!post) return [];
-  const imgArr = Array.isArray(post.images) ? post.images : [];
-  const vidArr = post.video ? [post.video] : [];
-  return [...imgArr, ...vidArr];
-};
+const getMediaArray = (post) => !post ? [] : [...(Array.isArray(post.images) ? post.images : []), ...(post.video ? [post.video] : [])];
 
 const mappedPosts = computed(() =>
   postStore.posts.map((p) => ({
@@ -226,9 +178,7 @@ const handlePostCreated = (newPost) => {
   postStore.posts.unshift(newPost);
 };
 
-const loadMorePosts = () => {
-  postStore.fetchPosts();
-};
+const loadMorePosts = () => postStore.fetchPosts();
 
 const retryFetchPosts = async () => {
   postStore.resetPosts();
@@ -248,24 +198,19 @@ const likePost = async (postId) => {
   try {
     await postStore.toggleLike(postId);
   } catch (err) {
-    console.error("Error toggling like:", err);
+    handleError(err);
   }
 };
 
 const showComments = (postId) => {
   router.push({
     name: "PostDetail",
-    params: { postId: postId },
+    params: { postId },
     hash: "#comments",
   });
 };
 
-const formatDate = (date) => {
-  return formatDistanceToNow(new Date(date), {
-    addSuffix: true,
-    locale: vi,
-  });
-};
+const formatDate = (date) => formatDistanceToNow(new Date(date), { addSuffix: true, locale: vi });
 
 const isImage = (fileUrl) => {
   try {
@@ -279,7 +224,7 @@ const isImage = (fileUrl) => {
 const goToWatchPage = (postId, mediaIndex) => {
   router.push({
     name: "PostDetail",
-    params: { postId: postId },
+    params: { postId },
     query: { mediaIndex },
   });
 };

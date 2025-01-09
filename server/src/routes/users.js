@@ -98,40 +98,6 @@ const router = Router();
  */
 router.get('/profile/:userId?', authenticateToken, userController.getUserInfo);
 
-/**
- * @swagger
- * /users/profile:
- *   put:
- *     summary: Update user profile
- *     tags: [User]
- *     security:
- *       - bearerAuth: []
- *     requestBody:
- *       content:
- *         multipart/form-data:
- *           schema:
- *             type: object
- *             properties:
- *               userName:
- *                 type: string
- *               bio:
- *                 type: string
- *               avatar:
- *                 type: file
- *               coverPhoto:
- *                 type: file
- *               city:
- *                 type: string
- *               link:
- *                 type: string
- *     responses:
- *       200:
- *         description: Profile updated successfully
- *       400:
- *         description: Invalid input
- */
-router.put('/profile', authenticateToken, userController.setUserInfo);
-
 // Legacy endpoint maintained for backward compatibility
 router.get('/get_user_info/:userId?', authenticateToken, userController.getUserInfo);
 

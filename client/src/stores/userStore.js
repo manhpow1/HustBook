@@ -577,12 +577,13 @@ export const useUserStore = defineStore('user', () => {
             isLoading.value = true;
             error.value = null;
 
-            // If no targetUserId provided and we have userData, use that
-            if (!userId) {
-                if (!userData.value?.userId) {
-                    throw new Error('No user ID available');
-                }
+            // If no userId provided and user data exists, use current user's id
+            if (!userId && userData.value?.userId) {
                 userId = userData.value.userId;
+            }
+
+            if (!userId) {
+                throw new Error('No user ID available');
             }
 
             logger.debug('Fetching profile for user:', { userId });
@@ -591,7 +592,7 @@ export const useUserStore = defineStore('user', () => {
             if (response.data?.code === '1000') {
                 const profileData = response.data.data.user;
 
-                // If this is the current user's profile, update the store
+                // Update current user data if fetching own profile
                 if (userId === userData.value?.userId) {
                     user.value = {
                         ...user.value,
@@ -621,9 +622,10 @@ export const useUserStore = defineStore('user', () => {
  * @param {Object} updateData - Profile data to update
  * @returns {Promise<boolean>} Success status
  */
-    const updateUserProfile = async (updateData) => {
+    const updateUserProfile = async (userId, updateData) => {
         try {
             const formData = new FormData();
+
             Object.keys(updateData).forEach(key => {
                 if (updateData[key] !== null && updateData[key] !== undefined) {
                     if (key === 'avatar' || key === 'coverPhoto') {
@@ -636,14 +638,16 @@ export const useUserStore = defineStore('user', () => {
                 }
             });
 
-            const response = await apiService.updateProfile(formData);
+            const response = await apiService.updateProfile(userId, formData);
 
             if (response.data.code === '1000') {
-                // Update local user state
-                user.value = {
-                    ...user.value,
-                    ...response.data.data.user
-                };
+                // Update local user data if updating own profile
+                if (userId === user.value?.userId) {
+                    user.value = {
+                        ...user.value,
+                        ...response.data.data.user
+                    };
+                }
                 return response.data.data;
             }
 
@@ -658,10 +662,14 @@ export const useUserStore = defineStore('user', () => {
 
     const fetchUserProfile = async () => {
         try {
-            const userData = await getUserProfile();
+            if (!user.value?.userId) {
+                throw new Error('No user ID available for fetching profile');
+            }
+            const userData = await getUserProfile(user.value.userId);
             if (!userData) {
                 throw new Error('Failed to fetch user profile');
             }
+            
             return userData;
         } catch (err) {
             logger.error('Failed to fetch user profile:', err);

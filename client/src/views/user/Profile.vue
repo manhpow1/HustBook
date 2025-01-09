@@ -346,9 +346,15 @@ const initializeProfile = async () => {
   error.value = null;
 
   try {
-    // Verify auth state
+    logger.debug('Initializing profile view', {
+      targetUserId: targetUserId.value,
+      currentUser: userStore.userData
+    });
+
+    // Verify auth state first
     const isAuthenticated = await userStore.verifyAuthState();
     if (!isAuthenticated) {
+      logger.debug('User not authenticated, redirecting to login');
       router.push({
         name: "Login",
         query: { redirect: route.fullPath },
@@ -356,23 +362,45 @@ const initializeProfile = async () => {
       return;
     }
 
-    // Wait for user data to be available
-    if (isLoggedIn.value && userData.value?.userId) {
-      await userStore.fetchUserProfile();
+    // If viewing own profile, ensure we have latest user data
+    if (isCurrentUser.value) {
+      logger.debug('Fetching current user profile');
+      const currentUserData = await userStore.fetchUserProfile();
+      if (!currentUserData) {
+        throw new Error("Failed to fetch current user data");
+      }
+      user.value = currentUserData;
+    } else {
+      // Fetch target user's profile
+      logger.debug('Fetching target user profile', { userId: targetUserId.value });
+      const profileData = await userStore.getUserProfile(targetUserId.value);
+      if (!profileData) {
+        throw new Error("Failed to fetch user profile");
+      }
+      user.value = profileData;
     }
-
-    // Fetch profile data for the target user
-    const userData = await userStore.getUserProfile(targetUserId.value);
-    if (!userData) {
-      throw new Error("Failed to fetch user data");
-    }
-
-    user.value = userData;
 
     // Fetch additional data in parallel
-    await Promise.all([fetchFriendsData(), fetchPostsData()]);
+    logger.debug('Fetching additional profile data');
+    await Promise.all([
+      fetchFriendsData().catch(err => {
+        logger.warn('Failed to fetch friends data:', err);
+        friends.value = [];
+      }),
+      fetchPostsData().catch(err => {
+        logger.warn('Failed to fetch posts data:', err);
+        postError.value = 'Failed to load posts';
+      })
+    ]);
+
   } catch (err) {
-    handleError(err);
+    const errorMessage = err.response?.data?.message || err.message || "An error occurred";
+    error.value = errorMessage;
+    logger.error('Profile initialization failed:', {
+      error: err,
+      userId: targetUserId.value
+    });
+
     if (err.response?.status === 401) {
       await userStore.logout(true);
       router.push({
@@ -380,6 +408,12 @@ const initializeProfile = async () => {
         query: { redirect: route.fullPath },
       });
     }
+
+    toast({
+      title: "Error",
+      description: errorMessage,
+      variant: "destructive",
+    });
   } finally {
     loading.value = false;
   }
@@ -407,65 +441,6 @@ const fetchPostsData = async () => {
   }
 };
 
-const fetchUserData = async () => {
-  if (!targetUserId.value) {
-    logger.debug("No target user ID available", {
-      routeUserId: route.params.userId,
-      storeUserId: userStore.user?.userId,
-    });
-    return;
-  }
-
-  loading.value = true;
-  error.value = null;
-
-  try {
-    logger.debug("Fetching user data", {
-      targetUserId: targetUserId.value,
-      isCurrentUser: isCurrentUser.value,
-    });
-
-    const userData = await userStore.getUserProfile(targetUserId.value);
-    if (!userData) {
-      throw new Error("Cannot fetch user data");
-    }
-
-    user.value = userData;
-
-    // Fetch additional data sau khi có user info
-    await Promise.all([fetchFriendsData(), fetchPostsData()]);
-  } catch (err) {
-    const errorMessage =
-      err.response?.data?.message || err.message || "An error occurred";
-    error.value = errorMessage;
-
-    logger.error("Error in fetchUserData:", {
-      error: err,
-      userId: targetUserId.value,
-      message: errorMessage,
-      stack: err.stack,
-    });
-
-    toast({
-      title: "Error",
-      description: errorMessage,
-      variant: "destructive",
-    });
-
-    // Xử lý các trường hợp lỗi
-    if (err.response?.status === 401) {
-      await userStore.clearAuthState();
-      router.push({
-        name: "Login",
-        query: { redirect: router.currentRoute.value.fullPath },
-      });
-    } else if (err.response?.status === 404) {
-      router.push({ name: "NotFound" });
-    }
-  } finally {
-    loading.value = false;
-  }
-};
 
 const handleFriendAction = async () => {
   try {

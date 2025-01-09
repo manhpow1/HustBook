@@ -3,9 +3,6 @@ import { useUserStore } from '../stores/userStore';
 import { useCommentStore } from '../stores/commentStore';
 import logger from '../services/logging';
 
-/**
- * Route definitions
- */
 const routes = [
     {
         path: '/',
@@ -14,16 +11,22 @@ const routes = [
         meta: { allowWithoutAuth: true }
     },
     {
-        path: '/profile',
-        name: 'CurrentUserProfile',
-        component: () => import('../views/user/Profile.vue'),
-        meta: { requiresAuth: true },
-    },
-    {
-        path: '/profile/:userId',
+        path: '/profile/:userId?',
         name: 'UserProfile',
         component: () => import('../views/user/Profile.vue'),
         meta: { requiresAuth: true },
+        beforeEnter: async (to, from, next) => {
+            const userStore = useUserStore();
+            const targetUserId = to.params.userId;
+            const currentUserId = userStore.userData?.userId;
+
+            // If no userId provided and user is logged in, use current user's ID
+            if (!targetUserId && currentUserId) {
+                next({ name: 'UserProfile', params: { userId: currentUserId }, replace: true });
+                return;
+            }
+            next();
+        }
     },
     {
         path: '/friends',
@@ -79,12 +82,6 @@ const routes = [
         meta: { requiresAuth: true }
     },
     {
-        path: '/add-post',
-        name: 'AddPost',
-        component: () => import('../components/post/AddPost.vue'),
-        meta: { requiresAuth: true }
-    },
-    {
         path: '/post/:postId',
         name: 'PostDetail',
         component: () => import('../components/post/PostDetail.vue'),
@@ -92,7 +89,6 @@ const routes = [
             requiresAuth: true,
             analytics: 'PostDetail'
         },
-        // We keep this per-route guard to prefetch comments
         beforeEnter: (to, from, next) => {
             const commentStore = useCommentStore();
             commentStore.prefetchComments(to.params.postId);
@@ -136,43 +132,28 @@ const router = createRouter({
     routes,
 });
 
-/**
- * Global Navigation Guard:
- * - Checks auth state for protected routes
- * - Redirects /profile to /profile/:userId if user is valid
- * - Fetches user profile if needed
- */
 router.beforeEach(async (to, from, next) => {
-    // If route is public, just proceed
     if (to.meta.allowWithoutAuth) return next();
 
-    // Otherwise, verify auth
     const userStore = useUserStore();
     const isAuthenticated = await userStore.verifyAuthState();
+
     if (!isAuthenticated) {
-        // If not authenticated, go to login
         return next({ name: 'Login', query: { redirect: to.fullPath } });
     }
 
-    // Optionally fetch user profile only if userData is missing
     if (!userStore.userData?.userId) {
-        await userStore.fetchUserProfile(); // Make sure userId is available
+        await userStore.fetchUserProfile();
     }
 
     next();
 });
 
-/**
- * Optional guard to log or track "resolving" step
- */
 router.beforeResolve((to, from, next) => {
     logger.debug(`Resolving navigation from ${from.name} to ${to.name}`);
     next();
 });
 
-/**
- * Optional guard to log or track "after each" step
- */
 router.afterEach((to, from) => {
     logger.debug(`Navigation completed to: ${to.name}`);
 });

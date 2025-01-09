@@ -99,11 +99,12 @@ const apiService = {
     // Profile Methods
     async getProfile(userId = null) {
         const url = API_ENDPOINTS.GET_PROFILE(userId);
-        return axiosInstance.get(url);
+        return this.get(url);
     },
 
-    async updateProfile(data) {
-        return this.put(API_ENDPOINTS.UPDATE_PROFILE, data, {
+    async updateProfile(userId, data) {
+        const url = API_ENDPOINTS.UPDATE_PROFILE(userId);
+        return this.put(url, data, {
             headers: {
                 'Content-Type': 'multipart/form-data'
             }
@@ -144,12 +145,12 @@ const apiService = {
     async updatePost(postId, postData) {
         const formData = new FormData();
         formData.append('content', postData.content);
-        
+
         // Handle existing images
         if (postData.existingImages?.length) {
             formData.append('existingImages', JSON.stringify(postData.existingImages));
         }
-        
+
         // Handle new image files
         if (postData.media?.length) {
             postData.media.forEach(file => {
@@ -157,7 +158,7 @@ const apiService = {
                 formData.append('images', file);
             });
         }
-        
+
         return this.patch(API_ENDPOINTS.UPDATE_POST(postId), formData, {
             headers: {
                 'Content-Type': 'multipart/form-data'
