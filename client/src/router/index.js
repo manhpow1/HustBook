@@ -20,11 +20,19 @@ const routes = [
             const targetUserId = to.params.userId;
             const currentUserId = userStore.userData?.userId;
 
-            // If no userId provided and user is logged in, use current user's ID
-            if (!targetUserId && currentUserId) {
-                next({ name: 'UserProfile', params: { userId: currentUserId }, replace: true });
-                return;
+            // If viewing /profile without userId, redirect to current user's profile
+            if (!targetUserId) {
+                if (currentUserId) {
+                    return next({ 
+                        path: `/profile/${currentUserId}`,
+                        replace: true 
+                    });
+                }
+                // If somehow we don't have currentUserId, let the component handle it
+                return next();
             }
+
+            // Continue with the navigation
             next();
         }
     },
