@@ -129,7 +129,7 @@ export const usePostStore = defineStore("post", () => {
     }
 
     // Create Post
-    async function createPost(postData) {
+    async function createPost(postData, config) {
         loading.value = true;
         error.value = null;
         try {
@@ -171,7 +171,7 @@ export const usePostStore = defineStore("post", () => {
                 });
             }
 
-            const response = await apiService.createPost(formData);
+            const response = await apiService.createPost(postData, config);
 
             if (response.data.code === "1000") {
                 const newPost = validateAndProcessPost(response.data.data);

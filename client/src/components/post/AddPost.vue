@@ -19,7 +19,7 @@
                 <div class="flex items-center gap-2">
                     <div class="flex-1">
                         <FileUpload v-model="files" :maxFiles="4" accept="image/jpeg,image/png,image/gif" class="h-24"
-                            mode="add" @change="handleFilesChange">
+                            mode="add" multiple @change="handleFilesChange">
                             <template #trigger>
                                 <Button variant="outline" size="sm">
                                     <ImageIcon class="h-4 w-4 mr-2" />
@@ -31,7 +31,7 @@
 
                     <Button type="submit" :disabled="!isValid || isLoading" size="sm">
                         <Loader2Icon v-if="isLoading" class="h-4 w-4 animate-spin mr-2" />
-                        {{ isLoading ? 'Posting...' : 'Post' }}
+                        {{ isLoading ? "Posting..." : "Post" }}
                     </Button>
                 </div>
 
@@ -64,138 +64,158 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
-import { usePostStore } from '@/stores/postStore'
-import { useToast } from '@/components/ui/toast'
-import { ImageIcon, Loader2Icon, SmileIcon, XIcon } from 'lucide-vue-next'
-import { Card, CardContent } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
-import { Textarea } from '@/components/ui/textarea'
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogClose } from '@/components/ui/dialog'
-import EmojiPicker from '../shared/EmojiPicker.vue'
-import FileUpload from '../shared/FileUpload.vue'
+import { ref, computed } from "vue";
+import { usePostStore } from "@/stores/postStore";
+import { useToast } from "@/components/ui/toast";
+import { ImageIcon, Loader2Icon, SmileIcon, XIcon } from "lucide-vue-next";
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
+import {
+    Dialog,
+    DialogContent,
+    DialogHeader,
+    DialogTitle,
+    DialogClose,
+} from "@/components/ui/dialog";
+import EmojiPicker from "../shared/EmojiPicker.vue";
+import FileUpload from "../shared/FileUpload.vue";
 
-const MAX_FILE_SIZE = 4 * 1024 * 1024 // 4MB
-const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/gif']
+const MAX_FILE_SIZE = 4 * 1024 * 1024; // 4MB
+const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/gif"];
 
-const postStore = usePostStore()
-const { toast } = useToast()
+const postStore = usePostStore();
+const { toast } = useToast();
 
-const description = ref('')
-const descriptionError = ref('')
-const files = ref([])
-const previewUrls = ref([])
-const isLoading = ref(false)
-const showEmojiPicker = ref(false)
+const description = ref("");
+const descriptionError = ref("");
+const files = ref([]);
+const previewUrls = ref([]);
+const isLoading = ref(false);
+const showEmojiPicker = ref(false);
 
 const isValid = computed(() => {
-    return (description.value.trim().length > 0 || files.value.length > 0) &&
+    return (
+        (description.value.trim().length > 0 || files.value.length > 0) &&
         description.value.length <= 1000 &&
         files.value.length <= 4 &&
         !descriptionError.value
-})
+    );
+});
 
 const validateDescription = () => {
-    const content = description.value.trim()
+    const content = description.value.trim();
     if (content.length === 0 && files.value.length === 0) {
-        descriptionError.value = 'Post must have either text or images'
+        descriptionError.value = "Post must have either text or images";
     } else if (content.length > 1000) {
-        descriptionError.value = 'Description must not exceed 1000 characters'
+        descriptionError.value = "Description must not exceed 1000 characters";
     } else {
-        descriptionError.value = ''
+        descriptionError.value = "";
     }
-}
+};
 
 const handleFilesChange = async (newFiles) => {
     if (!newFiles?.length) return
+    console.log('Files selected:', newFiles)
 
-    const currentDescription = description.value // Store current description
+    const currentDescription = description.value; // Store current description
 
     // Validate file count
     if (newFiles.length > 4) {
         toast({
-            title: 'Error',
-            description: 'Maximum 4 files allowed',
-            variant: 'destructive'
-        })
-        return
+            title: "Error",
+            description: "Maximum 4 files allowed",
+            variant: "destructive",
+        });
+        return;
     }
 
     // Validate each file
-    const invalidFiles = newFiles.filter(file => {
+    const invalidFiles = newFiles.filter((file) => {
         if (file.size > MAX_FILE_SIZE) {
             toast({
-                title: 'Error',
+                title: "Error",
                 description: `File ${file.name} exceeds 4MB limit`,
-                variant: 'destructive'
-            })
-            return true
+                variant: "destructive",
+            });
+            return true;
         }
         if (!ALLOWED_TYPES.includes(file.type)) {
             toast({
-                title: 'Error',
+                title: "Error",
                 description: `File ${file.name} must be JPEG, PNG or GIF`,
-                variant: 'destructive'
-            })
-            return true
+                variant: "destructive",
+            });
+            return true;
         }
-        return false
-    })
+        return false;
+    });
 
     if (invalidFiles.length) {
-        files.value = newFiles.filter(f => !invalidFiles.includes(f))
+        files.value = newFiles.filter((f) => !invalidFiles.includes(f));
     } else {
-        files.value = newFiles
+        files.value = newFiles;
     }
 
     // Generate previews
-    previewUrls.value = []
+    previewUrls.value = [];
     for (const file of files.value) {
-        const reader = new FileReader()
+        const reader = new FileReader();
         reader.onload = (e) => {
-            previewUrls.value.push(e.target.result)
-        }
-        reader.readAsDataURL(file)
+            previewUrls.value.push(e.target.result);
+        };
+        reader.readAsDataURL(file);
     }
 
-    description.value = currentDescription // Restore description after file handling
-}
+    description.value = currentDescription; // Restore description after file handling
+};
 
 const removeFile = (index) => {
-    files.value = files.value.filter((_, i) => i !== index)
-    previewUrls.value = previewUrls.value.filter((_, i) => i !== index)
-}
+    files.value = files.value.filter((_, i) => i !== index);
+    previewUrls.value = previewUrls.value.filter((_, i) => i !== index);
+};
 
 const insertEmoji = (emoji) => {
-    description.value += emoji
-    showEmojiPicker.value = false
-}
+    description.value += emoji;
+    showEmojiPicker.value = false;
+};
 
 const handleSubmit = async () => {
     if (!isValid.value) return
     isLoading.value = true
-
     try {
         const formData = new FormData()
-        formData.append('content', description.value.trim()) // Giữ nguyên 'content'
+        formData.append('content', description.value.trim())
+        // Change to match backend expectation
+        if (files.value && files.value.length > 0) {
+            files.value.forEach((file, index) => {
+                formData.append(`images`, file) 
+            })
+        }
 
-        files.value.forEach(file => {
-            formData.append('images', file)
-        })
+        const config = {
+            headers: {
+                'Content-Type': 'multipart/form-data'
+            }
+        }
 
-        await postStore.createPost(formData)
+        console.log('Files being sent:', files.value) // Add this for debugging
+        console.log('FormData content:')
+        for (let pair of formData.entries()) {
+            console.log(pair[0] + ', ' + pair[1]);
+        }
 
+        await postStore.createPost(formData, config)
         toast({
             description: 'Post created successfully'
         })
-
-        // Reset form
         description.value = ''
         files.value = []
         previewUrls.value = []
         descriptionError.value = ''
 
     } catch (err) {
+        console.error('Error creating post:', err) // Add this for debugging
         toast({
             title: 'Error',
             description: err.message || 'Failed to create post',

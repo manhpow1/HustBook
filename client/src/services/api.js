@@ -112,12 +112,14 @@ const apiService = {
     // ─────────────────────────────────────────────────────────
     // POST APIs
     // ─────────────────────────────────────────────────────────
-    async createPost(postData) {
+    async createPost(postData, config) {
         return axiosInstance.post(API_ENDPOINTS.ADD_POST, postData, {
+            ...config,
             headers: {
+                ...config?.headers,
                 'Content-Type': 'multipart/form-data'
             }
-        })
+        });
     },
 
     async getPost(postId) {
