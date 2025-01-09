@@ -15,10 +15,7 @@
           <NavigationMenu v-if="isLoggedIn" class="hidden xl:flex">
             <NavigationMenuList class="flex items-center gap-2 xl:gap-4 2xl:gap-6">
               <NavigationMenuItem v-for="item in navItems" :key="item.path">
-                <NavigationMenuLink v-if="item.name === 'Profile'" :to="{
-                  name: 'UserProfile',
-                  params: { userId: userData?.userId },
-                }"
+                <NavigationMenuLink v-if="item.name === 'Profile'" :to="item.path"
                   class="group inline-flex items-center px-2 xl:px-3 py-2 text-sm font-medium hover:bg-accent hover:text-accent-foreground rounded-md transition-colors whitespace-nowrap"
                   :class="{
                     'bg-accent text-accent-foreground': isProfileActive,
