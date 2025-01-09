@@ -123,7 +123,6 @@
             <Tabs defaultValue="posts" class="w-full">
               <TabsList>
                 <TabsTrigger value="posts">Posts</TabsTrigger>
-                <TabsTrigger value="videos">Videos</TabsTrigger>
                 <TabsTrigger value="about">About</TabsTrigger>
               </TabsList>
 
@@ -188,41 +187,6 @@
                 </Card>
               </TabsContent>
 
-              <TabsContent value="videos">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Videos</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div v-if="!userVideos.length" class="text-center py-8">
-                      <Video class="h-12 w-12 mx-auto text-muted-foreground" />
-                      <p class="mt-4 text-muted-foreground">No videos found</p>
-                    </div>
-                    <div v-else class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      <Card v-for="video in userVideos" :key="video.id"
-                        class="overflow-hidden cursor-pointer hover:shadow-lg transition-shadow"
-                        @click="openVideoModal(video)">
-                        <AspectRatio :ratio="16 / 9">
-                          <img :src="video.thumbnail" :alt="video.title" class="object-cover w-full h-full" />
-                          <div
-                            class="absolute bottom-2 right-2 bg-black bg-opacity-75 text-white text-xs px-2 py-1 rounded">
-                            {{ formatDuration(video.duration) }}
-                          </div>
-                        </AspectRatio>
-                        <CardContent class="p-4">
-                          <h4 class="font-semibold line-clamp-2">
-                            {{ video.title }}
-                          </h4>
-                          <p class="text-sm text-muted-foreground mt-2">
-                            {{ formatViews(video.views) }} views
-                          </p>
-                        </CardContent>
-                      </Card>
-                    </div>
-                  </CardContent>
-                </Card>
-              </TabsContent>
-
               <TabsContent value="about">
                 <Card>
                   <CardHeader>
@@ -258,15 +222,6 @@
           </div>
         </div>
       </template>
-
-      <Dialog v-model:open="showVideoModal">
-        <DialogContent class="max-w-4xl">
-          <DialogHeader>
-            <DialogTitle>{{ selectedVideo?.title }}</DialogTitle>
-          </DialogHeader>
-          <video v-if="selectedVideo" :src="selectedVideo.url" controls class="w-full rounded-lg" />
-        </DialogContent>
-      </Dialog>
     </ErrorBoundary>
   </div>
 </template>
@@ -278,7 +233,6 @@ import { useRoute, useRouter } from "vue-router";
 import { useUserStore } from "@/stores/userStore";
 import { useSearchStore } from "@/stores/searchStore";
 import { useFriendStore } from "@/stores/friendStore";
-import { useVideoStore } from "@/stores/videoStore";
 import { usePostStore } from "@/stores/postStore";
 import { useToast } from "@/components/ui/toast";
 import { Button } from "../../components/ui/button";
@@ -317,7 +271,6 @@ import {
   MessageSquare,
   Settings,
   UserPlus,
-  Video,
   MapPin,
   Globe,
   Pencil,
@@ -329,7 +282,6 @@ import ErrorBoundary from "@/components/shared/ErrorBoundary.vue";
 const router = useRouter();
 const route = useRoute();
 const userStore = useUserStore();
-const videoStore = useVideoStore();
 const searchStore = useSearchStore();
 const friendStore = useFriendStore();
 const postStore = usePostStore();
@@ -342,10 +294,7 @@ const error = ref(null);
 const postError = ref(null);
 const user = ref(null);
 const friends = ref([]);
-const userVideos = ref([]);
 const postSearchQuery = ref("");
-const showVideoModal = ref(false);
-const selectedVideo = ref(null);
 
 // Computed
 const isCurrentUser = computed(() => {
@@ -391,98 +340,93 @@ const getInitials = (name) => {
 const fetchUserData = async () => {
   loading.value = true;
   error.value = null;
-
+  
   try {
-    // Verify authentication state first
-    const isAuthenticated = await userStore.verifyAuthState();
-    if (!isAuthenticated) {
-      router.push({
+    // 1. Verify authentication state
+    if (!userStore.isLoggedIn) {
+      logger.debug('User not logged in, redirecting to login');
+      router.push({ 
         name: 'Login',
         query: { redirect: router.currentRoute.value.fullPath }
-      });
-      toast({
-        title: 'Login required',
-        description: 'Please login to view profile information',
-        variant: 'destructive'
       });
       return;
     }
 
-    // Get current user ID from store
+    // 2. Wait for user store to be populated if necessary
+    await userStore.verifyAuthState();
+    
     const currentUserId = userStore.user?.userId;
-    if (!currentUserId) {
-      throw new Error('Invalid login session');
+    const routeUserId = route.params.userId;
+    const targetUserId = routeUserId || currentUserId;
+
+    logger.debug('Fetching user data', {
+      currentUserId,
+      routeUserId,
+      targetUserId,
+      isAuthenticated: userStore.isLoggedIn
+    });
+
+    if (!targetUserId) {
+      throw new Error('User ID not available. Please try again.');
     }
 
-    // Get target user ID from route params or use current user ID
-    const targetUserId = route.params.userId || currentUserId;
+    // 3. Fetch user data
+    const userData = await userStore.getUserProfile(targetUserId);
+    if (!userData) {
+      throw new Error('Cannot fetch user data');
+    }
+    user.value = userData;
 
-    // Start loading state for all async operations
-    loadingPosts.value = true;
-
+    // 4. Fetch dữ liệu bạn bè
     try {
-      // Fetch all profile data in parallel for better performance
-      const [profileData, friendsData, videosData] = await Promise.all([
-        userStore.getUserProfile(targetUserId),
-        friendStore.getUserFriends(targetUserId),
-        videoStore.getUserVideos(targetUserId)
-      ]);
-
-      // Handle case where profile is not found
-      if (!profileData) {
-        throw new Error('Profile not found');
-      }
-
-      // Update state with fetched data
-      user.value = profileData;
+      const friendsData = await friendStore.getUserFriends(targetUserId);
       friends.value = friendsData || [];
-      userVideos.value = videosData || [];
+    } catch (friendError) {
+      logger.warn('Error fetching friends data:', friendError);
+      friends.value = [];
+    }
 
-      // Reset posts store and fetch user posts
+    // 6. Fetch posts
+    try {
+      loadingPosts.value = true;
       postStore.resetPosts();
       await postStore.getUserPosts(targetUserId);
-
-    } catch (err) {
-      // Handle specific error cases
-      if (err.response?.status === 404) {
-        error.value = 'Profile not found';
-        router.push({ name: 'Home' });
-      } else if (err.response?.status === 403) {
-        error.value = 'You do not have permission to view this profile';
-      } else {
-        error.value = 'An error occurred while fetching user data';
-      }
-
-      logger.error('Error fetching user data:', {
-        error: err,
-        userId: targetUserId
-      });
-
-      toast({
-        title: 'Error',
-        description: error.value,
-        variant: 'destructive'
-      });
+    } catch (postError) {
+      logger.warn('Error fetching posts:', postError);
+      postError.value = 'Cannot load posts';
+    } finally {
+      loadingPosts.value = false;
     }
 
   } catch (err) {
-    error.value = err.message || 'An error occurred';
-    logger.error('Error in fetchUserData:', err);
+    const errorMessage = err.response?.data?.message || err.message || 'An error occurred';
+    error.value = errorMessage;
+    
+    logger.error('Error in fetchUserData:', {
+      error: err,
+      message: errorMessage,
+      stack: err.stack
+    });
 
     toast({
       title: 'Error',
-      description: error.value,
+      description: errorMessage,
       variant: 'destructive'
     });
 
-    // Redirect to home if profile not found
-    if (error.value.includes('not found')) {
+    // Xử lý các trường hợp lỗi cụ thể
+    if (err.response?.status === 401) {
+      await userStore.clearAuthState();
+      router.push({ 
+        name: 'Login',
+        query: { redirect: router.currentRoute.value.fullPath }
+      });
+    } else if (err.response?.status === 404) {
       router.push({ name: 'Home' });
     }
 
   } finally {
     loading.value = false;
-    loadingPosts.value = false;
   }
 };
 
@@ -598,11 +542,6 @@ const copyProfileLink = async () => {
   }
 };
 
-const openVideoModal = (video) => {
-  selectedVideo.value = video;
-  showVideoModal.value = true;
-};
-
 const formatViews = (views) => {
   return new Intl.NumberFormat("en-US", { notation: "compact" }).format(views);
 };
@@ -622,12 +561,19 @@ const formatDate = (date) => {
   });
 };
 
-onMounted(fetchUserData);
+onMounted(() => {
+  logger.debug('Profile component mounted, fetching user data');
+  fetchUserData();
+});
 
 watch(
   () => route.params.userId,
   (newId, oldId) => {
     if (newId !== oldId) {
+      logger.debug('Route params changed, reloading user data', {
+        oldId,
+        newId
+      });
       fetchUserData();
     }
   }
