@@ -33,7 +33,9 @@ class FriendController {
             }
 
             const { index, count } = value;
-
+            if (!req.user || !req.user.userId) {
+                throw createError('1002', 'Missing required parameter "userId"');
+            }
             const userId = req.user.userId;
             if (typeof userId !== 'string') {
                 throw createError('1002', '"userId" must be a string');

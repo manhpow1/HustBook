@@ -360,9 +360,8 @@ class UserService {
             }
 
             return {
-                userId: user.userId,  // Standardized to userId
+                userId: user.userId,
                 userName: user.userName,
-                fullName: user.fullName,
                 avatar: user.avatar,
                 coverPhoto: user.coverPhoto,
                 bio: user.bio,
@@ -370,9 +369,12 @@ class UserService {
                 city: user.city,
                 country: user.country,
                 createdAt: user.createdAt,
+                friendsCount: user.friendsCount || 0,
                 isVerified: user.isVerified,
+                lastSeen: user.lastSeen,
                 online: user.online,
-                isAdmin: user.isAdmin || false
+                version: user.version || 0,
+                isAdmin: user.isAdmin || false,
             };
         } catch (error) {
             logger.error('Error getting user info:', error);
@@ -464,20 +466,27 @@ class UserService {
             // Handle cover image upload if provided
             if (updateData.coverFile) {
                 try {
-                    logger.info('Processing cover image upload', { userId });
+                    logger.info('Processing cover photo upload', { userId });
                     const uploadedCoverUrl = await handleCoverPhotoUpload(updateData.coverFile, userId);
 
                     if (uploadedCoverUrl) {
-                        // If user already has a cover, delete the old one
+                        // Delete old cover photo if exists
                         if (user.coverPhoto) {
-                            await deleteFileFromStorage(user.coverPhoto);
+                            try {
+                                await deleteFileFromStorage(user.coverPhoto);
+                                logger.info('Deleted old cover photo', { userId });
+                            } catch (deleteError) {
+                                logger.warn('Failed to delete old cover photo', {
+                                    userId,
+                                    error: deleteError.message
+                                });
+                            }
                         }
                         updateData.coverPhoto = uploadedCoverUrl;
-                        logger.info('Cover image updated successfully', { userId, url: uploadedCoverUrl });
                     }
                 } catch (uploadError) {
-                    logger.error('Cover image upload failed:', uploadError);
-                    throw createError('9999', 'Failed to upload cover image');
+                    logger.error('Cover photo upload failed:', uploadError);
+                    throw createError('9999', 'Failed to upload cover photo');
                 }
             }
 
@@ -537,8 +546,8 @@ class UserService {
                         try {
                             Buffer.from(sanitizedData[field], 'utf8').toString('utf8');
                         } catch (error) {
-                            logger.warn('Invalid UTF-8 encoding in field - using original value', { 
-                                field, 
+                            logger.warn('Invalid UTF-8 encoding in field - using original value', {
+                                field,
                                 value: sanitizedData[field],
                                 error: error.message
                             });

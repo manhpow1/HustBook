@@ -53,8 +53,10 @@
                         <CardContent class="pt-6">
                             <div class="flex items-center gap-4 mb-4">
                                 <Avatar class="h-10 w-10">
-                                    <AvatarImage :src="friend.avatar || '/avatar-default.svg'" :alt="friend.userName" />
-                                    <AvatarFallback>{{ friend.userName.charAt(0) }}</AvatarFallback>
+                                    <AvatarImage :src="friend.avatar || '@/assets/avatar-default.svg'" :alt="friend.userName" />
+                                    <AvatarFallback>{{
+                                        friend.userName.charAt(0)
+                                        }}</AvatarFallback>
                                 </Avatar>
                                 <div class="flex-1 min-w-0">
                                     <h3 class="font-semibold truncate">{{ friend.userName }}</h3>
@@ -101,16 +103,15 @@
                 <AlertDialogHeader>
                     <AlertDialogTitle>Block User</AlertDialogTitle>
                     <AlertDialogDescription>
-                        Are you sure you want to block this user? They will no longer be able to send you messages or
-                        friend
-                        requests.
+                        Are you sure you want to block this user? They will no longer be
+                        able to send you messages or friend requests.
                     </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
                     <AlertDialogCancel @click="cancelBlock">Cancel</AlertDialogCancel>
                     <AlertDialogAction @click="blockConfirmed" :disabled="isProcessing">
                         <Loader2Icon v-if="isProcessing" class="mr-2 h-4 w-4 animate-spin" />
-                        {{ isProcessing ? 'Blocking...' : 'Block' }}
+                        {{ isProcessing ? "Blocking..." : "Block" }}
                     </AlertDialogAction>
                 </AlertDialogFooter>
             </AlertDialogContent>
@@ -119,35 +120,69 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, watch } from 'vue';
-import { useRouter } from 'vue-router';
-import { useToast } from '@/components/ui/toast';
-import { useFriendStore } from '@/stores/friendStore';
-import { useDebounce } from '@/composables/useDebounce';
-import { AlertCircleIcon, Loader2Icon, MoreVerticalIcon, SearchIcon, ShieldIcon, UserIcon } from 'lucide-vue-next';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, } from '@/components/ui/alert-dialog';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Skeleton } from '@/components/ui/skeleton';
+import { ref, computed, onMounted, watch } from "vue";
+import { useRouter } from "vue-router";
+import { useToast } from "@/components/ui/toast";
+import { useFriendStore } from "@/stores/friendStore";
+import { useDebounce } from "@/composables/useDebounce";
+import {
+    AlertCircleIcon,
+    Loader2Icon,
+    MoreVerticalIcon,
+    SearchIcon,
+    ShieldIcon,
+    UserIcon,
+} from "lucide-vue-next";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
+import {
+    Card,
+    CardContent,
+    CardDescription,
+    CardHeader,
+    CardTitle,
+} from "@/components/ui/card";
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuSeparator,
+    DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Input } from "@/components/ui/input";
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select";
+import { Skeleton } from "@/components/ui/skeleton";
 
 const props = defineProps({
     userId: {
         type: String,
-        default: null
+        default: null,
     },
     limit: {
         type: Number,
-        default: 6
+        default: 6,
     },
     sortBy: {
         type: String,
-        default: 'recent'
-    }
+        default: "recent",
+    },
 });
 
 const router = useRouter();
@@ -158,14 +193,14 @@ const { toast } = useToast();
 const friends = ref([]);
 const loading = ref(true);
 const error = ref(null);
-const searchQuery = ref('');
+const searchQuery = ref("");
 const sortByInternal = ref(props.sortBy);
 const confirmDialog = ref(false);
 const userToBlock = ref(null);
 const isProcessing = ref(false);
 
 // Debounced search
-const debouncedSearch = ref('');
+const debouncedSearch = ref("");
 const doSearch = () => {
     debouncedSearch.value = searchQuery.value;
 };
@@ -178,18 +213,20 @@ watch(searchQuery, () => {
 
 // Computed
 const filteredFriends = computed(() => {
-    let result = friends.value.filter(friend =>
+    let result = friends.value.filter((friend) =>
         friend.userName.toLowerCase().includes(debouncedSearch.value.toLowerCase())
     );
 
     switch (sortByInternal.value) {
-        case 'name':
+        case "name":
             result.sort((a, b) => a.userName.localeCompare(b.userName));
             break;
-        case 'recent':
-            result.sort((a, b) => new Date(b.friendshipDate) - new Date(a.friendshipDate));
+        case "recent":
+            result.sort(
+                (a, b) => new Date(b.friendshipDate) - new Date(a.friendshipDate)
+            );
             break;
-        case 'mutual':
+        case "mutual":
             result.sort((a, b) => b.mutualFriends - a.mutualFriends);
             break;
     }
@@ -209,19 +246,23 @@ const fetchFriends = async () => {
         await friendStore.getUserFriends({ userId: props.userId, count: 50 });
         friends.value = friendStore.friends;
     } catch (err) {
-        error.value = 'Failed to load friends';
-        console.error('Error fetching friends:', err);
+        error.value = "Failed to load friends";
+        console.error("Error fetching friends:", err);
     } finally {
         loading.value = false;
     }
 };
 
-const viewProfile = (userId) => {
-    router.push({ name: 'Profile', params: { userId: userId } });
+const viewProfile = (friend) => {
+    if (!friend?.userId) {
+        console.error("Missing userId for friend:", friend);
+        return;
+    }
+    router.push({ name: "UserProfile", params: { userId: friend.userId } });
 };
 
 const sendMessage = (userId) => {
-    router.push({ name: 'Messages', query: { userId } });
+    router.push({ name: "Messages", query: { userId } });
 };
 
 const confirmBlock = (userId) => {
@@ -239,7 +280,9 @@ const blockConfirmed = async () => {
             title: "Success",
             description: "User blocked successfully",
         });
-        friends.value = friends.value.filter(friend => friend.userId !== userToBlock.value);
+        friends.value = friends.value.filter(
+            (friend) => friend.userId !== userToBlock.value
+        );
     } catch (err) {
         console.error(`Error blocking user with ID ${userToBlock.value}:`, err);
         toast({

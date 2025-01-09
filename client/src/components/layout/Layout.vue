@@ -16,14 +16,23 @@
           <NavigationMenu v-if="isLoggedIn" class="hidden xl:flex">
             <NavigationMenuList class="flex items-center gap-2 xl:gap-4 2xl:gap-6">
               <NavigationMenuItem v-for="item in navItems" :key="item.path">
-                <NavigationMenuLink :href="item.path" :aria-label="item.name"
+                <NavigationMenuLink v-if="item.name === 'Profile'"
+                  :to="isLoggedIn ? { name: 'CurrentUserProfile' } : { name: 'Login' }"
+                  class="group inline-flex items-center px-2 xl:px-3 py-2 text-sm font-medium hover:bg-accent hover:text-accent-foreground rounded-md transition-colors whitespace-nowrap"
+                  :class="{ 'bg-accent text-accent-foreground': isProfileActive }">
+                  <component :is="iconComponents[item.icon]"
+                    class="h-4 w-4 mr-1.5 xl:mr-2.5 group-hover:text-accent-foreground transition-colors"
+                    aria-hidden="true" />
+                  {{ item.name }}
+                </NavigationMenuLink>
+                <router-link v-else :to="item.path"
                   class="group inline-flex items-center px-2 xl:px-3 py-2 text-sm font-medium hover:bg-accent hover:text-accent-foreground rounded-md transition-colors whitespace-nowrap"
                   :class="{ 'bg-accent text-accent-foreground': $route.path === item.path }">
                   <component :is="iconComponents[item.icon]"
                     class="h-4 w-4 mr-1.5 xl:mr-2.5 group-hover:text-accent-foreground transition-colors"
-                    :class="{ 'text-accent-foreground': $route.path === item.path }" aria-hidden="true" />
+                    aria-hidden="true" />
                   {{ item.name }}
-                </NavigationMenuLink>
+                </router-link>
               </NavigationMenuItem>
             </NavigationMenuList>
           </NavigationMenu>
@@ -54,8 +63,17 @@
                 </div>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem class="cursor-pointer" asChild>
-                  <router-link to="/profile" class="flex items-center">
-                    <UserIcon class="mr-2 h-4 w-4" />
+                  <router-link v-if="userData?.userId" :to="{
+                    name: 'UserProfile',
+                    params: {
+                      userId: userData.userId
+                    }
+                  }" class="flex items-center">
+                    <User class="mr-2 h-4 w-4" />
+                    Profile
+                  </router-link>
+                  <router-link v-else :to="{ name: 'Home' }" class="flex items-center">
+                    <User class="mr-2 h-4 w-4" />
                     Profile
                   </router-link>
                 </DropdownMenuItem>
@@ -98,7 +116,9 @@
                   <SearchPosts />
                 </div>
                 <template v-if="isLoggedIn">
-                  <router-link v-for="item in navItems" :key="item.path" :to="item.path"
+                  <router-link v-for="item in navItems" :key="item.path" :to="item.path === '/profile' && userData?.userId
+                    ? { name: 'UserProfile', params: { userId: userData?.userId } }
+                    : item.path"
                     class="flex items-center px-3 py-2 hover:bg-accent rounded-md transition-colors text-sm"
                     :class="{ 'bg-accent text-accent-foreground': $route.path === item.path }">
                     <component :is="iconComponents[item.icon]" class="h-4 w-4 mr-2.5"
@@ -129,7 +149,7 @@
     </main>
 
     <footer class="border-t bg-background">
-      <div class="container py-8">        
+      <div class="container py-8">
         <div class="text-center text-muted-foreground">
           <p>&copy; {{ currentYear }} HUSTBOOK. All rights reserved.</p>
         </div>
@@ -143,7 +163,7 @@ import { computed } from "vue";
 import { storeToRefs } from "pinia";
 import { useUserStore } from "@/stores/userStore";
 import { useHead } from "@unhead/vue";
-import { useRouter } from "vue-router";
+import { useRouter, useRoute } from "vue-router";
 import { navItems } from "@/config/navigation";
 import SearchPosts from "@/components/search/SearchPosts.vue";
 import NotificationTab from "@/components/notification/NotificationTab.vue";
@@ -181,14 +201,22 @@ import {
   Twitter,
   Instagram,
   Menu,
+  LogOut
 } from "lucide-vue-next";
 
 const iconComponents = { Home, User, Users, MessageCircle, Settings };
 
 const userStore = useUserStore();
 const router = useRouter();
-const { isLoggedIn, userData } = storeToRefs(userStore);
+const route = useRoute();
+const { isLoggedIn, userData, user } = storeToRefs(userStore);
 const currentYear = computed(() => new Date().getFullYear());
+
+console.log('User State:', {
+  user: user.value,
+  userData: userData.value,
+  isLoggedIn: isLoggedIn.value 
+});
 
 const handleLogout = async () => {
   try {
@@ -198,6 +226,21 @@ const handleLogout = async () => {
     console.error("Logout failed:", error);
   }
 };
+
+const getProfileRoute = (item) => {
+  if (userData?.userId) {
+    return {
+      name: 'UserProfile',
+      params: { userId: userData?.userId }
+    };
+  }
+  return { name: 'Login' };
+};
+
+const isProfileActive = computed(() => {
+  if (!userData?.userId) return false;
+  return route.path.startsWith('/profile');
+});
 
 // SEO
 useHead({

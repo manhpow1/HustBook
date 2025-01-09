@@ -11,6 +11,11 @@ export const API_ENDPOINTS = {
     AUTH_CHECK: `${API_BASE_URL}/api/auth/check`,
     CHANGE_PASSWORD: `${API_BASE_URL}/api/auth/change_password`,
     FORGOT_PASSWORD: `${API_BASE_URL}/api/auth/forgot-password`,
+    // Profile endpoints
+    GET_PROFILE: (userId) => userId ? `${API_BASE_URL}/api/users/profile/${userId}` : `${API_BASE_URL}/api/users/profile`,
+    UPDATE_PROFILE: `${API_BASE_URL}/api/users/profile`,
+    
+    // Legacy endpoints maintained for backward compatibility
     GET_USER_INFO: (userId) => userId ? `${API_BASE_URL}/api/users/get_user_info/${userId}` : `${API_BASE_URL}/api/users/get_user_info`,
     SET_USER_INFO: `${API_BASE_URL}/api/users/set_user_info`,
     // Post Endpoints

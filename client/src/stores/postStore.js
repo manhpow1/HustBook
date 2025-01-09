@@ -347,10 +347,19 @@ export const usePostStore = defineStore("post", () => {
                     ? post.comments
                     : 0;
 
+            // Ensure userId exists and is valid
+            post.userId = post.userId || null;
+            post.userName = post.userName || "Anonymous User";
+            
             // Validate inappropriate content
             if (containsInappropriateContent(post.content)) return null;
 
-            return post;
+            return {
+                ...post,
+                userId: post.userId,
+                userName: post.userName,
+                userAvatar: post.userAvatar || "",
+            };
         } catch (err) {
             console.error("Error validating post:", err);
             return null;

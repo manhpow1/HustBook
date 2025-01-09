@@ -310,6 +310,19 @@ class PostService {
         }
     }
 
+    async getUserPostsCount(userId) {
+        try {
+            const postsRef = db.collection(collections.posts)
+                .where('userId', '==', userId);
+    
+            const snapshot = await postsRef.count().get();
+            return snapshot.data().count;
+        } catch (error) {
+            logger.error('Error in getUserPostsCount service:', error);
+            return 0;
+        }
+    }
+
     async getComments(postId, userId, limit = 20, lastVisible = null) {
         try {
             // First verify the post exists

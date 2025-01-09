@@ -63,7 +63,7 @@ const init = async () => {
 };
 
 // Define components to cache with KeepAlive
-const cachedComponents = ref(['Home', 'Profile', 'Settings']);
+const cachedComponents = ref(['Home', 'CurrentUserProfile', 'UserProfile', 'Settings']);
 
 // Set up Head for SEO and Security
 logger.debug('Setting up meta tags...');

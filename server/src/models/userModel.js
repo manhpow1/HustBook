@@ -6,17 +6,23 @@ import redis from '../utils/redis.js';
 
 class User {
     constructor(data) {
-        this.userId = data.userId;  // Updated to use userId consistently
+        this.userId = data.userId;
         this.userName = data.userName || null;
         this.phoneNumber = data.phoneNumber;
+        this.bio = data.bio || null;
         this.address = data.address || null;
         this.city = data.city || null;
         this.country = data.country || null;
-        this.avatar = data.avatar || '';  // Initialize as empty string instead of null
+        this.avatar = data.avatar || '';
+        this.coverPhoto = data.coverPhoto || '';
+        this.link = data.link || null;
+        this.friendsCount = data.friendsCount || 0;
+        this.postsCount = data.postsCount || 0;
         this.createdAt = data.createdAt || new Date().toISOString();
         this.isVerified = data.isVerified || false;
         this.isBlocked = data.isBlocked || false;
         this.online = data.online || false;
+        this.lastSeen = data.lastSeen || new Date().toISOString();
         this.tokenVersion = data.tokenVersion || 0;
         this.isAdmin = data.isAdmin || false;
         this.deviceIds = data.deviceIds || [];
@@ -35,17 +41,23 @@ class User {
 
     toJSON() {
         return {
-            userId: this.userId,  // Updated to use userId consistently
-            usernName: this.userName,
+            userId: this.userId,
+            userName: this.userName,
             phoneNumber: this.phoneNumber,
+            bio: this.bio,
             avatar: this.avatar,
+            coverPhoto: this.coverPhoto,
+            link: this.link,
             address: this.address,
             city: this.city,
             country: this.country,
+            friendsCount: this.friendsCount,
+            postsCount: this.postsCount,
             createdAt: this.createdAt,
             isVerified: this.isVerified,
             isBlocked: this.isBlocked,
             online: this.online,
+            lastSeen: this.lastSeen,
             isAdmin: this.isAdmin,
             deviceIds: this.deviceIds,
             tokenFamily: this.tokenFamily
@@ -53,7 +65,7 @@ class User {
     }
 
     async getUserRef() {
-        return db.collection(collections.users).doc(this.userId);  // Updated to use userId consistently
+        return db.collection(collections.users).doc(this.userId);
     }
 
     async addDevice(deviceId) {
@@ -149,11 +161,20 @@ class User {
             userId: this.userId,
             userName: this.userName,
             phoneNumber: this.phoneNumber,
+            bio: this.bio,
             avatar: this.avatar,
+            coverPhoto: this.coverPhoto,
+            link: this.link,
+            address: this.address,
+            city: this.city,
+            country: this.country,
+            friendsCount: this.friendsCount,
+            postsCount: this.postsCount,
             createdAt: this.createdAt,
             isVerified: this.isVerified,
             isBlocked: this.isBlocked,
             online: this.online,
+            lastSeen: this.lastSeen,
             tokenVersion: this.tokenVersion,
             isAdmin: this.isAdmin,
             deviceIds: this.deviceIds,

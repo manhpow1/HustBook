@@ -11,10 +11,66 @@ const routes = [
         meta: { allowWithoutAuth: true }
     },
     {
-        path: '/profile',
-        name: 'Profile',
+        path: '/profile',  
+        name: 'CurrentUserProfile',
         component: () => import('../views/user/Profile.vue'),
-        meta: { requiresAuth: true }
+        meta: { requiresAuth: true },
+        beforeEnter: async (to, from, next) => {
+            const userStore = useUserStore();
+            try {
+                logger.debug('Checking auth state for profile access');
+                const isAuthenticated = await userStore.verifyAuthState();
+                
+                if (!isAuthenticated) {
+                    next({ 
+                        name: 'Login',
+                        query: { redirect: to.fullPath }  
+                    });
+                    return;
+                }
+    
+                if (userStore.userData?.userId) {
+                    next({ 
+                        name: 'UserProfile',
+                        params: { userId: userStore.userData.userId }
+                    });
+                    return;
+                }
+    
+                next();
+            } catch (error) {
+                logger.error('Profile route error:', error);
+                next({ name: 'Login' });
+            }
+        }
+    },
+    {
+        path: '/profile/:userId',
+        name: 'UserProfile', 
+        component: () => import('../views/user/Profile.vue'),
+        meta: { requiresAuth: true },
+        beforeEnter: async (to, from, next) => {
+            const userStore = useUserStore();
+            try {
+                // Nếu không có userId trong params
+                if (!to.params.userId) {
+                    next({ name: 'CurrentUserProfile' });
+                    return;
+                }
+    
+                // Nếu đang xem profile của chính mình
+                if (userStore.userData?.userId === to.params.userId) {
+                    // Vẫn cho phép xem nhưng cập nhật URL
+                    next();
+                    return;
+                }
+    
+                next();
+            } catch (error) {
+                logger.error('UserProfile route error:', error);
+                next({ name: 'CurrentUserProfile' });
+            }
+        }
     },
     {
         path: '/friends',
@@ -119,18 +175,6 @@ const routes = [
         component: () => import('../components/search/SearchPosts.vue'),
         meta: { requiresAuth: true },
     },
-    // {
-    //     path: '/videos',
-    //     name: 'VideoTab',
-    //     component: VideoTab,
-    //     meta: { requiresAuth: true },
-    // },
-    // {
-    //     path: '/videos/search',
-    //     name: 'VideoSearch',
-    //     component: VideoSearch,
-    //     meta: { requiresAuth: true },
-    // },
 ]
 
 const router = createRouter({
@@ -140,34 +184,41 @@ const router = createRouter({
 
 // Global navigation guard
 router.beforeEach(async (to, from, next) => {
-    logger.debug(`Router guard triggered: ${from.path} -> ${to.path}`);
-    logger.debug(`Route meta: `, to.meta);
+    logger.debug(`Navigation started: ${from.path} -> ${to.path}`);
+    const userStore = useUserStore();
 
     if (to.meta.allowWithoutAuth) {
-        logger.debug('Route allows access without auth');
         next();
         return;
     }
 
-    const userStore = useUserStore();
-    logger.debug(`Current login status: ${userStore.isLoggedIn}`);
+    // Check auth for protected routes
+    if (to.meta.requiresAuth) {
+        logger.debug('Route requires authentication');
 
-    if (to.meta.requiresAuth && !userStore.isLoggedIn) {
-        logger.debug('Route requires auth and user not logged in');
+        // Verify auth state
         const isAuthenticated = await userStore.verifyAuthState();
-        logger.debug(`Auth verification result: ${isAuthenticated}`);
 
         if (!isAuthenticated) {
-            logger.debug(`Redirecting to login with redirect=${to.fullPath}`);
+            logger.debug('User not authenticated, redirecting to login');
             next({
                 name: 'Login',
-                query: { redirect: to.fullPath }
+                query: {
+                    redirect: to.fullPath,
+                    message: 'Please login to continue'
+                }
             });
+            return;
+        }
+
+        // Special handling for profile routes
+        if (to.name === 'CurrentUserProfile' && !userStore.user.userId) {
+            logger.error('No user ID available for profile page');
+            next({ name: 'Home' });
             return;
         }
     }
 
-    logger.debug('Navigation allowed');
     next();
 });
 

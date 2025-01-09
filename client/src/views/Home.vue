@@ -50,7 +50,7 @@
                 <Card>
                   <CardHeader>
                     <div class="flex items-center gap-4">
-                      <RouterLink :to="{ name: 'Profile', params: { id: post.userId } }"
+                      <RouterLink v-if="post.userId" :to="{ name: 'UserProfile', params: { userId: post.userId } }"
                         class="flex items-center gap-4 hover:opacity-80">
                         <Avatar>
                           <AvatarImage :src="post.userAvatar" />
@@ -162,7 +162,8 @@
 
 <script setup>
 import { onMounted, watch, computed } from "vue";
-import { useRouter } from "vue-router";
+import { useRouter, RouterLink } from "vue-router";
+import ErrorBoundary from "@/components/shared/ErrorBoundary.vue";
 import {
   AlertCircle,
   ThumbsUp,
@@ -209,6 +210,7 @@ const getMediaArray = (post) => {
 const mappedPosts = computed(() =>
   postStore.posts.map((p) => ({
     postId: p.postId,
+    userId: p.author?.userId || p.userId,
     created: p.created ?? p.createdAt ?? new Date().toISOString(),
     userName: p.author?.userName || "Unknown",
     userAvatar: p.author?.avatar || "",

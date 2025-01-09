@@ -95,31 +95,22 @@ export const useUserStore = defineStore('user', () => {
         logger.debug('Starting auth verification');
         try {
             const token = Cookies.get('accessToken');
-            logger.debug(`Token exists: ${!!token}`);
-
             if (!token) {
-                logger.debug('No token found, clearing auth state');
-                clearAuthState();
+                await clearAuthState();
                 return false;
             }
 
-            logger.debug('Performing auth check API call');
             const response = await apiService.authCheck();
-            logger.debug(`Auth check response code: ${response.data?.code}`);
-
             if (response.data?.code === '1000') {
-                logger.debug('Auth check successful');
                 user.value = response.data.user;
                 return true;
             }
 
-            logger.debug('Auth check failed, clearing state');
-            clearAuthState();
+            await clearAuthState();
             return false;
-
         } catch (err) {
             logger.error('Auth verification failed:', err);
-            clearAuthState();
+            await clearAuthState();
             return false;
         }
     };
@@ -284,7 +275,7 @@ export const useUserStore = defineStore('user', () => {
                 const { token, userId, userName, phoneNumber: userPhone, deviceToken } = response.data.data;
                 setAuthCookies(token, null, rememberMe);
                 user.value = {
-                    userId: userId,
+                    userId,
                     userName,
                     phoneNumber: userPhone,
                     isVerified: true, // Server only returns success if verified
@@ -581,33 +572,42 @@ export const useUserStore = defineStore('user', () => {
  * @param {string|null} userId - Optional user ID. If not provided, fetches current user's profile
  * @returns {Promise<Object|null>} User profile data or null if error occurs
  */
-    const getUserProfile = async (userId = null) => {
+    const getUserProfile = async (targetUserId = null) => {
         try {
             isLoading.value = true;
             error.value = null;
 
-            logger.debug('Fetching user profile', { userId });
-            const response = await apiService.getUserInfo(userId);
+            if (!targetUserId && isLoggedIn.value) {
+                targetUserId = userId.value;
+            }
+
+            if (!targetUserId) {
+                throw new Error('No user ID available');
+            }
+
+            const response = await apiService.getProfile(targetUserId);
 
             if (response.data?.code === '1000') {
-                const userData = response.data.data;
+                const userData = response.data.data.user;
 
-                // If fetching current user's profile, update the store
-                if (!userId) {
-                    user.value = userData;
+                // Nếu là current user, update store state
+                if (targetUserId === userId.value) {
+                    user.value = {
+                        ...user.value,
+                        ...userData
+                    };
                 }
 
-                logger.debug('User profile fetched successfully', { userId });
                 return userData;
-            } else {
-                throw new Error(response.data?.message || 'Failed to fetch user profile');
             }
+
+            throw new Error(response.data?.message || 'Failed to fetch user profile');
         } catch (err) {
-            const errorMessage = 'Failed to fetch user profile';
-            logger.error(errorMessage, { userId, error: err });
-            error.value = errorMessage;
-            await handleError(err);
-            return null;
+            logger.error('Get user profile failed:', {
+                targetUserId,
+                error: err
+            });
+            throw err;
         } finally {
             isLoading.value = false;
         }
@@ -633,7 +633,7 @@ export const useUserStore = defineStore('user', () => {
                 }
             });
 
-            const response = await apiService.setUserInfo(formData);
+            const response = await apiService.updateProfile(formData);
 
             if (response.data.code === '1000') {
                 // Update local user state
@@ -643,10 +643,13 @@ export const useUserStore = defineStore('user', () => {
                 };
                 return response.data.data;
             }
-            throw createError(response.data.code, response.data.message);
-        } catch (error) {
-            logger.error('Set user info error:', error);
-            throw error;
+
+            throw new Error(response.data?.message || 'Failed to update profile');
+        } catch (err) {
+            logger.error('Update profile failed:', err);
+            throw err;
+        } finally {
+            isLoading.value = false;
         }
     };
 

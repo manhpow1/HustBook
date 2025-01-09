@@ -111,6 +111,7 @@ import { useUserStore } from "@/stores/userStore";
 import { useToast } from "@/components/ui/toast";
 import { AlertCircle, Loader2, RefreshCw } from "lucide-vue-next";
 import { Card, CardContent } from "@/components/ui/card";
+import ErrorBoundary from "../shared/ErrorBoundary.vue";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";

@@ -67,6 +67,20 @@ class FriendService {
         }
     }
 
+    async getFriendsCount(userId) {
+        try {
+            const friendsRef = db.collection(collections.friends)
+                .doc(userId)
+                .collection('userFriends');
+    
+            const snapshot = await friendsRef.count().get();
+            return snapshot.data().count;
+        } catch (error) {
+            logger.error('Error in getFriendsCount service:', error);
+            return 0;
+        }
+    }
+
     async getUserFriends(userId, count = 20, index = 0) {
         if (!userId || typeof userId !== 'string') {
             logger.error('Invalid userId provided:', userId);

@@ -15,7 +15,6 @@ import videoRoutes from './routes/video.js';
 import notificationRoutes from './routes/notifications.js';
 import { handleError } from './utils/responseHandler.js';
 
-const authLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 5 });
 const apiLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 200 });
 
 function createApp() {
@@ -32,7 +31,7 @@ function createApp() {
     app.use(apiLimiter);
 
     // Routes
-    app.use('/api/auth', authLimiter, authRoutes);
+    app.use('/api/auth', authRoutes);
     app.use('/api/posts', postRoutes);
     app.use('/api/users', userRoutes);
     app.use('/api/friends', friendRoutes);

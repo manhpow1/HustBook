@@ -7,6 +7,8 @@ import { sendResponse } from '../utils/responseHandler.js';
 import { createError } from '../utils/customError.js';
 import { db } from '../config/firebase.js';
 import logger from '../utils/logger.js';
+import getFriendsCount from '../services/friendService.js';
+import getUserPostsCount from '../services/postService.js';
 
 class UserController {
     constructor() {
@@ -387,33 +389,32 @@ class UserController {
 
     async setUserInfo(req, res, next) {
         try {
-            // Extract form data from request
             const formData = req.body;
             const userId = req.user.userId;
+            const files = req.files;
 
-            // Validate form data
             const { error, value } = userValidator.validateSetUserInfo(formData);
             if (error) {
                 throw createError('1002', error.details[0].message);
             }
 
-            // Prepare update data
+            // Handle file uploads
             const updateData = {
                 ...value,
                 version: (value.version || 0) + 1
             };
 
-            // Handle file uploads
-            if (req.files) {
-                if (req.files.coverPhoto) {
-                    updateData.coverFile = req.files.coverPhoto[0];
+            if (files) {
+                if (files.coverPhoto) {
+                    const coverPhotoUrl = await handleCoverPhotoUpload(files.coverPhoto[0], userId);
+                    updateData.coverPhoto = coverPhotoUrl;
                 }
-                if (req.files.avatar) {
-                    updateData.avatarFile = req.files.avatar[0];
+                if (files.avatar) {
+                    const avatarUrl = await handleAvatarUpload(files.avatar[0], userId);
+                    updateData.avatar = avatarUrl;
                 }
             }
 
-            // Perform update
             const updatedUser = await userService.setUserInfo(userId, updateData);
 
             // Log successful update
@@ -447,15 +448,25 @@ class UserController {
         try {
             const { error, value } = userValidator.validateGetUserInfo({ userId: req.params.userId });
             if (error) {
-                const errorMessage = error.details.map(detail => detail.message).join(', ');
-                throw createError('1002', errorMessage);
+                throw createError('1002', error.details[0].message);
             }
 
             const targetUserId = value.userId || req.user.userId;
-
             const userInfo = await userService.getUserInfo(targetUserId);
 
-            sendResponse(res, '1000', { user: userInfo });
+            // Add additional profile data
+            const [friendsCount, postsCount] = await Promise.all([
+                getFriendsCount(targetUserId),
+                getUserPostsCount(targetUserId)
+            ]);
+
+            sendResponse(res, '1000', {
+                user: {
+                    ...userInfo,
+                    friendsCount,
+                    postsCount
+                }
+            });
         } catch (error) {
             logger.error('Get User Info Error:', error);
             next(error);

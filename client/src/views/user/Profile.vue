@@ -14,7 +14,7 @@
         <AlertTitle>Error</AlertTitle>
         <AlertDescription>
           {{ error }}
-          <Button variant="outline" size="sm" class="mt-2" @click="fetchUserData">
+          <Button variant="outline" size="sm" class="mt-2" @click="initializeProfile">
             Retry
           </Button>
         </AlertDescription>
@@ -24,8 +24,8 @@
         <!-- Cover Image Section -->
         <Card class="relative overflow-hidden">
           <div class="h-48 relative">
-            <img :src="user?.cover_image || '/default-cover.jpg'" :alt="`${user?.userName || 'User'}'s cover`"
-              class="w-full h-full object-cover" />
+            <img :src="user?.coverPhoto || '../../assets/default-cover.png'"
+              :alt="`${user?.userName || 'User'}'s cover`" class="w-full h-full object-cover" />
             <div class="absolute top-4 right-4 flex space-x-2">
               <Button v-if="isCurrentUser" variant="secondary" size="sm" @click="uploadCoverPhoto">
                 <Pencil class="h-4 w-4 mr-2" />
@@ -47,9 +47,7 @@
                 <div class="flex flex-col items-center">
                   <Avatar class="h-24 w-24">
                     <AvatarImage :src="user?.avatar" :alt="user?.userName" />
-                    <AvatarFallback>
-                      {{ getInitials(user?.userName || "") }}
-                    </AvatarFallback>
+                    <AvatarFallback>{{ getInitials(user?.userName || '') }}</AvatarFallback>
                   </Avatar>
                   <CardTitle class="mt-4">{{ user?.userName }}</CardTitle>
                   <CardDescription>{{ truncatedDescription }}</CardDescription>
@@ -57,6 +55,7 @@
               </CardHeader>
               <CardContent>
                 <div class="space-y-4">
+                  <!-- Action Buttons -->
                   <div class="flex justify-center space-x-2">
                     <Button v-if="isCurrentUser" variant="outline" @click="router.push('/settings')">
                       <Settings class="h-4 w-4 mr-2" />
@@ -68,7 +67,7 @@
                     </Button>
                     <Button v-if="!isCurrentUser" variant="outline" @click="handleFriendAction">
                       <UserPlus class="h-4 w-4 mr-2" />
-                      {{ isFriend ? "Unfriend" : "Add Friend" }}
+                      {{ isFriend ? 'Unfriend' : 'Add Friend' }}
                     </Button>
                   </div>
 
@@ -95,21 +94,16 @@
             <Card class="mt-6">
               <CardHeader>
                 <CardTitle class="text-xl">Friends</CardTitle>
-                <CardDescription>{{ user?.friends_count || 0 }} friends</CardDescription>
+                <CardDescription>{{ user?.friendsCount || 0 }} friends</CardDescription>
               </CardHeader>
               <CardContent>
                 <div class="grid grid-cols-3 gap-2">
-                  <div v-for="friend in friends && friends.slice(0, 6)" :key="friend.id"
-                    class="flex flex-col items-center">
+                  <div v-for="friend in friends?.slice(0, 6)" :key="friend.userId" class="flex flex-col items-center">
                     <Avatar class="h-16 w-16">
                       <AvatarImage :src="friend.avatar" :alt="friend.userName" />
-                      <AvatarFallback>{{
-                        getInitials(friend.userName)
-                      }}</AvatarFallback>
+                      <AvatarFallback>{{ getInitials(friend.userName) }}</AvatarFallback>
                     </Avatar>
-                    <span class="text-sm mt-1 text-center line-clamp-1">{{
-                      friend.userName
-                    }}</span>
+                    <span class="text-sm mt-1 text-center line-clamp-1">{{ friend.userName }}</span>
                   </div>
                 </div>
                 <Button variant="ghost" class="w-full mt-4" @click="viewAllFriends">
@@ -194,9 +188,9 @@
                   </CardHeader>
                   <CardContent>
                     <div class="space-y-4">
-                      <div v-if="user?.description" class="space-y-2">
+                      <div v-if="user?.bio" class="space-y-2">
                         <h4 class="font-semibold">Bio</h4>
-                        <p class="text-sm">{{ user.description }}</p>
+                        <p class="text-sm">{{ user.bio }}</p>
                       </div>
 
                       <Separator />
@@ -230,6 +224,7 @@
 import { ref, onMounted, computed, watch } from "vue";
 import logger from "@/services/logging";
 import { useRoute, useRouter } from "vue-router";
+import { useErrorHandler } from "@/utils/errorHandler";
 import { useUserStore } from "@/stores/userStore";
 import { useSearchStore } from "@/stores/searchStore";
 import { useFriendStore } from "@/stores/friendStore";
@@ -286,6 +281,7 @@ const searchStore = useSearchStore();
 const friendStore = useFriendStore();
 const postStore = usePostStore();
 const { toast } = useToast();
+const { handleError } = useErrorHandler();
 
 // States
 const loading = ref(true);
@@ -295,30 +291,31 @@ const postError = ref(null);
 const user = ref(null);
 const friends = ref([]);
 const postSearchQuery = ref("");
+const targetUserId = computed(() => route.params.userId || userStore.userId);
 
-// Computed
 const isCurrentUser = computed(() => {
+  const targetUserId = route.params.userId;
   const currentUserId = userStore.user?.userId;
-  if (!currentUserId) {
-    throw new Error('User session invalid');
-  }
-  const profileUserId = route.params.userId || currentUserId;
-  return currentUserId === profileUserId;
+  return !targetUserId || targetUserId === currentUserId;
 });
+
+const isFriend = computed(() => {
+  return friendStore.isFriend(targetUserId.value);
+});
+
 const truncatedDescription = computed(() => {
-  const desc = user.value?.description;
-  if (!desc) return "";
+  const desc = user.value?.bio;
+  if (!desc) return '';
   return desc.length > 150 ? `${desc.slice(0, 150)}...` : desc;
 });
 
 const filteredPosts = computed(() => {
-  let posts = postStore.posts;
+  let posts = postStore.getUserPosts(targetUserId.value) || [];
   if (postSearchQuery.value) {
     const query = postSearchQuery.value.toLowerCase();
-    posts = posts.filter(
-      (post) =>
-        post.content?.toLowerCase().includes(query) ||
-        post.author?.userName.toLowerCase().includes(query)
+    posts = posts.filter(post =>
+      post.content?.toLowerCase().includes(query) ||
+      post.author?.userName.toLowerCase().includes(query)
     );
   }
   return posts;
@@ -328,82 +325,111 @@ const hasMorePosts = computed(() => postStore.hasMorePosts);
 
 // Methods
 const getInitials = (name) => {
-  if (!name) return "";
+  if (!name) return '';
   return name
-    .split(" ")
-    .map((word) => word[0])
-    .join("")
+    .split(' ')
+    .map(word => word[0])
+    .join('')
     .toUpperCase()
     .slice(0, 2);
 };
 
-const fetchUserData = async () => {
+const initializeProfile = async () => {
   loading.value = true;
   error.value = null;
-  
+
   try {
-    // 1. Verify authentication state
-    if (!userStore.isLoggedIn) {
-      logger.debug('User not logged in, redirecting to login');
-      router.push({ 
+    // Verify auth state
+    const isAuthenticated = await userStore.verifyAuthState();
+    if (!isAuthenticated) {
+      router.push({
         name: 'Login',
-        query: { redirect: router.currentRoute.value.fullPath }
+        query: { redirect: route.fullPath }
       });
       return;
     }
 
-    // 2. Wait for user store to be populated if necessary
-    await userStore.verifyAuthState();
-    
-    const currentUserId = userStore.user?.userId;
-    const routeUserId = route.params.userId;
-    const targetUserId = routeUserId || currentUserId;
-
-    logger.debug('Fetching user data', {
-      currentUserId,
-      routeUserId,
-      targetUserId,
-      isAuthenticated: userStore.isLoggedIn
-    });
-
-    if (!targetUserId) {
-      throw new Error('User ID not available. Please try again.');
+    // Fetch profile data
+    const userData = await userStore.getUserProfile(targetUserId.value);
+    if (!userData) {
+      throw new Error('Failed to fetch user data');
     }
 
-    // 3. Fetch user data
-    const userData = await userStore.getUserProfile(targetUserId);
+    user.value = userData;
+
+    // Fetch additional data
+    await Promise.all([
+      fetchFriendsData(),
+      fetchPostsData()
+    ]);
+
+  } catch (err) {
+    handleError(err);
+  } finally {
+    loading.value = false;
+  }
+};
+
+const fetchFriendsData = async () => {
+  try {
+    const friendsData = await friendStore.getUserFriends(targetUserId.value);
+    friends.value = friendsData || [];
+  } catch (err) {
+    logger.warn('Error fetching friends:', err);
+    friends.value = [];
+  }
+};
+
+const fetchPostsData = async () => {
+  try {
+    loadingPosts.value = true;
+    await postStore.fetchPosts(targetUserId.value);
+  } catch (err) {
+    logger.error('Error fetching posts:', err);
+    postError.value = 'Failed to load posts';
+  } finally {
+    loadingPosts.value = false;
+  }
+};
+
+const fetchUserData = async () => {
+  if (!targetUserId.value) {
+    logger.debug('No target user ID available', {
+      routeUserId: route.params.userId,
+      storeUserId: userStore.user?.userId
+    });
+    return;
+  }
+
+  loading.value = true;
+  error.value = null;
+
+  try {
+    logger.debug('Fetching user data', {
+      targetUserId: targetUserId.value,
+      isCurrentUser: isCurrentUser.value
+    });
+
+    const userData = await userStore.getUserProfile(targetUserId.value);
     if (!userData) {
       throw new Error('Cannot fetch user data');
     }
+
     user.value = userData;
 
-    // 4. Fetch dữ liệu bạn bè
-    try {
-      const friendsData = await friendStore.getUserFriends(targetUserId);
-      friends.value = friendsData || [];
-    } catch (friendError) {
-      logger.warn('Error fetching friends data:', friendError);
-      friends.value = [];
-    }
-
-    // 6. Fetch posts
-    try {
-      loadingPosts.value = true;
-      postStore.resetPosts();
-      await postStore.getUserPosts(targetUserId);
-    } catch (postError) {
-      logger.warn('Error fetching posts:', postError);
-      postError.value = 'Cannot load posts';
-    } finally {
-      loadingPosts.value = false;
-    }
+    // Fetch additional data sau khi có user info
+    await Promise.all([
+      fetchFriendsData(),
+      fetchPostsData()
+    ]);
 
   } catch (err) {
     const errorMessage = err.response?.data?.message || err.message || 'An error occurred';
     error.value = errorMessage;
-    
+
     logger.error('Error in fetchUserData:', {
       error: err,
+      userId: targetUserId.value,
       message: errorMessage,
       stack: err.stack
     });
@@ -414,15 +440,15 @@ const fetchUserData = async () => {
       variant: 'destructive'
     });
 
-    // Xử lý các trường hợp lỗi cụ thể
+    // Xử lý các trường hợp lỗi
     if (err.response?.status === 401) {
       await userStore.clearAuthState();
-      router.push({ 
+      router.push({
         name: 'Login',
         query: { redirect: router.currentRoute.value.fullPath }
       });
     } else if (err.response?.status === 404) {
-      router.push({ name: 'Home' });
+      router.push({ name: 'NotFound' });
     }
 
   } finally {
@@ -430,11 +456,27 @@ const fetchUserData = async () => {
   }
 };
 
+const handleFriendAction = async () => {
+  try {
+    await friendStore.sendFriendRequest(targetUserId.value);
+    toast({
+      title: 'Success',
+      description: isFriend.value ? 'Friend removed' : 'Friend request sent',
+    });
+  } catch (err) {
+    toast({
+      title: 'Error',
+      description: 'Failed to process friend action',
+      variant: 'destructive'
+    });
+  }
+};
+
 const fetchPostsForUser = async (userId) => {
   try {
     loadingPosts.value = true;
     postStore.resetPosts();
-    await postStore.getUserPosts(userId);
+    await postStore.fetchPosts(userId);
   } catch (err) {
     postError.value = "Failed to load user posts";
     logger.error('Error fetching user posts:', err);
@@ -530,14 +572,14 @@ const copyProfileLink = async () => {
   try {
     await navigator.clipboard.writeText(window.location.href);
     toast({
-      title: "Success",
-      description: "Profile link copied to clipboard",
+      title: 'Success',
+      description: 'Profile link copied to clipboard'
     });
   } catch (err) {
     toast({
-      title: "Error",
-      description: "Failed to copy profile link",
-      variant: "destructive",
+      title: 'Error',
+      description: 'Failed to copy profile link',
+      variant: 'destructive'
     });
   }
 };
@@ -561,21 +603,16 @@ const formatDate = (date) => {
   });
 };
 
-onMounted(() => {
-  logger.debug('Profile component mounted, fetching user data');
-  fetchUserData();
-});
-
 watch(
   () => route.params.userId,
-  (newId, oldId) => {
-    if (newId !== oldId) {
-      logger.debug('Route params changed, reloading user data', {
-        oldId,
-        newId
-      });
-      fetchUserData();
-    }
+  () => {
+    logger.debug('Route params changed, reinitializing profile');
+    initializeProfile();
   }
 );
+
+onMounted(() => {
+  logger.debug('Profile component mounted');
+  initializeProfile();
+});
 </script>

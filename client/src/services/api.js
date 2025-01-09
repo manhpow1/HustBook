@@ -96,6 +96,21 @@ const apiService = {
     // ─────────────────────────────────────────────────────────
     // USER PROFILE APIs
     // ─────────────────────────────────────────────────────────
+    // Profile Methods
+    async getProfile(userId = null) {
+        const url = API_ENDPOINTS.GET_PROFILE(userId);
+        return axiosInstance.get(url);
+    },
+
+    async updateProfile(data) {
+        return this.put(API_ENDPOINTS.UPDATE_PROFILE, data, {
+            headers: {
+                'Content-Type': 'multipart/form-data'
+            }
+        });
+    },
+
+    // Legacy methods maintained for backward compatibility
     async getUserInfo(userId = null) {
         const url = API_ENDPOINTS.GET_USER_INFO(userId);
         return axiosInstance.get(url);
