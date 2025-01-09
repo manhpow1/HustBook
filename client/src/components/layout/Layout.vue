@@ -101,7 +101,7 @@
             </Button>
           </template>
           <Sheet>
-            <SheetTrigger class="hidden md:block xl:hidden">
+            <SheetTrigger class="block xl:hidden">
               <Button variant="ghost" size="icon" aria-label="Menu">
                 <Menu class="h-6 w-6" />
               </Button>
