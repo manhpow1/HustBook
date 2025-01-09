@@ -103,7 +103,7 @@ const { toast } = useToast()
 const showConfirmBlock = ref(false)
 
 const isUploader = computed(() => props.uploaderId === userStore.user?.id)
-const isFriend = computed(() => userStore.friends?.includes(props.uploaderId))
+//const isFriend = computed(() => userStore.friends?.includes(props.uploaderId))
 
 // Action Handlers
 const handleReport = () => {

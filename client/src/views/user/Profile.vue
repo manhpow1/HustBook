@@ -47,7 +47,9 @@
                 <div class="flex flex-col items-center">
                   <Avatar class="h-24 w-24">
                     <AvatarImage :src="user?.avatar" :alt="user?.userName" />
-                    <AvatarFallback>{{ getInitials(user?.userName || '') }}</AvatarFallback>
+                    <AvatarFallback>{{
+                      getInitials(user?.userName || "")
+                    }}</AvatarFallback>
                   </Avatar>
                   <CardTitle class="mt-4">{{ user?.userName }}</CardTitle>
                   <CardDescription>{{ truncatedDescription }}</CardDescription>
@@ -67,7 +69,7 @@
                     </Button>
                     <Button v-if="!isCurrentUser" variant="outline" @click="handleFriendAction">
                       <UserPlus class="h-4 w-4 mr-2" />
-                      {{ isFriend ? 'Unfriend' : 'Add Friend' }}
+                      {{ isFriend ? "Unfriend" : "Add Friend" }}
                     </Button>
                   </div>
 
@@ -101,9 +103,13 @@
                   <div v-for="friend in friends?.slice(0, 6)" :key="friend.userId" class="flex flex-col items-center">
                     <Avatar class="h-16 w-16">
                       <AvatarImage :src="friend.avatar" :alt="friend.userName" />
-                      <AvatarFallback>{{ getInitials(friend.userName) }}</AvatarFallback>
+                      <AvatarFallback>{{
+                        getInitials(friend.userName)
+                      }}</AvatarFallback>
                     </Avatar>
-                    <span class="text-sm mt-1 text-center line-clamp-1">{{ friend.userName }}</span>
+                    <span class="text-sm mt-1 text-center line-clamp-1">{{
+                      friend.userName
+                    }}</span>
                   </div>
                 </div>
                 <Button variant="ghost" class="w-full mt-4" @click="viewAllFriends">
@@ -305,7 +311,7 @@ const isFriend = computed(() => {
 
 const truncatedDescription = computed(() => {
   const desc = user.value?.bio;
-  if (!desc) return '';
+  if (!desc) return "";
   return desc.length > 150 ? `${desc.slice(0, 150)}...` : desc;
 });
 
@@ -313,9 +319,10 @@ const filteredPosts = computed(() => {
   let posts = postStore.getUserPosts(targetUserId.value) || [];
   if (postSearchQuery.value) {
     const query = postSearchQuery.value.toLowerCase();
-    posts = posts.filter(post =>
-      post.content?.toLowerCase().includes(query) ||
-      post.author?.userName.toLowerCase().includes(query)
+    posts = posts.filter(
+      (post) =>
+        post.content?.toLowerCase().includes(query) ||
+        post.author?.userName.toLowerCase().includes(query)
     );
   }
   return posts;
@@ -325,11 +332,11 @@ const hasMorePosts = computed(() => postStore.hasMorePosts);
 
 // Methods
 const getInitials = (name) => {
-  if (!name) return '';
+  if (!name) return "";
   return name
-    .split(' ')
-    .map(word => word[0])
-    .join('')
+    .split(" ")
+    .map((word) => word[0])
+    .join("")
     .toUpperCase()
     .slice(0, 2);
 };
@@ -343,8 +350,8 @@ const initializeProfile = async () => {
     const isAuthenticated = await userStore.verifyAuthState();
     if (!isAuthenticated) {
       router.push({
-        name: 'Login',
-        query: { redirect: route.fullPath }
+        name: "Login",
+        query: { redirect: route.fullPath },
       });
       return;
     }
@@ -352,17 +359,13 @@ const initializeProfile = async () => {
     // Fetch profile data
     const userData = await userStore.getUserProfile(targetUserId.value);
     if (!userData) {
-      throw new Error('Failed to fetch user data');
+      throw new Error("Failed to fetch user data");
     }
 
     user.value = userData;
 
     // Fetch additional data
-    await Promise.all([
-      fetchFriendsData(),
-      fetchPostsData()
-    ]);
-
+    await Promise.all([fetchFriendsData(), fetchPostsData()]);
   } catch (err) {
     handleError(err);
   } finally {
@@ -375,7 +378,7 @@ const fetchFriendsData = async () => {
     const friendsData = await friendStore.getUserFriends(targetUserId.value);
     friends.value = friendsData || [];
   } catch (err) {
-    logger.warn('Error fetching friends:', err);
+    logger.warn("Error fetching friends:", err);
     friends.value = [];
   }
 };
@@ -385,8 +388,8 @@ const fetchPostsData = async () => {
     loadingPosts.value = true;
     await postStore.fetchPosts(targetUserId.value);
   } catch (err) {
-    logger.error('Error fetching posts:', err);
-    postError.value = 'Failed to load posts';
+    logger.error("Error fetching posts:", err);
+    postError.value = "Failed to load posts";
   } finally {
     loadingPosts.value = false;
   }
@@ -394,9 +397,9 @@ const fetchPostsData = async () => {
 
 const fetchUserData = async () => {
   if (!targetUserId.value) {
-    logger.debug('No target user ID available', {
+    logger.debug("No target user ID available", {
       routeUserId: route.params.userId,
-      storeUserId: userStore.user?.userId
+      storeUserId: userStore.user?.userId,
     });
     return;
   }
@@ -405,52 +408,48 @@ const fetchUserData = async () => {
   error.value = null;
 
   try {
-    logger.debug('Fetching user data', {
+    logger.debug("Fetching user data", {
       targetUserId: targetUserId.value,
-      isCurrentUser: isCurrentUser.value
+      isCurrentUser: isCurrentUser.value,
     });
 
     const userData = await userStore.getUserProfile(targetUserId.value);
     if (!userData) {
-      throw new Error('Cannot fetch user data');
+      throw new Error("Cannot fetch user data");
     }
 
     user.value = userData;
 
     // Fetch additional data sau khi có user info
-    await Promise.all([
-      fetchFriendsData(),
-      fetchPostsData()
-    ]);
-
+    await Promise.all([fetchFriendsData(), fetchPostsData()]);
   } catch (err) {
-    const errorMessage = err.response?.data?.message || err.message || 'An error occurred';
+    const errorMessage =
+      err.response?.data?.message || err.message || "An error occurred";
     error.value = errorMessage;
 
-    logger.error('Error in fetchUserData:', {
+    logger.error("Error in fetchUserData:", {
       error: err,
       userId: targetUserId.value,
       message: errorMessage,
-      stack: err.stack
+      stack: err.stack,
     });
 
     toast({
-      title: 'Error',
+      title: "Error",
       description: errorMessage,
-      variant: 'destructive'
+      variant: "destructive",
     });
 
     // Xử lý các trường hợp lỗi
     if (err.response?.status === 401) {
       await userStore.clearAuthState();
       router.push({
-        name: 'Login',
-        query: { redirect: router.currentRoute.value.fullPath }
+        name: "Login",
+        query: { redirect: router.currentRoute.value.fullPath },
       });
     } else if (err.response?.status === 404) {
-      router.push({ name: 'NotFound' });
+      router.push({ name: "NotFound" });
     }
-
   } finally {
     loading.value = false;
   }
@@ -460,14 +459,14 @@ const handleFriendAction = async () => {
   try {
     await friendStore.sendFriendRequest(targetUserId.value);
     toast({
-      title: 'Success',
-      description: isFriend.value ? 'Friend removed' : 'Friend request sent',
+      title: "Success",
+      description: isFriend.value ? "Friend removed" : "Friend request sent",
     });
   } catch (err) {
     toast({
-      title: 'Error',
-      description: 'Failed to process friend action',
-      variant: 'destructive'
+      title: "Error",
+      description: "Failed to process friend action",
+      variant: "destructive",
     });
   }
 };
@@ -479,11 +478,11 @@ const fetchPostsForUser = async (userId) => {
     await postStore.fetchPosts(userId);
   } catch (err) {
     postError.value = "Failed to load user posts";
-    logger.error('Error fetching user posts:', err);
+    logger.error("Error fetching user posts:", err);
     toast({
-      title: 'Error',
+      title: "Error",
       description: postError.value,
-      variant: 'destructive'
+      variant: "destructive",
     });
   } finally {
     loadingPosts.value = false;
@@ -572,14 +571,14 @@ const copyProfileLink = async () => {
   try {
     await navigator.clipboard.writeText(window.location.href);
     toast({
-      title: 'Success',
-      description: 'Profile link copied to clipboard'
+      title: "Success",
+      description: "Profile link copied to clipboard",
     });
   } catch (err) {
     toast({
-      title: 'Error',
-      description: 'Failed to copy profile link',
-      variant: 'destructive'
+      title: "Error",
+      description: "Failed to copy profile link",
+      variant: "destructive",
     });
   }
 };
@@ -606,13 +605,13 @@ const formatDate = (date) => {
 watch(
   () => route.params.userId,
   () => {
-    logger.debug('Route params changed, reinitializing profile');
+    logger.debug("Route params changed, reinitializing profile");
     initializeProfile();
   }
 );
 
 onMounted(() => {
-  logger.debug('Profile component mounted');
+  logger.debug("Profile component mounted");
   initializeProfile();
 });
 </script>

@@ -578,7 +578,7 @@ export const useUserStore = defineStore('user', () => {
             error.value = null;
 
             if (!targetUserId && isLoggedIn.value) {
-                targetUserId = userId.value;
+                targetUserId = user.value?.userId;
             }
 
             if (!targetUserId) {
@@ -591,7 +591,7 @@ export const useUserStore = defineStore('user', () => {
                 const userData = response.data.data.user;
 
                 // Nếu là current user, update store state
-                if (targetUserId === userId.value) {
+                if (targetUserId === user.value?.userId) {
                     user.value = {
                         ...user.value,
                         ...userData

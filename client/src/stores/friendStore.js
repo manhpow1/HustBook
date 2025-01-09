@@ -225,6 +225,11 @@ export const useFriendStore = defineStore('friend', () => {
         sortBy.value = sort;
     };
 
+    const isFriend = (userId) => {
+        if (!userId || !friends.value) return false;
+        return friends.value.some(friend => friend.userId === userId);
+    };
+
     return {
         friends,
         friendRequests,
@@ -247,5 +252,6 @@ export const useFriendStore = defineStore('friend', () => {
         getListBlocks,
         setBlock,
         resetBlockedUsers,
+        isFriend,
     }
 })
