@@ -124,8 +124,17 @@ axiosInstance.interceptors.response.use(
         const { useUserStore } = await import('@/stores/userStore'); // Lazy import
         const userStore = useUserStore();
         if (error.response?.status === 401) {
+            // Clear auth cookies
+            Cookies.remove('accessToken');
+            Cookies.remove('refreshToken');
+            
+            // Clear auth headers
+            delete axiosInstance.defaults.headers.common['Authorization'];
+            
+            // Clear user state and redirect
             await userStore.clearAuthState();
             router.push('/login');
+            
             return Promise.reject(error);
         }
         return Promise.reject(error);
