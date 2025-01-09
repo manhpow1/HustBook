@@ -184,8 +184,11 @@ const handleSubmit = async () => {
     if (!isValid.value) return
     isLoading.value = true
     try {
+        const content = description.value.trim()
         const formData = new FormData()
-        formData.append('content', description.value.trim())
+        formData.append('content', content)
+        formData.append('contentLowerCase', decodeURIComponent(content).toLowerCase())
+        formData.append('userNameLowerCase', decodeURIComponent(content).toLowerCase().split(' '))
         // Change to match backend expectation
         if (files.value && files.value.length > 0) {
             files.value.forEach((file, index) => {

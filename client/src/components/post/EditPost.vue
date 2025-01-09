@@ -298,6 +298,7 @@ const handleSubmit = async () => {
 
         const postData = {
             content: sanitizedContent,
+            contentLowerCase: sanitizedContent.toLowerCase(),
             media: processedMedia,
         };
 

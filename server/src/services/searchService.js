@@ -6,22 +6,17 @@ import logger from '../utils/logger.js';
 class SearchService {
     async searchPosts(userId, keyword, index, count) {
         try {
-            const normalizedKeyword = keyword.trim().toLowerCase();
+            const normalizedKeyword = decodeURIComponent(keyword.trim()).toLowerCase().split(' ');
 
-            const query = queryDocuments(collections.posts, (ref) =>
-                ref.orderBy('createdAt', 'desc')
-                    .offset(parseInt(index))
-                    .limit(parseInt(count))
-            );
+            // Create compound query to search in contentLowerCase field
+            const query = db.collection(collections.posts)
+                .where('contentLowerCase', 'array-contains-any', normalizedKeyword)
+                .orderBy('createdAt', 'desc')
+                .offset(parseInt(index))
+                .limit(parseInt(count));
 
-            const posts = await query;
-
-            const matchingPosts = posts.filter(post => {
-                const content = post.content?.toLowerCase() || '';
-                const username = post.userName?.toLowerCase() || '';
-                return content.includes(normalizedKeyword) || 
-                       username.includes(normalizedKeyword);
-            });
+            const postsSnapshot = await query.get();
+            const matchingPosts = postsSnapshot.docs.map(doc => doc.data());
 
             await createDocument(collections.savedSearches, {
                 userId,
@@ -51,13 +46,12 @@ class SearchService {
 
     async searchUsers(currentUserId, keyword, index, count) {
         try {
-            const normalizedKeyword = keyword.trim().toLowerCase();
+            const normalizedKeyword = decodeURIComponent(keyword.trim()).toLowerCase();
 
-            // Create a query that searches usernames starting with the keyword
+            // Create compound query to search in userNameLowerCase field
             const usersQuery = db.collection(collections.users)
-                .where('userName', '>=', normalizedKeyword)
-                .where('userName', '<=', normalizedKeyword + '\uf8ff')
-                .orderBy('userName')
+                .where('userNameLowerCase', 'array-contains', normalizedKeyword)
+                .orderBy('createdAt', 'desc')
                 .offset(index)
                 .limit(count);
 
@@ -83,6 +77,7 @@ class SearchService {
                     return {
                         userId: doc.id,
                         userName: userData.userName || '',
+                        userNameLowerCase: decodeURIComponent(userData.userName || '').toLowerCase().split(' '),
                         avatar: userData.avatar || '',
                         same_friends: userData.mutualFriendsCount || 0
                     };

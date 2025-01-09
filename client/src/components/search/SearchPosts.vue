@@ -181,7 +181,26 @@ const partialMatch = (source, target) => {
 
 // Computed properties
 const sortedSearchResults = computed(() => {
-  return searchResults.value;
+  if (!searchResults.value.length) return [];
+  
+  return searchResults.value.sort((a, b) => {
+    // First sort by exact matches if keyword search is active
+    if (keyword.value) {
+      const aExactMatch = normalizeString(a.content).includes(normalizeString(keyword.value));
+      const bExactMatch = normalizeString(b.content).includes(normalizeString(keyword.value));
+      if (aExactMatch !== bExactMatch) return aExactMatch ? -1 : 1;
+    }
+    
+    // Then sort by username matches if username search is active
+    if (username.value) {
+      const aUsernameMatch = normalizeString(a.author?.userName).includes(normalizeString(username.value));
+      const bUsernameMatch = normalizeString(b.author?.userName).includes(normalizeString(username.value));
+      if (aUsernameMatch !== bUsernameMatch) return aUsernameMatch ? -1 : 1;
+    }
+    
+    // Finally sort by date (assuming newer posts should appear first)
+    return new Date(b.createdAt || 0) - new Date(a.createdAt || 0);
+  });
 });
 
 const normalizedSavedSearches = computed(() => {
@@ -205,77 +224,40 @@ const normalizedSavedSearches = computed(() => {
 
 // Event handlers
 const handleSearch = async () => {
-  if (!keyword.value.trim() && !username.value.trim()) return;
+  if (!keyword.value.trim() && !username.value.trim()) {
+    searchStore.resetSearch();
+    return;
+  }
+
+  isLoading.value = true;
+  error.value = null;
 
   try {
-    // First search for users if username is provided
-    let userResults = [];
+    const searchParams = {
+      keyword: keyword.value.trim(),
+      index: 0,
+      count: 20
+    };
+
     if (username.value.trim()) {
-      const response = await searchStore.searchUsers({
+      const { users } = await searchStore.searchUsers({
         keyword: username.value.trim(),
         index: 0,
-        count: 20,
+        count: 20
       });
-      userResults = response;
+      
+      if (users.length > 0) {
+        searchParams.userIds = users.map(user => user.userId);
+      }
     }
 
-    // Then search posts with either keyword or filtered by found users
-    await searchStore.searchPosts({
-      keyword: keyword.value.trim(),
-      userId:
-        userResults.length > 0 ? userResults.map((user) => user.id) : undefined,
-      index: 0,
-      count: 20,
-    });
-
-    // Filter and sort results
-    const filteredResults = searchResults.value.filter((post) => {
-      const contentMatch = keyword.value
-        ? partialMatch(post.content, keyword.value)
-        : true;
-
-      const usernameMatch = username.value
-        ? partialMatch(post.author?.userName, username.value)
-        : true;
-
-      return contentMatch && usernameMatch;
-    });
-
-    // Sort results by relevance
-    searchResults.value = filteredResults.sort((a, b) => {
-      // Prioritize username matches if username search is active
-      if (username.value) {
-        const aExactUsername = normalizeString(a.author?.userName).includes(
-          normalizeString(username.value)
-        );
-        const bExactUsername = normalizeString(b.author?.userName).includes(
-          normalizeString(username.value)
-        );
-
-        if (aExactUsername && !bExactUsername) return -1;
-        if (!aExactUsername && bExactUsername) return 1;
-      }
-
-      // Then prioritize content matches
-      if (keyword.value) {
-        const aExactContent = normalizeString(a.content).includes(
-          normalizeString(keyword.value)
-        );
-        const bExactContent = normalizeString(b.content).includes(
-          normalizeString(keyword.value)
-        );
-
-        if (aExactContent && !bExactContent) return -1;
-        if (!aExactContent && bExactContent) return 1;
-      }
-
-      // Finally sort by date
-      return new Date(b.created) - new Date(a.created);
-    });
-
+    await searchStore.searchPosts(searchParams);
     isResultsOpen.value = true;
   } catch (err) {
+    error.value = err.message || 'Search failed';
     console.error("Error during search:", err);
+  } finally {
+    isLoading.value = false;
   }
 };
 

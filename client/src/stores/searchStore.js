@@ -30,10 +30,13 @@ export const useSearchStore = defineStore('search', () => {
 
             if (data.code === '1000') {
                 // Filter and sort results client-side for better matching
-                const filteredResults = data.data.filter(post =>
-                    partialMatch(post.content, keyword) ||
-                    partialMatch(post.author?.userName, keyword)
-                );
+                const decodedKeyword = decodeURIComponent(keyword.trim()).toLowerCase();
+                const filteredResults = data.data.filter(post => {
+                    const decodedContent = decodeURIComponent(post.content || '').toLowerCase();
+                    const decodedUsername = decodeURIComponent(post.author?.userName || '').toLowerCase();
+                    return decodedContent.includes(decodedKeyword) ||
+                        decodedUsername.includes(decodedKeyword);
+                });
 
                 searchResults.value = filteredResults;
                 hasMore.value = data.data.length === count;
@@ -47,43 +50,56 @@ export const useSearchStore = defineStore('search', () => {
     }
 
     const searchUsers = async ({ keyword, index = 0, count = 20 }) => {
-        if (!keyword?.trim()) {
+        const trimmedKeyword = keyword?.trim();
+        if (!trimmedKeyword) {
             userSearchResults.value = [];
-            return [];
+            hasMoreUsers.value = false;
+            return { users: [], total: 0 };
         }
 
         isLoading.value = true;
         error.value = null;
-        userSearchParams.value = { keyword, index, count };
+        userSearchParams.value = { keyword: trimmedKeyword, index, count };
 
         try {
-            const response = await apiService.searchUsers(keyword, index, count);
+            const response = await apiService.searchUsers(trimmedKeyword, index, count);
+            const { code, data, message } = response.data;
 
-            const data = response.data;
-            if (data.code === '1000') {
-                // For initial search, replace results
+            if (code === '1000' && Array.isArray(data)) {
+                // Process and normalize user data
+                const processedUsers = data.map(user => ({
+                    ...user,
+                    userName: decodeURIComponent(user.userName || ''),
+                    userNameLowerCase: user.userNameLowerCase?.map(part => decodeURIComponent(part)) || [],
+                    avatar: user.avatar || '',
+                    same_friends: Number(user.same_friends || 0)
+                }));
+
+                // Update store state
                 if (index === 0) {
-                    userSearchResults.value = data.data;
+                    userSearchResults.value = processedUsers;
                 } else {
-                    // For pagination, append results
-                    userSearchResults.value = [...userSearchResults.value, ...data.data];
+                    // Remove duplicates when appending
+                    const existingIds = new Set(userSearchResults.value.map(u => u.userId));
+                    const newUsers = processedUsers.filter(user => !existingIds.has(user.userId));
+                    userSearchResults.value = [...userSearchResults.value, ...newUsers];
                 }
 
-                hasMoreUsers.value = data.data.length === count;
-                return data.data;
-            } else if (data.code === '9994') {
-                if (index === 0) {
-                    userSearchResults.value = [];
-                }
+                hasMoreUsers.value = processedUsers.length === count;
+                return { users: processedUsers, total: userSearchResults.value.length };
+            } 
+
+            if (code === '9994') {
+                if (index === 0) userSearchResults.value = [];
                 hasMoreUsers.value = false;
-                return [];
-            } else {
-                throw new Error(data.message || 'Failed to search users');
+                return { users: [], total: 0 };
             }
+
+            throw new Error(message || 'Failed to search users');
         } catch (err) {
-            error.value = 'Failed to search users';
+            error.value = err.message || 'Failed to search users';
             await handleError(err);
-            return [];
+            return { users: [], total: 0 };
         } finally {
             isLoading.value = false;
         }
