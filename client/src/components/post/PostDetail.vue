@@ -117,7 +117,6 @@ import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "../ui/skeleton";
 import { useMediaUtils } from '@/composables/useMediaUtils';
 import { useCommentStore } from "@/stores/commentStore";
-import { useMediaUtils } from "@/composables/useMediaUtils";
 
 const ErrorBoundary = defineAsyncComponent(() =>
     import("../shared/ErrorBoundary.vue")
