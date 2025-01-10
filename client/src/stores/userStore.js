@@ -162,7 +162,8 @@ export const useUserStore = defineStore('user', () => {
 
     const clearAuthState = () => {
         user.value = null;
-        Cookies.remove('accessToken');
+        Cookies.remove('accessToken', { path: '/' });
+        localStorage.removeItem('accessToken');
         error.value = null;
         successMessage.value = '';
         failedAttempts.value = 0;
