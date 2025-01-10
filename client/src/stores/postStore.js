@@ -6,6 +6,7 @@ import { formatNumber } from "../utils/numberFormat";
 import { useErrorHandler } from "@/utils/errorHandler";
 import { useImageProcessing } from "@/composables/useImageProcessing";
 import inappropriateWords from "../words/inappropriateWords";
+import logger from "@/services/logging";
 
 export const usePostStore = defineStore("post", () => {
     const posts = ref([]);
