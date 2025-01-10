@@ -117,6 +117,7 @@ import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "../ui/skeleton";
 import { useMediaUtils } from '@/composables/useMediaUtils';
 import { useCommentStore } from "@/stores/commentStore";
+import { useMediaUtils } from "@/composables/useMediaUtils";
 
 const ErrorBoundary = defineAsyncComponent(() =>
     import("../shared/ErrorBoundary.vue")
@@ -145,11 +146,25 @@ const { currentPost: post, loading, error } = storeToRefs(postStore);
 const { comments, loadingComments, commentError, loadingMoreComments } =
     storeToRefs(postStore);
 
-const { createMediaList } = useMediaUtils();
+const { getOptimizedImageUrl, getImageSrcSet } = useMediaUtils();
 
 const mediaList = computed(() => {
     if (!post.value) return [];
-    return createMediaList(post.value.image, post.value.video, post.value.content);
+    
+    const images = post.value.media?.map(media => ({
+        type: 'image',
+        url: getOptimizedImageUrl(media.url),
+        srcset: getImageSrcSet(media.url),
+        alt: media.description || 'Post image'
+    })) || [];
+    
+    const video = post.value.video ? [{
+        type: 'video',
+        url: post.value.video,
+        thumbnail: post.value.videoThumbnail
+    }] : [];
+    
+    return [...images, ...video];
 });
 
 // Methods

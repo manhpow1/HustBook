@@ -89,6 +89,7 @@
 <script setup>
 import { ref, computed, onMounted, onUnmounted, watch } from "vue";
 import { useCommentStore } from "@/stores/commentStore";
+import { useUserStore } from "@/stores/userStore";
 import { useNotificationStore } from "@/stores/notificationStore";
 import { useErrorHandler } from "@/utils/errorHandler";
 import { useFormValidation } from "@/composables/useFormValidation";
@@ -96,6 +97,7 @@ import { debounce } from "lodash-es";
 import logger from "@/services/logging";
 import { storeToRefs } from "pinia";
 const commentStore = useCommentStore();
+const userStore = useUserStore();
 const {
     comments,
     loadingComments,
@@ -167,9 +169,19 @@ const onAddComment = async () => {
             commentContent: newComment.value,
         });
 
+        const userData = await userStore.fetchUserProfile();
+        const commentData = {
+            content: newComment.value.trim(),
+            user: {
+                userId: userData.userId,
+                userName: userData.userName,
+                avatar: userData.avatar
+            }
+        };
+
         await commentStore.addComment(
             props.postId,
-            newComment.value.trim()
+            commentData
         );
         newComment.value = "";
         notificationStore.showNotification(
