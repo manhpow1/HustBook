@@ -232,7 +232,7 @@ router.get('/:postId', authenticateToken, postController.getPost);
 /**
  * @swagger
  * /posts/{postId}:
- *   put:
+ *   patch:
  *     summary: Update a post by ID
  *     tags: [Posts]
  *     security:
@@ -270,7 +270,7 @@ router.get('/:postId', authenticateToken, postController.getPost);
  *       404:
  *         description: Post not found
  */
-router.put('/:postId', authenticateToken, upload.array('images', 4), postController.updatePost);
+router.patch('/:postId', authenticateToken, upload.array('images', 4), postController.updatePost);
 
 /**
  * @swagger
