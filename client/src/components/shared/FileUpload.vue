@@ -152,9 +152,7 @@ const processFiles = async (files) => {
             uploadProgress.value = ((i + 1) / totalFiles) * 100
         }
 
-        const updatedFiles = [...props.modelValue, ...processedFiles]
-        emit('update:modelValue', updatedFiles)
-        emit('change', updatedFiles)
+        emit('change', processedFiles)
 
     } catch (err) {
         error.value = 'Failed to process files'

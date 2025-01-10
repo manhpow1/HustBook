@@ -175,9 +175,12 @@ const mappedPosts = computed(() =>
 );
 
 const handlePostCreated = async () => {
-  postStore.posts.unshift(newPost);
-  postStore.resetPosts();
-  await postStore.fetchPosts();
+  try {
+    await postStore.resetPosts();
+    await postStore.fetchPosts();
+  } catch (err) {
+    handleError(err);
+  }
 };
 
 const loadMorePosts = () => postStore.fetchPosts();

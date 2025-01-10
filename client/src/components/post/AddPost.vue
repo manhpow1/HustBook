@@ -114,12 +114,12 @@ const validateDescription = () => {
     }
 };
 
-const handleFilesChange = async (newFiles) => {
-    if (!newFiles?.length) return
-    console.log('Files selected:', newFiles)
+const handleFilesChange = async (processedFiles) => {
+    if (!processedFiles?.length) return
+    console.log('Files selected:', processedFiles)
 
     // Validate file count
-    if (newFiles.length > 4) {
+    if (processedFiles.length > 4) {
         toast({
             title: "Error",
             description: "Maximum 4 files allowed",
@@ -129,7 +129,7 @@ const handleFilesChange = async (newFiles) => {
     }
 
     // Validate each file
-    const invalidFiles = newFiles.filter((file) => {
+    const invalidFiles = processedFiles.filter((file) => {
         if (file.size > MAX_FILE_SIZE) {
             toast({
                 title: "Error",
@@ -149,15 +149,14 @@ const handleFilesChange = async (newFiles) => {
         return false;
     });
 
-    if (invalidFiles.length) {
-        files.value = newFiles.filter((f) => !invalidFiles.includes(f));
-    } else {
-        files.value = newFiles;
-    }
+    const validFiles = processedFiles.filter((f) => !invalidFiles.includes(f));
+    
+    // Update files state
+    files.value = validFiles;
 
     // Generate previews
     previewUrls.value = [];
-    for (const file of files.value) {
+    for (const file of validFiles) {
         const reader = new FileReader();
         reader.onload = (e) => {
             previewUrls.value.push(e.target.result);

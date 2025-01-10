@@ -26,9 +26,6 @@
                     <MarkdownEditor v-model="newComment" :rows="3" ref="commentInput"
                         placeholder="Write your comment here..." :maxLength="1000" @input="onInput"
                         data-testid="new-comment-editor" />
-                    <p class="text-sm text-muted-foreground">
-                        {{ newComment.length }}/1000 characters
-                    </p>
                     <p v-if="inputError" class="text-sm text-destructive" role="alert">
                         {{ inputError }}
                     </p>
