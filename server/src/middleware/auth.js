@@ -76,11 +76,6 @@ const authenticateToken = async (req, res, next) => {
 
             const { userId, tokenVersion, exp } = decoded;
 
-            // Additional expiration check
-            const currentTimestamp = Math.floor(Date.now() / 1000);
-            if (exp && currentTimestamp > exp) {
-                throw createError('9998', 'Token has expired');
-            }
 
             // Rate limiting check from Redis
             const requestCount = await cache.incr(`auth:${userId}:requests`);
