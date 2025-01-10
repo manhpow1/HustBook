@@ -440,8 +440,8 @@ onBeforeUnmount(() => {
     if (avatarPreview.value?.startsWith("blob:")) {
         URL.revokeObjectURL(avatarPreview.value);
     }
-    if (coverPreview.value?.startsWith("blob:")) {
-        URL.revokeObjectURL(coverPreview.value);
+    if (coverPhotoPreview.value?.startsWith("blob:")) {
+        URL.revokeObjectURL(coverPhotoPreview.value);
     }
 });
 
