@@ -181,6 +181,10 @@ const {
   isProcessing: isCompressing,
 } = useImageProcessing();
 
+// Local state
+const userName = ref("");
+const error = ref(null);
+
 // Store refs
 const {
   user,
@@ -188,9 +192,6 @@ const {
   error: errorMessage,
   successMessage,
 } = storeToRefs(userStore);
-
-// Local state
-const userName = ref("");
 const userNameError = ref("");
 const avatar = ref(null);
 const avatarPreview = ref("");
@@ -283,7 +284,8 @@ const handleSubmit = async () => {
 
   try {
     isLoading.value = true;
-    errorMessage.value = null; 
+    error.value = null;
+    errorMessage.value = null;
 
     if (!userName.value?.trim()) {
       toast({

@@ -401,9 +401,9 @@ class UserService {
             }
 
             // Check username uniqueness if userName is being updated
-            if (updateData.userNameLowerCase) {
+            if (userNameLowerCase && userNameLowerCase.length > 0) {
                 const existingUser = await db.collection('users')
-                    .where('userNameLowerCase', 'array-contains-any', updateData.userNameLowerCase)
+                    .where('userNameLowerCase', 'array-contains-any', userNameLowerCase)
                     .where('userId', '!=', userId)
                     .get();
 
