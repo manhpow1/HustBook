@@ -255,7 +255,7 @@ const isFormValid = computed(() => {
 
 // Methods
 const handleAvatarUpload = debounce(async (event) => {
-    const file = event.target.files[0];
+    const file = event.target.files?.[0];
     if (!file) return;
 
     try {
@@ -270,10 +270,10 @@ const handleAvatarUpload = debounce(async (event) => {
             description: "Cannot process avatar image",
         });
     }
-};
+}, 500);
 
 const handleCoverUpload = debounce(async (event) => {
-    const file = event.target.files[0];
+    const file = event.target.files?.[0];
     if (!file) return;
 
     try {
@@ -288,7 +288,7 @@ const handleCoverUpload = debounce(async (event) => {
             description: "Cannot process cover image",
         });
     }
-};
+}, 500);
 
 const resetForm = () => {
     form.value = { ...initialForm.value };
