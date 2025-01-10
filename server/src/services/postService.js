@@ -285,6 +285,7 @@ class PostService {
 
     async addComment(postId, userId, content) {
         try {
+            const commentRef = db.collection(collections.comments).doc();
             await db.runTransaction(async (transaction) => {
                 const postRef = db.collection(collections.posts).doc(postId);
                 const postDoc = await transaction.get(postRef);
@@ -293,7 +294,6 @@ class PostService {
                     throw createError('9992', 'Post not found');
                 }
 
-                const commentRef = db.collection(collections.comments).doc();
                 transaction.set(commentRef, {
                     userId,
                     postId,
@@ -305,7 +305,7 @@ class PostService {
                     comments: admin.firestore.FieldValue.increment(1),
                 });
             });
-            return true;
+            return commentRef.id;
         } catch (error) {
             logger.error('Error in addComment service:', error);
             throw createError('9999', 'Exception error');
@@ -316,7 +316,7 @@ class PostService {
         try {
             const postsRef = db.collection(collections.posts)
                 .where('userId', '==', userId);
-    
+
             const snapshot = await postsRef.count().get();
             return snapshot.data().count;
         } catch (error) {

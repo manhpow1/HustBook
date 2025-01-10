@@ -1,15 +1,12 @@
 <template>
     <div>
-        <!-- Image Grid Layout -->
         <div v-if="post.images?.length" class="mb-4">
-            <!-- Single Image Layout -->
             <div v-if="post.images.length === 1" class="mb-4">
                 <Card class="overflow-hidden">
                     <AspectRatio :ratio="16/9">
                         <div @click="openLightbox(0)"
                             class="relative w-full h-full cursor-pointer group">
-                            <img :src="getOptimizedImageUrl(post.images[0])" 
-                                :srcset="getImageSrcSet(post.images[0])"
+                            <img :src="post.images[0]"
                                 :alt="post.content || 'Post image'"
                                 class="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
                                 loading="lazy" />
@@ -23,8 +20,7 @@
                     <AspectRatio :ratio="1">
                         <div @click="openLightbox(index)"
                             class="relative w-full h-full cursor-pointer group">
-                            <img :src="getOptimizedImageUrl(img)" 
-                                :srcset="getImageSrcSet(img)"
+                            <img :src="img"
                                 :alt="post.content || 'Post image'"
                                 class="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
                                 loading="lazy" />
@@ -50,8 +46,7 @@
                     <AspectRatio :ratio="1">
                         <div @click="openLightbox(index)"
                             class="relative w-full h-full cursor-pointer group">
-                            <img :src="getOptimizedImageUrl(post.images[index])" 
-                                :srcset="getImageSrcSet(post.images[index])"
+                            <img :src="post.images[index]"
                                 :alt="post.content || 'Post image'"
                                 class="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
                                 loading="lazy" />
@@ -116,7 +111,6 @@ const emit = defineEmits(['like', 'comment']);
 // Composables
 const { handleError } = useErrorHandler();
 const { toast } = useToast();
-const { getOptimizedImageUrl, getImageSrcSet, createMediaList } = useMediaUtils();
 
 // Refs
 const showLightbox = ref(false);

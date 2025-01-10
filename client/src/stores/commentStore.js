@@ -87,9 +87,10 @@ export const useCommentStore = defineStore('comment', () => {
                 return await addOfflineComment(postId, content)
             }
 
-            const response = await apiService.addComment(postId, content);
+            const commentContent = typeof content === 'object' ? content.content : String(content)
 
-            // Kiểm tra response code từ server
+            const response = await apiService.addComment(postId, commentContent);
+
             if (response.data.code !== '1000') {
                 throw new Error(response.data.message || 'Failed to add comment')
             }
@@ -97,7 +98,7 @@ export const useCommentStore = defineStore('comment', () => {
             // Tạo comment mới với dữ liệu từ response
             const newComment = {
                 commentId: response.data.commentId,
-                content: content,
+                content: commentContent,
                 created: new Date().toISOString(),
                 like: 0,
                 isLiked: false,

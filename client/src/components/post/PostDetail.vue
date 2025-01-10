@@ -145,11 +145,12 @@ const { currentPost: post, loading, error } = storeToRefs(postStore);
 const { comments, loadingComments, commentError, loadingMoreComments } =
     storeToRefs(postStore);
 
-const { getOptimizedImageUrl, getImageSrcSet } = useMediaUtils();
-
 const mediaList = computed(() => {
     if (!post.value) return [];
-    return createMediaList(post.value);
+    return !post.value ? [] : [
+        ...(Array.isArray(post.value.images) ? post.value.images : []),
+        ...(post.value.video ? [post.value.video] : [])
+    ];
 });
 
 // Methods

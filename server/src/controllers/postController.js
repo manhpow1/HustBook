@@ -150,9 +150,19 @@ class PostController {
             const { postId } = req.params;
             const { content } = req.body;
             const userId = req.user.userId;
-            await postService.addComment(postId, userId, String(content));
 
-            sendResponse(res, '1000', { message: 'Comment added successfully' });
+            const userDoc = await db.collection(collections.users).doc(userId).get();
+            const userData = userDoc.data();
+
+            const commentId = await postService.addComment(postId, userId, String(content));
+
+            sendResponse(res, '1000', {
+                commentId,
+                userId,
+                userName: userData?.userName || 'Anonymous User',
+                avatar: userData?.avatar || ''
+            });
+
         } catch (error) {
             next(error);
         }

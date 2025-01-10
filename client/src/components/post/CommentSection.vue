@@ -161,39 +161,27 @@ const onAddComment = async () => {
         inputError.value = "Comment cannot be empty";
         return;
     }
-
     isSubmitting.value = true;
     try {
         logger.debug("Adding comment:", {
             postId: props.postId,
             commentContent: newComment.value,
         });
-
         if (typeof newComment.value !== 'string') {
             inputError.value = "Invalid comment format";
             return;
         }
 
-        const userData = await userStore.fetchUserProfile();
-        const commentData = {
-            content: String(newComment.value.trim()),
-            user: {
-                userId: userData.userId,
-                userName: userData.userName,
-                avatar: userData.avatar
-            }
-        };
-
-        await commentStore.addComment(
+        const response = await commentStore.addComment(
             props.postId,
-            commentData
+            String(newComment.value.trim())
         );
+        
         newComment.value = "";
         notificationStore.showNotification(
             "Comment posted successfully",
             "success"
         );
-
         logger.info("Comment posted successfully", { postId: props.postId });
     } catch (error) {
         logger.error("Error posting comment:", error);
