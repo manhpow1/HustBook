@@ -277,30 +277,29 @@ const handleSubmit = async () => {
         successMessage.value = "";
 
         // Validate content
-        const sanitizedContent = sanitizeInput(form.value.description);
-        if (!sanitizedContent) {
+        const content = form.value.description.trim();
+        if (!content) {
             error.value = "Post content cannot be empty";
             return;
         }
 
-        // Process images if needed
-        let processedMedia = [];
-        if (form.value.media.length > 0) {
-            processedMedia = await Promise.all(
-                form.value.media.map(async (file) => {
-                    // Skip processing for existing image URLs
-                    if (typeof file === "string") return file;
-                    return await compressImage(file);
-                })
-            );
-            processedMedia = processedMedia.filter(Boolean);
-        }
-
         const postData = {
-            content: sanitizedContent,
-            contentLowerCase: sanitizedContent.toLowerCase(),
-            media: processedMedia,
+            content: content,
+            existingImages: [],
+            media: []
         };
+
+        if (form.value.media.length > 0) {
+            form.value.media.forEach(file => {
+                // Nếu là URL (ảnh hiện có)
+                if (typeof file === 'string' && file.startsWith('http')) {
+                    postData.existingImages.push(file);
+                } else {
+                    // Nếu là file mới
+                    postData.media.push(file);
+                }
+            });
+        }
 
         await postStore.updatePost(props.postId, postData);
 

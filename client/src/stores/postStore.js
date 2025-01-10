@@ -143,10 +143,10 @@ export const usePostStore = defineStore("post", () => {
             // Validate post data
             const content = postData.get('content');
             const images = postData.getAll('images');
-            
+
             const hasContent = content?.trim()?.length > 0;
             const hasImages = images?.length > 0;
-            
+
             if (!hasContent && !hasImages) {
                 throw new Error("Post must have either text content or images");
             }
@@ -155,23 +155,22 @@ export const usePostStore = defineStore("post", () => {
                 throw new Error("Maximum 4 images allowed");
             }
 
-            // Create FormData for multipart request
+            const contentWords = content.trim().toLowerCase().split(/\s+/);
+
             const formData = new FormData();
             formData.append("content", content);
 
-            // Handle image files
-            if (postData.images?.length) {
-                postData.images.forEach((image, index) => {
-                    // If image is a string (URL), it's an existing image
-                    if (typeof image === "string") {
-                        formData.append("existingImages", image);
-                    } else {
-                        formData.append("images", image);
-                    }
+            contentWords.forEach(word => {
+                formData.append("contentLowerCase[]", word);
+            });
+
+            if (images?.length) {
+                images.forEach((image, index) => {
+                    formData.append("images", image);
                 });
             }
 
-            const response = await apiService.createPost(postData, config);
+            const response = await apiService.createPost(formData, config);
 
             if (response.data.code === "1000") {
                 const newPost = validateAndProcessPost(response.data.data);
@@ -195,14 +194,49 @@ export const usePostStore = defineStore("post", () => {
     async function updatePost(postId, postData) {
         loading.value = true;
         try {
-            if (postData.images?.length) {
-                const processedImages = await Promise.all(
-                    postData.images.map((img) => useImageProcessing().compressImage(img))
-                );
-                postData.images = processedImages.filter(Boolean);
+            const formData = new FormData();
+
+            // Xử lý content và contentLowerCase
+            const content = postData.content.trim();
+            formData.append('content', content);
+
+            // Chuyển đổi content thành mảng contentLowerCase
+            const contentWords = content.toLowerCase().split(/\s+/).filter(Boolean);
+            contentWords.forEach(word => {
+                formData.append('contentLowerCase[]', word);
+            });
+
+            // Xử lý images hiện có
+            if (postData.existingImages?.length) {
+                postData.existingImages.forEach(url => {
+                    formData.append('existingImages[]', url);
+                });
             }
 
-            const response = await apiService.updatePost(postId, postData);
+            // Xử lý images mới
+            if (postData.media?.length) {
+                const processedImages = await Promise.all(
+                    postData.media.map(async (img) => {
+                        // Nếu là URL (ảnh hiện có), giữ nguyên
+                        if (typeof img === 'string') return img;
+                        // Nếu là file mới, xử lý và nén
+                        return await useImageProcessing().compressImage(img);
+                    })
+                );
+
+                processedImages
+                    .filter(Boolean)
+                    .forEach(img => {
+                        if (typeof img === 'string' && img.startsWith('http')) {
+                            formData.append('existingImages[]', img);
+                    } else {
+                            formData.append('images', img);
+                        }
+                    });
+            }
+
+            const response = await apiService.updatePost(postId, formData);
+
             if (response.data.code === "1000") {
                 const updatedPost = validateAndProcessPost(response.data.data);
                 const index = posts.value.findIndex((p) => p.postId === postId);
@@ -350,7 +384,7 @@ export const usePostStore = defineStore("post", () => {
             // Ensure userId exists and is valid
             post.userId = post.userId || null;
             post.userName = post.userName || "Anonymous User";
-            
+
             // Validate inappropriate content
             if (containsInappropriateContent(post.content)) return null;
 

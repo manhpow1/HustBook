@@ -187,9 +187,14 @@ const handleSubmit = async () => {
         const content = description.value.trim()
         const formData = new FormData()
         formData.append('content', content)
-        formData.append('contentLowerCase', decodeURIComponent(content).toLowerCase())
-        formData.append('userNameLowerCase', decodeURIComponent(content).toLowerCase().split(' '))
-        // Change to match backend expectation
+
+        // Convert content to lowercase words array
+        const contentWords = content.toLowerCase().split(/\s+/).filter(Boolean);
+        contentWords.forEach(word => {
+            formData.append('contentLowerCase[]', word);
+        });
+
+        // Handle files
         if (files.value && files.value.length > 0) {
             files.value.forEach((file, index) => {
                 formData.append(`images`, file) 
@@ -218,7 +223,7 @@ const handleSubmit = async () => {
         descriptionError.value = ''
 
     } catch (err) {
-        console.error('Error creating post:', err) // Add this for debugging
+        console.error('Error creating post:', err)
         toast({
             title: 'Error',
             description: err.message || 'Failed to create post',
