@@ -1,4 +1,3 @@
-// PostActions.vue
 <template>
     <div class="flex items-center justify-between space-x-4 py-4">
         <Button variant="ghost" size="sm" :class="[

@@ -110,18 +110,6 @@ const routes = [
         meta: { requiresAuth: true }
     },
     {
-        path: '/watch/:postId',
-        name: 'Watch',
-        component: () => import('../views/Watch.vue'),
-        meta: { requiresAuth: true }
-    },
-    {
-        path: '/delete-post/:postId',
-        name: 'DeletePost',
-        component: () => import('../components/post/DeletePost.vue'),
-        meta: { requiresAuth: true }
-    },
-    {
         path: '/report-post/:postId',
         name: 'ReportPost',
         component: () => import('../components/post/ReportPostModal.vue'),
