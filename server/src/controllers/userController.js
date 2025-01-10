@@ -399,9 +399,15 @@ class UserController {
             }
 
             // Handle file uploads
+            // Generate userNameLowerCase array if userName is being updated
+            const userNameLowerCase = value.userName ? 
+                value.userName.toLowerCase().split(' ').filter(Boolean) : 
+                undefined;
+
             const updateData = {
                 ...value,
-                version: (value.version || 0) + 1
+                version: (value.version || 0) + 1,
+                ...(userNameLowerCase && { userNameLowerCase })
             };
 
             if (files) {
@@ -508,10 +514,14 @@ class UserController {
                 }
             }
 
+            // Generate userNameLowerCase array
+            const userNameLowerCase = userName.toLowerCase().split(' ').filter(Boolean);
+            
             const updatedUser = await userService.changeInfoAfterSignup(
                 userId,
                 userName,
-                avatarUrl
+                avatarUrl,
+                userNameLowerCase
             );
 
             sendResponse(res, '1000', {

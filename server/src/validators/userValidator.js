@@ -363,6 +363,10 @@ const setUserInfoSchema = Joi.object({
             'string.max': 'Username cannot exceed 50 characters.',
             'string.pattern.base': 'Username can only contain letters and spaces.'
         }),
+    userNameLowerCase: Joi.array()
+        .items(Joi.string().lowercase().trim())
+        .default(() => [])
+        .strip(), // This field will be generated server-side
     bio: Joi.string()
         .max(200)
         .optional()

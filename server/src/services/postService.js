@@ -8,7 +8,7 @@ import redis from '../utils/redis.js';
 import { handleImageUpload, deleteFileFromStorage } from '../utils/helpers.js';
 
 class PostService {
-    async createPost(userId, content, imageFiles) {
+    async createPost(userId, content, contentLowerCase, imageFiles) {
         try {
             let processedImageUrls = [];
 
@@ -29,6 +29,7 @@ class PostService {
                 postId,
                 userId,
                 content,
+                contentLowerCase,
                 images: processedImageUrls,
                 createdAt: new Date(),
                 likes: 0,
@@ -87,7 +88,7 @@ class PostService {
         }
     }
 
-    async updatePost(postId, userId, content, images) {
+    async updatePost(postId, userId, content, contentLowerCase, images) {
         try {
             const existingPost = await this.getPost(postId);
             if (!existingPost) {
@@ -111,6 +112,7 @@ class PostService {
             const updatedPost = new Post({
                 ...existingPost,
                 content,
+                contentLowerCase,
                 images: [...existingImages, ...newImages],
                 updatedAt: new Date()
             });

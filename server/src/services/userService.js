@@ -383,7 +383,7 @@ class UserService {
     }
 
     // In userService.js
-    async changeInfoAfterSignup(userId, userName, avatarUrl) {
+    async changeInfoAfterSignup(userId, userName, avatarUrl, userNameLowerCase) {
         try {
             const user = await this.getUserById(userId);
             if (!user) {
@@ -400,8 +400,21 @@ class UserService {
                 throw createError('1003', 'Please wait before updating again');
             }
 
+            // Check username uniqueness if userName is being updated
+            if (updateData.userNameLowerCase) {
+                const existingUser = await db.collection('users')
+                    .where('userNameLowerCase', 'array-contains-any', updateData.userNameLowerCase)
+                    .where('userId', '!=', userId)
+                    .get();
+
+                if (!existingUser.empty) {
+                    throw createError('1002', 'Username already taken');
+                }
+            }
+
             // Update user data
             user.userName = userName;
+            user.userNameLowerCase = userNameLowerCase;
 
             // Update avatar if new one was uploaded
             if (avatarUrl) {
@@ -429,6 +442,7 @@ class UserService {
             logger.info('User info updated after signup', {
                 userId,
                 userName,
+                userNameLowerCase,
                 hasAvatar: !!avatarUrl
             });
 
@@ -437,7 +451,8 @@ class UserService {
                 userName: user.userName,
                 avatar: user.avatar,
                 version: user.version,
-                updatedAt: user.updatedAt
+                updatedAt: user.updatedAt,
+                userNameLowerCase: user.userNameLowerCase
             };
 
         } catch (error) {
@@ -487,6 +502,18 @@ class UserService {
                 } catch (uploadError) {
                     logger.error('Cover photo upload failed:', uploadError);
                     throw createError('9999', 'Failed to upload cover photo');
+                }
+            }
+
+            // Check username uniqueness if userNameLowerCase is being updated
+            if (updateData.userNameLowerCase) {
+                const existingUser = await db.collection(collections.users)
+                    .where('userNameLowerCase', 'array-contains-any', updateData.userNameLowerCase)
+                    .where('userId', '!=', userId)
+                    .get();
+
+                if (!existingUser.empty) {
+                    throw createError('1002', 'Username already taken');
                 }
             }
 

@@ -22,6 +22,10 @@ const createPostSchema = Joi.object({
             'string.max': 'Content cannot exceed 1000 characters',
             'string.pattern.base': 'Content contains invalid characters'
         }),
+    contentLowerCase: Joi.array()
+        .items(Joi.string().lowercase().trim())
+        .default(() => [])
+        .strip(), // This field will be generated server-side
     images: Joi.array()
         .items(
             Joi.string()
@@ -48,6 +52,10 @@ const updatePostSchema = Joi.object({
             'string.max': 'Content cannot exceed 1000 characters',
             'string.pattern.base': 'Content contains invalid characters'
         }),
+    contentLowerCase: Joi.array()
+        .items(Joi.string().lowercase().trim())
+        .default(() => [])
+        .strip(), // This field will be generated server-side
     existingImages: Joi.array()
         .items(Joi.string().uri())
         .default([])

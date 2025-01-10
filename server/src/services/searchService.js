@@ -48,10 +48,11 @@ class SearchService {
         try {
             const normalizedKeyword = decodeURIComponent(keyword.trim()).toLowerCase();
 
-            // Create compound query to search in userNameLowerCase field
+            // Create compound query to search in userName field (case-insensitive)
             const usersQuery = db.collection(collections.users)
-                .where('userNameLowerCase', 'array-contains', normalizedKeyword)
-                .orderBy('createdAt', 'desc')
+                .orderBy('userName')
+                .startAt(normalizedKeyword)
+                .endAt(normalizedKeyword + '\uf8ff')
                 .offset(index)
                 .limit(count);
 

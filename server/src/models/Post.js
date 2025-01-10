@@ -6,6 +6,7 @@ class Post {
         postId = null,
         userId,
         content,
+        contentLowerCase = [],
         images = [],
         likes = 0,
         comments = 0,
@@ -20,6 +21,7 @@ class Post {
         this.postId = postId;
         this.userId = userId;
         this.content = content;
+        this.contentLowerCase = contentLowerCase;
         this.images = images;
         this.likes = likes;
         this.comments = comments;
@@ -77,6 +79,7 @@ class Post {
             postId: this.postId,
             userId: this.userId,
             content: this.content,
+            contentLowerCase: this.contentLowerCase,
             images: this.images,
             likes: this.likes,
             comments: this.comments,

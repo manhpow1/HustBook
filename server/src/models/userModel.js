@@ -8,6 +8,7 @@ class User {
     constructor(data) {
         this.userId = data.userId;
         this.userName = data.userName || null;
+        this.userNameLowerCase = data.userNameLowerCase || [];
         this.phoneNumber = data.phoneNumber;
         this.bio = data.bio || null;
         this.address = data.address || null;
@@ -43,6 +44,7 @@ class User {
         return {
             userId: this.userId,
             userName: this.userName,
+            userNameLowerCase: this.userNameLowerCase,
             phoneNumber: this.phoneNumber,
             bio: this.bio,
             avatar: this.avatar,
@@ -160,6 +162,7 @@ class User {
         const userData = {
             userId: this.userId,
             userName: this.userName,
+            userNameLowerCase: this.userNameLowerCase,
             phoneNumber: this.phoneNumber,
             bio: this.bio,
             avatar: this.avatar,

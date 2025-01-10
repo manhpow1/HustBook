@@ -19,12 +19,15 @@ class PostController {
             const userId = req.user.userId;
             const files = req.files;
 
+            // Generate contentLowerCase array for search
+            const contentLowerCase = content.toLowerCase().split(' ').filter(Boolean);
+
             // Validate file count
             if (files && files.length > Post.MAX_IMAGES) {
                 throw createError('1008', `Maximum ${Post.MAX_IMAGES} images allowed`);
             }
 
-            const postId = await postService.createPost(userId, content, files);
+            const postId = await postService.createPost(userId, content, contentLowerCase, files);
 
             // Clean up temporary files after successful upload
             if (files) {
@@ -73,6 +76,9 @@ class PostController {
             const { content, existingImages = [] } = req.body;
             const userId = req.user.userId;
 
+            // Generate contentLowerCase array for search
+            const contentLowerCase = content.toLowerCase().split(' ').filter(Boolean);
+
             // Validate total number of images (existing + new)
             const totalImages = (req.files?.length || 0) + existingImages.length;
             if (totalImages > Post.MAX_IMAGES) {
@@ -99,7 +105,7 @@ class PostController {
             // Combine existing and new images
             const allImages = [...existingImages, ...processedImages];
 
-            const updatedPost = await postService.updatePost(postId, userId, content, allImages);
+            const updatedPost = await postService.updatePost(postId, userId, content, contentLowerCase, allImages);
 
             // Clean up temp files after successful update
             if (req.files) {
