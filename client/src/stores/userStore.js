@@ -620,12 +620,15 @@ export const useUserStore = defineStore('user', () => {
         }
     };
 
-    const updateUserProfile = async (userId, updateData) => {
+    const updateUserProfile = async (userId, updateData, retryCount = 0) => {
         try {
             isLoading.value = true;
             error.value = null;
 
             const formData = new FormData();
+
+            // Add version to form data
+            formData.append('version', updateData.version);
 
             // Handle basic fields
             ['userName', 'bio', 'address', 'city', 'country'].forEach(field => {
@@ -662,6 +665,20 @@ export const useUserStore = defineStore('user', () => {
 
             throw new Error(response.data?.message || 'Failed to update profile');
         } catch (err) {
+            if (err.message?.includes('Data was modified by another request') && retryCount < 3) {
+                logger.info('Retrying profile update due to version conflict', { retryCount });
+                
+                // Wait using exponential backoff
+                await new Promise(resolve => setTimeout(resolve, Math.pow(2, retryCount) * 1000));
+                
+                // Fetch latest version and retry
+                const latestUser = await getUserProfile(userId);
+                return updateUserProfile(userId, {
+                    ...updateData,
+                    version: latestUser.version
+                }, retryCount + 1);
+            }
+            
             logger.error('Profile update error:', err);
             throw err;
         } finally {

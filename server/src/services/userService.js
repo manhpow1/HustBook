@@ -16,6 +16,10 @@ const VERIFICATION_CODE_COOLDOWN = 60 * 1000;
 const MAX_VERIFICATION_ATTEMPTS = 5;
 const PASSWORD_HISTORY_SIZE = 5;
 
+// Constants for retry mechanism
+const MAX_RETRIES = 3;
+const BASE_DELAY = 1000; // 1 second base delay
+
 class UserService {
     async createUser(phoneNumber, password, uuid, verificationCode, deviceId) {
         try {
@@ -518,14 +522,30 @@ class UserService {
                     throw createError('9995', 'User not found');
                 }
 
-                const currentVersion = userDoc.data().version || 0;
+                const currentData = userDoc.data();
+                const currentVersion = currentData.version || 0;
+
+                // If version mismatch, fetch latest data and merge with updates
                 if (currentVersion !== updateData.version - 1) {
+                    logger.info('Version mismatch detected', {
+                        expected: updateData.version - 1,
+                        actual: currentVersion,
+                        retryCount
+                    });
+
                     if (retryCount < MAX_RETRIES) {
+                        // Merge current data with updates
+                        const mergedData = {
+                            ...updateData,
+                            version: currentVersion + 1
+                        };
+
                         const delay = BASE_DELAY * Math.pow(2, retryCount);
                         await new Promise(resolve => setTimeout(resolve, delay));
-                        return this.setUserInfo(userId, updateData, retryCount + 1);
+                        return this.setUserInfo(userId, mergedData, retryCount + 1);
                     }
-                    throw createError('9999', 'Data was modified by another request');
+                    
+                    throw createError('9999', 'Profile update failed due to concurrent modifications. Please try again.');
                 }
 
                 // Ensure avatar is always a string

@@ -367,6 +367,7 @@ const loadUserData = async () => {
                 coverPhoto: null,
                 existingAvatar: userData.avatar || '',
                 existingCoverPhoto: userData.coverPhoto || '',
+                version: userData.version || 0
             };
 
             initialForm.value = { ...form.value };
