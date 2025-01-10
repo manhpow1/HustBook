@@ -12,7 +12,9 @@
                     <div class="flex items-center gap-4">
                         <Avatar class="w-20 h-20">
                             <AvatarImage v-if="avatarPreview" :src="avatarPreview" />
-                            <AvatarFallback>{{ getInitials(form.userName) }}</AvatarFallback>
+                            <AvatarFallback>
+                                {{ form.userName ? form.userName.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) : 'U' }}
+                            </AvatarFallback>
                         </Avatar>
                         <div class="flex-1">
                             <div class="flex gap-2">
