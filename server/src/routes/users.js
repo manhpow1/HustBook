@@ -5,10 +5,26 @@
  *   description: User account and profile management endpoints
  */
 import { Router } from 'express';
+import multer from 'multer';
 import { authenticateToken } from '../middleware/auth.js';
 import userController from '../controllers/userController.js';
 import userStatusController from '../controllers/userStatusController.js';
 import { setBlockLimiter } from '../middleware/rateLimiter.js';
+const upload = multer({
+    storage: multer.memoryStorage(),
+    limits: {
+        fileSize: 5 * 1024 * 1024, // 5MB limit
+        files: 4 // Maximum 4 files
+    },
+    fileFilter: (req, file, cb) => {
+        if (!file.mimetype.match(/^image\/(jpeg|png|gif)$/)) {
+            cb(createError('1004', 'Invalid file type'), false);
+            return;
+        }
+        cb(null, true);
+    }
+});
+
 const router = Router();
 /**
  * @swagger
@@ -99,70 +115,57 @@ const router = Router();
 router.get('/profile/:userId?', authenticateToken, userController.getUserInfo);
 
 // Legacy endpoint maintained for backward compatibility
-router.get('/get_user_info/:userId?', authenticateToken, userController.getUserInfo);
+// router.get('/get_user_info/:userId?', authenticateToken, userController.getUserInfo);
 
 /**
  * @swagger
- * /users/set_user_info:
- *   put:
- *     summary: Update user information
- *     tags: [User]
+ * /users/profile/{userId}:
+ *   patch:
+ *     summary: Update user profile
+ *     tags: [Users]
  *     security:
  *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: userId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: User ID
  *     requestBody:
- *       description: Fields to update. If no fields provided, returns current user info.
- *       required: false
+ *       required: true
  *       content:
- *         application/json:
+ *         multipart/form-data:
  *           schema:
  *             type: object
  *             properties:
  *               userName:
  *                 type: string
- *               description:
- *                 type: string
- *               avatar:
+ *               bio:
  *                 type: string
  *               address:
  *                 type: string
  *               city:
- *                 type: string
+ *                 type: string  
  *               country:
  *                 type: string
- *               cover_image:
+ *               avatar:
  *                 type: string
- *               link:
+ *                 format: binary
+ *               coverPhoto:
  *                 type: string
+ *                 format: binary
  *     responses:
  *       200:
- *         description: User info updated or retrieved
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 code:
- *                   type: string
- *                   example: "1000"
- *                 data:
- *                   type: object
- *                   properties:
- *                     avatar:
- *                       type: string
- *                     cover_image:
- *                       type: string
- *                     link:
- *                       type: string
- *                     city:
- *                       type: string
- *                     country:
- *                       type: string
+ *         description: Profile updated successfully
  *       400:
- *         description: Validation error
+ *         description: Invalid request
+ *       401:
+ *         description: Unauthorized
  *       404:
  *         description: User not found
  */
-router.put('/set_user_info', authenticateToken, userController.setUserInfo);
+router.patch('/profile/:userId', authenticateToken, upload.fields([ { name: 'avatar', maxCount: 1 }, { name: 'coverPhoto', maxCount: 1 }]), userController.setUserInfo );
 
 /**
  * @swagger
