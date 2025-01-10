@@ -120,9 +120,9 @@
         </div>
         <Card v-else class="text-center p-6">
           <CardContent class="space-y-4">
-            <p class="text-muted-foreground">Please log in to view and create posts.</p>
+            <p class="text-muted-foreground">Please sign in to view and create posts.</p>
             <RouterLink to="/login">
-              <Button>Log In</Button>
+              <Button>Sign In</Button>
             </RouterLink>
           </CardContent>
         </Card>
@@ -174,8 +174,10 @@ const mappedPosts = computed(() =>
   }))
 );
 
-const handlePostCreated = (newPost) => {
+const handlePostCreated = async () => {
   postStore.posts.unshift(newPost);
+  postStore.resetPosts();
+  await postStore.fetchPosts();
 };
 
 const loadMorePosts = () => postStore.fetchPosts();

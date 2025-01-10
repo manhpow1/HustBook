@@ -118,8 +118,6 @@ const handleFilesChange = async (newFiles) => {
     if (!newFiles?.length) return
     console.log('Files selected:', newFiles)
 
-    const currentDescription = description.value; // Store current description
-
     // Validate file count
     if (newFiles.length > 4) {
         toast({
@@ -166,8 +164,6 @@ const handleFilesChange = async (newFiles) => {
         };
         reader.readAsDataURL(file);
     }
-
-    description.value = currentDescription; // Restore description after file handling
 };
 
 const removeFile = (index) => {

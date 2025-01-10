@@ -12,7 +12,7 @@
                 ]" />
                 <Loader2Icon v-if="isLiking" class="absolute inset-0 h-5 w-5 animate-spin" />
                 <span>{{ formattedLikes }}</span>
-                <span class="sr-only">likes</span>
+                <span class="sr-only">Likes</span>
             </div>
         </Button>
 
@@ -21,7 +21,7 @@
             <div class="flex items-center gap-2">
                 <MessageSquareIcon class="h-5 w-5" />
                 <span>{{ formattedComments }}</span>
-                <span class="sr-only">comments</span>
+                <span class="sr-only">Comments</span>
             </div>
         </Button>
 
@@ -46,45 +46,63 @@ import { Toaster } from '@/components/ui/toast'
 import { HeartIcon, MessageSquareIcon, ShareIcon, Loader2Icon } from 'lucide-vue-next'
 import { formatNumber } from '@/utils/numberFormat'
 import { useDebounce } from '@/composables/useDebounce'
+import { useErrorHandler } from '@/utils/errorHandler';
+import logger from '@/services/logging';
 
 const props = defineProps({
     post: {
         type: Object,
         required: true,
         validator(post) {
-            return post && typeof post === 'object' && 'postId' in post
+            return post && typeof post === 'object' && 'postId' in post;
         }
     }
-})
+});
 
-const emit = defineEmits(['comment', 'like'])
-
-const postStore = usePostStore()
-const { toast } = useToast()
-const isLiking = ref(false)
+const emit = defineEmits(['comment', 'like']);
+const postStore = usePostStore();
+const { toast } = useToast();
+const { handleError } = useErrorHandler();
+const isLiking = ref(false);
 
 // Computed
-const formattedLikes = computed(() => formatNumber(props.post.like || 0))
-const formattedComments = computed(() => formatNumber(props.post.comment || 0))
+const formattedLikes = computed(() => {
+    const count = parseInt(props.post?.likes) || 0;
+    return formatNumber(Math.max(0, count));
+});
+
+const formattedComments = computed(() => {
+    const count = parseInt(props.post?.comments) || 0;
+    return formatNumber(Math.max(0, count));
+});
 
 // Methods
 const handleLike = async () => {
-    if (isLiking.value) return
+    if (isLiking.value || !props.post?.postId) return;
 
-    isLiking.value = true
+    isLiking.value = true;
     try {
-        await postStore.toggleLike(props.post.postId)
+        await postStore.toggleLike(props.post.postId);
+        emit('like', {
+            postId: props.post.postId,
+            isLiked: props.post.isLiked === "1" ? "0" : "1",
+            likeCount: parseInt(props.post.likeCount || 0) + (props.post.isLiked === "1" ? -1 : 1)
+        });
     } catch (error) {
+        handleError(error);
         toast({
             title: "Error",
-            description: "Failed to like post. Please try again.",
+            description: "Unable to process like action. Please try again.",
             variant: "destructive"
-        })
-        logger.error('Error toggling like:', error)
+        });
+        logger.error('Like action failed:', { 
+            postId: props.post.postId,
+            error: error.message 
+        });
     } finally {
-        isLiking.value = false
+        isLiking.value = false;
     }
-}
+};
 
 const debouncedHandleLike = useDebounce(handleLike, 300)
 
@@ -93,27 +111,44 @@ const handleComment = () => {
 }
 
 const handleShare = async () => {
+    if (!props.post?.postId) {
+        logger.warn('Share attempted with invalid post');
+        return;
+    }
+
     try {
-        if (navigator.share) {
-            await navigator.share({
-                title: 'Share Post',
-                text: props.post.content,
-                url: window.location.href
-            })
+        const postUrl = `${window.location.origin}/post/${props.post.postId}`;
+        const shareData = {
+            title: 'Share Post from HUSTBOOK',
+            text: props.post.content?.substring(0, 100) + (props.post.content?.length > 100 ? '...' : ''),
+            url: postUrl
+        };
+
+        if (navigator.share && navigator.canShare(shareData)) {
+            await navigator.share(shareData);
+            logger.info('Post shared successfully', { postId: props.post.postId });
         } else {
-            await navigator.clipboard.writeText(window.location.href)
+            await navigator.clipboard.writeText(postUrl);
             toast({
-                description: "Link copied to clipboard"
-            })
+                title: "Success",
+                description: "Post link copied to clipboard",
+                duration: 2000
+            });
+            logger.info('Post URL copied to clipboard', { postId: props.post.postId });
         }
     } catch (error) {
         if (error.name !== 'AbortError') {
+            handleError(error);
             toast({
-                title: "Error",
-                description: "Failed to share post",
+                title: "Share Failed",
+                description: "Unable to share post at this time",
                 variant: "destructive"
-            })
+            });
+            logger.error('Share action failed:', {
+                postId: props.post.postId,
+                error: error.message
+            });
         }
     }
-}
+};
 </script>

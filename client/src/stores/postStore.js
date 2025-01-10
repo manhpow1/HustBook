@@ -1,6 +1,7 @@
 import { defineStore } from "pinia";
 import { ref, computed } from "vue";
 import apiService from "../services/api";
+import { useUserStore } from "./userStore";
 import { formatNumber } from "../utils/numberFormat";
 import { useErrorHandler } from "@/utils/errorHandler";
 import { useImageProcessing } from "@/composables/useImageProcessing";
@@ -386,13 +387,30 @@ export const usePostStore = defineStore("post", () => {
             post.userName = post.userName || "Anonymous User";
 
             // Validate inappropriate content
-            if (containsInappropriateContent(post.content)) return null;
+            if (containsInappropriateContent(post.content)) {
+                logger.debug('Post contains inappropriate content');
+                return null;
+            }
+
+            // Check if the current user is the owner of the post
+            const userStore = useUserStore();
+            const currentUserId = userStore.userData?.userId;
+            const isOwner = currentUserId === post.userId;
+
+            logger.debug('Post ownership check:', { 
+                postId: post.postId,
+                postUserId: post.userId,
+                currentUserId,
+                isOwner 
+            });
 
             return {
                 ...post,
                 userId: post.userId,
                 userName: post.userName,
                 userAvatar: post.userAvatar || "",
+                isOwner,
+                lastModified: new Date().toISOString()
             };
         } catch (err) {
             console.error("Error validating post:", err);

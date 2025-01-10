@@ -13,16 +13,13 @@
                     <!-- Description Field -->
                     <FormField v-slot="{ messages }" name="description">
                         <FormItem>
-                            <FormLabel>Description</FormLabel>
+                            <FormLabel>Content</FormLabel>
                             <FormControl>
                                 <MarkdownEditor v-model="form.description" :maxLength="1000"
                                     placeholder="What's on your mind?" @input="validateDescription"
                                     :disabled="isLoading" />
                             </FormControl>
                             <FormMessage>{{ descriptionError }}</FormMessage>
-                            <FormDescription>
-                                {{ form.description.length }}/1000 characters
-                            </FormDescription>
                         </FormItem>
                     </FormField>
 
@@ -308,6 +305,11 @@ const handleSubmit = async () => {
             title: "Success",
             description: "Post updated successfully",
         });
+        
+        // Clear the form
+        form.value.description = '';
+        form.value.media = [];
+        mediaPreviews.value = [];
 
         router.push({
             name: "PostDetail",
@@ -340,7 +342,7 @@ const closeUnsavedDialog = () => {
 
 const discardChanges = () => {
     showUnsavedDialog.value = false;
-    router.back();
+    router.push('/');
 };
 
 // Lifecycle Hooks

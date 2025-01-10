@@ -68,7 +68,7 @@
                         <PostContent :post="post" :showFullContent="showFullContent" @toggleContent="toggleContent"
                             @hashtagClick="handleHashtagClick" />
 
-                        <PostMedia v-if="post.media?.length || post.video" :post="post"
+                        <PostMedia v-if="post.images?.length || post.video" :post="post"
                             @uncoverMedia="handleUncoverMedia" @like="handleLike" @comment="focusCommentInput" />
 
                         <Separator />

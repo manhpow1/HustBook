@@ -141,6 +141,11 @@ const onInput = () => {
     debouncedSaveDraft();
 };
 
+const clearContent = () => {
+    localContent.value = '';
+    emit('update:modelValue', '');
+};
+
 const insertMarkdown = (syntax) => {
     const textareaEl = textarea.value;
     const start = textareaEl.selectionStart;

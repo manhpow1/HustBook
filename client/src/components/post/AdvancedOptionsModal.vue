@@ -39,7 +39,7 @@
 
       <div class="grid gap-4 py-4">
         <div class="space-y-2">
-          <div>
+          <div v-if="post.isOwner">
             <Button variant="ghost" class="w-full justify-start" @click="navigateToEdit">
               <PencilIcon class="mr-2 h-4 w-4" />
               Edit Post
@@ -51,7 +51,7 @@
             </Button>
           </div>
 
-          <div>
+          <div class="mt-2">
             <Button variant="ghost" class="w-full justify-start text-destructive" @click="showReportModal = true">
               <Flag class="mr-2 h-4 w-4" />
               Report Post

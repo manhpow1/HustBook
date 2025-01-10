@@ -49,7 +49,7 @@
                     </FormField>
 
                     <div class="space-y-4">
-                        <Button v-if="!verificationSuccess" type="submit" class="w-full"
+                        <Button type="submit" class="w-full"
                             :disabled="!isCodeComplete || isLoading" :loading="isLoading">
                             <ShieldCheck v-if="!isLoading" class="h-4 w-4 mr-2" />
                             Verify Code
@@ -67,13 +67,6 @@
                         </Button>
                     </div>
                     </form>
-
-                    <Button v-if="verificationSuccess" variant="success" class="w-full mt-4"
-                            @click="router.push({ name: 'CompleteProfile', query: { phoneNumber } })">
-                            <UserPlus class="h-4 w-4 mr-2" />
-                            Complete Your Profile
-                        </Button>
-
                 <!-- Back Button -->
                 <div class="mt-4">
                     <button @click="goBack"
@@ -157,14 +150,17 @@ const handleSubmit = async () => {
     const result = await userStore.verifyCode(phoneNumber.value, verifyCode);
 
     if (result.success) {
-        verificationSuccess.value = true;
         if (result.exists) {
             const token = result.token;
             if (token) {
                 localStorage.setItem('user', JSON.stringify({ isVerified: true }));
-                Cookies.set('accessToken', token, { expires: 1 / 96 });
+                Cookies.set('accessToken', token);
             }
         }
+        router.push({ 
+            name: 'CompleteProfile', 
+            query: { phoneNumber: phoneNumber.value } 
+        });
     } else if (isVerifyCodeExpired.value) {
         codeDigits.value = Array(6).fill('');
         digitInputs.value[0]?.focus();
