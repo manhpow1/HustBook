@@ -30,7 +30,7 @@
                             <FormControl>
                                 <FileUpload v-model="form.media" :maxFiles="4" accept="image/*"
                                     :initialFiles="initialMedia" mode="edit" @change="handleMediaChange"
-                                    @error="handleUploadError" class="h-32" />
+                                    @error="handleUploadError" className="h-30" />
                             </FormControl>
                             <FormMessage>{{ mediaError }}</FormMessage>
                             <FormDescription>
