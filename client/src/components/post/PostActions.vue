@@ -82,11 +82,14 @@ const handleLike = async () => {
 
     isLiking.value = true;
     try {
-        await postStore.toggleLike(props.post.postId);
+        const result = await postStore.toggleLike(props.post.postId);
+        const newLikeStatus = props.post.isLiked === "1" ? "0" : "1";
+        const newLikeCount = parseInt(props.post.likes || 0) + (newLikeStatus === "1" ? 1 : -1);
+        
         emit('like', {
             postId: props.post.postId,
-            isLiked: props.post.isLiked === "1" ? "0" : "1",
-            likeCount: parseInt(props.post.likeCount || 0) + (props.post.isLiked === "1" ? -1 : 1)
+            isLiked: newLikeStatus,
+            likes: Math.max(0, newLikeCount)
         });
     } catch (error) {
         handleError(error);

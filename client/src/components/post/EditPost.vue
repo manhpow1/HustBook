@@ -167,6 +167,9 @@ const { handleError } = useErrorHandler();
 const { compressImage } = useImageProcessing();
 const currentPost = computed(() => postStore.currentPost);
 
+// Component refs
+const editorRef = ref(null);
+
 // Form State
 const form = ref({
     description: "",
@@ -306,10 +309,11 @@ const handleSubmit = async () => {
             description: "Post updated successfully",
         });
         
-        // Clear the form
+        // Clear the form and draft
         form.value.description = '';
         form.value.media = [];
         mediaPreviews.value = [];
+        editorRef.value?.clearDraft();
 
         router.push({
             name: "PostDetail",

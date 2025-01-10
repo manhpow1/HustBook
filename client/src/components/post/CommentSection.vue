@@ -153,6 +153,8 @@ const onInput = () => {
     debouncedValidateInput(newComment.value, inputError);
 };
 
+const commentInput = ref(null);
+
 const onAddComment = async () => {
     if (!newComment.value.trim()) {
         inputError.value = "Comment cannot be empty";
@@ -175,7 +177,7 @@ const onAddComment = async () => {
         );
         
         if (addedComment) {
-            newComment.value = "";
+            commentInput.value?.clearDraft();
             notificationStore.showNotification(
                 "Comment posted successfully",
                 "success"

@@ -305,12 +305,16 @@ const handleKeyDown = (event) => {
 // Autosave
 const debouncedSaveDraft = debounce(() => {
     localStorage.setItem('markdown-editor-content', localContent.value);
-    localStorage.setItem('markdown-editor-content', localContent.value);
     autosaveStatus.value = `Autosaved at ${new Date().toLocaleTimeString()}`;
     setTimeout(() => {
         autosaveStatus.value = '';
     }, 3000);
 }, 1000);
+
+const clearDraft = () => {
+    localStorage.removeItem('markdown-editor-content');
+    clearContent();
+};
 
 // Watchers
 watch(() => props.modelValue, (newValue) => {
@@ -318,6 +322,8 @@ watch(() => props.modelValue, (newValue) => {
         localContent.value = newValue;
     }
 });
+
+defineExpose({ clearDraft });
 
 // Lifecycle
 onMounted(() => {

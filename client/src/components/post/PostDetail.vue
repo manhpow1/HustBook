@@ -73,7 +73,7 @@
 
                         <Separator />
 
-                        <PostActions :post="post" @like="handleLike" @comment="focusCommentInput" />
+                        <PostActions :post="post" @like="handleLike" @comment="focusCommentInput" @updateComments="updateCommentCount" />
 
                         <PostBanWarning v-if="post.banned && post.banned !== '0'" :banStatus="post.banned" />
 
@@ -88,7 +88,8 @@
                             <CommentSection v-else :postId="post.postId" :comments="comments"
                                 @addComment="handleComment" @updateComment="handleCommentUpdate"
                                 @deleteComment="handleCommentDelete" @loadMore="loadMoreComments"
-                                :loading="loadingMoreComments" :error="commentError" @retry="retryLoadComments" />
+                                :loading="loadingMoreComments" :error="commentError" @retry="retryLoadComments"
+                                @update:comments="updateCommentCount" />
                         </div>
                     </CardContent>
                 </Card>
@@ -200,13 +201,24 @@ const handleLike = async () => {
 
 const handleComment = async (content) => {
     try {
-        await commentStore.addComment(post.value.postId, content);
+        const newComment = await commentStore.addComment(post.value.postId, content);
+        if (newComment && post.value) {
+            const newCount = (parseInt(post.value.comments) || 0) + 1;
+            post.value.comments = newCount;
+            updateCommentCount(newCount);
+        }
     } catch (err) {
         toast({
             title: "Error",
             description: "Failed to add comment",
             variant: "destructive",
         });
+    }
+};
+
+const updateCommentCount = (newCount) => {
+    if (post.value) {
+        post.value.comments = newCount;
     }
 };
 

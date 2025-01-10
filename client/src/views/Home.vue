@@ -66,7 +66,7 @@
                     <div v-if="post.media.length" class="mt-4">
                       <div class="grid gap-2 media-grid" :class="mediaGridClass(post.media.length)">
                         <div v-for="(media, index) in post.media" :key="index"
-                          class="relative rounded-lg overflow-hidden media-item">
+                          class="relative rounded-lg overflow-hidden media-item aspect-[4/3]">
                           <AspectRatio :ratio="16 / 9">
                             <img v-if="isImage(media)" :src="media" :alt="`Post image ${index + 1}`"
                               class="w-full h-full object-contain min-h-[200px] max-h-[512px]" loading="lazy" />
@@ -195,7 +195,6 @@ const mediaGridClass = (count) => ({
   "grid-cols-2": count === 2 || count === 4,
   "grid-cols-3": count === 3,
   "grid-rows-2": count === 4,
-  "aspect-square": count === 2 || count === 4,
   "gap-1": count > 1,
 });
 

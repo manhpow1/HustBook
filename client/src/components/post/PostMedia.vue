@@ -116,7 +116,14 @@ const { toast } = useToast();
 const showLightbox = ref(false);
 const currentMediaIndex = ref(0);
 
-const mediaList = computed(() => createMediaList(props.post));
+const mediaList = computed(() => {
+    if (!props.post) return [];
+    return props.post.images?.map((url, index) => ({
+        type: 'image',
+        url,
+        index
+    })) || [];
+});
 
 // Methods
 const openLightbox = (index) => {
