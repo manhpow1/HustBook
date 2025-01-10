@@ -10,16 +10,11 @@
 
                 <!-- Media Content -->
                 <div v-if="currentMedia.type === 'image'" class="flex items-center justify-center">
-                    <img :src="getOptimizedImageUrl(currentMedia.url)" :srcset="getImageSrcSet(currentMedia.url)"
-                        sizes="(max-width: 768px) 100vw, 80vw" :alt="currentMedia.alt || 'Post Media'"
-                        class="max-w-full max-h-[90vh] object-contain" loading="lazy" @click="handleImageClick" />
-                </div>
-
-                <div v-else-if="currentMedia.type === 'video'" class="flex items-center justify-center">
-                    <video ref="videoPlayer" :src="currentMedia.url" class="max-w-full max-h-[90vh]" controls
-                        @click="handleVideoClick" loading="lazy">
-                        Your browser does not support the video tag.
-                    </video>
+                    <img :src="currentMedia.url"
+                        :alt="currentMedia.alt || 'Post Media'"
+                        class="max-w-full max-h-[90vh] object-contain transition-transform duration-300 group-hover:scale-105" 
+                        loading="lazy" 
+                        @click="handleImageClick" />
                 </div>
 
                 <!-- Navigation Buttons -->
@@ -59,7 +54,6 @@ import { Button } from '@/components/ui/button';
 import { useRateLimiter } from '../../composables/useRateLimiter';
 import { useErrorHandler } from '@/utils/errorHandler';
 import { useToast } from '../ui/toast';
-import { useMediaUtils } from '@/composables/useMediaUtils';
 
 // Define component props
 const props = defineProps({
@@ -72,9 +66,8 @@ const props = defineProps({
         required: true,
         validator: (value) => {
             return value.every(item => 
-                item.type === 'image' || item.type === 'video' &&
-                typeof item.url === 'string' &&
-                typeof item.covered === 'boolean'
+                (item.type === 'image' || item.type === 'video') &&
+                typeof item.url === 'string'
             );
         }
     },
@@ -101,7 +94,6 @@ const props = defineProps({
 
 // Define component emits
 const emit = defineEmits(['close', 'like', 'comment']);
-const { getOptimizedImageUrl, getImageSrcSet } = useMediaUtils();
 
 // Composables and utilities
 const { handleError } = useErrorHandler();

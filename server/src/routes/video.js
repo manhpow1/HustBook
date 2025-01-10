@@ -80,7 +80,7 @@ const router = Router();
  *                           created:
  *                             type: string
  *                             format: date-time
- *                           like:
+ *                           likes:
  *                             type: string
  *                             example: "10"
  *                           comment:

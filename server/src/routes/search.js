@@ -64,7 +64,7 @@ const router = Router();
  *                       video:
  *                         type: string
  *                         example: "http://example.com/video.mp4"
- *                       like:
+ *                       likes:
  *                         type: string
  *                         example: "10"
  *                       comment:

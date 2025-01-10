@@ -82,9 +82,10 @@ const handleLike = async () => {
 
     isLiking.value = true;
     try {
-        const result = await postStore.toggleLike(props.post.postId);
-        const newLikeStatus = props.post.isLiked === "1" ? "0" : "1";
-        const newLikeCount = parseInt(props.post.likes || 0) + (newLikeStatus === "1" ? 1 : -1);
+        await postStore.toggleLike(props.post.postId);
+        const currentLikeStatus = props.post.isLiked === "1";
+        const newLikeStatus = currentLikeStatus ? "0" : "1";
+        const newLikeCount = parseInt(props.post.likes || 0) + (currentLikeStatus ? -1 : 1);
         
         emit('like', {
             postId: props.post.postId,

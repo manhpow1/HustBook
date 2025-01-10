@@ -58,8 +58,8 @@
                         <Button variant="ghost" size="sm" :class="{ 'text-primary': commentData.isLiked }"
                             @click="toggleLike" :disabled="isLikeLoading">
                             <ThumbsUpIcon class="h-4 w-4 mr-2" :class="{ 'fill-current': commentData.isLiked }" />
-                            <span>{{ commentData.like }}
-                                {{ commentData.like === 1 ? "Like" : "Likes" }}</span>
+                            <span>{{ commentData.likes }}
+                                {{ commentData.likes === 1 ? "Like" : "Likes" }}</span>
                             <Loader2Icon v-if="isLikeLoading" class="ml-2 h-4 w-4 animate-spin" />
                         </Button>
                         <Button variant="ghost" size="sm" @click="toggleReply">
@@ -238,10 +238,14 @@ const toggleLike = async () => {
     if (isLikeLoading.value) return;
     isLikeLoading.value = true;
     try {
+        const currentLikeStatus = commentData.value.isLiked;
+        const newLikeStatus = !currentLikeStatus;
+        const newLikeCount = commentData.value.likes + (currentLikeStatus ? -1 : 1);
+        
         await emit("update", {
-            commentId: props.comment.commentId,
-            isLiked: !props.comment.isLiked,
-            like: props.comment.like + (props.comment.isLiked ? -1 : 1),
+            commentId: commentData.value.commentId,
+            isLiked: newLikeStatus,
+            likes: Math.max(0, newLikeCount)
         });
     } catch (error) {
         console.error("Error toggling like:", error);

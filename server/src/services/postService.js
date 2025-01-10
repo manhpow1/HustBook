@@ -436,7 +436,7 @@ class PostService {
                     commentId: comment.commentId,
                     content: comment.content,
                     created: comment.createdAt?.toDate?.()?.toISOString() || new Date().toISOString(),
-                    like: parseInt(comment.likes || 0),
+                    likes: parseInt(comment.likes || 0),
                     isLiked: Boolean(comment.isLiked),
                     user: {
                         userId: comment.userId,

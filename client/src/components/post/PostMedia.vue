@@ -83,7 +83,7 @@
         </div>
         <!-- Media Viewer Modal -->
         <MediaViewer v-if="showLightbox" :is-open="showLightbox" :media-list="mediaList"
-            :initial-index="currentMediaIndex" :likes="post.like" :comments="post.comment"
+            :initial-index="currentMediaIndex" :likes="post.likes" :comments="post.comments"
             :is-liked="post.isLiked === '1'" @close="closeLightbox" @like="handleLike" @comment="handleComment" />
     </div>
 </template>

@@ -28,7 +28,7 @@ class SearchService {
                 postId: post.postId,
                 image: post.images?.[0] || '',
                 video: post.video || '',
-                like: post.likes?.toString() || '0',
+                likes: post.likes?.toString() || '0',
                 comment: post.comments?.toString() || '0',
                 isLiked: post.isLiked ? '1' : '0',
                 author: {

@@ -105,7 +105,7 @@ export const useCommentStore = defineStore('comment', () => {
                 commentId,
                 content: commentContent,
                 created: new Date().toISOString(),
-                like: 0,
+                likes: 0,
                 isLiked: false,
                 user: {
                     userId: user?.userId || '',

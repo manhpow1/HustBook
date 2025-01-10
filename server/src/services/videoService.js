@@ -39,7 +39,7 @@ class VideoService {
                     },
                     content: data.description,
                     created: data.createdAt.toDate().toISOString(),
-                    like: data.likes.toString(),
+                    likes: data.likes.toString(),
                     comment: data.comments.toString(),
                     isLiked: data.likedBy && data.likedBy.includes(userId) ? '1' : '0',
                     isBlocked: data.blockedBy && data.blockedBy.includes(userId) ? '1' : '0',
