@@ -102,9 +102,9 @@ const apiService = {
         return this.get(url);
     },
 
-    async updateProfile(userId, data) {
+    async updateProfile(userId, formData) {
         const url = API_ENDPOINTS.UPDATE_PROFILE(userId);
-        return this.put(url, data, {
+        return this.patch(url, formData, {
             headers: {
                 'Content-Type': 'multipart/form-data'
             }

@@ -389,16 +389,15 @@ class UserController {
 
     async setUserInfo(req, res, next) {
         try {
-            const formData = req.body;
             const userId = req.user.userId;
-            const files = req.files;
+            const formData = req.body;
+            const files = req.files || {};
 
             const { error, value } = userValidator.validateSetUserInfo(formData);
             if (error) {
                 throw createError('1002', error.details[0].message);
             }
 
-            // Handle file uploads
             // Generate userNameLowerCase array if userName is being updated
             const userNameLowerCase = value.userName ? 
                 value.userName.toLowerCase().split(' ').filter(Boolean) : 
@@ -410,15 +409,20 @@ class UserController {
                 ...(userNameLowerCase && { userNameLowerCase })
             };
 
-            if (files) {
-                if (files.coverPhoto) {
-                    const coverPhotoUrl = await handleCoverPhotoUpload(files.coverPhoto[0], userId);
-                    updateData.coverPhoto = coverPhotoUrl;
-                }
-                if (files.avatar) {
-                    const avatarUrl = await handleAvatarUpload(files.avatar[0], userId);
-                    updateData.avatar = avatarUrl;
-                }
+            // Handle avatar file
+            if (files.avatar) {
+                const avatarUrl = await handleAvatarUpload(files.avatar[0], userId);
+                updateData.avatar = avatarUrl;
+            } else if (formData.existingAvatar !== undefined) {
+                updateData.avatar = formData.existingAvatar;
+            }
+
+            // Handle cover photo file
+            if (files.coverPhoto) {
+                const coverPhotoUrl = await handleCoverPhotoUpload(files.coverPhoto[0], userId);
+                updateData.coverPhoto = coverPhotoUrl;
+            } else if (formData.existingCoverPhoto !== undefined) {
+                updateData.coverPhoto = formData.existingCoverPhoto;
             }
 
             const updatedUser = await userService.setUserInfo(userId, updateData);
@@ -441,7 +445,8 @@ class UserController {
                     address: updatedUser.address,
                     city: updatedUser.city,
                     country: updatedUser.country,
-                    version: updatedUser.version
+                    version: updatedUser.version,
+                    userNameLowerCase: updatedUser.userNameLowerCase
                 }
             });
         } catch (error) {

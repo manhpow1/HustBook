@@ -354,72 +354,61 @@ const validateGetVerifyCode = (data) => {
  */
 const setUserInfoSchema = Joi.object({
     userName: Joi.string()
-        .min(2)
-        .max(50)
+        .min(3)
+        .max(30)
         .pattern(/^[a-zA-Z\s]*$/)
-        .optional()
         .messages({
-            'string.min': 'Username must be at least 2 characters.',
-            'string.max': 'Username cannot exceed 50 characters.',
-            'string.pattern.base': 'Username can only contain letters and spaces.'
+            'string.min': 'Username must be at least 3 characters',
+            'string.max': 'Username cannot exceed 30 characters',
+            'string.pattern.base': 'Username can only contain letters and spaces'
         }),
     userNameLowerCase: Joi.array()
         .items(Joi.string().lowercase().trim())
         .default(() => [])
-        .strip(), // This field will be generated server-side
+        .strip(),
     bio: Joi.string()
         .max(200)
-        .optional()
         .allow('')
         .messages({
-            'string.max': 'Bio cannot exceed 200 characters.'
+            'string.max': 'Bio cannot exceed 200 characters'
         }),
     avatar: Joi.alternatives().try(
-        Joi.string().uri().messages({
-            'string.uri': 'Avatar must be a valid URL'
+        Joi.string().messages({
+            'string.base': 'Avatar must be a string'
         }),
         Joi.object().unknown(true).messages({
-            'object.base': 'Avatar must be a valid file object'
+            'object.base': 'Avatar must be a valid file'
         }),
-        Joi.any().allow(null)
-    )
-        .optional()
-        .messages({
-            'alternatives.types': 'Avatar must be either a URL string or file object'
-        }),
+        Joi.any().allow(null, '')
+    ),
+    existingAvatar: Joi.string().allow('', null),
     coverPhoto: Joi.alternatives().try(
-        Joi.string().uri().messages({
-            'string.uri': 'Cover photo must be a valid URL'
+        Joi.string().messages({
+            'string.base': 'Cover photo must be a string'
         }),
         Joi.object().unknown(true).messages({
-            'object.base': 'Cover photo must be a valid file object'
+            'object.base': 'Cover photo must be a valid file'
         }),
-        Joi.any().allow(null)
-    )
-        .optional()
-        .messages({
-            'alternatives.types': 'Cover photo must be either a URL string or file object'
-        }),
+        Joi.any().allow(null, '')
+    ),
+    existingCoverPhoto: Joi.string().allow('', null),
     address: Joi.string()
         .max(100)
-        .optional()
         .allow('')
         .messages({
-            'string.max': 'Address cannot exceed 100 characters.'
+            'string.max': 'Address cannot exceed 100 characters'
         }),
     city: Joi.string()
         .max(50)
-        .optional()
         .allow('')
         .messages({
-            'string.max': 'City cannot exceed 50 characters.'
+            'string.max': 'City cannot exceed 50 characters'
         }),
     country: Joi.string()
         .max(50)
-        .optional()
         .allow('')
         .messages({
-            'string.max': 'Country cannot exceed 50 characters.'
+            'string.max': 'Country cannot exceed 50 characters'
         })
 }).min(1).required();
 

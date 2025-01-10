@@ -620,31 +620,37 @@ export const useUserStore = defineStore('user', () => {
         }
     };
 
-    /**
- * Updates user profile information
- * @param {Object} updateData - Profile data to update
- * @returns {Promise<boolean>} Success status
- */
     const updateUserProfile = async (userId, updateData) => {
         try {
+            isLoading.value = true;
+            error.value = null;
+
             const formData = new FormData();
 
-            Object.keys(updateData).forEach(key => {
-                if (updateData[key] !== null && updateData[key] !== undefined) {
-                    if (key === 'avatar' || key === 'coverPhoto') {
-                        if (updateData[key] instanceof File) {
-                            formData.append(key, updateData[key]);
-                        }
-                    } else {
-                        formData.append(key, updateData[key]);
-                    }
+            // Handle basic fields
+            ['userName', 'bio', 'address', 'city', 'country'].forEach(field => {
+                if (updateData[field] !== null && updateData[field] !== undefined) {
+                    formData.append(field, updateData[field]);
                 }
             });
 
+            // Handle avatar
+            if (updateData.avatar instanceof File) {
+                formData.append('avatar', updateData.avatar);
+            } else if (updateData.existingAvatar !== undefined) {
+                formData.append('existingAvatar', updateData.existingAvatar);
+            }
+
+            // Handle cover photo
+            if (updateData.coverPhoto instanceof File) {
+                formData.append('coverPhoto', updateData.coverPhoto);
+            } else if (updateData.existingCoverPhoto !== undefined) {
+                formData.append('existingCoverPhoto', updateData.existingCoverPhoto);
+            }
+
             const response = await apiService.updateProfile(userId, formData);
 
-            if (response.data.code === '1000') {
-                // Update local user data if updating own profile
+            if (response.data?.code === '1000') {
                 if (userId === user.value?.userId) {
                     user.value = {
                         ...user.value,
@@ -656,7 +662,7 @@ export const useUserStore = defineStore('user', () => {
 
             throw new Error(response.data?.message || 'Failed to update profile');
         } catch (err) {
-            logger.error('Update profile failed:', err);
+            logger.error('Profile update error:', err);
             throw err;
         } finally {
             isLoading.value = false;
@@ -672,7 +678,7 @@ export const useUserStore = defineStore('user', () => {
             if (!userData) {
                 throw new Error('Failed to fetch user profile');
             }
-            
+
             return userData;
         } catch (err) {
             logger.error('Failed to fetch user profile:', err);

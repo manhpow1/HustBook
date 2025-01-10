@@ -478,30 +478,22 @@ class UserService {
                 throw createError('1003', 'Please wait a moment before updating again');
             }
 
-            // Handle cover image upload if provided
-            if (updateData.coverFile) {
+            // Handle old file deletion if needed
+            if (updateData.avatar === '' && user.avatar) {
                 try {
-                    logger.info('Processing cover photo upload', { userId });
-                    const uploadedCoverUrl = await handleCoverPhotoUpload(updateData.coverFile, userId);
+                    await deleteFileFromStorage(user.avatar);
+                    logger.info('Deleted old avatar', { userId });
+                } catch (error) {
+                    logger.warn('Failed to delete old avatar', { userId, error: error.message });
+                }
+            }
 
-                    if (uploadedCoverUrl) {
-                        // Delete old cover photo if exists
-                        if (user.coverPhoto) {
-                            try {
-                                await deleteFileFromStorage(user.coverPhoto);
-                                logger.info('Deleted old cover photo', { userId });
-                            } catch (deleteError) {
-                                logger.warn('Failed to delete old cover photo', {
-                                    userId,
-                                    error: deleteError.message
-                                });
-                            }
-                        }
-                        updateData.coverPhoto = uploadedCoverUrl;
-                    }
-                } catch (uploadError) {
-                    logger.error('Cover photo upload failed:', uploadError);
-                    throw createError('9999', 'Failed to upload cover photo');
+            if (updateData.coverPhoto === '' && user.coverPhoto) {
+                try {
+                    await deleteFileFromStorage(user.coverPhoto);
+                    logger.info('Deleted old cover photo', { userId });
+                } catch (error) {
+                    logger.warn('Failed to delete old cover photo', { userId, error: error.message });
                 }
             }
 
