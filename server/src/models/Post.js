@@ -15,6 +15,7 @@ class Post {
     }) {
         if (!userId) throw new Error('userId is required');
         if (!content) throw new Error('content is required');
+        if (!Array.isArray(contentLowerCase)) throw new Error('contentLowerCase must be an array');
         if (!Array.isArray(images)) throw new Error('images must be an array');
         if (images.length > Post.MAX_IMAGES) throw new Error(`Maximum ${Post.MAX_IMAGES} images allowed`);
 

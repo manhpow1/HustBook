@@ -20,7 +20,7 @@ class PostController {
             const files = req.files;
 
             // Generate contentLowerCase array for search
-            const contentLowerCase = content.toLowerCase().split(' ').filter(Boolean);
+            const contentLowerCase = content.toLowerCase().split(/\s+/).filter(Boolean);
 
             // Validate file count
             if (files && files.length > Post.MAX_IMAGES) {
@@ -77,7 +77,7 @@ class PostController {
             const userId = req.user.userId;
 
             // Generate contentLowerCase array for search
-            const contentLowerCase = content.toLowerCase().split(' ').filter(Boolean);
+            const contentLowerCase = content.toLowerCase().split(/\s+/).filter(Boolean);
 
             // Validate total number of images (existing + new)
             const totalImages = (req.files?.length || 0) + existingImages.length;

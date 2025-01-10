@@ -112,7 +112,7 @@ class PostService {
             const updatedPost = new Post({
                 ...existingPost,
                 content,
-                contentLowerCase,
+                contentLowerCase: Array.isArray(contentLowerCase) ? contentLowerCase : content.toLowerCase().split(/\s+/).filter(Boolean),
                 images: [...existingImages, ...newImages],
                 updatedAt: new Date()
             });
