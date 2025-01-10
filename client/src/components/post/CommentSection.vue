@@ -172,17 +172,24 @@ const onAddComment = async () => {
             return;
         }
 
-        const response = await commentStore.addComment(
+        const addedComment = await commentStore.addComment(
             props.postId,
             String(newComment.value.trim())
         );
         
-        newComment.value = "";
-        notificationStore.showNotification(
-            "Comment posted successfully",
-            "success"
-        );
-        logger.info("Comment posted successfully", { postId: props.postId });
+        if (addedComment) {
+            newComment.value = "";
+            notificationStore.showNotification(
+                "Comment posted successfully",
+                "success"
+            );
+            logger.info("Comment posted successfully", { 
+                postId: props.postId,
+                commentId: addedComment.commentId 
+            });
+        } else {
+            throw new Error("Failed to add comment - invalid response");
+        }
     } catch (error) {
         logger.error("Error posting comment:", error);
         await handleError(error);
@@ -238,16 +245,19 @@ const onRetryLoadComments = async () => {
     commentStore.resetComments();
     try {
         logger.debug("Retrying to load comments");
-        const { comments: newComments } = await commentStore.fetchComments(
+        const newComments = await commentStore.fetchComments(
             props.postId,
             20,
             lastVisible.value
         );
 
-        if (!newComments?.length) {
+        if (!Array.isArray(newComments)) {
+            throw new Error("Invalid comments response format");
+        }
+
+        if (newComments.length === 0) {
             notificationStore.showNotification("No comments found", "warning");
         }
-        comments.value = newComments || [];
     } catch (error) {
         logger.error("Error retrying to load comments:", error);
         if (error.code === "9992") {

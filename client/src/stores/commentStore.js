@@ -91,24 +91,26 @@ export const useCommentStore = defineStore('comment', () => {
 
             const response = await apiService.addComment(postId, commentContent);
 
-            if (response.data.code !== '1000') {
-                throw new Error(response.data.message || 'Failed to add comment')
+            if (!response?.data?.data) {
+                throw new Error('Invalid response format');
             }
-            
-            if (!response.data.user?.userId) {
-                throw new Error('Invalid user data in response');
+
+            const { commentId, user } = response.data.data;
+
+            if (!commentId) {
+                throw new Error('Invalid comment ID in response');
             }
 
             const newComment = {
-                commentId: response.data.commentId,
+                commentId,
                 content: commentContent,
-                createdAt: new Date(),
-                likes: 0,
+                created: new Date().toISOString(),
+                like: 0,
                 isLiked: false,
                 user: {
-                    userId: response.data.user.userId,
-                    userName: response.data.user.userName || 'Anonymous User',
-                    avatar: response.data.user.avatar || ''
+                    userId: user?.userId || '',
+                    userName: user?.userName || 'Anonymous User',
+                    avatar: user?.avatar || ''
                 }
             }
 
