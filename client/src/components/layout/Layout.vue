@@ -15,7 +15,8 @@
           <NavigationMenu v-if="isLoggedIn" class="hidden xl:flex">
             <NavigationMenuList class="flex items-center gap-2 xl:gap-4 2xl:gap-6">
               <NavigationMenuItem v-for="item in navItems" :key="item.path">
-                <NavigationMenuLink v-if="item.name === 'Profile'" :to="item.path"
+                <router-link v-if="item.name === 'Profile'" 
+                  :to="{ name: 'UserProfile', params: { userId: userData?.userId }}"
                   class="group inline-flex items-center px-2 xl:px-3 py-2 text-sm font-medium hover:bg-accent hover:text-accent-foreground rounded-md transition-colors whitespace-nowrap"
                   :class="{
                     'bg-accent text-accent-foreground': isProfileActive,
@@ -24,7 +25,7 @@
                     class="h-4 w-4 mr-1.5 xl:mr-2.5 group-hover:text-accent-foreground transition-colors"
                     aria-hidden="true" />
                   {{ item.name }}
-                </NavigationMenuLink>
+                </router-link>
                 <router-link v-else :to="item.path"
                   class="group inline-flex items-center px-2 xl:px-3 py-2 text-sm font-medium hover:bg-accent hover:text-accent-foreground rounded-md transition-colors whitespace-nowrap"
                   :class="{
@@ -115,12 +116,13 @@
                   <SearchPosts />
                 </div>
                 <template v-if="isLoggedIn">
-                  <router-link v-for="item in navItems" :key="item.path" :to="item.name === 'Profile'
-                    ? {
-                      name: 'UserProfile',
-                      params: { userId: userData?.userId },
-                    }
-                    : item.path
+                  <router-link v-for="item in navItems" :key="item.path" 
+                    :to="item.name === 'Profile' && userData?.userId
+                      ? {
+                          name: 'UserProfile',
+                          params: { userId: userData.userId },
+                        }
+                      : item.path
                     " class="flex items-center px-3 py-2 hover:bg-accent rounded-md transition-colors text-sm" :class="{
                       'bg-accent text-accent-foreground':
                         $route.path === item.path,
