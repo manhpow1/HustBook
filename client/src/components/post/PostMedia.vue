@@ -1,90 +1,60 @@
 <template>
     <div>
         <!-- Image Grid Layout -->
-        <div v-if="hasImages" class="mb-4">
+        <div v-if="post.images?.length" class="mb-4">
             <!-- Single Image Layout -->
-            <div v-if="singleImage" class="mb-4">
+            <div v-if="post.images.length === 1" class="mb-4">
                 <Card class="overflow-hidden">
-                    <AspectRatio ratio={16/9}>
-                        <div v-if="!post.media[0].covered" @click="openLightbox(0)"
+                    <AspectRatio :ratio="16/9">
+                        <div @click="openLightbox(0)"
                             class="relative w-full h-full cursor-pointer group">
-                            <img :src="getOptimizedImageUrl(post.media[0].url)" 
-                                :srcset="getImageSrcSet(post.media[0].url)"
-                                :alt="post.media[0].description || post.content"
+                            <img :src="getOptimizedImageUrl(post.images[0])" 
+                                :srcset="getImageSrcSet(post.images[0])"
+                                :alt="post.content || 'Post image'"
                                 class="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
                                 loading="lazy" />
-                        </div>
-                        <div v-else class="flex items-center justify-center h-full bg-muted">
-                            <div class="text-center">
-                                <p class="text-muted-foreground mb-2">This image is covered</p>
-                                <Button variant="default" @click.stop="uncoverMedia(post.media[0].id)">
-                                    <EyeIcon class="h-4 w-4 mr-2" />
-                                    Uncover
-                                </Button>
-                            </div>
                         </div>
                     </AspectRatio>
                 </Card>
             </div>
             <!-- Two Images Layout -->
-            <div v-else-if="twoImages" class="grid grid-cols-2 gap-2">
-                <Card v-for="(img, index) in post.media" :key="img.id" class="overflow-hidden">
-                    <AspectRatio ratio={1}>
-                        <div v-if="!img.covered" @click="openLightbox(index)"
+            <div v-else-if="post.images.length === 2" class="grid grid-cols-2 gap-2">
+                <Card v-for="(img, index) in post.images" :key="index" class="overflow-hidden">
+                    <AspectRatio :ratio="1">
+                        <div @click="openLightbox(index)"
                             class="relative w-full h-full cursor-pointer group">
-                            <img :src="img.url" :alt="post.content"
+                            <img :src="getOptimizedImageUrl(img)" 
+                                :srcset="getImageSrcSet(img)"
+                                :alt="post.content || 'Post image'"
                                 class="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
                                 loading="lazy" />
-                        </div>
-                        <div v-else class="flex items-center justify-center h-full bg-muted">
-                            <div class="text-center">
-                                <p class="text-muted-foreground mb-2">This image is covered</p>
-                                <Button variant="default" @click.stop="uncoverMedia(img.id)">
-                                    <EyeIcon class="h-4 w-4 mr-2" />
-                                    Uncover
-                                </Button>
-                            </div>
                         </div>
                     </AspectRatio>
                 </Card>
             </div>
             <!-- Three Images Layout -->
-            <div v-else-if="threeImages" class="grid grid-cols-2 gap-2">
+            <div v-else-if="post.images.length === 3" class="grid grid-cols-2 gap-2">
                 <Card class="overflow-hidden row-span-2">
-                    <AspectRatio ratio={1}>
-                        <div v-if="!post.media[0].covered" @click="openLightbox(0)"
+                    <AspectRatio :ratio="1">
+                        <div @click="openLightbox(0)"
                             class="relative w-full h-full cursor-pointer group">
-                            <img :src="post.media[0].url" :alt="post.content"
+                            <img :src="getOptimizedImageUrl(post.images[0])" 
+                                :srcset="getImageSrcSet(post.images[0])"
+                                :alt="post.content || 'Post image'"
                                 class="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
                                 loading="lazy" />
-                        </div>
-                        <div v-else class="flex items-center justify-center h-full bg-muted">
-                            <div class="text-center">
-                                <p class="text-muted-foreground mb-2">This image is covered</p>
-                                <Button variant="default" @click.stop="uncoverMedia(post.media[0].id)">
-                                    <EyeIcon class="h-4 w-4 mr-2" />
-                                    Uncover
-                                </Button>
-                            </div>
                         </div>
                     </AspectRatio>
                 </Card>
-                <Card v-for="index in [1, 2]" :key="post.media[index].id" class="overflow-hidden">
-                    <AspectRatio ratio={1}>
-                        <div v-if="!post.media[index].covered" @click="openLightbox(index)"
+                <Card v-for="index in [1, 2]" :key="index" class="overflow-hidden">
+                    <AspectRatio :ratio="1">
+                        <div @click="openLightbox(index)"
                             class="relative w-full h-full cursor-pointer group">
-                            <img :src="post.media[index].url" :alt="post.content"
+                            <img :src="getOptimizedImageUrl(post.images[index])" 
+                                :srcset="getImageSrcSet(post.images[index])"
+                                :alt="post.content || 'Post image'"
                                 class="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
                                 loading="lazy" />
-                        </div>
-                        <div v-else class="flex items-center justify-center h-full bg-muted">
-                            <div class="text-center">
-                                <p class="text-muted-foreground mb-2">This image is covered</p>
-                                <Button variant="default" @click.stop="uncoverMedia(post.media[index].id)">
-                                    <EyeIcon class="h-4 w-4 mr-2" />
-                                    Uncover
-                                </Button>
-                            </div>
                         </div>
                     </AspectRatio>
                 </Card>
@@ -141,38 +111,18 @@ const props = defineProps({
     },
 });
 
-const emit = defineEmits(['uncoverMedia', 'like', 'comment']);
+const emit = defineEmits(['like', 'comment']);
 
 // Composables
 const { handleError } = useErrorHandler();
 const { toast } = useToast();
+const { getOptimizedImageUrl, getImageSrcSet, createMediaList } = useMediaUtils();
 
 // Refs
 const showLightbox = ref(false);
 const currentMediaIndex = ref(0);
-const { getOptimizedImageUrl, getImageSrcSet } = useMediaUtils();
 
-const hasImages = computed(() => props.post.media && props.post.media.length > 0);
-const singleImage = computed(() => props.post.media?.length === 1);
-const twoImages = computed(() => props.post.media?.length === 2);
-const threeImages = computed(() => props.post.media?.length === 3);
-const fourOrMoreImages = computed(() => props.post.media?.length >= 4);
-const visibleImages = computed(() => props.post.media?.slice(0, 4) || []);
-
-const mediaList = computed(() => {
-    let media = [];
-
-    if (hasImages.value) {
-        media = props.post.media.slice(0, 4).map((img) => ({
-            type: 'image',
-            url: getOptimizedImageUrl(img.url),
-            srcset: getImageSrcSet(img.url),
-            alt: img.description || props.post.content,
-            covered: img.covered,
-        }));
-    }
-    return media;
-});
+const mediaList = computed(() => createMediaList(props.post));
 
 // Methods
 const openLightbox = (index) => {

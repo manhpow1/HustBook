@@ -12,29 +12,23 @@ export function useMediaUtils() {
         return widths.map((w) => `${getOptimizedImageUrl(url, w)} ${w}w`).join(', ');
     };
 
-    const createMediaList = (images = [], videos = [], content = '') => {
-        const media = [];
-
-        if (images?.length) {
-            media.push(
-                ...images.slice(0, 4).map((img) => ({
-                    type: 'image',
-                    url: img.url,
-                    alt: content,
-                    covered: img.covered,
-                }))
-            );
-        }
-
-        if (videos?.length) {
-            media.push({
-                type: 'video',
-                url: videos[0].url,
-                covered: videos[0].covered,
-            });
-        }
-
-        return media;
+    const createMediaList = (post) => {
+        if (!post) return [];
+        
+        const images = Array.isArray(post.images) ? post.images.map(url => ({
+            type: 'image',
+            url: getOptimizedImageUrl(url),
+            srcset: getImageSrcSet(url),
+            alt: post.content || 'Post image'
+        })) : [];
+        
+        const video = post.video ? [{
+            type: 'video',
+            url: post.video,
+            thumbnail: post.videoThumbnail
+        }] : [];
+        
+        return [...images, ...video];
     };
 
     return {

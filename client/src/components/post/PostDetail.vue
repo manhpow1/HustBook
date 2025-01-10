@@ -149,21 +149,7 @@ const { getOptimizedImageUrl, getImageSrcSet } = useMediaUtils();
 
 const mediaList = computed(() => {
     if (!post.value) return [];
-    
-    const images = post.value.media?.map(media => ({
-        type: 'image',
-        url: getOptimizedImageUrl(media.url),
-        srcset: getImageSrcSet(media.url),
-        alt: media.description || 'Post image'
-    })) || [];
-    
-    const video = post.value.video ? [{
-        type: 'video',
-        url: post.value.video,
-        thumbnail: post.value.videoThumbnail
-    }] : [];
-    
-    return [...images, ...video];
+    return createMediaList(post.value);
 });
 
 // Methods

@@ -169,9 +169,14 @@ const onAddComment = async () => {
             commentContent: newComment.value,
         });
 
+        if (typeof newComment.value !== 'string') {
+            inputError.value = "Invalid comment format";
+            return;
+        }
+
         const userData = await userStore.fetchUserProfile();
         const commentData = {
-            content: newComment.value.trim(),
+            content: String(newComment.value.trim()),
             user: {
                 userId: userData.userId,
                 userName: userData.userName,

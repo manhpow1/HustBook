@@ -77,7 +77,14 @@ const updatePostSchema = Joi.object({
 });
 
 const commentSchema = Joi.object({
-    content: Joi.string().required().max(500)
+    content: Joi.string()
+        .required()
+        .max(500)
+        .messages({
+            'string.base': 'Content must be a string',
+            'string.empty': 'Content cannot be empty',
+            'string.max': 'Content cannot exceed 500 characters'
+        })
 });
 
 const likeSchema = Joi.object({
