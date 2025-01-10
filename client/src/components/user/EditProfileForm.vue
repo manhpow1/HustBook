@@ -131,6 +131,7 @@
 
 <script setup>
 import { ref, computed, onMounted, watch, onBeforeUnmount } from "vue";
+import { debounce } from 'lodash-es';
 import { storeToRefs } from "pinia";
 import { onBeforeRouteLeave } from "vue-router";
 import { useUserStore } from "@/stores/userStore";
@@ -253,7 +254,7 @@ const isFormValid = computed(() => {
 });
 
 // Methods
-const handleAvatarUpload = async (event) => {
+const handleAvatarUpload = debounce(async (event) => {
     const file = event.target.files[0];
     if (!file) return;
 
@@ -271,7 +272,7 @@ const handleAvatarUpload = async (event) => {
     }
 };
 
-const handleCoverUpload = async (event) => {
+const handleCoverUpload = debounce(async (event) => {
     const file = event.target.files[0];
     if (!file) return;
 
@@ -296,6 +297,7 @@ const resetForm = () => {
 };
 
 const handleSubmit = async () => {
+    if (isLoading.value) return;
     try {
         isLoading.value = true;
         error.value = null;
@@ -384,14 +386,18 @@ const loadUserData = async () => {
     }
 };
 
+const debouncedValidation = debounce((newValues) => {
+    Object.keys(newValues).forEach((field) => {
+        if (field !== "avatar" && field !== "coverPhoto") {
+            validateField(field, newValues[field]);
+        }
+    });
+}, 300);
+
 watch(
     form,
     (newValues) => {
-        Object.keys(newValues).forEach((field) => {
-            if (field !== "avatar" && field !== "coverPhoto") {
-                validateField(field, newValues[field]);
-            }
-        });
+        debouncedValidation(newValues);
     },
     { deep: true }
 );
@@ -446,6 +452,10 @@ onBeforeUnmount(() => {
     if (coverPhotoPreview.value?.startsWith("blob:")) {
         URL.revokeObjectURL(coverPhotoPreview.value);
     }
+    // Cancel any pending debounced operations
+    debouncedValidation.cancel();
+    handleAvatarUpload.cancel();
+    handleCoverUpload.cancel();
 });
 
 const removeAvatar = () => {
