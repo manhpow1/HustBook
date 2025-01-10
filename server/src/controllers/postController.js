@@ -158,9 +158,11 @@ class PostController {
 
             sendResponse(res, '1000', {
                 commentId,
-                userId,
-                userName: userData?.userName || 'Anonymous User',
-                avatar: userData?.avatar || ''
+                user: {
+                    userId,
+                    userName: userData?.userName || 'Anonymous User',
+                    avatar: userData?.avatar || ''
+                }
             });
 
         } catch (error) {

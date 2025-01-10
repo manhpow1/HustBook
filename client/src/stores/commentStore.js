@@ -94,8 +94,11 @@ export const useCommentStore = defineStore('comment', () => {
             if (response.data.code !== '1000') {
                 throw new Error(response.data.message || 'Failed to add comment')
             }
+            
+            if (!response.data.user?.userId) {
+                throw new Error('Invalid user data in response');
+            }
 
-            // Tạo comment mới với dữ liệu từ response
             const newComment = {
                 commentId: response.data.commentId,
                 content: commentContent,
@@ -103,9 +106,9 @@ export const useCommentStore = defineStore('comment', () => {
                 likes: 0,
                 isLiked: false,
                 user: {
-                    userId: response.data.userId,
-                    userName: response.data.userName,
-                    avatar: response.data.avatar || ''
+                    userId: response.data.user.userId,
+                    userName: response.data.user.userName || 'Anonymous User',
+                    avatar: response.data.user.avatar || ''
                 }
             }
 
