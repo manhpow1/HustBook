@@ -195,8 +195,8 @@ const mediaGridClass = (count) => ({
   "grid-cols-2": count === 2 || count === 4,
   "grid-cols-3": count === 3,
   "grid-rows-2": count === 4,
-  "aspect-square": count > 1,
-  "gap-1": count > 2,
+  "aspect-square": count === 2 || count === 4,
+  "gap-1": count > 1,
 });
 
 const likePost = async (postId) => {
