@@ -185,7 +185,7 @@ const validators = {
         if (!value?.trim()) return "Username is required";
         if (value.length < 2) return "Username must be at least 2 characters";
         if (value.length > 50) return "Username must be less than 50 characters";
-        if (!/^[a-zA-Z\s]*$/.test(value))
+        if (!/^[\p{L}\s]*$/u.test(value))
             return "Username can only contain letters and spaces";
         return null;
     },

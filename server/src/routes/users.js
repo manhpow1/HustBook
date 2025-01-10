@@ -120,7 +120,7 @@ router.get('/profile/:userId?', authenticateToken, userController.getUserInfo);
 /**
  * @swagger
  * /users/profile/{userId}:
- *   patch:
+ *   put:
  *     summary: Update user profile
  *     tags: [Users]
  *     security:
@@ -165,7 +165,7 @@ router.get('/profile/:userId?', authenticateToken, userController.getUserInfo);
  *       404:
  *         description: User not found
  */
-router.patch('/profile/:userId', authenticateToken, upload.fields([ { name: 'avatar', maxCount: 1 }, { name: 'coverPhoto', maxCount: 1 }]), userController.setUserInfo );
+router.put('/profile/:userId', authenticateToken, upload.fields([ { name: 'avatar', maxCount: 1 }, { name: 'coverPhoto', maxCount: 1 }]), userController.setUserInfo );
 
 /**
  * @swagger

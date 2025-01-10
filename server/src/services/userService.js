@@ -548,12 +548,9 @@ class UserService {
                     throw createError('9999', 'Profile update failed due to concurrent modifications. Please try again.');
                 }
 
-                // Ensure avatar is always a string
-                // Ensure all string fields are properly encoded
                 const encodeUtf8 = (value) => {
                     if (typeof value === 'string') {
                         try {
-                            // Normalize to NFC form and encode
                             return value.normalize('NFC');
                         } catch (error) {
                             logger.warn('Failed to normalize string', { value, error });
