@@ -128,7 +128,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, watch } from "vue";
+import { ref, computed, onMounted, watch, onBeforeUnmount } from "vue";
 import { storeToRefs } from "pinia";
 import { onBeforeRouteLeave } from "vue-router";
 import { useUserStore } from "@/stores/userStore";
