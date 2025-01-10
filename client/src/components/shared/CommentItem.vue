@@ -133,10 +133,10 @@ const props = defineProps({
         type: Object,
         required: true,
         validator(comment) {
-            return comment && typeof comment === 'object' && 
-                   comment.commentId && 
-                   typeof comment.content === 'string' &&
-                   comment.user && typeof comment.user === 'object';
+            return comment && typeof comment === 'object' &&
+                comment.commentId &&
+                typeof comment.content === 'string' &&
+                comment.user && typeof comment.user === 'object';
         },
     },
 });
@@ -145,13 +145,13 @@ const props = defineProps({
 const commentData = computed(() => ({
     commentId: props.comment.commentId,
     content: props.comment.content || '',
-    created: props.comment.createdAt?.toDate?.()?.toISOString() || props.comment.created || new Date().toISOString(),
-    like: parseInt(props.comment.likes || props.comment.like || 0),
+    created: props.comment.createdAt?.toISOString() || new Date().toISOString(),
+    likes: parseInt(props.comment.likes || 0),
     isLiked: Boolean(props.comment.isLiked || false),
     user: {
-        userId: props.comment.userId || props.comment.user?.userId || '',
-        userName: props.comment.userName || props.comment.user?.userName || 'Anonymous User',
-        avatar: props.comment.avatar || props.comment.user?.avatar || ''
+        userId: props.comment.user?.userId || '',
+        userName: props.comment.user?.userName || 'Anonymous User',
+        avatar: props.comment.user?.avatar || ''
     }
 }));
 
