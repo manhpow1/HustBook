@@ -28,16 +28,37 @@ export const useSearchStore = defineStore('search', () => {
         error.value = null;
 
         try {
-            console.log('Sending API request for search posts');
-            const response = await apiService.searchPosts(keyword, index, count);
+            // Normalize keyword
+            const normalizedKeyword = decodeURIComponent(keyword.trim()).toLowerCase();
+            console.log('Normalized keyword:', normalizedKeyword);
+
+            // First try with original keyword
+            let response = await apiService.searchPosts(normalizedKeyword, index, count);
             console.log('Raw API response:', response);
 
-            const data = response.data;
+            let data = response.data;
             console.log('Response data:', data);
 
             if (data.code === '1000') {
-                // Process the results from server
-                const filteredResults = data.data.map(post => ({
+                // If no results and keyword contains multiple words, try with individual words
+                if (data.data.length === 0 && normalizedKeyword.includes(' ')) {
+                    console.log('No results with full phrase, trying individual words');
+                    const words = normalizedKeyword.split(/\s+/).filter(word => word.length > 0);
+
+                    // Try with first word
+                    response = await apiService.searchPosts(words[0], index, count);
+                    data = response.data;
+                    console.log('Retry response with first word:', data);
+                }
+
+                if (!data.data || !Array.isArray(data.data)) {
+                    console.warn('Invalid data format from API');
+                    searchResults.value = [];
+                    return;
+                }
+
+                // Server now provides properly formatted results
+                const processedResults = data.data.map(post => ({
                     ...post,
                     content: decodeURIComponent(post.content || ''),
                     author: {
@@ -46,17 +67,27 @@ export const useSearchStore = defineStore('search', () => {
                     }
                 }));
 
-                console.log('Filtered results:', filteredResults);
-                // Filter out any failed decodings (false values)
-                const validResults = filteredResults.filter(Boolean);
-                searchResults.value = validResults;
-                hasMore.value = data.data.length === count;
-                console.log('Search results updated:', {
-                    resultCount: validResults.length,
-                    hasMore: hasMore.value
+                console.log('Processed results:', processedResults);
+                searchResults.value = processedResults;
+                hasMore.value = processedResults.length === count;
+
+                // Sort results: exact matches first, then by date
+                const sortedResults = filteredResults.sort((a, b) => {
+                    if (a.isExactMatch !== b.isExactMatch) {
+                        return a.isExactMatch ? -1 : 1;
+                    }
+                    return new Date(b.created) - new Date(a.created);
                 });
+
+                console.log('Processed search results:', sortedResults);
+                searchResults.value = sortedResults;
+                hasMore.value = data.data.length === count;
+
+                // Cache last search params for retry
+                lastSearchParams.value = { keyword, index, count };
             } else {
                 console.warn('API returned non-success code:', data.code);
+                error.value = data.message || 'Search failed';
             }
         } catch (err) {
             console.error('Search failed:', err);

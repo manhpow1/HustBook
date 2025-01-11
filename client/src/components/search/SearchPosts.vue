@@ -235,34 +235,21 @@ const sortedSearchResults = computed(() => {
     ? searchStore.userSearchResults 
     : searchResults.value;
 
-  if (!results || !Array.isArray(results) || !results.length) return [];
-
-  const normalizedKeyword = normalizeString(keyword.value);
-  const sortedResults = [...results];
+  if (!results?.length) return [];
 
   if (searchType.value === "posts") {
-    return sortedResults.sort((a, b) => {
-      if (normalizedKeyword) {
-        const aContent = normalizeString(a.content);
-        const bContent = normalizeString(b.content);
-        const aExactMatch = aContent.includes(normalizedKeyword);
-        const bExactMatch = bContent.includes(normalizedKeyword);
-        if (aExactMatch !== bExactMatch) return aExactMatch ? -1 : 1;
-      }
-      const aDate = new Date(a.created || a.createdAt || 0);
-      const bDate = new Date(b.created || b.createdAt || 0);
-      return bDate - aDate;
-    });
+    // Posts are already sorted by exact match and date from the server
+    return [...results];
   } else {
-    return sortedResults.sort((a, b) => {
-      if (normalizedKeyword) {
-        const aName = normalizeString(a.userName);
-        const bName = normalizeString(b.userName);
-        const aExactMatch = aName.includes(normalizedKeyword);
-        const bExactMatch = bName.includes(normalizedKeyword);
-        if (aExactMatch !== bExactMatch) return aExactMatch ? -1 : 1;
-      }
-      return (a.userName || '').localeCompare(b.userName || '');
+    // Only sort users client-side
+    const normalizedKeyword = normalizeString(keyword.value);
+    return [...results].sort((a, b) => {
+      const aName = normalizeString(a.userName);
+      const bName = normalizeString(b.userName);
+      const aExactMatch = aName.includes(normalizedKeyword);
+      const bExactMatch = bName.includes(normalizedKeyword);
+      if (aExactMatch !== bExactMatch) return aExactMatch ? -1 : 1;
+      return aName.localeCompare(bName);
     });
   }
 });

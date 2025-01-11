@@ -32,7 +32,7 @@ class SearchService {
                 created: new Date(),
             });
 
-            // Process and return results
+            // Process and return results with normalized data
             const processedPosts = matchingPosts.map(post => ({
                 postId: post.postId,
                 image: post.images?.[0] || '',
@@ -42,11 +42,12 @@ class SearchService {
                 isLiked: post.isLiked ? '1' : '0',
                 author: {
                     userId: post.userId,
-                    userName: post.userName || '',
+                    userName: encodeURIComponent(post.userName || ''),
                     avatar: post.avatar || '',
                 },
-                content: post.content || '',
+                content: encodeURIComponent(post.content || ''),
                 created: post.createdAt?.toDate?.() || new Date(),
+                isExactMatch: post.content?.toLowerCase().includes(normalizedKeywords[0])
             }));
 
             return processedPosts;

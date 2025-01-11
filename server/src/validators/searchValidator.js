@@ -1,16 +1,7 @@
 import Joi from 'joi';
 
 const searchPostsSchema = Joi.object({
-    keyword: Joi.string()
-        .required()
-        .min(1)
-        .custom((value, helpers) => {
-            const normalized = decodeURIComponent(value.trim())
-                .toLowerCase()
-                .split(/\s+/)
-                .filter(word => word.length > 0);
-            return normalized;
-        }),
+    keyword: Joi.string().required().min(1),
     index: Joi.number().integer().min(0).default(0),
     count: Joi.number().integer().min(1).max(100).default(20)
 });
