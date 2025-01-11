@@ -387,6 +387,35 @@ class UserController {
         }
     }
 
+    async getUserInfo(req, res, next) {
+        try {
+            const { error, value } = userValidator.validateGetUserInfo({ userId: req.params.userId });
+            if (error) {
+                throw createError('1002', error.details[0].message);
+            }
+
+            const targetUserId = value.userId || req.user.userId;
+            const userInfo = await userService.getUserInfo(targetUserId);
+
+            // Add additional profile data
+            const [friendsCount, postsCount] = await Promise.all([
+                friendService.getFriendsCount(targetUserId),
+                postService.getUserPostsCount(targetUserId)
+            ]);
+
+            sendResponse(res, '1000', {
+                user: {
+                    ...userInfo,
+                    friendsCount,
+                    postsCount
+                }
+            });
+        } catch (error) {
+            logger.error('Get User Info Error:', error);
+            next(error);
+        }
+    }
+
     async setUserInfo(req, res, next) {
         try {
             const userId = req.user.userId;
