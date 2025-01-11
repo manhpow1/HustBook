@@ -46,7 +46,10 @@ class SearchService {
                     avatar: post.avatar || '',
                 },
                 content: post.content || '',
+                created: post.createdAt?.toDate?.() || new Date(),
             }));
+
+            return processedPosts;
         } catch (error) {
             logger.error('Search service error:', error);
             throw createError('9999', 'Exception error');

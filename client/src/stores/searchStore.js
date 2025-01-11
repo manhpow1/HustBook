@@ -36,36 +36,23 @@ export const useSearchStore = defineStore('search', () => {
             console.log('Response data:', data);
 
             if (data.code === '1000') {
-                // Filter and sort results client-side for better matching
-                const decodedKeyword = decodeURIComponent(keyword.trim()).toLowerCase();
-                console.log('Decoded keyword:', decodedKeyword);
-
-                // Server now handles the matching, we just need to process the results
-                const filteredResults = data.data.map(post => {
-                    try {
-                        // Decode any URI-encoded fields
-                        const decodedContent = decodeURIComponent(post.content || '');
-                        const decodedUsername = decodeURIComponent(post.author?.userName || '');
-
-                        return {
-                            ...post,
-                            content: decodedContent,
-                            author: {
-                                ...post.author,
-                                userName: decodedUsername
-                            }
-                        };
-                    } catch (decodeError) {
-                        console.error('Error decoding post content:', decodeError, post);
-                        return false;
+                // Process the results from server
+                const filteredResults = data.data.map(post => ({
+                    ...post,
+                    content: decodeURIComponent(post.content || ''),
+                    author: {
+                        ...post.author,
+                        userName: decodeURIComponent(post.author?.userName || '')
                     }
-                });
+                }));
 
                 console.log('Filtered results:', filteredResults);
-                searchResults.value = filteredResults;
+                // Filter out any failed decodings (false values)
+                const validResults = filteredResults.filter(Boolean);
+                searchResults.value = validResults;
                 hasMore.value = data.data.length === count;
                 console.log('Search results updated:', {
-                    resultCount: filteredResults.length,
+                    resultCount: validResults.length,
                     hasMore: hasMore.value
                 });
             } else {
