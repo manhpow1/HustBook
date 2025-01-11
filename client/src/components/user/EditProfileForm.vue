@@ -330,7 +330,24 @@ const handleSubmit = async () => {
             version: form.value.version || 0
         };
 
-        const result = await userStore.updateUserProfile(userId, updateData);
+        let retries = 3;
+        let result = null;
+            
+        while (retries > 0) {
+            try {
+                result = await userStore.updateUserProfile(userId, updateData);
+                break;
+            } catch (err) {
+                if (err.message?.includes('concurrent modifications') && retries > 1) {
+                    // Refresh user data and retry
+                    const userData = await userStore.getUserProfile();
+                    updateData.version = userData.version;
+                    retries--;
+                    continue;
+                }
+                throw err;
+            }
+        }
 
         if (result) {
             form.value = {
@@ -345,7 +362,7 @@ const handleSubmit = async () => {
             initialForm.value = { ...form.value };
 
             toast({
-                title: 'Success',
+                title: 'Success', 
                 description: 'Profile updated successfully'
             });
         }

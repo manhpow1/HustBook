@@ -524,8 +524,9 @@ class UserService {
                 const currentData = userDoc.data();
                 const currentVersion = currentData.version || 0;
 
-                if (currentVersion !== updateData.version - 1) {
-                    throw createError('9999', 'Profile update failed due to concurrent modifications');
+                // Allow updates if version is not older than current
+                if (updateData.version < currentVersion) {
+                    throw createError('9999', 'Profile update failed - please refresh and try again');
                 }
 
                 const updatePayload = {
