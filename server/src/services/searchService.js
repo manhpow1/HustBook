@@ -6,11 +6,16 @@ import logger from '../utils/logger.js';
 class SearchService {
     async searchPosts(userId, keyword, index, count) {
         try {
-            const normalizedKeyword = decodeURIComponent(keyword.trim()).toLowerCase().split(' ');
+            const normalizedKeywords = decodeURIComponent(keyword.trim())
+                .toLowerCase()
+                .split(/\s+/)
+                .filter(word => word.length > 0);
 
-            // Create compound query to search in contentLowerCase field
+            logger.info('Searching posts with keywords:', { normalizedKeywords });
+
+            // Get posts that contain any of the search terms
             const query = db.collection(collections.posts)
-                .where('contentLowerCase', 'array-contains-any', normalizedKeyword)
+                .where('contentLowerCase', 'array-contains-any', normalizedKeywords)
                 .orderBy('createdAt', 'desc')
                 .offset(parseInt(index))
                 .limit(parseInt(count));
@@ -18,15 +23,20 @@ class SearchService {
             const postsSnapshot = await query.get();
             const matchingPosts = postsSnapshot.docs.map(doc => doc.data());
 
+            logger.info('Found posts:', { count: matchingPosts.length });
+
+            // Save search to history
             await createDocument(collections.savedSearches, {
                 userId,
                 keyword,
                 created: new Date(),
             });
 
-            return matchingPosts.map(post => ({
+            // Process and return results
+            const processedPosts = matchingPosts.map(post => ({
                 postId: post.postId,
                 image: post.images?.[0] || '',
+                video: post.video || '',
                 likes: post.likes?.toString() || '0',
                 comment: post.comments?.toString() || '0',
                 isLiked: post.isLiked ? '1' : '0',
@@ -47,21 +57,19 @@ class SearchService {
         try {
             const normalizedKeyword = decodeURIComponent(keyword.trim()).toLowerCase();
 
+            // Get all users and filter client-side for more flexible matching
             const usersQuery = db.collection(collections.users)
-                .where('userNameLowerCase', 'array-contains', normalizedKeyword)
+                .orderBy('userName')
                 .offset(index)
                 .limit(count);
 
+            // Get blocked users in parallel
             const [usersSnapshot, blockedUsersSnapshot] = await Promise.all([
                 usersQuery.get(),
                 db.collection(collections.blocks)
                     .where('userId', '==', currentUserId)
                     .get()
             ]);
-
-            if (usersSnapshot.empty) {
-                throw createError('9994', 'No data or end of list data');
-            }
 
             const blockedUserIds = new Set(
                 blockedUsersSnapshot.docs.map(doc => doc.data().blockedUserId)
@@ -70,29 +78,30 @@ class SearchService {
             const matchingUsers = usersSnapshot.docs
                 .filter(doc => {
                     const userId = doc.id;
-                    return !blockedUserIds.has(userId) && userId !== currentUserId;
+                    const userData = doc.data();
+                    // Filter out blocked users and current user
+                    if (blockedUserIds.has(userId) || userId === currentUserId) {
+                        return false;
+                    }
+                    // Check if username contains the search term (case-insensitive)
+                    const userName = decodeURIComponent(userData.userName || '').toLowerCase();
+                    return userName.includes(normalizedKeyword);
                 })
                 .map(doc => {
                     const userData = doc.data();
                     return {
                         userId: doc.id,
                         userName: userData.userName || '',
+                        userNameLowerCase: decodeURIComponent(userData.userName || '').toLowerCase().split(' '),
                         avatar: userData.avatar || '',
                         same_friends: userData.mutualFriendsCount || 0
                     };
                 });
 
-            if (matchingUsers.length === 0) {
-                throw createError('9994', 'No data or end of list data');
-            }
-
             return matchingUsers;
 
         } catch (error) {
             logger.error('Search users service error:', error);
-            if (error.code) {
-                throw error;
-            }
             throw createError('9999', 'Exception error');
         }
     }

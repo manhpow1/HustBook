@@ -1,23 +1,44 @@
 <template>
   <div v-if="isLoggedIn" class="relative w-full" ref="searchRef">
     <div class="flex items-center space-x-2">
-      <Input id="keyword" v-model="keyword" placeholder="Search by keyword..." @input="debouncedSearch"
-        aria-label="Search Keyword" class="w-full lg:w-64">
+      <!-- Search Type Toggle -->
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button variant="outline" class="w-32">
+            {{ searchType === 'posts' ? 'Search Posts' : 'Search Users' }}
+            <ChevronDownIcon class="ml-2 h-4 w-4" />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent>
+          <DropdownMenuItem @click="setSearchType('posts')">
+            <FileTextIcon class="mr-2 h-4 w-4" />
+            Search Posts
+          </DropdownMenuItem>
+          <DropdownMenuItem @click="setSearchType('users')">
+            <UserIcon class="mr-2 h-4 w-4" />
+            Search Users
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+
+      <!-- Search Input -->
+      <Input :id="searchType === 'posts' ? 'postKeyword' : 'userKeyword'" v-model="keyword"
+        :placeholder="searchType === 'posts' ? 'Search posts by keyword...' : 'Search users...'"
+        @input="debouncedSearch" :aria-label="searchType === 'posts' ? 'Search Posts' : 'Search Users'"
+        class="w-full lg:w-64">
       <template #prefix>
         <SearchIcon class="h-4 w-4 text-muted-foreground" />
       </template>
       </Input>
-      <Input id="username" v-model="username" placeholder="Search by username" @input="debouncedSearch"
-        aria-label="Search by Username" class="hidden lg:block w-48">
-      <template #prefix>
-        <UserIcon class="h-4 w-4 text-muted-foreground" />
-      </template>
-      </Input>
+
+      <!-- Search Button -->
       <Button @click="handleSearch" :disabled="isLoading" :aria-disabled="isLoading" class="hidden lg:flex">
         <Loader2Icon v-if="isLoading" class="mr-2 h-4 w-4 animate-spin" aria-hidden="true" />
         {{ isLoading ? "Searching..." : "Search" }}
       </Button>
-      <DropdownMenu v-model="isDropdownOpen">
+
+      <!-- Saved Searches (Only for Posts) -->
+      <DropdownMenu v-if="searchType === 'posts'" v-model="isDropdownOpen">
         <DropdownMenuTrigger asChild @click="handleDropdownTrigger">
           <Button variant="outline" class="hidden lg:flex">Saved Searches</Button>
         </DropdownMenuTrigger>
@@ -47,14 +68,19 @@
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
+
+      <!-- Toggle Results Button -->
       <Button @click="toggleResults" variant="ghost" size="sm" class="hidden lg:flex">
         <ChevronDownIcon class="h-4 w-4 transition-transform" :class="{ 'rotate-180': isResultsOpen }" />
         <span class="sr-only">{{ isResultsOpen ? "Hide" : "Show" }} search results</span>
       </Button>
     </div>
+
+    <!-- Search Results -->
     <div v-if="isResultsOpen"
       class="absolute left-0 right-0 mt-2 bg-background border rounded-md shadow-lg z-50 max-h-[80vh] overflow-y-auto w-full lg:max-w-lg">
       <ScrollArea className="h-full w-full rounded-md">
+        <!-- Loading State -->
         <div v-if="isLoading && !searchResults.length" class="p-4 space-y-4">
           <div v-for="i in 3" :key="i" class="space-y-3">
             <div class="flex items-center space-x-4">
@@ -68,6 +94,8 @@
             <Skeleton class="h-4 w-[90%]" />
           </div>
         </div>
+
+        <!-- Error State -->
         <div v-else-if="error" class="p-4" role="alert">
           <Alert variant="destructive">
             <AlertCircleIcon class="h-4 w-4" />
@@ -81,7 +109,9 @@
             </AlertDescription>
           </Alert>
         </div>
-        <div v-else-if="sortedSearchResults.length > 0" class="p-4 space-y-4">
+
+        <!-- Results for Posts -->
+        <div v-else-if="searchType === 'posts' && sortedSearchResults.length > 0" class="p-4 space-y-4">
           <Card v-for="post in sortedSearchResults" :key="post.postId" class="overflow-hidden search-result"
             :data-test="`card-${post.postId}`">
             <CardContent class="p-4">
@@ -90,10 +120,10 @@
                   <AvatarImage :src="post.author?.avatar" :alt="post.author?.userName" />
                   <AvatarFallback>{{
                     post.author?.userName?.charAt(0) || "U"
-                    }}</AvatarFallback>
+                  }}</AvatarFallback>
                 </Avatar>
                 <div>
-                  <h3 class="font-semibold" v-html="highlightMatch(post.author?.userName, keyword)"></h3>
+                  <h3 class="font-semibold">{{ post.author?.userName }}</h3>
                   <time :datetime="post.created" class="text-sm text-muted-foreground">
                     {{ formatDate(post.created) }}
                   </time>
@@ -111,17 +141,44 @@
             </CardContent>
           </Card>
         </div>
+
+        <!-- Results for Users -->
+        <div v-else-if="searchType === 'users' && sortedSearchResults.length > 0" class="p-4 space-y-4">
+          <Card v-for="user in sortedSearchResults" :key="user.userId" class="overflow-hidden search-result"
+            :data-test="`card-${user.userId}`">
+            <CardContent class="p-4">
+              <div class="flex items-center space-x-4">
+                <Avatar>
+                  <AvatarImage :src="user.avatar" :alt="user.userName" />
+                  <AvatarFallback>{{ user.userName?.charAt(0) || "U" }}</AvatarFallback>
+                </Avatar>
+                <div>
+                  <h3 class="font-semibold" v-html="highlightMatch(user.userName, keyword)"></h3>
+                  <p class="text-sm text-muted-foreground">{{ user.bio || 'No bio available' }}</p>
+                </div>
+              </div>
+              <div class="mt-4 flex justify-end">
+                <Button variant="secondary" @click="viewProfile(user.userId)">
+                  View Profile
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        <!-- No Results -->
         <div v-else class="p-4 text-center text-muted-foreground">
           No results found.
         </div>
       </ScrollArea>
     </div>
   </div>
-  <p v-else class="text-muted-foreground">Please log in to search posts.</p>
+  <p v-else class="text-muted-foreground">Please log in to search.</p>
 </template>
 
 <script setup>
 import { ref, computed, onMounted, onUnmounted, watch } from "vue";
+import { escapeRegExp } from "lodash-es";
 import { useSearchStore } from "../../stores/searchStore";
 import { useUserStore } from "../../stores/userStore";
 import { useRouter } from "vue-router";
@@ -143,6 +200,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import {
   AlertCircleIcon,
   ChevronDownIcon,
+  FileTextIcon,
   Loader2Icon,
   RefreshCwIcon,
   SearchIcon,
@@ -158,49 +216,55 @@ const searchRef = ref(null);
 const { searchResults, isLoading, error } = storeToRefs(searchStore);
 const { isLoggedIn } = storeToRefs(userStore);
 const keyword = ref("");
-const userId = ref("");
-const username = ref("");
+const searchType = ref("posts");
 const savedSearches = ref([]);
 const isResultsOpen = ref(false);
 const isDropdownOpen = ref(false);
 
-const normalizeString = (str) => str?.toLowerCase().trim() || "";
-
-const partialMatch = (source, target) => {
-  if (!source || !target) return false;
-  source = normalizeString(source);
-  target = normalizeString(target);
-
-  // Check for exact match first
-  if (source.includes(target)) return true;
-
-  // Check for partial word matches
-  const searchWords = target.split(" ").filter((word) => word.length >= 2);
-  return searchWords.some((word) => source.includes(word));
+const setSearchType = (type) => {
+  searchType.value = type;
+  keyword.value = "";
+  searchStore.resetSearch();
+  isResultsOpen.value = false;
 };
 
-// Computed properties
+const normalizeString = (str) => str?.toLowerCase().trim() || "";
+
 const sortedSearchResults = computed(() => {
-  if (!searchResults.value.length) return [];
+  const results = searchType.value === "users" 
+    ? searchStore.userSearchResults 
+    : searchResults.value;
 
-  return searchResults.value.sort((a, b) => {
-    // First sort by exact matches if keyword search is active
-    if (keyword.value) {
-      const aExactMatch = normalizeString(a.content).includes(normalizeString(keyword.value));
-      const bExactMatch = normalizeString(b.content).includes(normalizeString(keyword.value));
-      if (aExactMatch !== bExactMatch) return aExactMatch ? -1 : 1;
-    }
+  if (!results || !Array.isArray(results) || !results.length) return [];
 
-    // Then sort by username matches if username search is active
-    if (username.value) {
-      const aUsernameMatch = normalizeString(a.author?.userName).includes(normalizeString(username.value));
-      const bUsernameMatch = normalizeString(b.author?.userName).includes(normalizeString(username.value));
-      if (aUsernameMatch !== bUsernameMatch) return aUsernameMatch ? -1 : 1;
-    }
+  const normalizedKeyword = normalizeString(keyword.value);
+  const sortedResults = [...results];
 
-    // Finally sort by date (assuming newer posts should appear first)
-    return new Date(b.createdAt || 0) - new Date(a.createdAt || 0);
-  });
+  if (searchType.value === "posts") {
+    return sortedResults.sort((a, b) => {
+      if (normalizedKeyword) {
+        const aContent = normalizeString(a.content);
+        const bContent = normalizeString(b.content);
+        const aExactMatch = aContent.includes(normalizedKeyword);
+        const bExactMatch = bContent.includes(normalizedKeyword);
+        if (aExactMatch !== bExactMatch) return aExactMatch ? -1 : 1;
+      }
+      const aDate = new Date(a.created || a.createdAt || 0);
+      const bDate = new Date(b.created || b.createdAt || 0);
+      return bDate - aDate;
+    });
+  } else {
+    return sortedResults.sort((a, b) => {
+      if (normalizedKeyword) {
+        const aName = normalizeString(a.userName);
+        const bName = normalizeString(b.userName);
+        const aExactMatch = aName.includes(normalizedKeyword);
+        const bExactMatch = bName.includes(normalizedKeyword);
+        if (aExactMatch !== bExactMatch) return aExactMatch ? -1 : 1;
+      }
+      return (a.userName || '').localeCompare(b.userName || '');
+    });
+  }
 });
 
 const normalizedSavedSearches = computed(() => {
@@ -210,8 +274,7 @@ const normalizedSavedSearches = computed(() => {
       const normalizedKeyword = search.keyword.trim().toLowerCase();
       if (
         !uniqueSearches.has(normalizedKeyword) ||
-        new Date(search.created) >
-        new Date(uniqueSearches.get(normalizedKeyword).created)
+        new Date(search.created) > new Date(uniqueSearches.get(normalizedKeyword).created)
       ) {
         uniqueSearches.set(normalizedKeyword, search);
       }
@@ -222,35 +285,30 @@ const normalizedSavedSearches = computed(() => {
     .slice(0, 20);
 });
 
-// Event handlers
 const handleSearch = async () => {
-  const searchText = keyword.value.trim();
-  const searchUsername = username.value.trim();
+  if (!keyword.value.trim()) {
+    searchStore.resetSearch();
+    return;
+  }
 
   isLoading.value = true;
   error.value = null;
 
   try {
-    let userIds = [];
-    // Tìm kiếm users trước nếu có username
-    if (searchUsername) {
-      const { users } = await searchStore.searchUsers({
-        keyword: searchUsername,
-        index: 0,
-        count: 20
-      });
-      userIds = users.map(user => user.userId);
-    }
-
-    if (searchText || userIds.length > 0) {
+    if (searchType.value === "posts") {
       await searchStore.searchPosts({
-        keyword: searchText,
-        userIds,
+        keyword: keyword.value.trim(),
         index: 0,
         count: 20
       });
-      isResultsOpen.value = true;
+    } else {
+      await searchStore.searchUsers({
+        keyword: keyword.value.trim(),
+        index: 0,
+        count: 20
+      });
     }
+    isResultsOpen.value = true;
   } catch (err) {
     error.value = err.message || 'Search failed';
     console.error("Error during search:", err);
@@ -261,13 +319,10 @@ const handleSearch = async () => {
 
 const highlightMatch = (text, searchTerm) => {
   if (!text || !searchTerm) return text;
-
   const normalizedText = normalizeString(text);
   const normalizedSearch = normalizeString(searchTerm);
-
   if (!normalizedText.includes(normalizedSearch)) return text;
-
-  const regex = new RegExp(`(${_.escapeRegExp(normalizedSearch)})`, "gi");
+  const regex = new RegExp(`(${escapeRegExp(normalizedSearch)})`, "gi");
   return text.replace(regex, "<mark>$1</mark>");
 };
 
@@ -275,6 +330,10 @@ const debouncedSearch = useDebounce(handleSearch, 300);
 
 const viewPost = (postId) => {
   router.push(`/posts/${postId}`);
+};
+
+const viewProfile = (userId) => {
+  router.push(`/profile/${userId}`);
 };
 
 const fetchSavedSearches = async () => {
@@ -289,7 +348,7 @@ const fetchSavedSearches = async () => {
 
 const applySavedSearch = (search) => {
   keyword.value = search.keyword;
-  userId.value = search.userId || "";
+  searchType.value = "posts"; // Saved searches are only for posts
   handleSearch();
 };
 
@@ -337,13 +396,15 @@ onUnmounted(() => {
   document.removeEventListener("mousedown", handleClickOutside);
 });
 
-watch(
-  [keyword, username],
-  () => {
-    searchStore.resetSearch();
-  },
-  { deep: true }
-);
+watch(keyword, () => {
+  searchStore.resetSearch();
+}, { immediate: true });
+
+watch(searchType, () => {
+  searchStore.resetSearch();
+  keyword.value = "";
+  isResultsOpen.value = false;
+});
 </script>
 
 <style scoped>
