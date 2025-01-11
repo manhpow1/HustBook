@@ -589,7 +589,10 @@ class UserService {
                     newVersion: updatePayload.version
                 });
 
-                return updatePayload;
+                return {
+                    ...updatePayload,
+                    version: updatePayload.version
+                };
             });
         } catch (error) {
             logger.error('Error updating user info:', {

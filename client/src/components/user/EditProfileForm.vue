@@ -332,7 +332,7 @@ const handleSubmit = async () => {
             address: form.value.address,
             city: form.value.city,
             country: form.value.country,
-            version: form.value.version
+            version: form.value.version || 0
         };
 
         // Chỉ thêm files nếu có thay đổi
@@ -347,11 +347,16 @@ const handleSubmit = async () => {
         while (retries > 0) {
             try {
                 result = await userStore.updateUserProfile(userId, updateData);
+                if (result && result.data) {
+                    form.value.version = result.data.version;
+                    initialForm.value.version = result.data.version;
+                }
                 break;
             } catch (err) {
                 if (err.message?.includes('concurrent modifications') && retries > 1) {
                     const userData = await userStore.getUserProfile();
                     updateData.version = userData.version;
+                    form.value.version = userData.version;
                     retries--;
                     continue;
                 }
@@ -362,10 +367,11 @@ const handleSubmit = async () => {
         if (result) {
             // Reset form state
             form.value = {
-                ...result.user,
+                ...form.value,
+                ...result.data,
                 avatar: null,
                 coverPhoto: null,
-                version: result.user.version
+                version: result.data.version
             };
 
             initialForm.value = { ...form.value };

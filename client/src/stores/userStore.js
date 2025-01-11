@@ -653,14 +653,14 @@ export const useUserStore = defineStore('user', () => {
             const response = await apiService.updateProfile(userId, formData);
 
             if (response.data?.code === '1000') {
-                // Update local state in one operation
                 if (userId === user.value?.userId) {
                     user.value = {
                         ...user.value,
-                        ...response.data.data.user
+                        ...response.data.data,
+                        version: response.data.data.version
                     };
                 }
-                return response.data.data;
+                return response.data;
             }
 
             throw new Error(response.data?.message || 'Failed to update profile');
