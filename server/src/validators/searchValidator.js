@@ -1,9 +1,12 @@
 import Joi from 'joi';
 
 const searchPostsSchema = Joi.object({
-    keyword: Joi.string().required().min(1),
-    index: Joi.number().integer().min(0).default(0),
-    count: Joi.number().integer().min(1).max(100).default(20)
+    keyword: Joi.alternatives().try(
+        Joi.string().trim().required(),
+        Joi.array().items(Joi.string().trim()).required()
+    ),
+    index: Joi.number().min(0).default(0),
+    count: Joi.number().min(1).max(100).default(20)
 });
 
 const searchUsersSchema = Joi.object({

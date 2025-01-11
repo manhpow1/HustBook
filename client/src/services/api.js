@@ -204,7 +204,13 @@ const apiService = {
     // SEARCH APIs
     // ─────────────────────────────────────────────────────────
     async searchPosts(keyword, index = 0, count = 20) {
-        return axiosInstance.get(API_ENDPOINTS.SEARCH_POSTS, { keyword, index, count });
+        return axiosInstance.get(API_ENDPOINTS.SEARCH_POSTS, {
+            params: {  // Thêm params object
+                keyword,
+                index,
+                count
+            }
+        });
     },
 
     async searchUsers(keyword, index = 0, count = 20) {

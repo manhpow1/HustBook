@@ -5,7 +5,7 @@
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button variant="outline" class="w-32">
-            {{ searchType === 'posts' ? 'Search Posts' : 'Search Users' }}
+            {{ searchType === "posts" ? "Search Posts" : "Search Users" }}
             <ChevronDownIcon class="ml-2 h-4 w-4" />
           </Button>
         </DropdownMenuTrigger>
@@ -22,9 +22,10 @@
       </DropdownMenu>
 
       <!-- Search Input -->
-      <Input :id="searchType === 'posts' ? 'postKeyword' : 'userKeyword'" v-model="keyword"
-        :placeholder="searchType === 'posts' ? 'Search posts by keyword...' : 'Search users...'"
-        @input="debouncedSearch" :aria-label="searchType === 'posts' ? 'Search Posts' : 'Search Users'"
+      <Input :id="searchType === 'posts' ? 'postKeyword' : 'userKeyword'" v-model="keyword" :placeholder="searchType === 'posts'
+          ? 'Search posts by keyword...'
+          : 'Search users...'
+        " @input="debouncedSearch" :aria-label="searchType === 'posts' ? 'Search Posts' : 'Search Users'"
         class="w-full lg:w-64">
       <template #prefix>
         <SearchIcon class="h-4 w-4 text-muted-foreground" />
@@ -150,11 +151,15 @@
               <div class="flex items-center space-x-4">
                 <Avatar>
                   <AvatarImage :src="user.avatar" :alt="user.userName" />
-                  <AvatarFallback>{{ user.userName?.charAt(0) || "U" }}</AvatarFallback>
+                  <AvatarFallback>{{
+                    user.userName?.charAt(0) || "U"
+                  }}</AvatarFallback>
                 </Avatar>
                 <div>
                   <h3 class="font-semibold" v-html="highlightMatch(user.userName, keyword)"></h3>
-                  <p class="text-sm text-muted-foreground">{{ user.bio || 'No bio available' }}</p>
+                  <p class="text-sm text-muted-foreground">
+                    {{ user.bio || "No bio available" }}
+                  </p>
                 </div>
               </div>
               <div class="mt-4 flex justify-end">
@@ -231,9 +236,10 @@ const setSearchType = (type) => {
 const normalizeString = (str) => str?.toLowerCase().trim() || "";
 
 const sortedSearchResults = computed(() => {
-  const results = searchType.value === "users" 
-    ? searchStore.userSearchResults 
-    : searchResults.value;
+  const results =
+    searchType.value === "users"
+      ? searchStore.userSearchResults
+      : searchResults.value;
 
   if (!results?.length) return [];
 
@@ -261,7 +267,8 @@ const normalizedSavedSearches = computed(() => {
       const normalizedKeyword = search.keyword.trim().toLowerCase();
       if (
         !uniqueSearches.has(normalizedKeyword) ||
-        new Date(search.created) > new Date(uniqueSearches.get(normalizedKeyword).created)
+        new Date(search.created) >
+        new Date(uniqueSearches.get(normalizedKeyword).created)
       ) {
         uniqueSearches.set(normalizedKeyword, search);
       }
@@ -284,20 +291,20 @@ const handleSearch = async () => {
   try {
     if (searchType.value === "posts") {
       await searchStore.searchPosts({
-        keyword: keyword.value.trim(),
+        keyword: keyword.value,
         index: 0,
-        count: 20
+        count: 20,
       });
     } else {
       await searchStore.searchUsers({
         keyword: keyword.value.trim(),
         index: 0,
-        count: 20
+        count: 20,
       });
     }
     isResultsOpen.value = true;
   } catch (err) {
-    error.value = err.message || 'Search failed';
+    error.value = err.message || "Search failed";
     console.error("Error during search:", err);
   } finally {
     isLoading.value = false;
@@ -383,9 +390,17 @@ onUnmounted(() => {
   document.removeEventListener("mousedown", handleClickOutside);
 });
 
-watch(keyword, () => {
-  searchStore.resetSearch();
-}, { immediate: true });
+watch(
+  keyword,
+  (newVal) => {
+    if (!newVal?.trim()) {
+      searchStore.resetSearch();
+      return;
+    }
+    debouncedSearch();
+  },
+  { immediate: false }
+);
 
 watch(searchType, () => {
   searchStore.resetSearch();

@@ -21,11 +21,11 @@ function createApp() {
     const app = express();
 
     // Basic middlewares
+    app.use(morgan('dev'));
     app.use(cors({ origin: process.env.CORS_ORIGIN }));
     app.use(express.json());
     app.use(helmet());
     app.set('trust proxy', 1);
-    app.use(morgan('dev'));
 
     // Apply API-wide rate limiter
     app.use(apiLimiter);

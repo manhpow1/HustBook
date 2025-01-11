@@ -18,7 +18,8 @@ export const useSearchStore = defineStore('search', () => {
     const searchPosts = async ({ keyword, index = 0, count = 20 }) => {
         console.log('Starting search with params:', { keyword, index, count });
 
-        if (!keyword?.trim()) {
+        const trimmedKeyword = keyword?.trim();
+        if (!trimmedKeyword) {
             console.log('No keyword provided, resetting search results');
             searchResults.value = [];
             return;
@@ -28,76 +29,83 @@ export const useSearchStore = defineStore('search', () => {
         error.value = null;
 
         try {
-            // Normalize keyword
-            const normalizedKeyword = decodeURIComponent(keyword.trim()).toLowerCase();
-            console.log('Normalized keyword:', normalizedKeyword);
+            // Normalize và tách keyword thành array
+            const normalizedKeyword = decodeURIComponent(trimmedKeyword).toLowerCase();
+            const searchWords = normalizedKeyword.split(/\s+/).filter(word => word.length > 0);
 
-            // First try with original keyword
-            let response = await apiService.searchPosts(normalizedKeyword, index, count);
-            console.log('Raw API response:', response);
+            console.log('Search preparation:', {
+                originalKeyword: keyword,
+                trimmedKeyword,
+                normalizedKeyword,
+                searchWords
+            });
 
-            let data = response.data;
-            console.log('Response data:', data);
+            // Gửi searchWords array lên API
+            console.log('Sending search request to API with words:', searchWords);
+            const response = await apiService.searchPosts(normalizedKeyword, index, count);
 
-            if (data.code === '1000') {
-                // If no results and keyword contains multiple words, try with individual words
-                if (data.data.length === 0 && normalizedKeyword.includes(' ')) {
-                    console.log('No results with full phrase, trying individual words');
-                    const words = normalizedKeyword.split(/\s+/).filter(word => word.length > 0);
+            console.log('API Response:', {
+                status: response.status,
+                statusText: response.statusText,
+                responseData: response.data
+            });
 
-                    // Try with first word
-                    response = await apiService.searchPosts(words[0], index, count);
-                    data = response.data;
-                    console.log('Retry response with first word:', data);
-                }
+            const { code, data, message } = response.data;
 
-                if (!data.data || !Array.isArray(data.data)) {
-                    console.warn('Invalid data format from API');
+            if (code === '1000') {
+                console.log('Raw posts data:', data);
+
+                if (!data || !Array.isArray(data)) {
+                    console.warn('Invalid data format received:', data);
                     searchResults.value = [];
                     return;
                 }
 
-                // Server now provides properly formatted results
-                const processedResults = data.data.map(post => ({
-                    ...post,
-                    content: decodeURIComponent(post.content || ''),
-                    author: {
-                        ...post.author,
-                        userName: decodeURIComponent(post.author?.userName || '')
-                    }
-                }));
+                // Process results
+                const processedResults = data.map(post => {
+                    const processed = {
+                        ...post,
+                        content: decodeURIComponent(post.content || ''),
+                        author: {
+                            ...post.author,
+                            userName: decodeURIComponent(post.author?.userName || '')
+                        }
+                    };
+                    console.log('Processed post:', processed);
+                    return processed;
+                });
 
-                console.log('Processed results:', processedResults);
-                searchResults.value = processedResults;
-                hasMore.value = processedResults.length === count;
+                console.log('Final processed results:', processedResults);
 
                 // Sort results: exact matches first, then by date
-                const sortedResults = filteredResults.sort((a, b) => {
+                const sortedResults = processedResults.sort((a, b) => {
                     if (a.isExactMatch !== b.isExactMatch) {
                         return a.isExactMatch ? -1 : 1;
                     }
                     return new Date(b.created) - new Date(a.created);
                 });
 
-                console.log('Processed search results:', sortedResults);
+                console.log('Sorted results:', sortedResults);
                 searchResults.value = sortedResults;
-                hasMore.value = data.data.length === count;
-
-                // Cache last search params for retry
+                hasMore.value = data.length === count;
                 lastSearchParams.value = { keyword, index, count };
             } else {
-                console.warn('API returned non-success code:', data.code);
-                error.value = data.message || 'Search failed';
+                console.warn('API returned error code:', code, message);
+                error.value = message || 'Search failed';
             }
         } catch (err) {
             console.error('Search failed:', err);
-            error.value = 'Search failed';
+            error.value = err.message || 'Search failed';
             await handleError(err);
         } finally {
             isLoading.value = false;
-            console.log('Search completed, loading state reset');
+            console.log('Search completed, final state:', {
+                resultsCount: searchResults.value.length,
+                hasMore: hasMore.value,
+                error: error.value
+            });
         }
-    }
+    };
 
     const searchUsers = async ({ keyword, index = 0, count = 20 }) => {
         console.log('Starting user search with params:', { keyword, index, count });
