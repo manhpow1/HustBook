@@ -1,7 +1,16 @@
 import Joi from 'joi';
 
 const searchPostsSchema = Joi.object({
-    keyword: Joi.string().required().min(1),
+    keyword: Joi.string()
+        .required()
+        .min(1)
+        .custom((value, helpers) => {
+            const normalized = decodeURIComponent(value.trim())
+                .toLowerCase()
+                .split(/\s+/)
+                .filter(word => word.length > 0);
+            return normalized;
+        }),
     index: Joi.number().integer().min(0).default(0),
     count: Joi.number().integer().min(1).max(100).default(20)
 });
@@ -38,7 +47,7 @@ const validateSearchUsers = (data) => {
     return searchUsersSchema.validate(data);
 };
 
-export default{
+export default {
     validateSearchPosts,
     validateGetSavedSearch,
     validateDeleteSavedSearch,
