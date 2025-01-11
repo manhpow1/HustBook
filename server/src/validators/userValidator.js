@@ -356,7 +356,7 @@ const setUserInfoSchema = Joi.object({
     userName: Joi.string()
         .min(3)
         .max(30)
-        .pattern(/^[a-zA-ZÀ-ỹ\s]*$/)
+        .pattern(/^[a-zA-ZÀ-ỹ0-9\s,.-]*$/)
         .messages({
             'string.min': 'Username must be at least 3 characters',
             'string.max': 'Username cannot exceed 30 characters',
@@ -369,7 +369,7 @@ const setUserInfoSchema = Joi.object({
     bio: Joi.string()
         .max(200)
         .allow('')
-        .pattern(/^[a-zA-ZÀ-ỹ\s]*$/)
+        .pattern(/^[a-zA-ZÀ-ỹ0-9\s,.-]*$/)
         .messages({
             'string.max': 'Bio cannot exceed 200 characters'
         }),
@@ -396,21 +396,21 @@ const setUserInfoSchema = Joi.object({
     address: Joi.string()
         .max(100)
         .allow('')
-        .pattern(/^[a-zA-ZÀ-ỹ\s]*$/)
+        .pattern(/^[a-zA-ZÀ-ỹ0-9\s,.-]*$/)
         .messages({
-            'string.max': 'Address cannot exceed 100 characters'
+            'string.max': 'Address cannot exceed 100 characters',
         }),
     city: Joi.string()
         .max(50)
         .allow('')
-        .pattern(/^[a-zA-ZÀ-ỹ\s]*$/)
+        .pattern(/^[a-zA-ZÀ-ỹ0-9\s,.-]*$/)
         .messages({
             'string.max': 'City cannot exceed 50 characters'
         }),
     country: Joi.string()
         .max(50)
         .allow('')
-        .pattern(/^[a-zA-ZÀ-ỹ\s]*$/)
+        .pattern(/^[a-zA-ZÀ-ỹ0-9\s,.-]*$/)
         .messages({
             'string.max': 'Country cannot exceed 50 characters'
         })
