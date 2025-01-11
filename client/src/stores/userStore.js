@@ -164,7 +164,6 @@ export const useUserStore = defineStore('user', () => {
         user.value = null;
         Cookies.remove('accessToken', { path: '/' });
         localStorage.removeItem('accessToken');
-        localStorage.removeItem('deviceId');
         localStorage.removeItem('deviceToken');
         error.value = null;
         successMessage.value = '';

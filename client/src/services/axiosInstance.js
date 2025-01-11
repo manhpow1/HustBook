@@ -98,6 +98,7 @@ if (newCsrfToken) {
         }
 
         // Handle 401 Unauthorized
+        Cookies.remove('accessToken', { path: '/' });
         await userStore.logout();
         handleError(error);
         return Promise.reject(error);
