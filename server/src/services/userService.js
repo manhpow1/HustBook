@@ -467,10 +467,22 @@ class UserService {
 
     async setUserInfo(userId, updateData) {
         try {
+            logger.debug('Starting setUserInfo service:', {
+                userId,
+                updateDataKeys: Object.keys(updateData)
+            });
+
             const user = await this.getUserById(userId);
             if (!user) {
+                logger.warn('User not found:', { userId });
                 throw createError('9995', 'User not found');
             }
+
+            logger.debug('Current user data:', {
+                userId,
+                currentVersion: user.version,
+                updateVersion: updateData.version
+            });
 
             const normalizeText = (text) => {
                 if (!text) return text;
@@ -484,6 +496,10 @@ class UserService {
             for (const field of textFields) {
                 if (updateData[field] !== undefined) {
                     sanitizedData[field] = normalizeText(updateData[field]);
+                    logger.debug(`Normalized ${field}:`, {
+                        original: updateData[field],
+                        normalized: sanitizedData[field]
+                    });
                 }
             }
 
@@ -494,11 +510,19 @@ class UserService {
                     .split(/\s+/)
                     .filter(Boolean);
 
+                logger.debug('Generated userNameLowerCase:', {
+                    userNameLowerCase: sanitizedData.userNameLowerCase
+                });
+
                 // Check for existing username
                 const existingUser = await db.collection('users')
                     .where('userNameLowerCase', 'array-contains-any', sanitizedData.userNameLowerCase)
                     .where('userId', '!=', userId)
                     .get();
+
+                logger.debug('Username uniqueness check:', {
+                    exists: !existingUser.empty
+                });
 
                 if (!existingUser.empty) {
                     throw createError('1002', 'Username already taken');
@@ -508,25 +532,41 @@ class UserService {
             // Handle file URLs
             if (updateData.avatar === '') {
                 sanitizedData.avatar = '';
+                logger.debug('Clearing avatar');
             }
             if (updateData.coverPhoto === '') {
                 sanitizedData.coverPhoto = '';
+                logger.debug('Clearing cover photo');
             }
 
             return await db.runTransaction(async (transaction) => {
+                logger.debug('Starting transaction for user update:', { userId });
+
                 const userRef = db.collection('users').doc(userId);
                 const userDoc = await transaction.get(userRef);
 
                 if (!userDoc.exists) {
+                    logger.warn('User not found in transaction:', { userId });
                     throw createError('9995', 'User not found');
                 }
 
                 const currentData = userDoc.data();
                 const currentVersion = currentData.version || 0;
 
+                logger.debug('Version check:', {
+                    currentVersion,
+                    updateVersion: updateData.version,
+                    userId
+                });
+
                 // Allow updates if version is not older than current
                 if (updateData.version < currentVersion) {
-                    throw createError('9999', 'Profile update failed - please refresh and try again');
+                    logger.warn('Version conflict detected:', {
+                        currentVersion,
+                        updateVersion: updateData.version,
+                        userId
+                    });
+                    throw createError('1009', 'concurrent modifications detected');
                 }
 
                 const updatePayload = {
@@ -536,14 +576,27 @@ class UserService {
                     updatedAt: new Date().toISOString()
                 };
 
+                logger.debug('Applying update:', {
+                    userId,
+                    updatePayload,
+                    newVersion: updatePayload.version
+                });
+
                 transaction.update(userRef, updatePayload);
+
+                logger.debug('Transaction completed successfully:', {
+                    userId,
+                    newVersion: updatePayload.version
+                });
+
                 return updatePayload;
             });
         } catch (error) {
             logger.error('Error updating user info:', {
                 userId,
                 error: error.message,
-                stack: error.stack
+                stack: error.stack,
+                updateData: JSON.stringify(updateData)
             });
             throw error;
         }

@@ -120,9 +120,11 @@
                     <Button type="button" variant="outline" :disabled="isLoading" @click="resetForm">
                         Cancel
                     </Button>
-                    <Button type="submit" :disabled="isLoading || !isFormValid">
+                    <Button type="submit"
+                        :disabled="isLoading || !isFormValid || formState.pendingUploads || !hasChanges">
                         <Loader2Icon v-if="isLoading" class="mr-2 h-4 w-4 animate-spin" />
-                        {{ isLoading ? "Saving..." : "Save Changes" }}
+                        {{ formState.pendingUploads ? "Processing uploads..." :
+                            isLoading ? "Saving..." : "Save Changes" }}
                     </Button>
                 </div>
             </form>
@@ -180,6 +182,10 @@ const initialForm = ref({ ...defaultFormState });
 const errors = ref({});
 const isLoading = ref(false);
 const error = ref(null);
+const formState = ref({
+    isDirty: false,
+    pendingUploads: false
+});
 
 // Validation rules
 const validators = {
@@ -249,10 +255,12 @@ const handleAvatarUpload = debounce(async (event) => {
     if (!file) return;
 
     try {
+        formState.value.pendingUploads = true;
         const compressedFile = await compressImage(file, 400, 400, 0.8);
-        if (!compressedFile) return;
-
-        form.value.avatar = compressedFile;
+        if (compressedFile) {
+            form.value.avatar = compressedFile;
+            formState.value.isDirty = true;
+        }
     } catch (err) {
         toast({
             type: "error",
@@ -262,23 +270,27 @@ const handleAvatarUpload = debounce(async (event) => {
     }
 }, 500);
 
-const handleCoverUpload = debounce(async (event) => {
+const handleCoverUpload = async (event) => {
     const file = event.target.files?.[0];
     if (!file) return;
 
     try {
+        formState.value.pendingUploads = true;
         const compressedFile = await compressImage(file, 1500, 500, 0.8);
-        if (!compressedFile) return;
-
-        form.value.coverPhoto = compressedFile;
+        if (compressedFile) {
+            form.value.coverPhoto = compressedFile;
+            formState.value.isDirty = true;
+        }
     } catch (err) {
         toast({
             type: "error",
             title: "Error",
-            description: "Cannot process cover image",
+            description: "Cannot process cover photo"
         });
+    } finally {
+        formState.value.pendingUploads = false;
     }
-}, 500);
+};
 
 const resetForm = () => {
     form.value = { ...initialForm.value };
@@ -287,59 +299,57 @@ const resetForm = () => {
 };
 
 const handleSubmit = async () => {
-    if (isLoading.value) return;
+    if (isLoading.value || formState.value.pendingUploads || !hasChanges.value) {
+        return;
+    }
 
     try {
-        // Validate all fields at once
+        isLoading.value = true;
+        error.value = null;
+
+        // Validate
         const validationErrors = {};
         Object.keys(validators).forEach((field) => {
-            if (validators[field]) {
-                const error = validators[field](form.value[field]);
-                if (error) validationErrors[field] = error;
-            }
+            const error = validators[field]?.(form.value[field]);
+            if (error) validationErrors[field] = error;
         });
 
         if (Object.keys(validationErrors).length > 0) {
             errors.value = validationErrors;
-            // Only show one toast for all validation errors
             toast({
                 type: "warning",
-                title: "Validation Error",
-                description: "Please check the form for errors"
+                description: "Please fix validation errors",
             });
             return;
         }
 
-        isLoading.value = true;
-        error.value = null;
-
         const userId = userStore.userData?.userId;
         if (!userId) throw new Error('User ID not found');
 
-        // Collect all changes at once
         const updateData = {
             userName: form.value.userName,
             bio: form.value.bio,
             address: form.value.address,
             city: form.value.city,
             country: form.value.country,
-            avatar: form.value.avatar,
-            coverPhoto: form.value.coverPhoto,
-            existingAvatar: form.value.existingAvatar,
-            existingCoverPhoto: form.value.existingCoverPhoto,
-            version: form.value.version || 0
+            version: form.value.version
         };
 
-        let retries = 3;
+        // Chỉ thêm files nếu có thay đổi
+        if (form.value.avatar) updateData.avatar = form.value.avatar;
+        if (form.value.coverPhoto) updateData.coverPhoto = form.value.coverPhoto;
+        if (form.value.existingAvatar === '') updateData.existingAvatar = '';
+        if (form.value.existingCoverPhoto === '') updateData.existingCoverPhoto = '';
+
         let result = null;
-            
+        let retries = 3;
+
         while (retries > 0) {
             try {
                 result = await userStore.updateUserProfile(userId, updateData);
                 break;
             } catch (err) {
                 if (err.message?.includes('concurrent modifications') && retries > 1) {
-                    // Refresh user data and retry
                     const userData = await userStore.getUserProfile();
                     updateData.version = userData.version;
                     retries--;
@@ -350,34 +360,33 @@ const handleSubmit = async () => {
         }
 
         if (result) {
+            // Reset form state
             form.value = {
-                ...form.value,
+                ...result.user,
                 avatar: null,
                 coverPhoto: null,
-                existingAvatar: result.user.avatar || form.value.existingAvatar,
-                existingCoverPhoto: result.user.coverPhoto || form.value.existingCoverPhoto,
                 version: result.user.version
             };
 
             initialForm.value = { ...form.value };
+            formState.value.isDirty = false;
 
             toast({
-                title: 'Success', 
-                description: 'Profile updated successfully'
+                title: "Success",
+                description: "Profile updated successfully"
             });
         }
     } catch (err) {
-        error.value = err.message || 'An error occurred while updating';
+        error.value = err.message || 'Update failed';
         toast({
-            title: 'Error',
+            title: "Error",
             description: error.value,
-            variant: 'destructive'
+            variant: "destructive"
         });
     } finally {
         isLoading.value = false;
     }
 };
-
 
 // Load initial data
 const loadUserData = async () => {
@@ -429,9 +438,17 @@ const debouncedValidation = debounce((newValues) => {
     }
 }, 300);
 
-watch(form, (newValues) => {
-    debouncedValidation(newValues);
+watch([form], () => {
+    formState.value.isDirty = hasChanges.value;
 }, { deep: true });
+
+const hasChanges = computed(() => {
+    const basicFieldsChanged = Object.keys(form.value).some(key =>
+        form.value[key] !== initialForm.value[key]
+    );
+
+    return basicFieldsChanged || form.value.avatar || form.value.coverPhoto;
+});
 
 const avatarPreview = computed(() => {
     if (form.value.avatar instanceof File) {

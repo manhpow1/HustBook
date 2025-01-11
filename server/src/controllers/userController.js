@@ -419,33 +419,53 @@ class UserController {
     async setUserInfo(req, res, next) {
         try {
             const userId = req.user.userId;
+            logger.debug('Starting setUserInfo request:', { 
+                userId,
+                requestBody: req.body,
+                hasFiles: !!req.files 
+            });
+    
             const updateData = {};
-
+    
             // Batch validate all data at once
             const { error, value } = userValidator.validateSetUserInfo({
                 ...req.body,
                 files: req.files
             });
-
+    
             if (error) {
+                logger.debug('Validation error:', { error: error.details });
                 throw createError('1002', error.details[0].message);
             }
-
+    
+            logger.debug('Validation passed, processing data:', { validatedData: value });
+    
             // Normalize Vietnamese text for all text fields
             const normalizedValue = { ...value };
             const textFields = ['userName', 'bio', 'address', 'city', 'country'];
             textFields.forEach(field => {
                 if (normalizedValue[field]) {
                     normalizedValue[field] = normalizedValue[field].normalize('NFC');
+                    logger.debug(`Normalized ${field}:`, { 
+                        original: value[field], 
+                        normalized: normalizedValue[field] 
+                    });
                 }
             });
-
+    
             // Batch process all files
+            logger.debug('Processing file uploads:', {
+                hasAvatar: !!req.files?.avatar,
+                hasCoverPhoto: !!req.files?.coverPhoto
+            });
+    
             const [avatarUrl, coverPhotoUrl] = await Promise.all([
                 req.files?.avatar && handleAvatarUpload(req.files.avatar[0], userId),
                 req.files?.coverPhoto && handleCoverPhotoUpload(req.files.coverPhoto[0], userId)
             ]);
-
+    
+            logger.debug('File upload results:', { avatarUrl, coverPhotoUrl });
+    
             // Build update data in one go
             Object.assign(updateData, {
                 ...normalizedValue,
@@ -456,21 +476,35 @@ class UserController {
                     undefined,
                 version: normalizedValue.version || 0
             });
-
+    
+            logger.debug('Final update data:', { updateData });
+    
             const updatedUser = await userService.setUserInfo(userId, updateData);
-
+    
+            logger.debug('User update successful:', { 
+                userId, 
+                updatedFields: Object.keys(updateData),
+                newVersion: updatedUser.version 
+            });
+    
             // Single audit log
             await req.app.locals.auditLog.logAction(userId, null, 'update_profile', {
                 timestamp: new Date().toISOString(),
                 updatedFields: Object.keys(updateData),
                 version: updatedUser.version
             });
-
+    
             sendResponse(res, '1000', {
                 message: 'Profile updated successfully',
                 user: updatedUser
             });
         } catch (error) {
+            logger.error('Error in setUserInfo controller:', {
+                userId: req.user.userId,
+                error: error.message,
+                stack: error.stack,
+                requestBody: req.body
+            });
             next(error);
         }
     }
