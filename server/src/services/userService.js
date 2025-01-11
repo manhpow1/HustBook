@@ -465,46 +465,38 @@ class UserService {
         }
     }
 
-    async setUserInfo(userId, updateData, retryCount = 0) {
-        const MAX_RETRIES = 3;
-        const BASE_DELAY = 100; // 100ms base delay
-
+    async setUserInfo(userId, updateData) {
         try {
             const user = await this.getUserById(userId);
             if (!user) {
                 throw createError('9995', 'User not found');
             }
 
-            const currentTime = Date.now();
-            const lastModifiedAt = user.lastModifiedAt || 0;
+            const normalizeText = (text) => {
+                if (!text) return text;
+                return text.normalize('NFC');
+            };
 
-            if (currentTime - lastModifiedAt < 1000) {
-                throw createError('1003', 'Please wait a moment before updating again');
-            }
+            // Process all text fields at once
+            const textFields = ['userName', 'bio', 'address', 'city', 'country'];
+            const sanitizedData = {};
 
-            // Handle old file deletion if needed
-            if (updateData.avatar === '' && user.avatar) {
-                try {
-                    await deleteFileFromStorage(user.avatar);
-                    logger.info('Deleted old avatar', { userId });
-                } catch (error) {
-                    logger.warn('Failed to delete old avatar', { userId, error: error.message });
+            for (const field of textFields) {
+                if (updateData[field] !== undefined) {
+                    sanitizedData[field] = normalizeText(updateData[field]);
                 }
             }
 
-            if (updateData.coverPhoto === '' && user.coverPhoto) {
-                try {
-                    await deleteFileFromStorage(user.coverPhoto);
-                    logger.info('Deleted old cover photo', { userId });
-                } catch (error) {
-                    logger.warn('Failed to delete old cover photo', { userId, error: error.message });
-                }
-            }
+            // Handle userNameLowerCase special case
+            if (sanitizedData.userName) {
+                sanitizedData.userNameLowerCase = sanitizedData.userName
+                    .toLowerCase()
+                    .split(/\s+/)
+                    .filter(Boolean);
 
-            // Check username uniqueness if userNameLowerCase is being updated
-            if (updateData.userNameLowerCase) {
-                const existingUser = await db.collection(collections.users)
-                    .where('userNameLowerCase', 'array-contains-any', updateData.userNameLowerCase)
+                // Check for existing username
+                const existingUser = await db.collection('users')
+                    .where('userNameLowerCase', 'array-contains-any', sanitizedData.userNameLowerCase)
                     .where('userId', '!=', userId)
                     .get();
 
@@ -513,11 +505,18 @@ class UserService {
                 }
             }
 
-            // Use Firestore's built-in version tracking
-            const userRef = db.collection(collections.users).doc(userId);
+            // Handle file URLs
+            if (updateData.avatar === '') {
+                sanitizedData.avatar = '';
+            }
+            if (updateData.coverPhoto === '') {
+                sanitizedData.coverPhoto = '';
+            }
 
             return await db.runTransaction(async (transaction) => {
+                const userRef = db.collection('users').doc(userId);
                 const userDoc = await transaction.get(userRef);
+
                 if (!userDoc.exists) {
                     throw createError('9995', 'User not found');
                 }
@@ -525,97 +524,27 @@ class UserService {
                 const currentData = userDoc.data();
                 const currentVersion = currentData.version || 0;
 
-                // If version mismatch, fetch latest data and merge with updates
                 if (currentVersion !== updateData.version - 1) {
-                    logger.info('Version mismatch detected', {
-                        expected: updateData.version - 1,
-                        actual: currentVersion,
-                        retryCount
-                    });
-
-                    if (retryCount < MAX_RETRIES) {
-                        // Merge current data with updates
-                        const mergedData = {
-                            ...updateData,
-                            version: currentVersion + 1
-                        };
-
-                        const delay = BASE_DELAY * Math.pow(2, retryCount);
-                        await new Promise(resolve => setTimeout(resolve, delay));
-                        return this.setUserInfo(userId, mergedData, retryCount + 1);
-                    }
-                    
-                    throw createError('9999', 'Profile update failed due to concurrent modifications. Please try again.');
+                    throw createError('9999', 'Profile update failed due to concurrent modifications');
                 }
-
-                const encodeUtf8 = (value) => {
-                    if (typeof value === 'string') {
-                        try {
-                            return value.normalize('NFC');
-                        } catch (error) {
-                            logger.warn('Failed to normalize string', { value, error });
-                            return value;
-                        }
-                    }
-                    return value;
-                };
-
-                // Create sanitized data with proper encoding
-                const sanitizedData = Object.fromEntries(
-                    Object.entries({
-                        ...updateData,
-                        avatar: updateData.avatar || ''
-                    }).map(([key, value]) => [key, encodeUtf8(value)])
-                );
 
                 const updatePayload = {
                     ...sanitizedData,
                     version: currentVersion + 1,
-                    lastModifiedAt: currentTime,
+                    lastModifiedAt: Date.now(),
                     updatedAt: new Date().toISOString()
                 };
 
-                // Validate encoding of critical fields
-                const criticalFields = ['userName', 'fullName', 'bio', 'address', 'city', 'country'];
-                for (const field of criticalFields) {
-                    if (sanitizedData[field] && typeof sanitizedData[field] === 'string') {
-                        try {
-                            Buffer.from(sanitizedData[field], 'utf8').toString('utf8');
-                        } catch (error) {
-                            logger.warn('Invalid UTF-8 encoding in field - using original value', {
-                                field,
-                                value: sanitizedData[field],
-                                error: error.message
-                            });
-                        }
-                    }
-                }
-
                 transaction.update(userRef, updatePayload);
-                logger.info(`Updated user info for user ${userId}`, {
-                    userId,
-                    version: currentVersion + 1,
-                    retryCount
-                });
-
                 return updatePayload;
             });
         } catch (error) {
             logger.error('Error updating user info:', {
-                error: error.message,
-                stack: error.stack,
                 userId,
-                retryCount,
-                updateData
+                error: error.message,
+                stack: error.stack
             });
-
-            if (retryCount < MAX_RETRIES && error.code === '9999') {
-                const delay = BASE_DELAY * Math.pow(2, retryCount);
-                await new Promise(resolve => setTimeout(resolve, delay));
-                return this.setUserInfo(userId, updateData, retryCount + 1);
-            }
-
-            throw createError('9999', 'Failed to update user info after multiple attempts');
+            throw error;
         }
     }
 

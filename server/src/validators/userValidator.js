@@ -253,15 +253,15 @@ const sanitizeInput = (value) => {
 
     // Additional security measures
     sanitized = sanitized
-        // Remove potential SQL injection characters
         .replace(/['";]/g, '')
         // Remove potential command injection characters
         .replace(/[$`]/g, '')
-        // Remove potential script tags that might have survived
+        // Remove potential script tags
         .replace(/<\/?[^>]+(>|$)/g, '')
-        // Remove unicode control characters
-        .replace(/[^\x20-\x7E]/g, '')
-        // Normalize whitespace
+        // Keep Unicode characters for Vietnamese text
+        .replace(/[^\p{L}\p{N}\s\-_]/gu, '')
+        // Normalize Unicode characters
+        .normalize('NFC')
         .trim();
 
     return sanitized;
@@ -356,7 +356,7 @@ const setUserInfoSchema = Joi.object({
     userName: Joi.string()
         .min(3)
         .max(30)
-        .pattern(/^[a-zA-Z\s]*$/)
+        .pattern(/^[a-zA-ZÀ-ỹ\s]*$/)
         .messages({
             'string.min': 'Username must be at least 3 characters',
             'string.max': 'Username cannot exceed 30 characters',
@@ -369,6 +369,7 @@ const setUserInfoSchema = Joi.object({
     bio: Joi.string()
         .max(200)
         .allow('')
+        .pattern(/^[a-zA-ZÀ-ỹ\s]*$/)
         .messages({
             'string.max': 'Bio cannot exceed 200 characters'
         }),
@@ -395,18 +396,21 @@ const setUserInfoSchema = Joi.object({
     address: Joi.string()
         .max(100)
         .allow('')
+        .pattern(/^[a-zA-ZÀ-ỹ\s]*$/)
         .messages({
             'string.max': 'Address cannot exceed 100 characters'
         }),
     city: Joi.string()
         .max(50)
         .allow('')
+        .pattern(/^[a-zA-ZÀ-ỹ\s]*$/)
         .messages({
             'string.max': 'City cannot exceed 50 characters'
         }),
     country: Joi.string()
         .max(50)
         .allow('')
+        .pattern(/^[a-zA-ZÀ-ỹ\s]*$/)
         .messages({
             'string.max': 'Country cannot exceed 50 characters'
         })
@@ -433,16 +437,16 @@ const validateCheckVerifyCode = (data) => {
 };
 
 const validateSetUserInfo = (data) => {
-    const sanitizedData = {
-        userName: sanitizeInput(data.userName),
-        bio: sanitizeInput(data.bio),
-        address: sanitizeInput(data.address),
-        city: sanitizeInput(data.city),
-        country: sanitizeInput(data.country),
-        avatar: data.avatar,
-        coverPhoto: data.coverPhoto
-    };
-    return setUserInfoSchema.validate(sanitizedData, { abortEarly: false });
+    const fieldsToSanitize = ['userName', 'bio', 'address', 'city', 'country'];
+    const sanitizedData = fieldsToSanitize.reduce((acc, field) => {
+        acc[field] = data[field] ? sanitizeInput(data[field]) : data[field];
+        return acc;
+    }, {});
+
+    return setUserInfoSchema.validate(sanitizedData, { 
+        abortEarly: false,
+        stripUnknown: true 
+    });
 };
 
 const validateGetUserInfo = (data) => {

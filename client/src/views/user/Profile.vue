@@ -24,7 +24,7 @@
         <!-- Cover Image Section -->
         <Card class="relative overflow-hidden">
           <div class="h-48 relative">
-            <img :src="user?.coverPhoto || '@/assets/default-cover.png'"
+            <img :src="user?.coverPhoto || '../../assets/default-cover.png'"
               :alt="`${user?.userName || 'User'}'s cover`" class="w-full h-full object-cover" />
             <div class="absolute top-4 right-4 flex space-x-2">
               <Button v-if="isCurrentUser" variant="secondary" size="sm" @click="uploadCoverPhoto">

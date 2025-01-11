@@ -13,7 +13,8 @@
                         <Avatar class="w-20 h-20">
                             <AvatarImage v-if="avatarPreview" :src="avatarPreview" />
                             <AvatarFallback>
-                                {{ form.userName ? form.userName.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) : 'U' }}
+                                {{ form.userName ? form.userName.split(' ').map(n =>
+                                    n[0]).join('').toUpperCase().slice(0, 2) : 'U' }}
                             </AvatarFallback>
                         </Avatar>
                         <div class="flex-1">
@@ -234,17 +235,6 @@ const userNameLowerCase = computed(() => {
     return [...new Set(variations)];
 });
 
-// Watch for form changes and validate
-watch(
-    form,
-    (newValues) => {
-        Object.keys(newValues).forEach((field) => {
-            validateField(field, newValues[field]);
-        });
-    },
-    { deep: true }
-);
-
 // Computed values
 const isFormValid = computed(() => {
     return (
@@ -298,15 +288,35 @@ const resetForm = () => {
 
 const handleSubmit = async () => {
     if (isLoading.value) return;
+
     try {
+        // Validate all fields at once
+        const validationErrors = {};
+        Object.keys(validators).forEach((field) => {
+            if (validators[field]) {
+                const error = validators[field](form.value[field]);
+                if (error) validationErrors[field] = error;
+            }
+        });
+
+        if (Object.keys(validationErrors).length > 0) {
+            errors.value = validationErrors;
+            // Only show one toast for all validation errors
+            toast({
+                type: "warning",
+                title: "Validation Error",
+                description: "Please check the form for errors"
+            });
+            return;
+        }
+
         isLoading.value = true;
         error.value = null;
 
         const userId = userStore.userData?.userId;
-        if (!userId) {
-            throw new Error('User ID not found');
-        }
+        if (!userId) throw new Error('User ID not found');
 
+        // Collect all changes at once
         const updateData = {
             userName: form.value.userName,
             bio: form.value.bio,
@@ -336,7 +346,7 @@ const handleSubmit = async () => {
 
             toast({
                 title: 'Success',
-                description: 'Updated successfully'
+                description: 'Profile updated successfully'
             });
         }
     } catch (err) {
@@ -387,20 +397,24 @@ const loadUserData = async () => {
 };
 
 const debouncedValidation = debounce((newValues) => {
-    Object.keys(newValues).forEach((field) => {
-        if (field !== "avatar" && field !== "coverPhoto") {
-            validateField(field, newValues[field]);
+    const errors = {};
+    // Validate all fields at once
+    Object.keys(validators).forEach((field) => {
+        if (validators[field] && newValues[field] !== undefined) {
+            const error = validators[field](newValues[field]);
+            if (error) errors[field] = error;
         }
     });
+
+    // Only update errors if there are any changes
+    if (Object.keys(errors).length > 0) {
+        errors.value = errors;
+    }
 }, 300);
 
-watch(
-    form,
-    (newValues) => {
-        debouncedValidation(newValues);
-    },
-    { deep: true }
-);
+watch(form, (newValues) => {
+    debouncedValidation(newValues);
+}, { deep: true });
 
 const avatarPreview = computed(() => {
     if (form.value.avatar instanceof File) {

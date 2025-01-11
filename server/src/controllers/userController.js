@@ -390,44 +390,47 @@ class UserController {
     async setUserInfo(req, res, next) {
         try {
             const userId = req.user.userId;
-            const formData = req.body;
-            const files = req.files || {};
+            const updateData = {};
 
-            const { error, value } = userValidator.validateSetUserInfo(formData);
+            // Batch validate all data at once
+            const { error, value } = userValidator.validateSetUserInfo({
+                ...req.body,
+                files: req.files
+            });
+
             if (error) {
                 throw createError('1002', error.details[0].message);
             }
 
-            // Generate userNameLowerCase array if userName is being updated
-            const userNameLowerCase = value.userName ? 
-                value.userName.toLowerCase().split(' ').filter(Boolean) : 
-                undefined;
+            // Normalize Vietnamese text for all text fields
+            const normalizedValue = { ...value };
+            const textFields = ['userName', 'bio', 'address', 'city', 'country'];
+            textFields.forEach(field => {
+                if (normalizedValue[field]) {
+                    normalizedValue[field] = normalizedValue[field].normalize('NFC');
+                }
+            });
 
-            const updateData = {
-                ...value,
-                version: (value.version || 0) + 1,
-                ...(userNameLowerCase && { userNameLowerCase })
-            };
+            // Batch process all files
+            const [avatarUrl, coverPhotoUrl] = await Promise.all([
+                req.files?.avatar && handleAvatarUpload(req.files.avatar[0], userId),
+                req.files?.coverPhoto && handleCoverPhotoUpload(req.files.coverPhoto[0], userId)
+            ]);
 
-            // Handle avatar file
-            if (files.avatar) {
-                const avatarUrl = await handleAvatarUpload(files.avatar[0], userId);
-                updateData.avatar = avatarUrl;
-            } else if (formData.existingAvatar !== undefined) {
-                updateData.avatar = formData.existingAvatar;
-            }
-
-            // Handle cover photo file
-            if (files.coverPhoto) {
-                const coverPhotoUrl = await handleCoverPhotoUpload(files.coverPhoto[0], userId);
-                updateData.coverPhoto = coverPhotoUrl;
-            } else if (formData.existingCoverPhoto !== undefined) {
-                updateData.coverPhoto = formData.existingCoverPhoto;
-            }
+            // Build update data in one go
+            Object.assign(updateData, {
+                ...normalizedValue,
+                ...(avatarUrl && { avatar: avatarUrl }),
+                ...(coverPhotoUrl && { coverPhoto: coverPhotoUrl }),
+                userNameLowerCase: normalizedValue.userName ?
+                    normalizedValue.userName.toLowerCase().split(/\s+/).filter(Boolean) :
+                    undefined,
+                version: normalizedValue.version || 0
+            });
 
             const updatedUser = await userService.setUserInfo(userId, updateData);
 
-            // Log successful update
+            // Single audit log
             await req.app.locals.auditLog.logAction(userId, null, 'update_profile', {
                 timestamp: new Date().toISOString(),
                 updatedFields: Object.keys(updateData),
@@ -436,50 +439,9 @@ class UserController {
 
             sendResponse(res, '1000', {
                 message: 'Profile updated successfully',
-                user: {
-                    userId: updatedUser.userId,
-                    userName: updatedUser.userName,
-                    avatar: updatedUser.avatar,
-                    coverPhoto: updatedUser.coverPhoto,
-                    bio: updatedUser.bio,
-                    address: updatedUser.address,
-                    city: updatedUser.city,
-                    country: updatedUser.country,
-                    version: updatedUser.version,
-                    userNameLowerCase: updatedUser.userNameLowerCase
-                }
+                user: updatedUser
             });
         } catch (error) {
-            logger.error('Set User Info Error:', error);
-            next(error);
-        }
-    }
-
-    async getUserInfo(req, res, next) {
-        try {
-            const { error, value } = userValidator.validateGetUserInfo({ userId: req.params.userId });
-            if (error) {
-                throw createError('1002', error.details[0].message);
-            }
-
-            const targetUserId = value.userId || req.user.userId;
-            const userInfo = await userService.getUserInfo(targetUserId);
-
-            // Add additional profile data
-            const [friendsCount, postsCount] = await Promise.all([
-                friendService.getFriendsCount(targetUserId),
-                postService.getUserPostsCount(targetUserId)
-            ]);
-
-            sendResponse(res, '1000', {
-                user: {
-                    ...userInfo,
-                    friendsCount,
-                    postsCount
-                }
-            });
-        } catch (error) {
-            logger.error('Get User Info Error:', error);
             next(error);
         }
     }
@@ -521,7 +483,7 @@ class UserController {
 
             // Generate userNameLowerCase array
             const userNameLowerCase = userName.toLowerCase().split(' ').filter(Boolean);
-            
+
             const updatedUser = await userService.changeInfoAfterSignup(
                 userId,
                 userName,
