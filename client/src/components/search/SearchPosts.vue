@@ -90,7 +90,7 @@
                   <AvatarImage :src="post.author?.avatar" :alt="post.author?.userName" />
                   <AvatarFallback>{{
                     post.author?.userName?.charAt(0) || "U"
-                  }}</AvatarFallback>
+                    }}</AvatarFallback>
                 </Avatar>
                 <div>
                   <h3 class="font-semibold" v-html="highlightMatch(post.author?.userName, keyword)"></h3>
@@ -182,7 +182,7 @@ const partialMatch = (source, target) => {
 // Computed properties
 const sortedSearchResults = computed(() => {
   if (!searchResults.value.length) return [];
-  
+
   return searchResults.value.sort((a, b) => {
     // First sort by exact matches if keyword search is active
     if (keyword.value) {
@@ -190,14 +190,14 @@ const sortedSearchResults = computed(() => {
       const bExactMatch = normalizeString(b.content).includes(normalizeString(keyword.value));
       if (aExactMatch !== bExactMatch) return aExactMatch ? -1 : 1;
     }
-    
+
     // Then sort by username matches if username search is active
     if (username.value) {
       const aUsernameMatch = normalizeString(a.author?.userName).includes(normalizeString(username.value));
       const bUsernameMatch = normalizeString(b.author?.userName).includes(normalizeString(username.value));
       if (aUsernameMatch !== bUsernameMatch) return aUsernameMatch ? -1 : 1;
     }
-    
+
     // Finally sort by date (assuming newer posts should appear first)
     return new Date(b.createdAt || 0) - new Date(a.createdAt || 0);
   });
@@ -224,35 +224,33 @@ const normalizedSavedSearches = computed(() => {
 
 // Event handlers
 const handleSearch = async () => {
-  if (!keyword.value.trim() && !username.value.trim()) {
-    searchStore.resetSearch();
-    return;
-  }
+  const searchText = keyword.value.trim();
+  const searchUsername = username.value.trim();
 
   isLoading.value = true;
   error.value = null;
 
   try {
-    const searchParams = {
-      keyword: keyword.value.trim(),
-      index: 0,
-      count: 20
-    };
-
-    if (username.value.trim()) {
+    let userIds = [];
+    // Tìm kiếm users trước nếu có username
+    if (searchUsername) {
       const { users } = await searchStore.searchUsers({
-        keyword: username.value.trim(),
+        keyword: searchUsername,
         index: 0,
         count: 20
       });
-      
-      if (users.length > 0) {
-        searchParams.userIds = users.map(user => user.userId);
-      }
+      userIds = users.map(user => user.userId);
     }
 
-    await searchStore.searchPosts(searchParams);
-    isResultsOpen.value = true;
+    if (searchText || userIds.length > 0) {
+      await searchStore.searchPosts({
+        keyword: searchText,
+        userIds,
+        index: 0,
+        count: 20
+      });
+      isResultsOpen.value = true;
+    }
   } catch (err) {
     error.value = err.message || 'Search failed';
     console.error("Error during search:", err);

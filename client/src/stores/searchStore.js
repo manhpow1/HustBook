@@ -16,90 +16,47 @@ export const useSearchStore = defineStore('search', () => {
     const { handleError } = useErrorHandler();
 
     const searchPosts = async ({ keyword, index = 0, count = 20 }) => {
-        if (!keyword?.trim()) {
-            searchResults.value = [];
-            return;
-        }
-
         isLoading.value = true;
         error.value = null;
 
         try {
             const response = await apiService.searchPosts(keyword, index, count);
-            const data = response.data;
-
-            if (data.code === '1000') {
-                // Filter and sort results client-side for better matching
-                const decodedKeyword = decodeURIComponent(keyword.trim()).toLowerCase();
-                const filteredResults = data.data.filter(post => {
-                    const decodedContent = decodeURIComponent(post.content || '').toLowerCase();
-                    const decodedUsername = decodeURIComponent(post.author?.userName || '').toLowerCase();
-                    return decodedContent.includes(decodedKeyword) ||
-                        decodedUsername.includes(decodedKeyword);
-                });
-
-                searchResults.value = filteredResults;
-                hasMore.value = data.data.length === count;
+            if (response.data?.code === '1000') {
+                searchResults.value = response.data.data || [];
+                hasMore.value = searchResults.value.length === count;
+            } else if (response.data?.code === '9994') {
+                searchResults.value = [];
+                hasMore.value = false;
             }
         } catch (err) {
-            error.value = 'Search failed';
-            await handleError(err);
+            error.value = err.message || 'Search failed';
+            throw err;
         } finally {
             isLoading.value = false;
         }
-    }
+    };
 
     const searchUsers = async ({ keyword, index = 0, count = 20 }) => {
-        const trimmedKeyword = keyword?.trim();
-        if (!trimmedKeyword) {
-            userSearchResults.value = [];
-            hasMoreUsers.value = false;
-            return { users: [], total: 0 };
-        }
-
         isLoading.value = true;
         error.value = null;
-        userSearchParams.value = { keyword: trimmedKeyword, index, count };
 
         try {
-            const response = await apiService.searchUsers(trimmedKeyword, index, count);
-            const { code, data, message } = response.data;
-
-            if (code === '1000' && Array.isArray(data)) {
-                // Process and normalize user data
-                const processedUsers = data.map(user => ({
-                    ...user,
-                    userName: decodeURIComponent(user.userName || ''),
-                    userNameLowerCase: user.userNameLowerCase?.map(part => decodeURIComponent(part)) || [],
-                    avatar: user.avatar || '',
-                    same_friends: Number(user.same_friends || 0)
-                }));
-
-                // Update store state
+            const response = await apiService.searchUsers(keyword, index, count);
+            if (response.data?.code === '1000') {
+                const users = response.data.data || [];
                 if (index === 0) {
-                    userSearchResults.value = processedUsers;
+                    userSearchResults.value = users;
                 } else {
-                    // Remove duplicates when appending
                     const existingIds = new Set(userSearchResults.value.map(u => u.userId));
-                    const newUsers = processedUsers.filter(user => !existingIds.has(user.userId));
+                    const newUsers = users.filter(user => !existingIds.has(user.userId));
                     userSearchResults.value = [...userSearchResults.value, ...newUsers];
                 }
-
-                hasMoreUsers.value = processedUsers.length === count;
-                return { users: processedUsers, total: userSearchResults.value.length };
-            } 
-
-            if (code === '9994') {
-                if (index === 0) userSearchResults.value = [];
-                hasMoreUsers.value = false;
-                return { users: [], total: 0 };
+                return { users, total: userSearchResults.value.length };
             }
-
-            throw new Error(message || 'Failed to search users');
-        } catch (err) {
-            error.value = err.message || 'Failed to search users';
-            await handleError(err);
             return { users: [], total: 0 };
+        } catch (err) {
+            error.value = err.message || 'Search failed';
+            throw err;
         } finally {
             isLoading.value = false;
         }
