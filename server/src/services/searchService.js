@@ -27,7 +27,6 @@ class SearchService {
             return matchingPosts.map(post => ({
                 postId: post.postId,
                 image: post.images?.[0] || '',
-                video: post.video || '',
                 likes: post.likes?.toString() || '0',
                 comment: post.comments?.toString() || '0',
                 isLiked: post.isLiked ? '1' : '0',
@@ -48,21 +47,21 @@ class SearchService {
         try {
             const normalizedKeyword = decodeURIComponent(keyword.trim()).toLowerCase();
 
-            // Create compound query to search in userName field (case-insensitive)
             const usersQuery = db.collection(collections.users)
-                .orderBy('userName')
-                .startAt(normalizedKeyword)
-                .endAt(normalizedKeyword + '\uf8ff')
+                .where('userNameLowerCase', 'array-contains', normalizedKeyword)
                 .offset(index)
                 .limit(count);
 
-            // Get blocked users in parallel
             const [usersSnapshot, blockedUsersSnapshot] = await Promise.all([
                 usersQuery.get(),
                 db.collection(collections.blocks)
                     .where('userId', '==', currentUserId)
                     .get()
             ]);
+
+            if (usersSnapshot.empty) {
+                throw createError('9994', 'No data or end of list data');
+            }
 
             const blockedUserIds = new Set(
                 blockedUsersSnapshot.docs.map(doc => doc.data().blockedUserId)
@@ -78,16 +77,22 @@ class SearchService {
                     return {
                         userId: doc.id,
                         userName: userData.userName || '',
-                        userNameLowerCase: decodeURIComponent(userData.userName || '').toLowerCase().split(' '),
                         avatar: userData.avatar || '',
                         same_friends: userData.mutualFriendsCount || 0
                     };
                 });
 
+            if (matchingUsers.length === 0) {
+                throw createError('9994', 'No data or end of list data');
+            }
+
             return matchingUsers;
 
         } catch (error) {
             logger.error('Search users service error:', error);
+            if (error.code) {
+                throw error;
+            }
             throw createError('9999', 'Exception error');
         }
     }
