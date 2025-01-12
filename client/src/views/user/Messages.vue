@@ -27,8 +27,8 @@
               No conversations yet
             </div>
             <div v-else class="divide-y">
-              <button v-for="conversation in chatStore.conversations" :key="conversation.id"
-                @click="selectConversation(conversation.id)"
+              <button v-for="conversation in chatStore.conversations" :key="conversation.conversationId"
+                @click="selectConversation(conversation.conversationId)"
                 class="w-full p-4 hover:bg-accent text-left transition-colors"
                 :class="{ 'bg-accent': chatStore.selectedConversationId === conversation.id }">
                 <div class="flex items-center space-x-4">
@@ -209,7 +209,7 @@ const { isLoading: searchLoading, error: searchError } = storeToRefs(searchStore
 
 // Computed
 const selectedConversation = computed(() => {
-  return chatStore.conversations.find(c => c.id === chatStore.selectedConversationId);
+  return chatStore.conversations?.find?.(c => c.conversationId === chatStore.selectedConversationId);
 });
 
 // Methods

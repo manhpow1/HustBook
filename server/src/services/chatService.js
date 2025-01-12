@@ -214,38 +214,43 @@ class ChatService {
         }
     }
 
-    async getConversation(userId, partnerId, conversationId, index, count) {
+    async getConversation(userId, options) {
         try {
             let convRef;
-            let partnerIdFinal;
-
-            if (conversationId) {
-                const convDoc = await db.collection('conversations').doc(conversationId).get();
+            
+            if (options.conversationId) {
+                const convDoc = await db.collection('conversations').doc(options.conversationId).get();
                 if (!convDoc.exists) {
                     throw createError('9994', 'No data or end of list data');
                 }
                 convRef = convDoc.ref;
+                
                 const data = convDoc.data();
                 if (!data.participants.includes(userId)) {
                     throw createError('1009', 'Not authorized');
                 }
-                partnerIdFinal = data.participants.find(p => p !== userId);
-            } else if (partnerId) {
-                const participants = [userId, partnerId].sort();
+            } 
+            else if (options.partnerId) {
+                const participants = [userId, options.partnerId].sort();
                 const convSnapshot = await db.collection(collections.conversations)
                     .where('participants', '==', participants)
                     .limit(1)
                     .get();
+                    
                 if (convSnapshot.empty) {
                     return [];
                 }
                 convRef = convSnapshot.docs[0].ref;
-                partnerIdFinal = partnerId;
-            } else {
-                throw createError('1002', 'Either "partnerId" or "conversationId" must be provided');
+            } 
+            else {
+                throw createError('1002', 'Either conversationId or partnerId must be provided');
             }
 
-            const isUserBlocked = await userService.isUserBlocked(userId, partnerIdFinal);
+            // Get partnerId from conversation data
+            const convData = await convRef.get();
+            const partnerId = convData.data().participants.find(p => p !== userId);
+            
+            const isUserBlocked = await userService.isUserBlocked(userId, partnerId);
             const isBlocked = isUserBlocked ? '1' : '0';
 
             let messagesQuery = convRef.collection('messages')
@@ -324,9 +329,11 @@ class ChatService {
         }
     }
 
-    async setReadMessage(userId, partnerId, conversationId) {
+    async setReadMessage(userId, options = {}) {
         try {
             let convRef;
+            const { partnerId, conversationId } = options;
+
             if (conversationId) {
                 const convDoc = await db.collection(collections.conversations).doc(conversationId).get();
                 if (!convDoc.exists) {

@@ -62,14 +62,16 @@ class ChatController {
                 throw createError('1002', messages);
             }
 
-            const { partnerId, conversationId, index, count } = value;
+            const { index, count, partnerId } = value;
+            const conversationId = req.params.conversationId;
             const userId = req.user.userId;
 
-            const messagesData = await chatService.getConversation(userId, partnerId, conversationId, index, count);
-
-            if (!messagesData || messagesData.length === 0) {
-                throw createError('9994', 'No data or end of list data');
-            }
+            const messagesData = await chatService.getConversation(userId, {
+                conversationId,
+                partnerId,
+                index,
+                count
+            });
 
             sendResponse(res, '1000', { data: messagesData });
         } catch (err) {
@@ -86,10 +88,14 @@ class ChatController {
                 throw createError('1002', messages);
             }
 
-            const { partnerId, conversationId } = value;
+            const conversationId = req.params.conversationId;
             const userId = req.user.userId;
 
-            const updatedCount = await chatService.setReadMessage(userId, partnerId, conversationId);
+            if (!conversationId) {
+                throw createError('1002', 'conversationId is required');
+            }
+
+            const updatedCount = await chatService.setReadMessage(userId, { conversationId });
 
             sendResponse(res, '1000', { data: [{ updated_count: updatedCount }] });
         } catch (err) {

@@ -1,42 +1,49 @@
 import Joi from 'joi';
 
-const getListConversationSchema = Joi.object({
+// Common schemas
+const paginationSchema = {
     index: Joi.number().integer().min(0).default(0),
-    count: Joi.number().integer().min(1).max(100).default(20),
+    count: Joi.number().integer().min(1).max(100).default(20)
+};
+
+const identifierSchema = {
+    partnerId: Joi.string().optional(),
+    conversationId: Joi.string().optional()
+};
+
+// Validation schemas
+const createConversationSchema = Joi.object({
+    partnerId: Joi.string().required()
+});
+
+const getListConversationSchema = Joi.object({
+    ...paginationSchema
 });
 
 const getConversationSchema = Joi.object({
-    partnerId: Joi.string().optional(),
-    conversationId: Joi.string().optional(),
-    index: Joi.number().integer().min(0).required(),
-    count: Joi.number().integer().min(1).max(100).required(),
+    ...identifierSchema,
+    ...paginationSchema
 }).or('partnerId', 'conversationId').messages({
-    'object.missing': 'Either "partnerId" or "conversationId" must be provided',
+    'object.missing': 'Either "partnerId" or "conversationId" must be provided'
 });
 
 const setReadMessageSchema = Joi.object({
-    partnerId: Joi.string().optional(),
-    conversationId: Joi.string().optional(),
+    ...identifierSchema
 }).or('partnerId', 'conversationId').messages({
-    'object.missing': 'Either "partnerId" or "conversationId" must be provided',
+    'object.missing': 'Either "partnerId" or "conversationId" must be provided'
 });
 
 const deleteMessageSchema = Joi.object({
-    partnerId: Joi.string().optional(),
-    conversationId: Joi.string().optional(),
+    ...identifierSchema,
+    messageId: Joi.string().required()
 }).or('partnerId', 'conversationId').messages({
-    'object.missing': 'Either "partnerId" or "conversationId" must be provided',
+    'object.missing': 'Either "partnerId" or "conversationId" must be provided'
 });
 
 const deleteConversationSchema = Joi.object({
-    partnerId: Joi.string().optional(),
-    conversationId: Joi.string().optional(),
+    ...identifierSchema
 }).or('partnerId', 'conversationId').messages({
-    'object.missing': 'Either "partnerId" or "conversationId" must be provided',
-});
-
-const createConversationSchema = Joi.object({
-    partnerId: Joi.string().required(),
+    'object.missing': 'Either "partnerId" or "conversationId" must be provided'
 });
 
 const validateCreateConversation = (data) => {
