@@ -190,6 +190,7 @@ import { formatDistanceToNow } from 'date-fns';
 import { useChatStore } from '@/stores/chatStore';
 import { useSearchStore } from '@/stores/searchStore';
 import { useUserStore } from '@/stores/userStore';
+import { getSocket } from '@/services/socket';
 import { useDebounce } from '@/composables/useDebounce';
 import { PlusCircleIcon, ArrowLeftIcon, SendIcon, Loader2Icon, CheckIcon, XCircleIcon } from 'lucide-vue-next';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -285,10 +286,13 @@ const sendMessage = async () => {
     // Thêm tin nhắn tạm thời vào UI (optimistic update)
     chatStore.addMessage(tempMessage);
 
+    const socket = getSocket();
     logger.debug('Sending message:', {
       conversationId: chatStore.selectedConversationId,
       messageLength: messageContent.value.trim().length,
-      recipientId: selectedConversation.value?.Partner?.userId
+      recipientId: selectedConversation.value?.Partner?.userId,
+      socketConnected: socket?.connected || false,
+      socketId: socket?.id
     });
 
     await chatStore.sendMessage({
@@ -298,7 +302,11 @@ const sendMessage = async () => {
     messageContent.value = '';
     scrollToBottom();
   } catch (error) {
-    logger.error('Failed to send message:', error);
+    logger.error('Failed to send message:', {
+      error: error.message || error,
+      conversationId: chatStore.selectedConversationId,
+      stack: error.stack
+    });
   }
 };
 

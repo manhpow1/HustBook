@@ -9,7 +9,7 @@ export const useChatStore = defineStore('chat', {
     state: () => ({
         conversations: [],
         selectedConversationId: null,
-        messages: [],
+        messages: Array(0),
         loadingConversations: false,
         loadingMessages: false,
         unreadCount: 0,
@@ -154,12 +154,20 @@ export const useChatStore = defineStore('chat', {
         },
 
         addMessage(message) {
+            if (!Array.isArray(this.messages)) {
+                this.messages = [];
+            }
+            
             // Add or update a message in the message list
             const exists = this.messages.find(m => m.messageId === message.messageId);
             if (!exists) {
                 this.messages.push(message);
             } else {
-                // Optional: update existing message if needed
+                // Update existing message
+                const index = this.messages.findIndex(m => m.messageId === message.messageId);
+                if (index !== -1) {
+                    this.messages[index] = { ...this.messages[index], ...message };
+                }
             }
         },
 
@@ -168,6 +176,7 @@ export const useChatStore = defineStore('chat', {
         },
 
         async sendMessage({ conversationId, message }) {
+            const { toast } = useToast();
             if (!conversationId || !message) {
                 logger.error('Invalid message parameters:', { 
                     conversationId, 
@@ -176,15 +185,40 @@ export const useChatStore = defineStore('chat', {
                 return;
             }
 
-            const socket = getSocket();
+            let socket = getSocket();
             if (!socket?.connected) {
-                logger.warn('Socket not connected, attempting to reconnect...');
-                await this.initSocket();
-                
-                const reconnectedSocket = getSocket();
-                if (!reconnectedSocket?.connected) {
-                    throw new Error('Failed to establish socket connection');
+                logger.warn('Socket not connected, attempting to reconnect...', {
+                    currentSocketId: socket?.id,
+                    connectionState: socket?.connected
+                });
+                    
+                try {
+                    const cleanup = await this.initSocket();
+                    socket = getSocket();
+                        
+                    if (!socket?.connected) {
+                        throw new Error('Socket failed to connect after initialization');
+                    }
+                        
+                    logger.info('Socket reconnected successfully', {
+                        newSocketId: socket.id
+                    });
+                        
+                    // Store cleanup function for later
+                    if (cleanup && typeof cleanup === 'function') {
+                        this.socketCleanup = cleanup;
+                    }
+                } catch (error) {
+                    logger.error('Socket reconnection failed:', {
+                        error: error.message,
+                        stack: error.stack
+                    });
+                    throw new Error('Unable to connect to chat server');
                 }
+            }
+
+            if (!socket?.connected) {
+                throw new Error('No active socket connection available');
             }
 
             this.sendingMessage = true;
