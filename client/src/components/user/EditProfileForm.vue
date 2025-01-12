@@ -13,8 +13,16 @@
                         <Avatar class="w-20 h-20">
                             <AvatarImage v-if="avatarPreview" :src="avatarPreview" />
                             <AvatarFallback>
-                                {{ form.userName ? form.userName.split(' ').map(n =>
-                                    n[0]).join('').toUpperCase().slice(0, 2) : 'U' }}
+                                {{
+                                    form.userName
+                                        ? form.userName
+                                            .split(" ")
+                                            .map((n) => n[0])
+                                            .join("")
+                                            .toUpperCase()
+                                            .slice(0, 2)
+                                        : "U"
+                                }}
                             </AvatarFallback>
                         </Avatar>
                         <div class="flex-1">
@@ -120,11 +128,19 @@
                     <Button type="button" variant="outline" :disabled="isLoading" @click="resetForm">
                         Cancel
                     </Button>
-                    <Button type="submit"
-                        :disabled="isLoading || !isFormValid || formState.pendingUploads || !hasChanges">
+                    <Button type="submit" :disabled="isLoading ||
+                        !isFormValid ||
+                        formState.pendingUploads ||
+                        !hasChanges
+                        ">
                         <Loader2Icon v-if="isLoading" class="mr-2 h-4 w-4 animate-spin" />
-                        {{ formState.pendingUploads ? "Processing uploads..." :
-                            isLoading ? "Saving..." : "Save Changes" }}
+                        {{
+                            formState.pendingUploads
+                                ? "Processing uploads..."
+                                : isLoading
+                                    ? "Saving..."
+                                    : "Save Changes"
+                        }}
                     </Button>
                 </div>
             </form>
@@ -134,7 +150,7 @@
 
 <script setup>
 import { ref, computed, onMounted, watch, onBeforeUnmount } from "vue";
-import { debounce } from 'lodash-es';
+import { debounce } from "lodash-es";
 import { storeToRefs } from "pinia";
 import { onBeforeRouteLeave } from "vue-router";
 import { useUserStore } from "@/stores/userStore";
@@ -166,25 +182,26 @@ const { compressImage } = useImageProcessing();
 
 // Form state
 const defaultFormState = {
-    userName: '',
-    bio: '',
-    address: '',
-    city: '',
-    country: '',
+    userName: "",
+    bio: "",
+    address: "",
+    city: "",
+    country: "",
     avatar: null,
     coverPhoto: null,
-    existingAvatar: '',
-    existingCoverPhoto: '',
+    existingAvatar: "",
+    existingCoverPhoto: "",
 };
 
 const form = ref({ ...defaultFormState });
 const initialForm = ref({ ...defaultFormState });
+const currentVersion = ref(0);
 const errors = ref({});
 const isLoading = ref(false);
 const error = ref(null);
 const formState = ref({
     isDirty: false,
-    pendingUploads: false
+    pendingUploads: false,
 });
 
 // Validation rules
@@ -234,9 +251,9 @@ const userNameLowerCase = computed(() => {
     if (!form.value.userName) return [];
     const name = form.value.userName.toLowerCase().trim();
     const variations = [name];
-    const parts = name.split(' ');
+    const parts = name.split(" ");
     for (let i = 1; i <= parts.length; i++) {
-        variations.push(parts.slice(0, i).join(' '));
+        variations.push(parts.slice(0, i).join(" "));
     }
     return [...new Set(variations)];
 });
@@ -285,7 +302,7 @@ const handleCoverUpload = async (event) => {
         toast({
             type: "error",
             title: "Error",
-            description: "Cannot process cover photo"
+            description: "Cannot process cover photo",
         });
     } finally {
         formState.value.pendingUploads = false;
@@ -324,7 +341,7 @@ const handleSubmit = async () => {
         }
 
         const userId = userStore.userData?.userId;
-        if (!userId) throw new Error('User ID not found');
+        if (!userId) throw new Error("User ID not found");
 
         const updateData = {
             userName: form.value.userName,
@@ -332,14 +349,15 @@ const handleSubmit = async () => {
             address: form.value.address,
             city: form.value.city,
             country: form.value.country,
-            version: form.value.version || 0
+            version: currentVersion.value
         };
 
         // Chỉ thêm files nếu có thay đổi
         if (form.value.avatar) updateData.avatar = form.value.avatar;
         if (form.value.coverPhoto) updateData.coverPhoto = form.value.coverPhoto;
-        if (form.value.existingAvatar === '') updateData.existingAvatar = '';
-        if (form.value.existingCoverPhoto === '') updateData.existingCoverPhoto = '';
+        if (form.value.existingAvatar === "") updateData.existingAvatar = "";
+        if (form.value.existingCoverPhoto === "")
+            updateData.existingCoverPhoto = "";
 
         let result = null;
         let retries = 3;
@@ -353,7 +371,7 @@ const handleSubmit = async () => {
                 }
                 break;
             } catch (err) {
-                if (err.message?.includes('concurrent modifications') && retries > 1) {
+                if (err.message?.includes("concurrent modifications") && retries > 1) {
                     const userData = await userStore.getUserProfile();
                     updateData.version = userData.version;
                     form.value.version = userData.version;
@@ -368,26 +386,27 @@ const handleSubmit = async () => {
             // Reset form state
             form.value = {
                 ...form.value,
-                ...result.data,
                 avatar: null,
                 coverPhoto: null,
-                version: result.data.version
+                existingAvatar: result.data.avatar || '',
+                existingAvatar: result.data.avatar || '',
             };
 
+            currentVersion.value = result.data.version;
             initialForm.value = { ...form.value };
             formState.value.isDirty = false;
 
             toast({
                 title: "Success",
-                description: "Profile updated successfully"
+                description: "Profile updated successfully",
             });
         }
     } catch (err) {
-        error.value = err.message || 'Update failed';
+        error.value = err.message || "Update failed";
         toast({
             title: "Error",
             description: error.value,
-            variant: "destructive"
+            variant: "destructive",
         });
     } finally {
         isLoading.value = false;
@@ -402,26 +421,26 @@ const loadUserData = async () => {
 
         if (userData) {
             form.value = {
-                userName: userData.userName || '',
-                bio: userData.bio || '',
-                address: userData.address || '',
-                city: userData.city || '',
-                country: userData.country || '',
+                userName: userData.userName || "",
+                bio: userData.bio || "",
+                address: userData.address || "",
+                city: userData.city || "",
+                country: userData.country || "",
                 avatar: null,
                 coverPhoto: null,
-                existingAvatar: userData.avatar || '',
-                existingCoverPhoto: userData.coverPhoto || '',
-                version: userData.version || 0
+                existingAvatar: userData.avatar || "",
+                existingCoverPhoto: userData.coverPhoto || "",
             };
 
+            currentVersion.value = userData.version || 0;
             initialForm.value = { ...form.value };
         }
     } catch (err) {
-        error.value = 'Cannot load user data';
+        error.value = "Cannot load user data";
         toast({
-            title: 'Error',
+            title: "Error",
             description: error.value,
-            variant: 'destructive'
+            variant: "destructive",
         });
     } finally {
         isLoading.value = false;
@@ -444,13 +463,23 @@ const debouncedValidation = debounce((newValues) => {
     }
 }, 300);
 
-watch([form], () => {
-    formState.value.isDirty = hasChanges.value;
-}, { deep: true });
+watch(
+    [form],
+    () => {
+        formState.value.isDirty = hasChanges.value;
+    },
+    { deep: true }
+);
+
+watch(() => userStore.userData?.version, async (newVersion) => {
+    if (newVersion !== undefined && newVersion !== currentVersion.value) {
+        await loadUserData();
+    }
+});
 
 const hasChanges = computed(() => {
-    const basicFieldsChanged = Object.keys(form.value).some(key =>
-        form.value[key] !== initialForm.value[key]
+    const basicFieldsChanged = Object.keys(form.value).some(
+        (key) => form.value[key] !== initialForm.value[key]
     );
 
     return basicFieldsChanged || form.value.avatar || form.value.coverPhoto;
@@ -460,23 +489,23 @@ const avatarPreview = computed(() => {
     if (form.value.avatar instanceof File) {
         return URL.createObjectURL(form.value.avatar);
     }
-    return form.value.existingAvatar || '';
+    return form.value.existingAvatar || "";
 });
 
 const coverPhotoPreview = computed(() => {
     if (form.value.coverPhoto instanceof File) {
         return URL.createObjectURL(form.value.coverPhoto);
     }
-    return form.value.existingCoverPhoto || '';
+    return form.value.existingCoverPhoto || "";
 });
 
 const hasFormChanged = computed(() => {
-    const formKeys = Object.keys(form.value).filter(key =>
-        key !== 'avatar' && key !== 'coverPhoto'
+    const formKeys = Object.keys(form.value).filter(
+        (key) => key !== "avatar" && key !== "coverPhoto"
     );
 
-    const hasBasicFieldsChanged = formKeys.some(key =>
-        form.value[key] !== initialForm.value[key]
+    const hasBasicFieldsChanged = formKeys.some(
+        (key) => form.value[key] !== initialForm.value[key]
     );
 
     const hasNewFiles = form.value.avatar || form.value.coverPhoto;
@@ -492,7 +521,9 @@ onMounted(async () => {
 // Handle unsaved changes
 onBeforeRouteLeave((to, from, next) => {
     if (hasFormChanged.value && !isLoading.value) {
-        const confirmed = window.confirm('You have unsaved changes. Are you sure you want to leave?');
+        const confirmed = window.confirm(
+            "You have unsaved changes. Are you sure you want to leave?"
+        );
         next(confirmed);
     } else {
         next();
@@ -514,11 +545,11 @@ onBeforeUnmount(() => {
 
 const removeAvatar = () => {
     form.value.avatar = null;
-    form.value.existingAvatar = '';
+    form.value.existingAvatar = "";
 };
 
 const removeCoverPhoto = () => {
     form.value.coverPhoto = null;
-    form.value.existingCoverPhoto = '';
+    form.value.existingCoverPhoto = "";
 };
 </script>
