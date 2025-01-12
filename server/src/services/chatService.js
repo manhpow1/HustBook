@@ -128,40 +128,55 @@ class ChatService {
                 status: 'sent'
             };
 
-            // Get sender info from cache or database
-            let senderInfo = await cache.get(`user:${userId}`);
-            if (!senderInfo) {
-                const senderDoc = await db.collection(collections.users).doc(userId).get();
-                senderInfo = senderDoc.data() || {};
-                await cache.set(`user:${userId}`, senderInfo, 3600);
-            }
+            // Get sender info from database
+            const senderDoc = await db.collection(collections.users).doc(userId).get();
+            const senderInfo = senderDoc.data() || {};
 
             // Run transaction
             await db.runTransaction(async (transaction) => {
-                // Verify conversation exists
-                const convDoc = await transaction.get(convRef);
-                if (!convDoc.exists) {
-                    throw createError('9994', 'Conversation not found');
-                }
+                try {
+                    // Verify conversation exists
+                    const convDoc = await transaction.get(convRef);
+                    if (!convDoc.exists) {
+                        throw createError('9994', 'Conversation not found');
+                    }
 
-                // Check if user is participant
-                const convData = convDoc.data();
-                if (!convData.participants.includes(userId)) {
-                    throw createError('1009', 'Not authorized to send message in this conversation');
-                }
+                    // Check if user is participant
+                    const convData = convDoc.data();
+                    if (!convData.participants.includes(userId)) {
+                        throw createError('1009', 'Not authorized to send message in this conversation');
+                    }
 
-                // Save message and update conversation
-                transaction.set(msgRef, msgData);
-                transaction.update(convRef, {
-                    lastMessage: {
-                        message: text.trim(),
-                        created: admin.firestore.FieldValue.serverTimestamp(),
-                        senderId: userId,
-                        unreadBy: [partnerId]
-                    },
-                    updatedAt: admin.firestore.FieldValue.serverTimestamp()
-                });
+                    // Save message
+                    transaction.set(msgRef, {
+                        ...msgData,
+                        conversationId: convId // Add reference to conversation
+                    });
+
+                    // Update conversation with last message
+                    transaction.update(convRef, {
+                        lastMessage: {
+                            message: text.trim(),
+                            created: admin.firestore.FieldValue.serverTimestamp(),
+                            senderId: userId,
+                            messageId: msgRef.id, // Add message reference
+                            unreadBy: [partnerId]
+                        },
+                        updatedAt: admin.firestore.FieldValue.serverTimestamp()
+                    });
+
+                    return true;
+                } catch (error) {
+                    logger.error('Transaction failed:', error);
+                    throw error;
+                }
             });
+
+            // Verify message was saved
+            const savedMsg = await msgRef.get();
+            if (!savedMsg.exists) {
+                throw createError('9999', 'Failed to save message');
+            }
 
             logger.debug('Message saved successfully:', {
                 messageId: msgRef.id,
