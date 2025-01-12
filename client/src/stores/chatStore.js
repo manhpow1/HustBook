@@ -226,13 +226,29 @@ export const useChatStore = defineStore('chat', {
 
             try {
                 const userStore = useUserStore();
+                const conversation = this.conversations.find(c => c.conversationId === conversationId);
+                if (!conversation) {
+                    throw new Error('Conversation not found');
+                }
+
                 const messageData = {
                     conversationId,
-                    message,
-                    partnerId: selectedConversation.value?.Partner?.userId
+                    message: message.trim(),
+                    partnerId: conversation.Partner.userId,
+                    timestamp: new Date().toISOString()
                 };
 
+                logger.debug('Sending message data:', {
+                    conversationId,
+                    partnerId: conversation.Partner.userId,
+                    messageLength: message.trim().length
+                });
+
                 logger.debug('Emitting socket message:', messageData);
+                const socket = getSocket();
+                if (!socket?.connected) {
+                    throw new Error('Socket not connected');
+                }
                 socket.emit('send', messageData);
 
                 logger.debug('Creating temporary message for optimistic update');
@@ -246,20 +262,18 @@ export const useChatStore = defineStore('chat', {
                         userName: userStore.userData?.userName || '',
                         avatar: userStore.userData?.avatar || ''
                     },
-                    isBlocked: '0'
+                    isBlocked: '0',
+                    status: 'sending'
                 };
 
                 this.addMessage(tempMessage);
 
                 // Update conversation list with new message
-                const conversation = this.conversations.find(c => c.conversationId === conversationId);
-                if (conversation) {
-                    conversation.LastMessage = {
-                        message,
-                        created: tempMessage.created,
-                        unread: '0'
-                    };
-                }
+                conversation.LastMessage = {
+                    message,
+                    created: tempMessage.created,
+                    unread: '0'
+                };
             } catch (error) {
                 logger.error('Error sending message:', error);
                 toast({
@@ -323,18 +337,18 @@ export const useChatStore = defineStore('chat', {
         },
 
         async confirmMessageSent(messageId) {
-            // Tìm và cập nhật trạng thái tin nhắn thành đã gửi
-            const messageIndex = messages.value.findIndex(msg => msg.messageId === messageId);
+            // Find and update message status to sent
+            const messageIndex = this.messages.findIndex(msg => msg.messageId === messageId);
             if (messageIndex !== -1) {
-                messages.value[messageIndex].status = 'sent';
-                messages.value[messageIndex].error = null;
+                this.messages[messageIndex].status = 'sent';
+                this.messages[messageIndex].error = null;
             }
         },
 
         async handleMessageError(error) {
-            // Cập nhật trạng thái tin nhắn thành lỗi
-            // Thường được gọi khi tin nhắn tạm thời đã được thêm vào UI (optimistic update)
-            messages.value = messages.value.map(msg => {
+            // Update message status to error
+            // Called when message was temporarily added to UI (optimistic update)
+            this.messages = this.messages.map(msg => {
                 if (msg.status === 'sending') {
                     return {
                         ...msg,
@@ -345,7 +359,7 @@ export const useChatStore = defineStore('chat', {
                 return msg;
             });
 
-            // Thông báo lỗi cho người dùng
+            // Show error notification to user
             const { toast } = useToast();
             toast({
                 title: "Error",

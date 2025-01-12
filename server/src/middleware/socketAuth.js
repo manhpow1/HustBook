@@ -15,7 +15,7 @@ const rateLimiter = new RateLimiterRedis({
     duration: 60, // Per 60 seconds
 });
 
-const CONNECTION_LIMIT_BY_IP = 10; // Maximum connections per IP
+const CONNECTION_LIMIT_BY_IP = 50; // Maximum connections per IP
 
 async function authenticateSocket(socket, next) {
     const clientIp = socket.handshake.headers['x-forwarded-for'] || socket.handshake.address;

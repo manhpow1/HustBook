@@ -233,7 +233,16 @@ const getInitials = (name) => {
 
 const formatDate = (date) => {
   if (!date) return '';
-  return formatDistanceToNow(new Date(date), { addSuffix: true });
+  try {
+    const parsedDate = new Date(date);
+    if (isNaN(parsedDate.getTime())) {
+      return '';
+    }
+    return formatDistanceToNow(parsedDate, { addSuffix: true });
+  } catch (error) {
+    logger.error('Date formatting error:', { date, error });
+    return '';
+  }
 };
 
 const selectConversation = async (conversationId) => {

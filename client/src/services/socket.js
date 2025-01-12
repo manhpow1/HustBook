@@ -67,9 +67,20 @@ export function initSocket() {
         logger.error('Socket connection error:', error);
         const errorMessage = error.message.includes('authentication failed')
             ? 'Authentication failed. Please log in again.'
-            : 'Chat connection failed';
+            : error.message.includes('Too many connections') 
+                ? 'Too many chat connections. Please try again in a few minutes.'
+                : 'Chat connection failed';
+        
         toast({ type: 'error', message: errorMessage });
-        handleReconnect();
+
+        if (error.message.includes('Too many connections')) {
+            // For connection limit errors, wait longer before retry
+            setTimeout(() => {
+                handleReconnect();
+            }, 60000); // Wait 1 minute before retry
+        } else {
+            handleReconnect();
+        }
     });
 
     socket.on('disconnect', (reason) => {

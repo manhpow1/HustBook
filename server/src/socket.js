@@ -53,7 +53,8 @@ export function initSocketIO(server) {
                     }
                 } catch (error) {
                     logger.error('Subscribe error:', error);
-                    socket.emit('connection_error', { message: 'Failed to subscribe to rooms' });
+                    socket.emit('error', { message: 'Failed to subscribe to rooms' });
+                    handleReconnect();
                 }
             });
 
@@ -116,8 +117,14 @@ export function initSocketIO(server) {
                             socket.userId,
                             partnerId,
                             targetConversationId,
-                            message
+                            message.trim()
                         );
+
+                        logger.debug('Message saved:', {
+                            messageId: savedMessage.messageId,
+                            conversationId: targetConversationId,
+                            message: message.trim().substring(0, 50) + '...'
+                        });
 
                         logger.debug('Message saved successfully:', {
                             messageId: savedMessage.messageId,

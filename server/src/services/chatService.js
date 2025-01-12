@@ -121,12 +121,20 @@ class ChatService {
             const msgRef = convRef.collection('messages').doc();
             const now = new Date();
             const msgData = {
-                text: text.trim(), // Trim message text
+                text: text.trim(),
                 senderId: userId,
-                createdAt: now,
+                createdAt: admin.firestore.FieldValue.serverTimestamp(),
                 unreadBy: [partnerId],
-                status: 'sent'
+                status: 'sent',
+                conversationId: convId
             };
+
+            logger.debug('Creating message:', {
+                messageId: msgRef.id,
+                senderId: userId,
+                conversationId: convId,
+                timestamp: now.toISOString()
+            });
 
             // Get sender info from database
             const senderDoc = await db.collection(collections.users).doc(userId).get();
