@@ -7,6 +7,7 @@ import logger from '../utils/logger.js';
 class ChatController {
     async getListConversation(req, res, next) {
         try {
+            logger.debug('getListConversation called with query:', req.query);
             const { error, value } = chatValidator.validateGetListConversation(req.query);
             if (error) {
                 const messages = error.details.map(detail => detail.message).join(', ');
@@ -16,9 +17,16 @@ class ChatController {
             const { index, count } = value;
             const userId = req.user.userId;
 
+            logger.debug('Fetching conversations for user:', { userId, index, count });
             const { conversations, numNewMessage } = await chatService.getListConversation(userId, index, count);
 
+            logger.debug('Conversations fetched:', { 
+                count: conversations?.length || 0,
+                numNewMessage 
+            });
+
             if (!conversations || conversations.length === 0) {
+                logger.debug('No conversations found');
                 throw createError('9994', 'No data or end of list data');
             }
 

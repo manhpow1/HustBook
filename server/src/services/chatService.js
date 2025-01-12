@@ -111,7 +111,8 @@ class ChatService {
 
     async getListConversation(userId, index, count) {
         try {
-            let query = db.collection('conversations')
+            logger.debug('getListConversation service called:', { userId, index, count });
+            let query = db.collection(collections.conversations)
                 .where('participants', 'array-contains', userId)
                 .orderBy('updatedAt', 'desc')
                 .offset(index)

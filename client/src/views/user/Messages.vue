@@ -96,12 +96,12 @@
             <div v-else class="space-y-4">
               <div v-for="message in chatStore.messages" :key="message.messageId" class="flex items-start space-x-4"
                 :class="{ 'justify-end': message.sender.id === userStore.user?.id }">
-                <Avatar v-if="message.sender.id !== userStore.user?.id">
+                <Avatar v-if="message.sender.userId !== userStore.userData?.userId">
                   <AvatarImage :src="message.sender.avatar" :alt="message.sender.userName" />
                   <AvatarFallback>{{ getInitials(message.sender.userName) }}</AvatarFallback>
                 </Avatar>
                 <div class="rounded-lg p-4 max-w-[70%]" :class="[
-                  message.sender.id === userStore.user?.id
+                  message.sender.userId === userStore.userData?.userId
                     ? 'bg-primary text-primary-foreground'
                     : 'bg-muted'
                 ]">
@@ -270,7 +270,14 @@ const searchUsers = useDebounce(async () => {
       index: 0,
       count: 20
     });
-    searchResults.value = users.filter(user => user.userId !== userStore.userData?.userId);
+    // Filter out current user and ensure user data format matches
+    searchResults.value = users
+      .filter(user => user.userId !== userStore.userData?.userId)
+      .map(user => ({
+        ...user,
+        userName: user.userName || user.username || 'Unknown User',
+        avatar: user.avatar || null
+      }));
   } catch (error) {
     logger.error('Failed to search users:', error);
     toast({
