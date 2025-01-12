@@ -2,8 +2,10 @@ import { Server } from 'socket.io';
 import logger from './utils/logger.js';
 import { authenticateSocket } from './middleware/socketAuth.js';
 import chatService from './services/chatService.js';
+import redis from './utils/redis.js';
 
 let io = null;
+const { cache } = redis;
 
 export function initSocketIO(server) {
     try {
