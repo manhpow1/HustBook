@@ -705,6 +705,21 @@ class UserService {
             throw error;
         }
     }
+
+    async isUserBlocked(userId, targetUserId) {
+        try {
+            const user = await this.getUserById(userId);
+            if (!user) {
+                throw createError('9995', 'User not found');
+            }
+
+            // Check if the target user is in the blocked list
+            return user.blockedUsers?.includes(targetUserId) || false;
+        } catch (error) {
+            logger.error('Error checking blocked status:', error);
+            throw error;
+        }
+    }
 }
 
 export default new UserService();
