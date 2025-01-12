@@ -33,12 +33,12 @@
                 :class="{ 'bg-accent': chatStore.selectedConversationId === conversation.id }">
                 <div class="flex items-center space-x-4">
                   <Avatar>
-                    <AvatarImage :src="conversation.Partner.avatar" :alt="conversation.Partner.userName" />
-                    <AvatarFallback>{{ getInitials(conversation.Partner.userName) }}</AvatarFallback>
+                    <AvatarImage :src="conversation.partner.avatar" :alt="conversation.partner.userName" />
+                    <AvatarFallback>{{ getInitials(conversation.partner.userName) }}</AvatarFallback>
                   </Avatar>
                   <div class="flex-1 min-w-0">
                     <div class="flex items-center justify-between">
-                      <p class="font-medium truncate">{{ conversation.Partner.userName }}</p>
+                      <p class="font-medium truncate">{{ conversation.partner.userName }}</p>
                       <span v-if="conversation.LastMessage" class="text-xs text-muted-foreground">
                         {{ formatDate(conversation.LastMessage.created) }}
                       </span>
@@ -70,13 +70,13 @@
                 <ArrowLeftIcon class="h-4 w-4" />
               </Button>
               <Avatar>
-                <AvatarImage :src="selectedConversation?.Partner.avatar"
-                  :alt="selectedConversation?.Partner.userName" />
+                <AvatarImage :src="selectedConversation?.partner.avatar"
+                  :alt="selectedConversation?.partner.userName" />
                 <AvatarFallback>
-                  {{ getInitials(selectedConversation?.Partner.userName) }}
+                  {{ getInitials(selectedConversation?.partner.userName) }}
                 </AvatarFallback>
               </Avatar>
-              <span>{{ selectedConversation?.Partner.userName }}</span>
+              <span>{{ selectedConversation?.partner.userName }}</span>
             </CardTitle>
           </CardHeader>
 
