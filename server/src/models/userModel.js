@@ -26,6 +26,7 @@ class User {
         this.lastSeen = data.lastSeen || new Date().toISOString();
         this.tokenVersion = data.tokenVersion || 0;
         this.isAdmin = data.isAdmin || false;
+        this.version = data.version || 0;
         this.deviceIds = data.deviceIds || [];
         this.deviceTokens = data.deviceTokens || [];
         this.tokenFamily = data.tokenFamily;
@@ -62,7 +63,8 @@ class User {
             lastSeen: this.lastSeen,
             isAdmin: this.isAdmin,
             deviceIds: this.deviceIds,
-            tokenFamily: this.tokenFamily
+            tokenFamily: this.tokenFamily,
+            version: this.version,
         };
     }
 
