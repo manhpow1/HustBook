@@ -12,11 +12,12 @@ export function initSocketIO(server) {
                 origin: process.env.CORS_ORIGIN || 'http://localhost:5173',
                 methods: ['GET', 'POST'],
                 credentials: true,
-                allowedHeaders: ['Authorization']
+                allowedHeaders: ['Authorization', 'Content-Type'],
             },
-            pingTimeout: 10000,
+            pingTimeout: 30000,
             pingInterval: 25000,
-            connectTimeout: 45000
+            connectTimeout: 45000,
+            transports: ['websocket', 'polling']
         });
 
         // Socket-level error handling
@@ -33,10 +34,11 @@ export function initSocketIO(server) {
             // Handle socket errors
             socket.on('error', (error) => {
                 logger.error(`Socket error for ${socket.id}:`, error);
+                socket.emit('error', { message: 'Internal server error' });
             });
 
             // Send initial connection success
-            socket.emit('connect_success', { 
+            socket.emit('connect_success', {
                 message: 'Successfully connected to chat server'
             });
 
@@ -127,15 +129,20 @@ export function initSocketIO(server) {
                 // Handle presence logic if needed
             });
 
-            socket.on('disconnect', (reason) => {
+            socket.on('disconnect', async (reason) => {
                 logger.info(`Socket disconnected: ${socket.id}, user: ${socket.userId}, reason: ${reason}`);
-                
+
                 try {
-                    // Notify relevant rooms about user disconnection
-                    const rooms = Array.from(socket.rooms);
-                    rooms.forEach(room => {
-                        if (room !== socket.id) { // Skip default room
-                            io.to(room).emit('user_disconnected', {
+                    // Cleanup connection count
+                    const currentConnections = await cache.get(`socket_ip:${socket.clientIp}`);
+                    if (currentConnections > 0) {
+                        await cache.set(`socket_ip:${socket.clientIp}`, currentConnections - 1, 3600);
+                    }
+
+                    // Notify other users
+                    socket.rooms.forEach(room => {
+                        if (room !== socket.id) {
+                            socket.to(room).emit('user_disconnected', {
                                 userId: socket.userId,
                                 timestamp: new Date()
                             });

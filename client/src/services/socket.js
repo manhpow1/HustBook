@@ -23,18 +23,18 @@ export function initSocket() {
     // More robust token extraction
     const token = (() => {
         try {
+            const token = localStorage.getItem('accessToken');
+            if (token) return token;
+
             const cookieToken = document.cookie
                 .split('; ')
                 .find(row => row.startsWith('accessToken='))
                 ?.split('=')[1];
             if (cookieToken) return cookieToken;
-            // Fallback to localStorage if cookie not found
-            const localToken = localStorage.getItem('accessToken');
-            if (localToken) return localToken;
-            
+
             throw new Error('No access token found');
         } catch (error) {
-            logger.error('Socket initialization failed:', error.message);
+            logger.error('Token retrieval failed:', error.message);
             return null;
         }
     })();
@@ -44,70 +44,67 @@ export function initSocket() {
     // Enhanced socket configuration with security measures
     socket = io(socketUrl, {
         auth: {
-            token
+            token: `Bearer ${token}`
         },
         transports: ['websocket'],
         reconnection: true,
         reconnectionAttempts: MAX_RECONNECT_ATTEMPTS,
         reconnectionDelay: 1000,
         timeout: 10000,
-        cors: {
-            origin: socketOrigin,
-            credentials: true
+        extraHeaders: {
+            Authorization: `Bearer ${token}`
         }
     });
 
     // Connection events with enhanced error handling
     socket.on('connect', () => {
-    logger.info('Socket connected:', socket.id);
-    reconnectAttempts = 0;
-    toast({ type: 'success', message: 'Chat connected' });
-});
+        logger.info('Socket connected:', socket.id);
+        reconnectAttempts = 0;
+        toast({ type: 'success', message: 'Chat connected' });
+    });
 
-socket.on('connect_error', (error) => {
-    logger.error('Socket connection error:', error);
-    const errorMessage = error.message.includes('authentication failed') 
-        ? 'Authentication failed. Please log in again.'
-        : 'Chat connection failed';
-    toast({ type: 'error', message: errorMessage });
-    handleReconnect();
-});
+    socket.on('connect_error', (error) => {
+        logger.error('Socket connection error:', error);
+        const errorMessage = error.message.includes('authentication failed')
+            ? 'Authentication failed. Please log in again.'
+            : 'Chat connection failed';
+        toast({ type: 'error', message: errorMessage });
+        handleReconnect();
+    });
 
     socket.on('disconnect', (reason) => {
         logger.warn('Socket disconnected:', reason);
-        if (reason === 'io server disconnect') {
-            // Server initiated disconnect - don't reconnect automatically
-            socket.connect();
-        } else if (reason === 'transport close') {
-            // Transport issues - attempt reconnect with backoff
-            handleReconnect();
+        if (reason === 'io server disconnect' || reason === 'transport close') {
+            setTimeout(() => {
+                socket.connect();
+            }, 1000);
         }
     });
 
     socket.on('reconnect_failed', () => {
-    logger.error('Socket reconnection failed after', MAX_RECONNECT_ATTEMPTS, 'attempts');
-    toast({ type: 'error', message: 'Unable to connect to chat. Please refresh the page.' });
-});
+        logger.error('Socket reconnection failed after', MAX_RECONNECT_ATTEMPTS, 'attempts');
+        toast({ type: 'error', message: 'Unable to connect to chat. Please refresh the page.' });
+    });
 
-socket.on('onmessage', (data) => {
-    try {
-        const chatStore = useChatStore();
-        chatStore.addMessage(data.message);
-    } catch (error) {
-        logger.error('Error handling incoming message:', error);
-        toast({ type: 'error', message: 'Error displaying new message' });
-    }
-});
+    socket.on('onmessage', (data) => {
+        try {
+            const chatStore = useChatStore();
+            chatStore.addMessage(data.message);
+        } catch (error) {
+            logger.error('Error handling incoming message:', error);
+            toast({ type: 'error', message: 'Error displaying new message' });
+        }
+    });
 
-socket.on('deletemessage', (data) => {
-    try {
-        const chatStore = useChatStore();
-        chatStore.removeMessage(data.messageId);
-    } catch (error) {
-        logger.error('Error handling message deletion:', error);
-        toast({ type: 'error', message: 'Error removing message' });
-    }
-});
+    socket.on('deletemessage', (data) => {
+        try {
+            const chatStore = useChatStore();
+            chatStore.removeMessage(data.messageId);
+        } catch (error) {
+            logger.error('Error handling message deletion:', error);
+            toast({ type: 'error', message: 'Error removing message' });
+        }
+    });
 
     // Keep socket connection alive with error handling
     const heartbeat = setInterval(() => {
@@ -156,15 +153,29 @@ export function joinChat(partnerId, conversationId) {
     });
 }
 
-export function sendMessage(partnerId, conversationId, message) {
+export async function sendMessage(partnerId, conversationId, message) {
     if (!socket?.connected) {
-        throw new Error('Socket not connected');
+        socket?.connect();
+
+        await new Promise((resolve, reject) => {
+            const timeout = setTimeout(() => reject(new Error('Connection timeout')), 5000);
+
+            socket.once('connect', () => {
+                clearTimeout(timeout);
+                resolve();
+            });
+        });
     }
-    socket.emit('send', { partnerId, conversationId, message }, (error) => {
-        if (error) {
-            logger.error('Error sending message:', error);
-            throw error;
-        }
+
+    return new Promise((resolve, reject) => {
+        socket.emit('send', { partnerId, conversationId, message }, (error) => {
+            if (error) {
+                logger.error('Error sending message:', error);
+                reject(error);
+            } else {
+                resolve();
+            }
+        });
     });
 }
 

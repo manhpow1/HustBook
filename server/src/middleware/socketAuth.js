@@ -29,60 +29,69 @@ async function authenticateSocket(socket, next) {
             return next(createError('1012', 'Too many connections from this IP'));
         }
 
-        // Increment connection count for this IP
-        await cache.set(ipKey, currentConnections + 1, 3600);
+        // Xử lý token
+        let token = null;
 
-        // Rate limit overall connections
-        await rateLimiter.consume(clientIp);
+        // Kiểm tra token trong auth object
+        if (socket.handshake.auth && socket.handshake.auth.token) {
+            token = socket.handshake.auth.token;
+        }
+        // Kiểm tra token trong header
+        else if (socket.handshake.headers.authorization) {
+            token = socket.handshake.headers.authorization;
+        }
 
-        // Get token from either auth object or Authorization header
-        const token = socket.handshake.auth?.token ||
-            socket.handshake.headers?.authorization?.replace('Bearer ', '');
+        // Xóa prefix 'Bearer ' nếu có
+        if (token && token.startsWith('Bearer ')) {
+            token = token.slice(7);
+        }
 
         if (!token) {
             logger.warn(`Socket connection attempt without token from IP: ${clientIp}`);
-            return next(createError('9998', 'Missing or invalid authorization token'));
+            return next(createError('9998', 'Missing authorization token'));
         }
 
         let decoded;
         try {
-            decoded = jwt.verify(token, config.get('jwt.secret'));
-        } catch (error) {
-            logger.warn(`Invalid token from IP: ${clientIp}, Error: ${error.message}`);
-            return next(createError('9998', 'Invalid or expired token'));
-        }
+            decoded = jwt.verify(token, config.get('jwt.secret'), {
+                algorithms: ['HS256']
+            });
 
-        const { userId, tokenVersion } = decoded;
+            const { userId, tokenVersion } = decoded;
 
-        let user = await cache.get(`user:${userId}`);
-        if (!user) {
-            user = await getDocument(collections.users, userId);
+            // Kiểm tra user trong cache trước
+            let user = await cache.get(`user:${userId}`);
+
+            // Nếu không có trong cache, tìm trong database
             if (!user) {
-                return next(createError('9995', 'User not found'));
-            }
-            await cache.set(`user:${userId}`, user, 3600);
-        }
-
-        if (user.tokenVersion !== tokenVersion) {
-            return next(createError('9998', 'Token is invalid or expired'));
-        }
-
-        socket.userId = userId;
-        socket.clientIp = clientIp; // Store IP for monitoring
-
-        // Add disconnect handler to clean up
-        socket.on('disconnect', async () => {
-            try {
-                const currentConnections = await cache.get(`socket_ip:${clientIp}`);
-                if (currentConnections > 0) {
-                    await cache.set(`socket_ip:${clientIp}`, currentConnections - 1, 3600);
+                user = await getDocument(collections.users, userId);
+                if (!user) {
+                    logger.error(`User not found: ${userId}`);
+                    return next(createError('9995', 'User not found'));
                 }
-            } catch (error) {
-                logger.error('Error cleaning up socket connection count:', error);
+                // Lưu vào cache
+                await cache.set(`user:${userId}`, user, 3600);
             }
-        });
 
-        next();
+            if (user.tokenVersion !== tokenVersion) {
+                logger.warn(`Invalid token version for user ${userId}`);
+                return next(createError('9998', 'Token is invalid or expired'));
+            }
+
+            // Gán thông tin user vào socket
+            socket.userId = userId;
+            socket.user = user;
+            socket.clientIp = clientIp;
+
+            // Increment connection count
+            await cache.set(ipKey, currentConnections + 1, 3600);
+
+            next();
+        } catch (error) {
+            logger.error('JWT verification failed:', error);
+            return next(createError('9998', 'Invalid token'));
+        }
+
     } catch (error) {
         logger.error('Socket auth error:', { error, clientIp });
         next(createError('9998', 'Authentication failed'));
