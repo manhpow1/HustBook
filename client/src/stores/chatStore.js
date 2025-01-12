@@ -23,7 +23,7 @@ export const useChatStore = defineStore('chat', {
             if (!this.isSocketInitialized && userStore.isLoggedIn) {
                 initSocket();
                 const socket = getSocket();
-                
+
                 socket.on('onmessage', (data) => {
                     const { message } = data;
                     if (message.sender.id !== userStore.userData?.userId) {
@@ -65,17 +65,20 @@ export const useChatStore = defineStore('chat', {
             const { toast } = useToast();
             try {
                 console.debug('Fetching conversations');
-                const response = await apiService.getConversations(); // GET /conversations
+                const response = await apiService.getConversations();
                 console.debug('Conversations response:', {
                     code: response.data.code,
                     conversationCount: response.data.data?.length || 0,
                     unreadCount: response.data.numNewMessage
                 });
-                
+
                 if (response.data.code === '1000') {
-                    // Ensure conversations array is properly initialized
-                    this.conversations = Array.isArray(response.data.data) ? response.data.data : [];
+                    this.conversations = Array.isArray(response.data.data)
+                        ? response.data.data
+                        : [];
+
                     this.unreadCount = parseInt(response.data.numNewMessage || 0, 10);
+
                     console.debug('Conversations updated:', {
                         count: this.conversations.length,
                         unreadCount: this.unreadCount,
@@ -103,7 +106,7 @@ export const useChatStore = defineStore('chat', {
                 console.debug('Fetching messages:', { conversationId, index, count });
                 this.selectedConversationId = conversationId;
                 const response = await apiService.getConversationMessages(conversationId, { index, count });
-                console.debug('Messages response:', { 
+                console.debug('Messages response:', {
                     code: response.data.code,
                     messageCount: response.data.data?.length || 0
                 });
@@ -141,7 +144,7 @@ export const useChatStore = defineStore('chat', {
         async sendMessage({ conversationId, message }) {
             const socket = getSocket();
             if (!socket || !conversationId || !message) return;
-            
+
             this.sendingMessage = true;
 
             try {
