@@ -356,5 +356,14 @@ watch(() => chatStore.messages, () => {
 // Lifecycle
 onMounted(async () => {
   await chatStore.fetchConversations();
+  
+  // If there's a selected conversation, load its messages
+  if (chatStore.selectedConversationId) {
+    await chatStore.fetchMessages(chatStore.selectedConversationId);
+    await chatStore.markAsRead();
+  }
+  
+  // Initialize socket connection
+  await chatStore.initSocket();
 });
 </script>
