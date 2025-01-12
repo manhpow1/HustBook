@@ -151,6 +151,7 @@ class ChatService {
                 return { conversations: [], numNewMessage: 0 };
             }
 
+            // Lấy thông tin partner
             const partnerIds = [];
             for (const doc of conversationDocs) {
                 const data = doc.data();
@@ -158,56 +159,52 @@ class ChatService {
                 if (partnerId) partnerIds.push(partnerId);
             }
 
-            const uniquePartnerIds = [...new Set(partnerIds)];
-            let partnerMapping = new Map();
-            if (uniquePartnerIds.length > 0) {
-                const chunks = [];
-                for (let i = 0; i < uniquePartnerIds.length; i += 10) {
-                    chunks.push(uniquePartnerIds.slice(i, i + 10));
-                }
+            const userMap = new Map();
+            if (partnerIds.length > 0) {
+                const usersSnapshot = await db.collection(collections.users)
+                    .where('userId', 'in', partnerIds)
+                    .get();
 
-                for (const chunk of chunks) {
-                    const usersSnap = await db.collection(collections.users)
-                        .where('__name__', 'in', chunk)
-                        .get();
-                    for (const userDoc of usersSnap.docs) {
-                        partnerMapping.set(userDoc.id, userDoc.data());
-                    }
-                }
+                usersSnapshot.docs.forEach(doc => {
+                    const userData = doc.data();
+                    userMap.set(doc.id, {
+                        userId: doc.id,
+                        userName: userData.userName || 'Unknown User',
+                        avatar: userData.avatar || ''
+                    });
+                });
             }
 
-            let numNewMessage = 0;
-            const conversations = conversationDocs.map((doc) => {
+            const conversations = conversationDocs.map(doc => {
                 const data = doc.data();
                 const conversationId = doc.id;
                 const partnerId = data.participants.find(p => p !== userId);
-                const partnerData = partnerMapping.get(partnerId) || {};
+                const partnerData = userMap.get(partnerId) || {
+                    userId: partnerId,
+                    userName: 'Unknown User',
+                    avatar: ''
+                };
 
-                let lastMessageData = { message: '', created: '', unread: false };
-                if (data.lastMessage) {
-                    const { message, created, unreadBy = [] } = data.lastMessage;
-                    lastMessageData.message = message || '';
-                    lastMessageData.created = created ? created.toDate().toISOString() : '';
-                    lastMessageData.unread = unreadBy.includes(userId);
-                    if (lastMessageData.unread) numNewMessage += 1;
-                }
-
-                const convo = new Conversation({
-                    id: conversationId,
-                    partnerId: partnerId,
-                    partneruserName: partnerData.userName || '',
-                    partnerAvatar: partnerData.avatar || '',
-                    lastMessage: {
-                        message: lastMessageData.message,
-                        created: lastMessageData.created
+                return {
+                    conversationId,
+                    Partner: {
+                        userId: partnerId,
+                        userName: partnerData.userName,
+                        avatar: partnerData.avatar
                     },
-                    unread: lastMessageData.unread
-                });
-
-                return convo.toJSON();
+                    LastMessage: data.lastMessage || {
+                        message: '',
+                        created: '',
+                        unread: '0'
+                    },
+                    unreadCount: 0
+                };
             });
 
-            return { conversations, numNewMessage };
+            return {
+                data: conversations,
+                numNewMessage: 0
+            };
         } catch (error) {
             logger.error('Error in getListConversation service:', error);
             throw createError('9999', 'Exception error');
@@ -217,31 +214,31 @@ class ChatService {
     async getConversation(userId, options) {
         try {
             let convRef;
-            
+
             if (options.conversationId) {
                 const convDoc = await db.collection('conversations').doc(options.conversationId).get();
                 if (!convDoc.exists) {
                     throw createError('9994', 'No data or end of list data');
                 }
                 convRef = convDoc.ref;
-                
+
                 const data = convDoc.data();
                 if (!data.participants.includes(userId)) {
                     throw createError('1009', 'Not authorized');
                 }
-            } 
+            }
             else if (options.partnerId) {
                 const participants = [userId, options.partnerId].sort();
                 const convSnapshot = await db.collection(collections.conversations)
                     .where('participants', '==', participants)
                     .limit(1)
                     .get();
-                    
+
                 if (convSnapshot.empty) {
                     return [];
                 }
                 convRef = convSnapshot.docs[0].ref;
-            } 
+            }
             else {
                 throw createError('1002', 'Either conversationId or partnerId must be provided');
             }
@@ -249,7 +246,7 @@ class ChatService {
             // Get partnerId from conversation data
             const convData = await convRef.get();
             const partnerId = convData.data().participants.find(p => p !== userId);
-            
+
             const isUserBlocked = await userService.isUserBlocked(userId, partnerId);
             const isBlocked = isUserBlocked ? '1' : '0';
 

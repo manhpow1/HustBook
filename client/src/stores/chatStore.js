@@ -66,23 +66,26 @@ export const useChatStore = defineStore('chat', {
             try {
                 console.debug('Fetching conversations');
                 const response = await apiService.getConversations();
-                console.debug('Conversations response:', {
-                    code: response.data.code,
-                    conversationCount: response.data.data?.length || 0,
-                    unreadCount: response.data.numNewMessage
-                });
-
-                if (response.data.code === '1000') {
-                    this.conversations = Array.isArray(response.data.data)
-                        ? response.data.data
+                console.debug('Raw server response:', response.data);
+                
+                if (response.data.code === '1000' && response.data.data) {
+                    this.conversations = Array.isArray(response.data.data.data) 
+                        ? response.data.data.data.map(conv => ({
+                            ...conv,
+                            Partner: {
+                                ...conv.Partner,
+                                userName: conv.Partner.userName || 'Unknown User'
+                            }
+                        }))
                         : [];
-
-                    this.unreadCount = parseInt(response.data.numNewMessage || 0, 10);
-
+                        
+                    this.unreadCount = parseInt(response.data.data.numNewMessage || 0, 10);
+                    
                     console.debug('Conversations updated:', {
                         count: this.conversations.length,
-                        unreadCount: this.unreadCount,
-                        firstConversation: this.conversations[0] || null
+                        conversations: this.conversations,
+                        firstConversation: this.conversations[0] || null,
+                        unreadCount: this.unreadCount
                     });
                 } else {
                     throw new Error(response.data.message || 'Failed to load conversations');
