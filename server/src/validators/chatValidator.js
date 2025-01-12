@@ -35,6 +35,14 @@ const deleteConversationSchema = Joi.object({
     'object.missing': 'Either "partnerId" or "conversationId" must be provided',
 });
 
+const createConversationSchema = Joi.object({
+    partnerId: Joi.string().required(),
+});
+
+const validateCreateConversation = (data) => {
+    return createConversationSchema.validate(data, { abortEarly: false });
+};
+
 const validateGetListConversation = (data) => {
     return getListConversationSchema.validate(data, { abortEarly: false });
 };
@@ -55,7 +63,8 @@ const validateDeleteConversation = (data) => {
     return deleteConversationSchema.validate(data, { abortEarly: false });
 };
 
-export default{
+export default {
+    validateCreateConversation,
     validateGetListConversation,
     validateGetConversation,
     validateSetReadMessage,

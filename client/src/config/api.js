@@ -53,6 +53,7 @@ export const API_ENDPOINTS = {
     // Video Endpoints
     GET_LIST_VIDEOS: `${API_BASE_URL}/api/video/get_list_videos`,
     // Chat Endpoints (Updated RESTful)
+    CREATE_CONVERSATIONS: `${API_BASE_URL}/api/chat/conversations`,
     GET_CONVERSATIONS: `${API_BASE_URL}/api/chat/conversations`,
     GET_CONVERSATION_MESSAGES: (conversationId) => `${API_BASE_URL}/api/chat/conversations/${conversationId}/messages`,
     SET_READ_MESSAGE: (conversationId) => `${API_BASE_URL}/api/chat/conversations/${conversationId}/messages/read`,

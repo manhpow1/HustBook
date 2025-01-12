@@ -304,6 +304,10 @@ const apiService = {
     // ─────────────────────────────────────────────────────────
     // CHAT APIs
     // ─────────────────────────────────────────────────────────
+    async createConversation(partnerId) {
+        return this.post(API_ENDPOINTS.CREATE_CONVERSATIONS, { partnerId });
+    },
+
     async getConversations() {
         return this.get(API_ENDPOINTS.GET_CONVERSATIONS);
     },

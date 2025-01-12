@@ -142,6 +142,45 @@ router.get('/conversations', authenticateToken, chatController.getListConversati
 
 /**
  * @swagger
+ * /chat/conversations:
+ *   post:
+ *     summary: Create a new conversation or get existing one
+ *     tags: [Chat]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - partnerId
+ *             properties:
+ *               partnerId:
+ *                 type: string
+ *                 description: The ID of the user to start conversation with
+ *     responses:
+ *       200:
+ *         description: Conversation created or existing one returned
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 code:
+ *                   type: string
+ *                   example: "1000"
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     conversationId:
+ *                       type: string
+ */
+router.post('/conversations', authenticateToken, chatController.createConversation);
+
+/**
+ * @swagger
  * /chat/conversations/{conversationId}/messages:
  *   get:
  *     summary: Get messages from a specific conversation

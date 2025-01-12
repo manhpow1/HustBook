@@ -5,6 +5,24 @@ import chatValidator from '../validators/chatValidator.js';
 import logger from '../utils/logger.js';
 
 class ChatController {
+    async createConversation(req, res, next) {
+        try {
+            const { error, value } = chatValidator.validateCreateConversation(req.body);
+            if (error) {
+                const messages = error.details.map(detail => detail.message).join(', ');
+                throw createError('1002', messages);
+            }
+
+            const { partnerId } = value;
+            const userId = req.user.userId;
+
+            const conversationId = await chatService.createConversation(userId, partnerId);
+            sendResponse(res, '1000', { conversationId });
+        } catch (err) {
+            logger.error('Error in createConversation controller:', err);
+            next(err);
+        }
+    }
     async getListConversation(req, res, next) {
         try {
             logger.debug('getListConversation called with query:', req.query);

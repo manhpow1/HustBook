@@ -9,6 +9,32 @@ import admin from 'firebase-admin';
 import { getIO } from '../socket.js';
 
 class ChatService {
+    async createConversation(userId, partnerId) {
+        try {
+            // Check if conversation already exists
+            const participants = [userId, partnerId].sort();
+            const convSnapshot = await db.collection(collections.conversations)
+                .where('participants', '==', participants)
+                .limit(1)
+                .get();
+
+            if (!convSnapshot.empty) {
+                return convSnapshot.docs[0].id;
+            }
+
+            // Create new conversation
+            const convRef = await db.collection(collections.conversations).add({
+                participants,
+                createdAt: admin.firestore.FieldValue.serverTimestamp(),
+                updatedAt: admin.firestore.FieldValue.serverTimestamp()
+            });
+
+            return convRef.id;
+        } catch (error) {
+            logger.error('Error in createConversation service:', error);
+            throw createError('9999', 'Exception error');
+        }
+    }
     async getConversationRoomName(userId, partnerId, conversationId) {
         if (conversationId) {
             return `conversation_${conversationId}`;
