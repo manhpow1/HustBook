@@ -113,10 +113,10 @@ class ChatService {
             const msgData = {
                 text: text.trim(),
                 senderId: userId,
-                createdAt: admin.firestore.FieldValue.serverTimestamp(), // Quan trọng: Sử dụng serverTimestamp
-                unreadBy: [partnerId],
+                createdAt: admin.firestore.FieldValue.serverTimestamp(),
+                unreadBy: partnerId ? [partnerId] : [],
                 status: 'sent',
-                conversationId: convId // Thêm reference tới conversation
+                conversationId: convId
             };
 
             // Lưu message và cập nhật conversation trong một transaction
@@ -132,20 +132,40 @@ class ChatService {
                     throw createError('1009', 'Not authorized to send message');
                 }
 
-                // Save message
-                transaction.set(msgRef, msgData);
+                // Save message with retry
+                let retryCount = 0;
+                const maxRetries = 3;
+            
+                while (retryCount < maxRetries) {
+                    try {
+                        // Save message
+                        transaction.set(msgRef, msgData);
 
-                // Update conversation's last message
-                transaction.update(convRef, {
-                    lastMessage: {
-                        message: text.trim(),
-                        created: admin.firestore.FieldValue.serverTimestamp(),
-                        senderId: userId,
-                        messageId: msgRef.id,
-                        unreadBy: [partnerId]
-                    },
-                    updatedAt: admin.firestore.FieldValue.serverTimestamp()
-                });
+                        // Update conversation's last message
+                        transaction.update(convRef, {
+                            lastMessage: {
+                                message: text.trim(),
+                                created: admin.firestore.FieldValue.serverTimestamp(),
+                                senderId: userId,
+                                messageId: msgRef.id,
+                                unreadBy: partnerId ? [partnerId] : []
+                            },
+                            updatedAt: admin.firestore.FieldValue.serverTimestamp()
+                        });
+                    
+                        break; // Success - exit retry loop
+                    } catch (retryError) {
+                        retryCount++;
+                        logger.warn(`Database operation failed, attempt ${retryCount}/${maxRetries}:`, retryError);
+                    
+                        if (retryCount === maxRetries) {
+                            throw retryError; // Rethrow if all retries failed
+                        }
+                    
+                        // Wait before retry (exponential backoff)
+                        await new Promise(resolve => setTimeout(resolve, Math.pow(2, retryCount) * 100));
+                    }
+                }
             });
 
             // Verify message was saved

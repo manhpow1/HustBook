@@ -51,7 +51,31 @@ export const useChatStore = defineStore('chat', {
                     if (message.sender.id !== userStore.userData?.userId) {
                         this.addMessage(message);
                         this.unreadCount++;
+                    } else {
+                        // Update temporary message with confirmed data
+                        const tempMessage = this.messages.find(m => 
+                            m.status === 'sending' && 
+                            m.message === message.message
+                        );
+                        if (tempMessage) {
+                            this.confirmMessageSent(tempMessage.messageId);
+                        }
                     }
+                });
+
+                socket.on('message_sent', (data) => {
+                    const { messageId, conversationId } = data;
+                    const tempMessage = this.messages.find(m => 
+                        m.status === 'sending' && 
+                        m.messageId.startsWith('temp_')
+                    );
+                    if (tempMessage) {
+                        this.confirmMessageSent(tempMessage.messageId);
+                    }
+                });
+
+                socket.on('message_error', (error) => {
+                    this.handleMessageError(error);
                 });
 
                 socket.on('deletemessage', (data) => {
@@ -233,12 +257,28 @@ export const useChatStore = defineStore('chat', {
                 };
                 
                 logger.debug('Emitting socket message:', messageData);
-                socket.emit('message', messageData);
+                // Create message tracking object
+                const messageTracker = {
+                    id: Date.now().toString(),
+                    retries: 0,
+                    maxRetries: 3,
+                    lastAttempt: Date.now()
+                };
 
-                logger.debug('Creating temporary message for optimistic update');
+                // Emit with acknowledgment callback
+                socket.emit('send', messageData, (error) => {
+                    if (error) {
+                        logger.error('Message send error:', error);
+                        this.handleMessageError(error);
+                    }
+                });
+
+                logger.debug('Creating temporary message for optimistic update', {
+                    tracker: messageTracker
+                });
                 const tempMessage = {
                     message,
-                    messageId: 'temp_' + Date.now(),
+                    messageId: 'temp_' + messageTracker.id,
                     unread: '0',
                     created: new Date().toISOString(),
                     sender: {
@@ -246,11 +286,13 @@ export const useChatStore = defineStore('chat', {
                         userName: userStore.userData?.userName || '',
                         avatar: userStore.userData?.avatar || ''
                     },
-                    isBlocked: '0'
+                    isBlocked: '0',
+                    status: 'sending',
+                    tracker: messageTracker,
+                    conversationId: conversationId // Add conversationId for tracking
                 };
 
                 this.addMessage(tempMessage);
-                
                 // Update conversation list with new message
                 const conversation = this.conversations.find(c => c.conversationId === conversationId);
                 if (conversation) {
@@ -323,35 +365,91 @@ export const useChatStore = defineStore('chat', {
         },
 
         async confirmMessageSent(messageId) {
-            // Tìm và cập nhật trạng thái tin nhắn thành đã gửi
-            const messageIndex = messages.value.findIndex(msg => msg.messageId === messageId);
+            const messageIndex = this.messages.findIndex(msg => msg.messageId === messageId);
             if (messageIndex !== -1) {
-                messages.value[messageIndex].status = 'sent';
-                messages.value[messageIndex].error = null;
+                this.messages[messageIndex] = {
+                    ...this.messages[messageIndex],
+                    status: 'sent',
+                    error: null
+                };
+                logger.debug('Message confirmed sent:', { messageId });
             }
         },
     
-        async handleMessageError(error) {
-            // Cập nhật trạng thái tin nhắn thành lỗi
-            // Thường được gọi khi tin nhắn tạm thời đã được thêm vào UI (optimistic update)
-            messages.value = messages.value.map(msg => {
-                if (msg.status === 'sending') {
+        async handleMessageError(error, specificMessageId = null) {
+            const errorDetails = {
+                message: error.message || 'Unknown error',
+                code: error.code,
+                timestamp: new Date().toISOString(),
+                stack: error.stack
+            };
+            
+            logger.error('Message error:', {
+                ...errorDetails,
+                messageId: specificMessageId
+            });
+            
+            this.messages = this.messages.map(msg => {
+                if ((specificMessageId && msg.messageId === specificMessageId) || 
+                    (!specificMessageId && msg.status === 'sending')) {
                     return {
                         ...msg,
                         status: 'error',
-                        error: error.message || 'Failed to send message'
+                        error: errorDetails.message,
+                        errorDetails,
+                        retryCount: (msg.retryCount || 0) + 1
                     };
                 }
                 return msg;
             });
     
-            // Thông báo lỗi cho người dùng
             const { toast } = useToast();
             toast({
-                title: "Error",
-                description: error.message || "Failed to send message",
+                title: "Message Error",
+                description: errorDetails.message,
                 variant: "destructive"
             });
+
+            // Only retry if it's not a permanent failure
+            const permanentErrors = ['AUTH_ERROR', 'INVALID_CONVERSATION', 'USER_BLOCKED'];
+            const shouldRetry = !permanentErrors.includes(error.code);
+
+            if (shouldRetry) {
+                this.messages.forEach(msg => {
+                    if (msg.status === 'error' && msg.tracker && msg.tracker.retries < msg.tracker.maxRetries) {
+                        const delay = Math.min(
+                            Math.pow(2, msg.tracker.retries) * 1000,
+                            30000 // Max 30 second delay
+                        );
+                        setTimeout(() => {
+                            this.retryMessage(msg);
+                        }, delay);
+                    }
+                });
+            }
+        },
+
+        async retryMessage(message) {
+            if (!message.tracker) return;
+
+            message.tracker.retries++;
+            message.status = 'sending';
+            message.error = null;
+
+            logger.debug('Retrying message:', {
+                messageId: message.messageId,
+                attempt: message.tracker.retries
+            });
+
+            try {
+                await this.sendMessage({
+                    conversationId: this.selectedConversationId,
+                    message: message.message,
+                    originalMessageId: message.messageId
+                });
+            } catch (error) {
+                this.handleMessageError(error);
+            }
         },
     }
 });
