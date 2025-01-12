@@ -25,28 +25,24 @@ class ChatController {
     }
     async getListConversation(req, res, next) {
         try {
-            logger.debug('getListConversation called with query:', req.query);
             const { error, value } = chatValidator.validateGetListConversation(req.query);
             if (error) {
-                const messages = error.details.map(detail => detail.message).join(', ');
-                throw createError('1002', messages);
+                throw createError('1002', error.details.map(detail => detail.message).join(', '));
             }
 
             const { index, count } = value;
             const userId = req.user.userId;
 
-            logger.debug('Fetching conversations for user:', { userId, index, count });
-            const { conversations, numNewMessage } = await chatService.getListConversation(userId, index, count);
+            logger.debug('Calling service with:', { userId, index, count });
 
-            logger.debug('Conversations fetched:', { 
-                count: conversations?.length || 0,
-                numNewMessage 
-            });
+            const result = await chatService.getListConversation(userId, index, count);
 
-            // Return empty array instead of error when no conversations exist
+            logger.debug('Service response:', result);
+
+            // Return response in correct format
             sendResponse(res, '1000', {
-                data: conversations || [],
-                numNewMessage: numNewMessage || 0
+                data: result.data,
+                numNewMessage: result.numNewMessage
             });
         } catch (err) {
             logger.error('Error in getListConversation controller:', err);

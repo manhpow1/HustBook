@@ -147,55 +147,59 @@ class ChatService {
             const snapshot = await query.get();
             const conversationDocs = snapshot.docs;
 
+            // Log để debug
+            logger.debug('Found conversations:', {
+                count: conversationDocs.length,
+                conversations: conversationDocs.map(doc => ({ id: doc.id, data: doc.data() }))
+            });
+
             if (conversationDocs.length === 0) {
                 return { conversations: [], numNewMessage: 0 };
             }
 
-            // Lấy thông tin partner
-            const partnerIds = [];
-            for (const doc of conversationDocs) {
+            const partnerIds = conversationDocs.map(doc => {
                 const data = doc.data();
-                const partnerId = data.participants.find(p => p !== userId);
-                if (partnerId) partnerIds.push(partnerId);
-            }
+                return data.participants.find(p => p !== userId);
+            }).filter(Boolean);
+
+            // Log partner IDs
+            logger.debug('Partner IDs:', partnerIds);
 
             const userMap = new Map();
             if (partnerIds.length > 0) {
-                for (let i = 0; i < partnerIds.length; i += 10) {
-                    const batch = partnerIds.slice(i, i + 10);
-                    const usersSnap = await db.collection(collections.users)
-                        .where(admin.firestore.FieldPath.documentId(), 'in', batch)
-                        .get();
+                const usersSnap = await db.collection(collections.users)
+                    .where(admin.firestore.FieldPath.documentId(), 'in', partnerIds)
+                    .get();
 
-                    for (const userDoc of usersSnap.docs) {
-                        const userData = userDoc.data();
-                        userMap.set(userDoc.id, {
-                            userId: userDoc.id,
-                            userName: userData.userName || 'Unknown User',
-                            avatar: userData.avatar || ''
-                        });
-                    }
-                }
+                usersSnap.docs.forEach(doc => {
+                    const userData = doc.data();
+                    userMap.set(doc.id, {
+                        userId: doc.id,
+                        userName: userData.userName || 'Unknown User',
+                        avatar: userData.avatar || ''
+                    });
+                });
             }
 
             logger.debug('User data mapping:', Object.fromEntries(userMap));
 
             const conversations = conversationDocs.map(doc => {
                 const data = doc.data();
-                const conversationId = doc.id;
                 const partnerId = data.participants.find(p => p !== userId);
-                const partnerData = userMap.get(partnerId) || {
-                    userId: partnerId,
-                    userName: 'Unknown User',
-                    avatar: ''
-                };
+                const partnerData = userMap.get(partnerId);
+
+                logger.debug('Processing conversation:', {
+                    conversationId: doc.id,
+                    partnerId,
+                    partnerData
+                });
 
                 return {
-                    conversationId,
+                    conversationId: doc.id,
                     Partner: {
                         userId: partnerId,
-                        userName: partnerData.userName,
-                        avatar: partnerData.avatar
+                        userName: partnerData?.userName || 'Unknown User',
+                        avatar: partnerData?.avatar || ''
                     },
                     LastMessage: data.lastMessage || {
                         message: '',
@@ -206,13 +210,19 @@ class ChatService {
                 };
             });
 
+            logger.debug('Final conversations data:', {
+                conversations,
+                count: conversations.length
+            });
+
             return {
                 data: conversations,
                 numNewMessage: 0
             };
+
         } catch (error) {
             logger.error('Error in getListConversation service:', error);
-            throw createError('9999', 'Exception error');
+            throw error;
         }
     }
 

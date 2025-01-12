@@ -146,20 +146,30 @@ export const useChatStore = defineStore('chat', {
 
         async sendMessage({ conversationId, message }) {
             const socket = getSocket();
-            if (!socket || !conversationId || !message) return;
+            if (!socket || !conversationId || !message) {
+                logger.error('Invalid message parameters:', { 
+                    hasSocket: !!socket, 
+                    conversationId, 
+                    hasMessage: !!message 
+                });
+                return;
+            }
 
             this.sendingMessage = true;
+            logger.debug('Preparing to send message:', { conversationId });
 
             try {
-                // Emit the message through socket
                 const userStore = useUserStore();
-                socket.emit('message', {
+                const messageData = {
                     conversationId,
                     message,
                     userId: userStore.userData?.userId
-                });
+                };
+                
+                logger.debug('Emitting socket message:', messageData);
+                socket.emit('message', messageData);
 
-                // Create temporary message for optimistic update
+                logger.debug('Creating temporary message for optimistic update');
                 const tempMessage = {
                     message,
                     messageId: 'temp_' + Date.now(),
@@ -167,13 +177,23 @@ export const useChatStore = defineStore('chat', {
                     created: new Date().toISOString(),
                     sender: {
                         id: userStore.userData?.userId,
-                        userName: userStore.userData?.userName,
-                        avatar: userStore.userData?.avatar
+                        userName: userStore.userData?.userName || '',
+                        avatar: userStore.userData?.avatar || ''
                     },
                     isBlocked: '0'
                 };
 
                 this.addMessage(tempMessage);
+                
+                // Update conversation list with new message
+                const conversation = this.conversations.find(c => c.conversationId === conversationId);
+                if (conversation) {
+                    conversation.LastMessage = {
+                        message,
+                        created: tempMessage.created,
+                        unread: '0'
+                    };
+                }
             } catch (error) {
                 logger.error('Error sending message:', error);
                 toast({

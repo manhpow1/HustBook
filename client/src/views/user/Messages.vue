@@ -47,8 +47,8 @@
                       {{ conversation.LastMessage?.message || 'No messages yet' }}
                     </p>
                   </div>
-                  <Badge v-if="conversation.unreadCount" variant="secondary">
-                    {{ conversation.unreadCount }}
+                  <Badge v-if="conversation.LastMessage?.unread === '1'" variant="secondary">
+                    New
                   </Badge>
                 </div>
               </button>
@@ -234,9 +234,9 @@ const selectConversation = async (conversationId) => {
   try {
     await chatStore.fetchMessages(conversationId);
     await chatStore.markAsRead();
-    console.log('Conversation loaded:', { 
+    logger.debug('Conversation loaded:', { 
       conversationId,
-      messageCount: chatStore.messages.length 
+      messageCount: chatStore.messages?.length || 0
     });
     scrollToBottom();
   } catch (error) {
@@ -263,6 +263,12 @@ const sendMessage = async () => {
   if (!messageContent.value.trim() || !chatStore.selectedConversationId) return;
 
   try {
+    logger.debug('Sending message:', {
+      conversationId: chatStore.selectedConversationId,
+      messageLength: messageContent.value.trim().length,
+      recipientId: selectedConversation.value?.Partner?.userId
+    });
+
     await chatStore.sendMessage({
       conversationId: chatStore.selectedConversationId,
       message: messageContent.value.trim()
