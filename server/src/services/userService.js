@@ -482,6 +482,11 @@ class UserService {
                     throw createError('1009', 'concurrent modifications detected');
                 }
 
+                const normalizeText = (text) => {
+                    if (!text) return text;
+                    return text.normalize('NFC');
+                };
+
                 const textFields = ['userName', 'bio', 'address', 'city', 'country'];
                 const sanitizedData = {};
 
