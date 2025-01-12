@@ -244,6 +244,12 @@ const scrollToBottom = () => {
   });
 };
 
+const createNewMessage = () => {
+  showNewMessageDialog.value = true;
+  searchQuery.value = '';
+  searchResults.value = [];
+};
+
 const sendMessage = async () => {
   if (!messageContent.value.trim() || !chatStore.selectedConversationId) return;
 
