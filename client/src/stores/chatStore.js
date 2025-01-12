@@ -2,7 +2,7 @@ import { defineStore } from 'pinia';
 import apiService from '../services/api';
 import { useToast } from '@/components/ui/toast';
 import { useUserStore } from './userStore';
-import { socket } from '@/services/socket';
+import { getSocket, initSocket } from '@/services/socket';
 import logger from '@/services/logging';
 
 export const useChatStore = defineStore('chat', {
@@ -21,9 +21,10 @@ export const useChatStore = defineStore('chat', {
         initSocket() {
             const userStore = useUserStore();
             if (!this.isSocketInitialized && userStore.isLoggedIn) {
-                this.socket = socket;
+                initSocket();
+                const socket = getSocket();
                 
-                this.socket.on('onmessage', (data) => {
+                socket.on('onmessage', (data) => {
                     const { message } = data;
                     if (message.sender.id !== userStore.userData?.userId) {
                         this.addMessage(message);
@@ -31,7 +32,7 @@ export const useChatStore = defineStore('chat', {
                     }
                 });
 
-                this.socket.on('deletemessage', (data) => {
+                socket.on('deletemessage', (data) => {
                     const { messageId } = data;
                     this.removeMessage(messageId);
                 });
@@ -110,13 +111,15 @@ export const useChatStore = defineStore('chat', {
         },
 
         async sendMessage({ conversationId, message }) {
-            if (!this.socket || !conversationId || !message) return;
+            const socket = getSocket();
+            if (!socket || !conversationId || !message) return;
             
             this.sendingMessage = true;
 
             try {
                 // Emit the message through socket
-                this.socket.emit('message', {
+                const userStore = useUserStore();
+                socket.emit('message', {
                     conversationId,
                     message,
                     userId: userStore.userData?.userId
