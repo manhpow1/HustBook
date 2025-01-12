@@ -161,19 +161,24 @@ class ChatService {
 
             const userMap = new Map();
             if (partnerIds.length > 0) {
-                const usersSnapshot = await db.collection(collections.users)
-                    .where('userId', 'in', partnerIds)
-                    .get();
+                for (let i = 0; i < partnerIds.length; i += 10) {
+                    const batch = partnerIds.slice(i, i + 10);
+                    const usersSnap = await db.collection(collections.users)
+                        .where(admin.firestore.FieldPath.documentId(), 'in', batch)
+                        .get();
 
-                usersSnapshot.docs.forEach(doc => {
-                    const userData = doc.data();
-                    userMap.set(doc.id, {
-                        userId: doc.id,
-                        userName: userData.userName || 'Unknown User',
-                        avatar: userData.avatar || ''
-                    });
-                });
+                    for (const userDoc of usersSnap.docs) {
+                        const userData = userDoc.data();
+                        userMap.set(userDoc.id, {
+                            userId: userDoc.id,
+                            userName: userData.userName || 'Unknown User',
+                            avatar: userData.avatar || ''
+                        });
+                    }
+                }
             }
+
+            logger.debug('User data mapping:', Object.fromEntries(userMap));
 
             const conversations = conversationDocs.map(doc => {
                 const data = doc.data();
