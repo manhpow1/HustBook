@@ -36,19 +36,43 @@ class ChatService {
         }
     }
     async getConversationRoomName(userId, partnerId, conversationId) {
-        if (conversationId) {
-            return `conversation_${conversationId}`;
+        try {
+            if (conversationId) {
+                const convDoc = await db.collection('conversations')
+                    .doc(conversationId)
+                    .get();
+
+                if (!convDoc.exists) {
+                    throw new Error('Conversation not found');
+                }
+
+                const convData = convDoc.data();
+                if (!convData.participants.includes(userId)) {
+                    throw new Error('Not authorized for this conversation');
+                }
+
+                return `conversation_${conversationId}`;
+            }
+
+            if (!partnerId) {
+                throw new Error('Either conversationId or partnerId is required');
+            }
+
+            const participants = [userId, partnerId].sort();
+            const convSnapshot = await db.collection('conversations')
+                .where('participants', '==', participants)
+                .limit(1)
+                .get();
+
+            if (convSnapshot.empty) {
+                throw new Error('Conversation not found');
+            }
+
+            return `conversation_${convSnapshot.docs[0].id}`;
+        } catch (error) {
+            logger.error('Error getting room name:', error);
+            throw error;
         }
-        const participants = [userId, partnerId].sort();
-        const convSnapshot = await db.collection(collections.conversations)
-            .where('participants', '==', participants)
-            .limit(1)
-            .get();
-        if (convSnapshot.empty) {
-            throw createError('9994', 'No data or end of list data');
-        }
-        const convId = convSnapshot.docs[0].id;
-        return `conversation_${convId}`;
     }
 
     async sendMessage(userId, partnerId, conversationId, text) {

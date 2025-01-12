@@ -86,68 +86,77 @@ export function initSocketIO(server) {
                 try {
                     const { partnerId, conversationId, message } = data;
 
-                    // Log chi tiết data nhận được
-                    logger.debug('Received send event:', {
+                    logger.debug('Received message event:', {
+                        socketId: socket.id,
                         userId: socket.userId,
                         partnerId,
                         conversationId,
                         messageLength: message?.length
                     });
 
-                    // Validate input
-                    if (!message || typeof message !== 'string') {
-                        throw new Error('Invalid message format');
+                    if (!message) {
+                        throw new Error('Message is required');
                     }
 
-                    if (!conversationId && !partnerId) {
-                        throw new Error('Either conversationId or partnerId is required');
+                    // Validate và lấy conversation
+                    let targetConversationId = conversationId;
+                    if (!targetConversationId && partnerId) {
+                        const participants = [socket.userId, partnerId].sort();
+                        const convSnapshot = await db.collection(collections.conversations)
+                            .where('participants', '==', participants)
+                            .limit(1)
+                            .get();
+
+                        if (!convSnapshot.empty) {
+                            targetConversationId = convSnapshot.docs[0].id;
+                        }
                     }
 
-                    // Lưu message vào DB
+                    if (!targetConversationId) {
+                        throw new Error('Invalid conversation');
+                    }
+
+                    // Lưu và gửi tin nhắn
                     const savedMessage = await chatService.sendMessage(
                         socket.userId,
                         partnerId,
-                        conversationId,
-                        message.trim()
+                        targetConversationId,
+                        message
                     );
 
-                    logger.debug('Message saved:', {
+                    logger.debug('Message saved successfully:', {
                         messageId: savedMessage.messageId,
-                        conversationId: conversationId
+                        conversationId: targetConversationId
                     });
 
-                    // Tạo tên phòng chat và gửi tin nhắn
+                    // Gửi tin nhắn qua socket
                     const roomName = await chatService.getConversationRoomName(
                         socket.userId,
                         partnerId,
-                        conversationId
+                        targetConversationId
                     );
 
-                    logger.debug('Emitting to room:', {
-                        roomName,
-                        messageId: savedMessage.messageId
-                    });
-
-                    // Emit tin nhắn tới tất cả người trong phòng
+                    // Emit tin nhắn cho tất cả người trong room
                     io.to(roomName).emit('onmessage', {
                         message: savedMessage,
                         timestamp: new Date().toISOString()
                     });
 
-                    // Xác nhận gửi thành công cho sender
+                    // Gửi xác nhận thành công cho người gửi
                     socket.emit('message_sent', {
                         status: 'success',
-                        messageId: savedMessage.messageId
+                        messageId: savedMessage.messageId,
+                        conversationId: targetConversationId
                     });
 
                 } catch (error) {
-                    logger.error('Error processing send event:', {
+                    logger.error('Error in send event:', {
                         error: error.message,
-                        userId: socket.userId,
-                        stack: error.stack
+                        stack: error.stack,
+                        userId: socket.userId
                     });
 
-                    // Thông báo lỗi chi tiết về client
+                    // Gửi thông báo lỗi về client
                     socket.emit('message_error', {
                         error: error.message,
                         code: error.code || 'UNKNOWN_ERROR'
