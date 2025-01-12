@@ -100,56 +100,61 @@ export function initSocketIO(server) {
                         throw new Error('Message is required');
                     }
 
-                    // Validate và lấy conversation
+                    // Get or validate conversation ID
                     let targetConversationId = conversationId;
-                    if (!targetConversationId && partnerId) {
-                        const participants = [socket.userId, partnerId].sort();
-                        const convSnapshot = await db.collection(collections.conversations)
-                            .where('participants', '==', participants)
-                            .limit(1)
-                            .get();
-
-                        if (!convSnapshot.empty) {
-                            targetConversationId = convSnapshot.docs[0].id;
-                        }
+                    if (!targetConversationId && !partnerId) {
+                        throw new Error('Either conversationId or partnerId is required');
                     }
 
-                    if (!targetConversationId) {
-                        throw new Error('Invalid conversation');
+                    try {
+                        // Save message using chat service
+                        const savedMessage = await chatService.sendMessage(
+                            socket.userId,
+                            partnerId,
+                            targetConversationId,
+                            message
+                        );
+
+                        logger.debug('Message saved successfully:', {
+                            messageId: savedMessage.messageId,
+                            conversationId: targetConversationId
+                        });
+
+                        // Get room name for socket communication
+                        const roomName = await chatService.getConversationRoomName(
+                            socket.userId,
+                            partnerId,
+                            targetConversationId
+                        );
+
+                        // Broadcast message to room
+                        io.to(roomName).emit('onmessage', {
+                            message: savedMessage,
+                            timestamp: new Date().toISOString()
+                        });
+
+                        // Send confirmation to sender
+                        socket.emit('message_sent', {
+                            status: 'success',
+                            messageId: savedMessage.messageId,
+                            conversationId: targetConversationId,
+                            timestamp: new Date().toISOString()
+                        });
+
+                    } catch (dbError) {
+                        logger.error('Database operation failed:', {
+                            error: dbError.message,
+                            stack: dbError.stack,
+                            userId: socket.userId
+                        });
+                        
+                        socket.emit('message_error', {
+                            error: 'Failed to save message',
+                            code: 'DB_ERROR'
+                        });
+                        
+                        throw dbError;
                     }
-
-                    // Lưu và gửi tin nhắn
-                    const savedMessage = await chatService.sendMessage(
-                        socket.userId,
-                        partnerId,
-                        targetConversationId,
-                        message
-                    );
-
-                    logger.debug('Message saved successfully:', {
-                        messageId: savedMessage.messageId,
-                        conversationId: targetConversationId
-                    });
-
-                    // Gửi tin nhắn qua socket
-                    const roomName = await chatService.getConversationRoomName(
-                        socket.userId,
-                        partnerId,
-                        targetConversationId
-                    );
-
-                    // Emit tin nhắn cho tất cả người trong room
-                    io.to(roomName).emit('onmessage', {
-                        message: savedMessage,
-                        timestamp: new Date().toISOString()
-                    });
-
-                    // Gửi xác nhận thành công cho người gửi
-                    socket.emit('message_sent', {
-                        status: 'success',
-                        messageId: savedMessage.messageId,
-                        conversationId: targetConversationId
-                    });
 
                 } catch (error) {
                     logger.error('Error in send event:', {
