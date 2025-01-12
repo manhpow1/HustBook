@@ -34,8 +34,7 @@
                     <AspectRatio :ratio="1">
                         <div @click="openLightbox(0)"
                             class="relative w-full h-full cursor-pointer group">
-                            <img :src="getOptimizedImageUrl(post.images[0])" 
-                                :srcset="getImageSrcSet(post.images[0])"
+                            <img :src="post.images[0]"
                                 :alt="post.content || 'Post image'"
                                 class="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
                                 loading="lazy" />
@@ -54,27 +53,19 @@
                     </AspectRatio>
                 </Card>
             </div>
-            <!-- Four or More Images Layout -->
-            <div v-else-if="fourOrMoreImages" class="grid grid-cols-2 gap-2">
-                <Card v-for="(img, index) in visibleImages" :key="img.id" class="overflow-hidden">
-                    <AspectRatio ratio={1}>
-                        <div v-if="!img.covered" @click="openLightbox(index)"
+            <!-- Four Images Layout -->
+            <div v-else class="grid grid-cols-2 gap-2">
+                <Card v-for="(img, index) in post.images.slice(0, 4)" :key="index" class="overflow-hidden">
+                    <AspectRatio :ratio="1">
+                        <div @click="openLightbox(index)"
                             class="relative w-full h-full cursor-pointer group">
-                            <img :src="img.url" :alt="post.content"
+                            <img :src="img"
+                                :alt="post.content || 'Post image'"
                                 class="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
                                 loading="lazy" />
-                            <div v-if="index === 3 && post.media.length > 4"
+                            <div v-if="index === 3 && post.images.length > 4"
                                 class="absolute inset-0 flex items-center justify-center bg-black/60 text-white">
-                                <span class="text-2xl font-bold">+{{ post.media.length - 4 }}</span>
-                            </div>
-                        </div>
-                        <div v-else class="flex items-center justify-center h-full bg-muted">
-                            <div class="text-center">
-                                <p class="text-muted-foreground mb-2">This image is covered</p>
-                                <Button variant="default" @click.stop="uncoverMedia(img.id)">
-                                    <EyeIcon class="h-4 w-4 mr-2" />
-                                    Uncover
-                                </Button>
+                                <span class="text-2xl font-bold">+{{ post.images.length - 4 }}</span>
                             </div>
                         </div>
                     </AspectRatio>
@@ -97,7 +88,6 @@ import { PlayIcon, EyeIcon } from 'lucide-vue-next';
 import MediaViewer from '../shared/MediaViewer.vue';
 import { useErrorHandler } from '@/utils/errorHandler';
 import { useToast } from '../ui/toast';
-import { useMediaUtils } from '@/composables/useMediaUtils';
 
 const props = defineProps({
     post: {
@@ -196,3 +186,4 @@ const handleComment = () => {
     cursor: pointer;
 }
 </style>
+
