@@ -1,23 +1,25 @@
 class Conversation {
-    constructor({ id, partnerId, partnerUsername = '', partnerAvatar = '', lastMessage = {}, unread = false }) {
-        this.id = id;
+    constructor({ conversationId, partnerId, partnerUsername = '', partnerAvatar = '', lastMessage = {}, unreadCount = 0 }) {
+        this.conversationId = conversationId;
         this.Partner = {
-            id: partnerId,
+            userId: partnerId,
             userName: partnerUsername,
             avatar: partnerAvatar
         };
-        this.LastMessage = {
+        this.LastMessage = lastMessage ? {
             message: lastMessage.message || '',
             created: lastMessage.created || '',
-            unread: unread ? '1' : '0'
-        };
+            unread: lastMessage.unread || '0'
+        } : null;
+        this.unreadCount = unreadCount;
     }
 
     toJSON() {
         return {
-            id: this.id,
+            conversationId: this.conversationId,
             Partner: this.Partner,
-            LastMessage: this.LastMessage
+            LastMessage: this.LastMessage,
+            unreadCount: this.unreadCount
         };
     }
 }

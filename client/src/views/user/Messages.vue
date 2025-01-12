@@ -33,12 +33,12 @@
                 :class="{ 'bg-accent': chatStore.selectedConversationId === conversation.conversationId }">
                 <div class="flex items-center space-x-4">
                   <Avatar>
-                    <AvatarImage :src="conversation.partner.avatar" :alt="conversation.partner.userName" />
-                    <AvatarFallback>{{ getInitials(conversation.partner.userName) }}</AvatarFallback>
+                    <AvatarImage :src="conversation.Partner.avatar" :alt="conversation.Partner.userName" />
+                    <AvatarFallback>{{ getInitials(conversation.Partner.userName) }}</AvatarFallback>
                   </Avatar>
                   <div class="flex-1 min-w-0">
                     <div class="flex items-center justify-between">
-                      <p class="font-medium truncate">{{ conversation.partner.userName }}</p>
+                      <p class="font-medium truncate">{{ conversation.Partner.userName }}</p>
                       <span v-if="conversation.LastMessage" class="text-xs text-muted-foreground">
                         {{ formatDate(conversation.LastMessage.created) }}
                       </span>
@@ -70,13 +70,13 @@
                 <ArrowLeftIcon class="h-4 w-4" />
               </Button>
               <Avatar>
-                <AvatarImage :src="selectedConversation?.partner.avatar"
-                  :alt="selectedConversation?.partner.userName" />
+                <AvatarImage :src="selectedConversation?.Partner.avatar"
+                  :alt="selectedConversation?.Partner.userName" />
                 <AvatarFallback>
-                  {{ getInitials(selectedConversation?.partner.userName) }}
+                  {{ getInitials(selectedConversation?.Partner.userName) }}
                 </AvatarFallback>
               </Avatar>
-              <span>{{ selectedConversation?.partner.userName }}</span>
+              <span>{{ selectedConversation?.Partner.userName }}</span>
             </CardTitle>
           </CardHeader>
 
@@ -95,7 +95,7 @@
             </div>
             <div v-else class="space-y-4">
               <div v-for="message in chatStore.messages" :key="message.messageId" class="flex items-start space-x-4"
-                :class="{ 'justify-end': message.sender.id === userStore.user?.id }">
+                :class="{ 'justify-end': message.sender.userId === userStore.userData?.userId }">
                 <Avatar v-if="message.sender.userId !== userStore.userData?.userId">
                   <AvatarImage :src="message.sender.avatar" :alt="message.sender.userName" />
                   <AvatarFallback>{{ getInitials(message.sender.userName) }}</AvatarFallback>
