@@ -253,15 +253,11 @@ class ChatService {
             const isUserBlocked = await userService.isUserBlocked(userId, partnerId);
             const isBlocked = isUserBlocked ? '1' : '0';
 
+            const { index = 0, count = 20 } = options;
             let messagesQuery = convRef.collection('messages')
-                .orderBy('createdAt', 'asc');
-
-            if (index) {
-                messagesQuery = messagesQuery.offset(index);
-            }
-            if (count) {
-                messagesQuery = messagesQuery.limit(count);
-            }
+                .orderBy('createdAt', 'asc')
+                .offset(index)
+                .limit(count);
 
             const messagesSnapshot = await messagesQuery.get();
             if (messagesSnapshot.empty) {
