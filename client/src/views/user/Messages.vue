@@ -28,9 +28,9 @@
             </div>
             <div v-else class="divide-y">
               <button v-for="conversation in chatStore.conversations" :key="conversation.conversationId"
-                @click="selectConversation(conversation.conversationId)"
+                @click="selectConversation(conversation.conversationId)" 
                 class="w-full p-4 hover:bg-accent text-left transition-colors"
-                :class="{ 'bg-accent': chatStore.selectedConversationId === conversation.id }">
+                :class="{ 'bg-accent': chatStore.selectedConversationId === conversation.conversationId }">
                 <div class="flex items-center space-x-4">
                   <Avatar>
                     <AvatarImage :src="conversation.partner.avatar" :alt="conversation.partner.userName" />
