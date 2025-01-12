@@ -82,15 +82,25 @@ export const useChatStore = defineStore('chat', {
             this.loadingMessages = true;
             const { toast } = useToast();
             try {
+                logger.debug('Fetching messages:', { conversationId, index, count });
                 this.selectedConversationId = conversationId;
                 const response = await apiService.getConversationMessages(conversationId, { index, count });
+                logger.debug('Messages response:', { 
+                    code: response.data.code,
+                    messageCount: response.data.data?.length || 0
+                });
                 if (response.data.code === '1000') {
                     this.messages = response.data.data;
                 } else {
                     throw new Error(response.data.message || 'Failed to load messages');
                 }
             } catch (error) {
-                toast(error.message, 'error');
+                logger.error('Failed to fetch messages:', error);
+                toast({
+                    title: "Error",
+                    description: error.message,
+                    variant: "destructive"
+                });
             } finally {
                 this.loadingMessages = false;
             }
