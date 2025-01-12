@@ -28,7 +28,7 @@
             </div>
             <div v-else class="divide-y">
               <button v-for="conversation in chatStore.conversations" :key="conversation.conversationId"
-                @click="selectConversation(conversation.conversationId)" 
+                @click="selectConversation(conversation.conversationId)"
                 class="w-full p-4 hover:bg-accent text-left transition-colors"
                 :class="{ 'bg-accent': chatStore.selectedConversationId === conversation.conversationId }">
                 <div class="flex items-center space-x-4">
@@ -108,6 +108,13 @@
                   <p class="whitespace-pre-wrap break-words">{{ message.message }}</p>
                   <span class="text-xs opacity-70">{{ formatDate(message.created) }}</span>
                 </div>
+                <span v-if="message.sender.userId === userStore.userData?.userId"
+                  class="text-xs text-muted-foreground ml-2">
+                  <CheckIcon v-if="message.status === 'sent'" class="h-4 w-4" />
+                  <Loader2Icon v-else-if="message.status === 'sending'" class="h-4 w-4 animate-spin" />
+                  <XCircleIcon v-else-if="message.status === 'error'" class="h-4 w-4 text-destructive"
+                    :title="message.error" />
+                </span>
               </div>
             </div>
           </ScrollArea>
@@ -184,7 +191,7 @@ import { useChatStore } from '@/stores/chatStore';
 import { useSearchStore } from '@/stores/searchStore';
 import { useUserStore } from '@/stores/userStore';
 import { useDebounce } from '@/composables/useDebounce';
-import { PlusCircleIcon, ArrowLeftIcon, SendIcon, Loader2Icon } from 'lucide-vue-next';
+import { PlusCircleIcon, ArrowLeftIcon, SendIcon, Loader2Icon, CheckIcon, XCircleIcon } from 'lucide-vue-next';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
@@ -234,7 +241,7 @@ const selectConversation = async (conversationId) => {
   try {
     await chatStore.fetchMessages(conversationId);
     await chatStore.markAsRead();
-    logger.debug('Conversation loaded:', { 
+    logger.debug('Conversation loaded:', {
       conversationId,
       messageCount: chatStore.messages?.length || 0
     });
@@ -263,6 +270,21 @@ const sendMessage = async () => {
   if (!messageContent.value.trim() || !chatStore.selectedConversationId) return;
 
   try {
+    const tempMessage = {
+      messageId: `temp-${Date.now()}`,
+      message: messageContent.value.trim(),
+      created: new Date().toISOString(),
+      sender: {
+        id: userStore.userData?.userId,
+        userName: userStore.userData?.userName || '',
+        avatar: userStore.userData?.avatar || ''
+      },
+      status: 'sending'
+    };
+
+    // Thêm tin nhắn tạm thời vào UI (optimistic update)
+    chatStore.addMessage(tempMessage);
+
     logger.debug('Sending message:', {
       conversationId: chatStore.selectedConversationId,
       messageLength: messageContent.value.trim().length,

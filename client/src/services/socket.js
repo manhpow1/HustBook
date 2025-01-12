@@ -106,6 +106,25 @@ export function initSocket() {
         }
     });
 
+    socket.on('message_sent', (data) => {
+        logger.debug('Message sent confirmation received:', {
+            messageId: data.messageId,
+            conversationId: data.conversationId
+        });
+
+        // Có thể cập nhật UI hoặc store để xác nhận tin nhắn đã được gửi
+        const chatStore = useChatStore();
+        chatStore.confirmMessageSent(data.messageId);
+    });
+
+    socket.on('message_error', (error) => {
+        logger.error('Message error received:', error);
+
+        const chatStore = useChatStore();
+        // Xử lý lỗi và có thể hiển thị thông báo cho người dùng
+        chatStore.handleMessageError(error);
+    });
+
     // Keep socket connection alive with error handling
     const heartbeat = setInterval(() => {
         if (socket?.connected) {

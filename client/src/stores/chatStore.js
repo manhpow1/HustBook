@@ -286,6 +286,38 @@ export const useChatStore = defineStore('chat', {
             } catch (error) {
                 toast(error.message, 'error');
             }
-        }
+        },
+
+        async confirmMessageSent(messageId) {
+            // Tìm và cập nhật trạng thái tin nhắn thành đã gửi
+            const messageIndex = messages.value.findIndex(msg => msg.messageId === messageId);
+            if (messageIndex !== -1) {
+                messages.value[messageIndex].status = 'sent';
+                messages.value[messageIndex].error = null;
+            }
+        },
+    
+        async handleMessageError(error) {
+            // Cập nhật trạng thái tin nhắn thành lỗi
+            // Thường được gọi khi tin nhắn tạm thời đã được thêm vào UI (optimistic update)
+            messages.value = messages.value.map(msg => {
+                if (msg.status === 'sending') {
+                    return {
+                        ...msg,
+                        status: 'error',
+                        error: error.message || 'Failed to send message'
+                    };
+                }
+                return msg;
+            });
+    
+            // Thông báo lỗi cho người dùng
+            const { toast } = useToast();
+            toast({
+                title: "Error",
+                description: error.message || "Failed to send message",
+                variant: "destructive"
+            });
+        },
     }
 });
