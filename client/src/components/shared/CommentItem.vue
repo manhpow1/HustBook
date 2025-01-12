@@ -169,12 +169,22 @@ const showDeleteDialog = ref(false);
 const canEditDelete = computed(
     () => userStore?.userId === commentData.value.user.userId
 );
+
 const formattedDate = computed(() => {
-    const date = new Date(commentData.value.created);
-    return isNaN(date.getTime())
-        ? "Invalid date"
-        : formatDistanceToNow(date, { addSuffix: true });
-});
+    try {
+        const date = new Date(props.post.created)
+        const now = new Date()
+        const diffInHours = (now - date) / (1000 * 60 * 60)
+
+        return diffInHours < 24
+            ? formatDistanceToNow(date, { addSuffix: true })
+            : format(date, 'PPP')
+    } catch (err) {
+        error.value = 'Invalid date format'
+        return 'Unknown date'
+    }
+})
+
 const renderedContent = computed(() => renderMarkdown(commentData.value.content));
 const getInitials = (name) => {
     if (!name) return "";
@@ -241,7 +251,7 @@ const toggleLike = async () => {
         const currentLikeStatus = commentData.value.isLiked;
         const newLikeStatus = !currentLikeStatus;
         const newLikeCount = commentData.value.likes + (currentLikeStatus ? -1 : 1);
-        
+
         await emit("update", {
             commentId: commentData.value.commentId,
             isLiked: newLikeStatus,

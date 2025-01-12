@@ -259,30 +259,27 @@ const sendMessage = async () => {
   }
 };
 
-const createNewMessage = () => {
-  showNewMessageDialog.value = true;
-  searchQuery.value = '';
-  searchResults.value = [];
-};
-
 const searchUsers = useDebounce(async () => {
   if (!searchQuery.value.trim()) {
     searchResults.value = [];
     return;
   }
-
   try {
-    const results = await searchStore.searchUsers({
+    const { users, total } = await searchStore.searchUsers({
       keyword: searchQuery.value,
       index: 0,
       count: 20
     });
-    searchResults.value = results.filter(user => user.userId !== userStore.user?.userId);
+    searchResults.value = users.filter(user => user.userId !== userStore.userData?.userId);
   } catch (error) {
     logger.error('Failed to search users:', error);
+    toast({
+      title: "Error",
+      description: "Failed to search users",
+      variant: "destructive"
+    });
   }
 }, 300);
-
 const startConversation = async (user) => {
   try {
     const conversationId = await chatStore.createConversation(user.userId);
