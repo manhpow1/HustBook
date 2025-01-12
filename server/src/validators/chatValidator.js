@@ -21,16 +21,11 @@ const getListConversationSchema = Joi.object({
 });
 
 const getConversationSchema = Joi.object({
-    ...identifierSchema,
     ...paginationSchema
-}).or('partnerId', 'conversationId').messages({
-    'object.missing': 'Either "partnerId" or "conversationId" must be provided'
 });
 
 const setReadMessageSchema = Joi.object({
-    ...identifierSchema
-}).or('partnerId', 'conversationId').messages({
-    'object.missing': 'Either "partnerId" or "conversationId" must be provided'
+
 });
 
 const deleteMessageSchema = Joi.object({

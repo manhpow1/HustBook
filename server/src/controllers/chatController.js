@@ -56,19 +56,22 @@ class ChatController {
 
     async getConversation(req, res, next) {
         try {
+            const conversationId = req.params.conversationId;
+            if (!conversationId) {
+                throw createError('1002', 'conversationId is required');
+            }
+
             const { error, value } = chatValidator.validateGetConversation(req.query);
             if (error) {
                 const messages = error.details.map(detail => detail.message).join(', ');
                 throw createError('1002', messages);
             }
 
-            const { index, count, partnerId } = value;
-            const conversationId = req.params.conversationId;
+            const { index, count } = value;
             const userId = req.user.userId;
 
             const messagesData = await chatService.getConversation(userId, {
                 conversationId,
-                partnerId,
                 index,
                 count
             });
@@ -82,19 +85,12 @@ class ChatController {
 
     async setReadMessage(req, res, next) {
         try {
-            const { error, value } = chatValidator.validateSetReadMessage(req.query);
-            if (error) {
-                const messages = error.details.map(detail => detail.message).join(', ');
-                throw createError('1002', messages);
-            }
-
             const conversationId = req.params.conversationId;
-            const userId = req.user.userId;
-
             if (!conversationId) {
                 throw createError('1002', 'conversationId is required');
             }
 
+            const userId = req.user.userId;
             const updatedCount = await chatService.setReadMessage(userId, { conversationId });
 
             sendResponse(res, '1000', { data: [{ updated_count: updatedCount }] });
