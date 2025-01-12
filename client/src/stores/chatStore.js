@@ -64,15 +64,31 @@ export const useChatStore = defineStore('chat', {
             this.loadingConversations = true;
             const { toast } = useToast();
             try {
+                console.debug('Fetching conversations');
                 const response = await apiService.getConversations(); // GET /conversations
+                console.debug('Conversations response:', {
+                    code: response.data.code,
+                    conversationCount: response.data.data?.length || 0,
+                    unreadCount: response.data.numNewMessage
+                });
+                
                 if (response.data.code === '1000') {
                     this.conversations = response.data.data;
                     this.unreadCount = parseInt(response.data.numNewMessage, 10);
+                    console.debug('Conversations updated:', {
+                        count: this.conversations.length,
+                        unreadCount: this.unreadCount
+                    });
                 } else {
                     throw new Error(response.data.message || 'Failed to load conversations');
                 }
             } catch (error) {
-                toast(error.message, 'error');
+                console.error('Failed to fetch conversations:', error);
+                toast({
+                    title: "Error",
+                    description: error.message,
+                    variant: "destructive"
+                });
             } finally {
                 this.loadingConversations = false;
             }
@@ -82,10 +98,10 @@ export const useChatStore = defineStore('chat', {
             this.loadingMessages = true;
             const { toast } = useToast();
             try {
-                logger.debug('Fetching messages:', { conversationId, index, count });
+                console.debug('Fetching messages:', { conversationId, index, count });
                 this.selectedConversationId = conversationId;
                 const response = await apiService.getConversationMessages(conversationId, { index, count });
-                logger.debug('Messages response:', { 
+                console.debug('Messages response:', { 
                     code: response.data.code,
                     messageCount: response.data.data?.length || 0
                 });
@@ -95,7 +111,7 @@ export const useChatStore = defineStore('chat', {
                     throw new Error(response.data.message || 'Failed to load messages');
                 }
             } catch (error) {
-                logger.error('Failed to fetch messages:', error);
+                console.error('Failed to fetch messages:', error);
                 toast({
                     title: "Error",
                     description: error.message,

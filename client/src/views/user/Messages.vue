@@ -229,18 +229,18 @@ const formatDate = (date) => {
 };
 
 const selectConversation = async (conversationId) => {
-  logger.debug('Selecting conversation:', { conversationId });
+  console.log('Selecting conversation:', { conversationId });
   chatStore.selectedConversationId = conversationId;
   try {
     await chatStore.fetchMessages(conversationId);
     await chatStore.markAsRead();
-    logger.debug('Conversation loaded:', { 
+    console.log('Conversation loaded:', { 
       conversationId,
       messageCount: chatStore.messages.length 
     });
     scrollToBottom();
   } catch (error) {
-    logger.error('Failed to load conversation:', error);
+    console.error('Failed to load conversation:', error);
   }
 };
 
