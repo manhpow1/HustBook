@@ -55,38 +55,82 @@ class ChatService {
         try {
             let convRef;
             let convId = conversationId;
+
+            // Validate inputs
+            if (!text || typeof text !== 'string') {
+                throw createError('1002', 'Invalid message format');
+            }
+
+            logger.debug('Starting sendMessage:', {
+                userId,
+                partnerId,
+                conversationId,
+                messageLength: text.length
+            });
+
+            // Get or create conversation
             if (!convId) {
+                logger.debug('No conversationId provided, creating/finding conversation');
                 const participants = [userId, partnerId].sort();
                 const convSnapshot = await db.collection(collections.conversations)
                     .where('participants', '==', participants)
                     .limit(1)
                     .get();
+
                 if (convSnapshot.empty) {
+                    logger.debug('Creating new conversation');
                     const newConvRef = await db.collection(collections.conversations).add({
                         participants,
-                        updatedAt: new Date()
+                        createdAt: admin.firestore.FieldValue.serverTimestamp(),
+                        updatedAt: admin.firestore.FieldValue.serverTimestamp()
                     });
                     convId = newConvRef.id;
                 } else {
                     convId = convSnapshot.docs[0].id;
+                    logger.debug('Found existing conversation:', { convId });
                 }
             }
 
             convRef = db.collection(collections.conversations).doc(convId);
 
+            // Create message
             const msgRef = convRef.collection('messages').doc();
+            const now = new Date();
             const msgData = {
-                text,
+                text: text.trim(), // Trim message text
                 senderId: userId,
-                createdAt: new Date(),
-                unreadBy: [partnerId]
+                createdAt: now,
+                unreadBy: [partnerId],
+                status: 'sent'
             };
 
+            // Get sender info from cache or database
+            let senderInfo = await cache.get(`user:${userId}`);
+            if (!senderInfo) {
+                const senderDoc = await db.collection(collections.users).doc(userId).get();
+                senderInfo = senderDoc.data() || {};
+                await cache.set(`user:${userId}`, senderInfo, 3600);
+            }
+
+            // Run transaction
             await db.runTransaction(async (transaction) => {
+                // Verify conversation exists
+                const convDoc = await transaction.get(convRef);
+                if (!convDoc.exists) {
+                    throw createError('9994', 'Conversation not found');
+                }
+
+                // Check if user is participant
+                const convData = convDoc.data();
+                if (!convData.participants.includes(userId)) {
+                    throw createError('1009', 'Not authorized to send message in this conversation');
+                }
+
+                // Save message and update conversation
                 transaction.set(msgRef, msgData);
                 transaction.update(convRef, {
                     lastMessage: {
-                        message: text,
+                        message: text.trim(),
                         created: admin.firestore.FieldValue.serverTimestamp(),
                         senderId: userId,
                         unreadBy: [partnerId]
@@ -95,21 +139,45 @@ class ChatService {
                 });
             });
 
+            logger.debug('Message saved successfully:', {
+                messageId: msgRef.id,
+                conversationId: convId
+            });
+
+            // Create response message object
             const createdMessage = {
-                message: text,
+                message: text.trim(),
                 messageId: msgRef.id,
                 unread: '1',
-                created: new Date().toISOString(),
-                sender: { id: userId, userName: '', avatar: '' }
+                created: now.toISOString(),
+                sender: {
+                    id: userId,
+                    userName: senderInfo.userName || '',
+                    avatar: senderInfo.avatar || ''
+                },
+                status: 'sent'
             };
 
-            const io = getIO();
-            const roomName = await this.getConversationRoomName(userId, partnerId, convId);
-            io.to(roomName).emit('onmessage', { message: createdMessage });
+            // Emit to socket room
+            try {
+                const io = getIO();
+                const roomName = await this.getConversationRoomName(userId, partnerId, convId);
+                io.to(roomName).emit('onmessage', {
+                    message: createdMessage,
+                    timestamp: now.toISOString()
+                });
+                logger.debug('Message emitted to room:', { roomName, messageId: msgRef.id });
+            } catch (socketError) {
+                logger.error('Socket emission failed:', socketError);
+                // Continue execution even if socket emission fails
+            }
 
             return createdMessage;
         } catch (error) {
             logger.error('Error in sendMessage:', error);
+            if (error.code) {
+                throw error;
+            }
             throw createError('9999', 'Exception error');
         }
     }
