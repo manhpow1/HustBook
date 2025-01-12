@@ -109,44 +109,20 @@ export function initSocket() {
     socket.on('message_sent', (data) => {
         logger.debug('Message sent confirmation received:', {
             messageId: data.messageId,
-            conversationId: data.conversationId,
-            timestamp: new Date().toISOString()
+            conversationId: data.conversationId
         });
 
+        // Có thể cập nhật UI hoặc store để xác nhận tin nhắn đã được gửi
         const chatStore = useChatStore();
         chatStore.confirmMessageSent(data.messageId);
     });
 
     socket.on('message_error', (error) => {
-        logger.error('Message error received:', {
-            error,
-            timestamp: new Date().toISOString()
-        });
+        logger.error('Message error received:', error);
 
         const chatStore = useChatStore();
+        // Xử lý lỗi và có thể hiển thị thông báo cho người dùng
         chatStore.handleMessageError(error);
-    });
-
-    socket.on('message_delivered', (data) => {
-        logger.debug('Message delivery confirmed:', {
-            messageId: data.messageId,
-            conversationId: data.conversationId,
-            timestamp: new Date().toISOString()
-        });
-
-        const chatStore = useChatStore();
-        chatStore.confirmMessageDelivered(data.messageId);
-    });
-
-    socket.on('message_seen', (data) => {
-        logger.debug('Message seen by recipient:', {
-            messageId: data.messageId,
-            conversationId: data.conversationId,
-            timestamp: new Date().toISOString()
-        });
-
-        const chatStore = useChatStore();
-        chatStore.confirmMessageSeen(data.messageId);
     });
 
     // Keep socket connection alive with error handling
@@ -207,63 +183,19 @@ export async function sendMessage(partnerId, conversationId, message) {
                 clearTimeout(timeout);
                 resolve();
             });
-
-            socket.once('connect_error', (error) => {
-                clearTimeout(timeout);
-                reject(error);
-            });
         });
     }
 
-    const messageId = `temp_${Date.now()}`;
-    const retryConfig = {
-        maxRetries: 3,
-        retryDelay: 1000,
-        currentRetry: 0
-    };
-
-    const attemptSend = async () => {
-        try {
-            await new Promise((resolve, reject) => {
-                const ackTimeout = setTimeout(() => {
-                    reject(new Error('Message acknowledgment timeout'));
-                }, 10000);
-
-                socket.emit('send', { 
-                    partnerId, 
-                    conversationId, 
-                    message,
-                    messageId,
-                    timestamp: new Date().toISOString()
-                }, (error) => {
-                    clearTimeout(ackTimeout);
-                    if (error) {
-                        reject(error);
-                    } else {
-                        resolve();
-                    }
-                });
-            });
-            return true;
-        } catch (error) {
-            logger.error('Message send attempt failed:', {
-                error,
-                retry: retryConfig.currentRetry + 1,
-                maxRetries: retryConfig.maxRetries
-            });
-
-            if (retryConfig.currentRetry < retryConfig.maxRetries) {
-                retryConfig.currentRetry++;
-                await new Promise(resolve => 
-                    setTimeout(resolve, retryConfig.retryDelay * Math.pow(2, retryConfig.currentRetry))
-                );
-                return attemptSend();
+    return new Promise((resolve, reject) => {
+        socket.emit('send', { partnerId, conversationId, message }, (error) => {
+            if (error) {
+                logger.error('Error sending message:', error);
+                reject(error);
+            } else {
+                resolve();
             }
-            throw error;
-        }
-    };
-
-    return attemptSend();
+        });
+    });
 }
 
 export function deleteMessage(messageId, partnerId, conversationId) {

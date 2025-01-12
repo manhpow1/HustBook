@@ -23,7 +23,7 @@ export const useChatStore = defineStore('chat', {
             if (!this.isSocketInitialized && userStore.isLoggedIn) {
                 const cleanup = initSocket();
                 const socket = getSocket();
-                
+
                 if (!socket) {
                     logger.error('Failed to initialize socket');
                     return;
@@ -51,31 +51,7 @@ export const useChatStore = defineStore('chat', {
                     if (message.sender.id !== userStore.userData?.userId) {
                         this.addMessage(message);
                         this.unreadCount++;
-                    } else {
-                        // Update temporary message with confirmed data
-                        const tempMessage = this.messages.find(m => 
-                            m.status === 'sending' && 
-                            m.message === message.message
-                        );
-                        if (tempMessage) {
-                            this.confirmMessageSent(tempMessage.messageId);
-                        }
                     }
-                });
-
-                socket.on('message_sent', (data) => {
-                    const { messageId, conversationId } = data;
-                    const tempMessage = this.messages.find(m => 
-                        m.status === 'sending' && 
-                        m.messageId.startsWith('temp_')
-                    );
-                    if (tempMessage) {
-                        this.confirmMessageSent(tempMessage.messageId);
-                    }
-                });
-
-                socket.on('message_error', (error) => {
-                    this.handleMessageError(error);
                 });
 
                 socket.on('deletemessage', (data) => {
@@ -114,9 +90,9 @@ export const useChatStore = defineStore('chat', {
                 console.debug('Fetching conversations');
                 const response = await apiService.getConversations();
                 console.debug('Raw server response:', response.data);
-                
+
                 if (response.data.code === '1000' && response.data.data) {
-                    this.conversations = Array.isArray(response.data.data.data) 
+                    this.conversations = Array.isArray(response.data.data.data)
                         ? response.data.data.data.map(conv => ({
                             ...conv,
                             Partner: {
@@ -125,9 +101,9 @@ export const useChatStore = defineStore('chat', {
                             }
                         }))
                         : [];
-                        
+
                     this.unreadCount = parseInt(response.data.data.numNewMessage || 0, 10);
-                    
+
                     console.debug('Conversations updated:', {
                         count: this.conversations.length,
                         conversations: this.conversations,
@@ -181,7 +157,7 @@ export const useChatStore = defineStore('chat', {
             if (!Array.isArray(this.messages)) {
                 this.messages = [];
             }
-            
+
             // Add or update a message in the message list
             const exists = this.messages.find(m => m.messageId === message.messageId);
             if (!exists) {
@@ -202,9 +178,9 @@ export const useChatStore = defineStore('chat', {
         async sendMessage({ conversationId, message }) {
             const { toast } = useToast();
             if (!conversationId || !message) {
-                logger.error('Invalid message parameters:', { 
-                    conversationId, 
-                    hasMessage: !!message 
+                logger.error('Invalid message parameters:', {
+                    conversationId,
+                    hasMessage: !!message
                 });
                 return;
             }
@@ -215,19 +191,19 @@ export const useChatStore = defineStore('chat', {
                     currentSocketId: socket?.id,
                     connectionState: socket?.connected
                 });
-                    
+
                 try {
                     const cleanup = await this.initSocket();
                     socket = getSocket();
-                        
+
                     if (!socket?.connected) {
                         throw new Error('Socket failed to connect after initialization');
                     }
-                        
+
                     logger.info('Socket reconnected successfully', {
                         newSocketId: socket.id
                     });
-                        
+
                     // Store cleanup function for later
                     if (cleanup && typeof cleanup === 'function') {
                         this.socketCleanup = cleanup;
@@ -253,32 +229,16 @@ export const useChatStore = defineStore('chat', {
                 const messageData = {
                     conversationId,
                     message,
-                    userId: userStore.userData?.userId
+                    partnerId: selectedConversation.value?.Partner?.userId
                 };
-                
+
                 logger.debug('Emitting socket message:', messageData);
-                // Create message tracking object
-                const messageTracker = {
-                    id: Date.now().toString(),
-                    retries: 0,
-                    maxRetries: 3,
-                    lastAttempt: Date.now()
-                };
+                socket.emit('send', messageData);
 
-                // Emit with acknowledgment callback
-                socket.emit('send', messageData, (error) => {
-                    if (error) {
-                        logger.error('Message send error:', error);
-                        this.handleMessageError(error);
-                    }
-                });
-
-                logger.debug('Creating temporary message for optimistic update', {
-                    tracker: messageTracker
-                });
+                logger.debug('Creating temporary message for optimistic update');
                 const tempMessage = {
                     message,
-                    messageId: 'temp_' + messageTracker.id,
+                    messageId: 'temp_' + Date.now(),
                     unread: '0',
                     created: new Date().toISOString(),
                     sender: {
@@ -286,13 +246,11 @@ export const useChatStore = defineStore('chat', {
                         userName: userStore.userData?.userName || '',
                         avatar: userStore.userData?.avatar || ''
                     },
-                    isBlocked: '0',
-                    status: 'sending',
-                    tracker: messageTracker,
-                    conversationId: conversationId // Add conversationId for tracking
+                    isBlocked: '0'
                 };
 
                 this.addMessage(tempMessage);
+
                 // Update conversation list with new message
                 const conversation = this.conversations.find(c => c.conversationId === conversationId);
                 if (conversation) {
@@ -365,91 +323,35 @@ export const useChatStore = defineStore('chat', {
         },
 
         async confirmMessageSent(messageId) {
-            const messageIndex = this.messages.findIndex(msg => msg.messageId === messageId);
+            // Tìm và cập nhật trạng thái tin nhắn thành đã gửi
+            const messageIndex = messages.value.findIndex(msg => msg.messageId === messageId);
             if (messageIndex !== -1) {
-                this.messages[messageIndex] = {
-                    ...this.messages[messageIndex],
-                    status: 'sent',
-                    error: null
-                };
-                logger.debug('Message confirmed sent:', { messageId });
+                messages.value[messageIndex].status = 'sent';
+                messages.value[messageIndex].error = null;
             }
         },
-    
-        async handleMessageError(error, specificMessageId = null) {
-            const errorDetails = {
-                message: error.message || 'Unknown error',
-                code: error.code,
-                timestamp: new Date().toISOString(),
-                stack: error.stack
-            };
-            
-            logger.error('Message error:', {
-                ...errorDetails,
-                messageId: specificMessageId
-            });
-            
-            this.messages = this.messages.map(msg => {
-                if ((specificMessageId && msg.messageId === specificMessageId) || 
-                    (!specificMessageId && msg.status === 'sending')) {
+
+        async handleMessageError(error) {
+            // Cập nhật trạng thái tin nhắn thành lỗi
+            // Thường được gọi khi tin nhắn tạm thời đã được thêm vào UI (optimistic update)
+            messages.value = messages.value.map(msg => {
+                if (msg.status === 'sending') {
                     return {
                         ...msg,
                         status: 'error',
-                        error: errorDetails.message,
-                        errorDetails,
-                        retryCount: (msg.retryCount || 0) + 1
+                        error: error.message || 'Failed to send message'
                     };
                 }
                 return msg;
             });
-    
+
+            // Thông báo lỗi cho người dùng
             const { toast } = useToast();
             toast({
-                title: "Message Error",
-                description: errorDetails.message,
+                title: "Error",
+                description: error.message || "Failed to send message",
                 variant: "destructive"
             });
-
-            // Only retry if it's not a permanent failure
-            const permanentErrors = ['AUTH_ERROR', 'INVALID_CONVERSATION', 'USER_BLOCKED'];
-            const shouldRetry = !permanentErrors.includes(error.code);
-
-            if (shouldRetry) {
-                this.messages.forEach(msg => {
-                    if (msg.status === 'error' && msg.tracker && msg.tracker.retries < msg.tracker.maxRetries) {
-                        const delay = Math.min(
-                            Math.pow(2, msg.tracker.retries) * 1000,
-                            30000 // Max 30 second delay
-                        );
-                        setTimeout(() => {
-                            this.retryMessage(msg);
-                        }, delay);
-                    }
-                });
-            }
-        },
-
-        async retryMessage(message) {
-            if (!message.tracker) return;
-
-            message.tracker.retries++;
-            message.status = 'sending';
-            message.error = null;
-
-            logger.debug('Retrying message:', {
-                messageId: message.messageId,
-                attempt: message.tracker.retries
-            });
-
-            try {
-                await this.sendMessage({
-                    conversationId: this.selectedConversationId,
-                    message: message.message,
-                    originalMessageId: message.messageId
-                });
-            } catch (error) {
-                this.handleMessageError(error);
-            }
         },
     }
 });

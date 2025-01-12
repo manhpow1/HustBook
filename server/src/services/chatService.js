@@ -85,8 +85,16 @@ class ChatService {
                 throw createError('1002', 'Invalid message format');
             }
 
-            // Tìm hoặc tạo conversation
+            logger.debug('Starting sendMessage:', {
+                userId,
+                partnerId,
+                conversationId,
+                messageLength: text.length
+            });
+
+            // Get or create conversation
             if (!convId) {
+                logger.debug('No conversationId provided, creating/finding conversation');
                 const participants = [userId, partnerId].sort();
                 const convSnapshot = await db.collection(collections.conversations)
                     .where('participants', '==', participants)
@@ -94,6 +102,7 @@ class ChatService {
                     .get();
 
                 if (convSnapshot.empty) {
+                    logger.debug('Creating new conversation');
                     const newConvRef = await db.collection(collections.conversations).add({
                         participants,
                         createdAt: admin.firestore.FieldValue.serverTimestamp(),
@@ -102,69 +111,64 @@ class ChatService {
                     convId = newConvRef.id;
                 } else {
                     convId = convSnapshot.docs[0].id;
+                    logger.debug('Found existing conversation:', { convId });
                 }
             }
 
             convRef = db.collection(collections.conversations).doc(convId);
 
-            // Tạo message document
+            // Create message
             const msgRef = convRef.collection('messages').doc();
             const now = new Date();
             const msgData = {
-                text: text.trim(),
+                text: text.trim(), // Trim message text
                 senderId: userId,
-                createdAt: admin.firestore.FieldValue.serverTimestamp(),
-                unreadBy: partnerId ? [partnerId] : [],
-                status: 'sent',
-                conversationId: convId
+                createdAt: now,
+                unreadBy: [partnerId],
+                status: 'sent'
             };
 
-            // Lưu message và cập nhật conversation trong một transaction
+            // Get sender info from database
+            const senderDoc = await db.collection(collections.users).doc(userId).get();
+            const senderInfo = senderDoc.data() || {};
+
+            // Run transaction
             await db.runTransaction(async (transaction) => {
-                const convDoc = await transaction.get(convRef);
-                if (!convDoc.exists) {
-                    throw createError('9994', 'Conversation not found');
-                }
-
-                // Verify user is participant
-                const convData = convDoc.data();
-                if (!convData.participants.includes(userId)) {
-                    throw createError('1009', 'Not authorized to send message');
-                }
-
-                // Save message with retry
-                let retryCount = 0;
-                const maxRetries = 3;
-            
-                while (retryCount < maxRetries) {
-                    try {
-                        // Save message
-                        transaction.set(msgRef, msgData);
-
-                        // Update conversation's last message
-                        transaction.update(convRef, {
-                            lastMessage: {
-                                message: text.trim(),
-                                created: admin.firestore.FieldValue.serverTimestamp(),
-                                senderId: userId,
-                                messageId: msgRef.id,
-                                unreadBy: partnerId ? [partnerId] : []
-                            },
-                            updatedAt: admin.firestore.FieldValue.serverTimestamp()
-                        });
-                    
-                        break; // Success - exit retry loop
-                    } catch (retryError) {
-                        retryCount++;
-                        logger.warn(`Database operation failed, attempt ${retryCount}/${maxRetries}:`, retryError);
-                    
-                        if (retryCount === maxRetries) {
-                            throw retryError; // Rethrow if all retries failed
-                        }
-                    
-                        // Wait before retry (exponential backoff)
-                        await new Promise(resolve => setTimeout(resolve, Math.pow(2, retryCount) * 100));
+                try {
+                    // Verify conversation exists
+                    const convDoc = await transaction.get(convRef);
+                    if (!convDoc.exists) {
+                        throw createError('9994', 'Conversation not found');
                     }
+
+                    // Check if user is participant
+                    const convData = convDoc.data();
+                    if (!convData.participants.includes(userId)) {
+                        throw createError('1009', 'Not authorized to send message in this conversation');
+                    }
+
+                    // Save message
+                    transaction.set(msgRef, {
+                        ...msgData,
+                        conversationId: convId // Add reference to conversation
+                    });
+
+                    // Update conversation with last message
+                    transaction.update(convRef, {
+                        lastMessage: {
+                            message: text.trim(),
+                            created: admin.firestore.FieldValue.serverTimestamp(),
+                            senderId: userId,
+                            messageId: msgRef.id, // Add message reference
+                            unreadBy: [partnerId]
+                        },
+                        updatedAt: admin.firestore.FieldValue.serverTimestamp()
+                    });
+
+                    return true;
+                } catch (error) {
+                    logger.error('Transaction failed:', error);
+                    throw error;
                 }
             });
 
@@ -174,27 +178,46 @@ class ChatService {
                 throw createError('9999', 'Failed to save message');
             }
 
-            // Get sender info
-            const senderDoc = await db.collection(collections.users).doc(userId).get();
-            const senderData = senderDoc.data() || {};
+            logger.debug('Message saved successfully:', {
+                messageId: msgRef.id,
+                conversationId: convId
+            });
 
-            // Return message object with correct format
-            return {
+            // Create response message object
+            const createdMessage = {
                 message: text.trim(),
                 messageId: msgRef.id,
                 unread: '1',
                 created: now.toISOString(),
                 sender: {
                     id: userId,
-                    userName: senderData.userName || '',
-                    avatar: senderData.avatar || ''
+                    userName: senderInfo.userName || '',
+                    avatar: senderInfo.avatar || ''
                 },
-                status: 'sent',
-                conversationId: convId
+                status: 'sent'
             };
+
+            // Emit to socket room
+            try {
+                const io = getIO();
+                const roomName = await this.getConversationRoomName(userId, partnerId, convId);
+                io.to(roomName).emit('onmessage', {
+                    message: createdMessage,
+                    timestamp: now.toISOString()
+                });
+                logger.debug('Message emitted to room:', { roomName, messageId: msgRef.id });
+            } catch (socketError) {
+                logger.error('Socket emission failed:', socketError);
+                // Continue execution even if socket emission fails
+            }
+
+            return createdMessage;
         } catch (error) {
             logger.error('Error in sendMessage:', error);
-            throw error.code ? error : createError('9999', 'Exception error');
+            if (error.code) {
+                throw error;
+            }
+            throw createError('9999', 'Exception error');
         }
     }
 

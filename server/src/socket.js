@@ -96,8 +96,12 @@ export function initSocketIO(server) {
                         messageLength: message?.length
                     });
 
-                    if (!message) {
-                        throw new Error('Message is required');
+                    if (!message || typeof message !== 'string') {
+                        throw new Error('Message is required and must be a string');
+                    }
+
+                    if (!partnerId && !conversationId) {
+                        throw new Error('Either partnerId or conversationId is required');
                     }
 
                     // Get or validate conversation ID
@@ -147,12 +151,12 @@ export function initSocketIO(server) {
                             stack: dbError.stack,
                             userId: socket.userId
                         });
-                        
+
                         socket.emit('message_error', {
                             error: 'Failed to save message',
                             code: 'DB_ERROR'
                         });
-                        
+
                         throw dbError;
                     }
 
