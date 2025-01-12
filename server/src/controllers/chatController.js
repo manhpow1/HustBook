@@ -46,7 +46,7 @@ class ChatController {
             // Return empty array instead of error when no conversations exist
             sendResponse(res, '1000', {
                 data: conversations || [],
-                numNewMessage: numNewMessage.toString()
+                numNewMessage: numNewMessage || 0
             });
         } catch (err) {
             logger.error('Error in getListConversation controller:', err);

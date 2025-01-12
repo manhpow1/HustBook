@@ -73,11 +73,13 @@ export const useChatStore = defineStore('chat', {
                 });
                 
                 if (response.data.code === '1000') {
-                    this.conversations = response.data.data;
-                    this.unreadCount = parseInt(response.data.numNewMessage, 10);
+                    // Ensure conversations array is properly initialized
+                    this.conversations = Array.isArray(response.data.data) ? response.data.data : [];
+                    this.unreadCount = parseInt(response.data.numNewMessage || 0, 10);
                     console.debug('Conversations updated:', {
                         count: this.conversations.length,
-                        unreadCount: this.unreadCount
+                        unreadCount: this.unreadCount,
+                        firstConversation: this.conversations[0] || null
                     });
                 } else {
                     throw new Error(response.data.message || 'Failed to load conversations');
