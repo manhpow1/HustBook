@@ -18,11 +18,33 @@ export const useChatStore = defineStore('chat', {
         isSocketInitialized: false
     }),
     actions: {
-        initSocket() {
+        async initSocket() {
             const userStore = useUserStore();
             if (!this.isSocketInitialized && userStore.isLoggedIn) {
-                initSocket();
+                const cleanup = initSocket();
                 const socket = getSocket();
+                
+                if (!socket) {
+                    logger.error('Failed to initialize socket');
+                    return;
+                }
+
+                // Wait for socket to connect
+                await new Promise((resolve, reject) => {
+                    const timeout = setTimeout(() => {
+                        reject(new Error('Socket connection timeout'));
+                    }, 5000);
+
+                    socket.once('connect', () => {
+                        clearTimeout(timeout);
+                        resolve();
+                    });
+
+                    socket.once('connect_error', (error) => {
+                        clearTimeout(timeout);
+                        reject(error);
+                    });
+                });
 
                 socket.on('onmessage', (data) => {
                     const { message } = data;
@@ -38,6 +60,7 @@ export const useChatStore = defineStore('chat', {
                 });
 
                 this.isSocketInitialized = true;
+                return cleanup;
             }
         },
 
@@ -145,14 +168,23 @@ export const useChatStore = defineStore('chat', {
         },
 
         async sendMessage({ conversationId, message }) {
-            const socket = getSocket();
-            if (!socket || !conversationId || !message) {
+            if (!conversationId || !message) {
                 logger.error('Invalid message parameters:', { 
-                    hasSocket: !!socket, 
                     conversationId, 
                     hasMessage: !!message 
                 });
                 return;
+            }
+
+            const socket = getSocket();
+            if (!socket?.connected) {
+                logger.warn('Socket not connected, attempting to reconnect...');
+                await this.initSocket();
+                
+                const reconnectedSocket = getSocket();
+                if (!reconnectedSocket?.connected) {
+                    throw new Error('Failed to establish socket connection');
+                }
             }
 
             this.sendingMessage = true;
