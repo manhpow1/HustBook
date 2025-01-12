@@ -271,21 +271,6 @@ const sendMessage = async () => {
   if (!messageContent.value.trim() || !chatStore.selectedConversationId) return;
 
   try {
-    const tempMessage = {
-      messageId: `temp-${Date.now()}`,
-      message: messageContent.value.trim(),
-      created: new Date().toISOString(),
-      sender: {
-        id: userStore.userData?.userId,
-        userName: userStore.userData?.userName || '',
-        avatar: userStore.userData?.avatar || ''
-      },
-      status: 'sending'
-    };
-
-    // Thêm tin nhắn tạm thời vào UI (optimistic update)
-    chatStore.addMessage(tempMessage);
-
     const socket = getSocket();
     logger.debug('Sending message:', {
       conversationId: chatStore.selectedConversationId,
@@ -338,6 +323,7 @@ const searchUsers = useDebounce(async () => {
     });
   }
 }, 300);
+
 const startConversation = async (user) => {
   try {
     const conversationId = await chatStore.createConversation(user.userId);
@@ -348,6 +334,26 @@ const startConversation = async (user) => {
   }
 };
 
+async function loadMessages(conversationId) {
+  try {
+    await chatStore.fetchMessages(conversationId);
+    await chatStore.markAsRead();
+
+    // Thêm listener cho tin nhắn mới
+    const socket = getSocket();
+    if (socket) {
+      socket.on('onmessage', (data) => {
+        if (data.message.conversationId === conversationId) {
+          chatStore.addMessage(data.message);
+          scrollToBottom();
+        }
+      });
+    }
+  } catch (error) {
+    console.error('Failed to load messages:', error);
+  }
+}
+
 // Watchers
 watch(() => chatStore.messages, () => {
   scrollToBottom();
@@ -356,14 +362,9 @@ watch(() => chatStore.messages, () => {
 // Lifecycle
 onMounted(async () => {
   await chatStore.fetchConversations();
-  
-  // If there's a selected conversation, load its messages
   if (chatStore.selectedConversationId) {
-    await chatStore.fetchMessages(chatStore.selectedConversationId);
-    await chatStore.markAsRead();
+    await loadMessages(chatStore.selectedConversationId);
   }
-  
-  // Initialize socket connection
   await chatStore.initSocket();
 });
 </script>
