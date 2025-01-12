@@ -25,13 +25,9 @@ class ChatController {
                 numNewMessage 
             });
 
-            if (!conversations || conversations.length === 0) {
-                logger.debug('No conversations found');
-                throw createError('9994', 'No data or end of list data');
-            }
-
+            // Return empty array instead of error when no conversations exist
             sendResponse(res, '1000', {
-                data: conversations,
+                data: conversations || [],
                 numNewMessage: numNewMessage.toString()
             });
         } catch (err) {
