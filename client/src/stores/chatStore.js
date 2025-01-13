@@ -137,7 +137,7 @@ export const useChatStore = defineStore('chat', {
                     messageCount: response.data.data?.length || 0
                 });
                 if (response.data.code === '1000') {
-                    this.messages = response.data.data;
+                    this.messages = response.data.data || [];
                 } else {
                     throw new Error(response.data.message || 'Failed to load messages');
                 }

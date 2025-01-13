@@ -348,9 +348,9 @@ async function loadMessages(conversationId) {
     await chatStore.fetchMessages(conversationId);
     await chatStore.markAsRead();
 
-    // Thêm listener cho tin nhắn mới
     const socket = getSocket();
     if (socket) {
+      socket.off('onmessage');
       socket.on('onmessage', (data) => {
         if (data.message.conversationId === conversationId) {
           chatStore.addMessage(data.message);
