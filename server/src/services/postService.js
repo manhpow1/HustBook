@@ -94,7 +94,6 @@ class PostService {
             if (!existingPost) {
                 throw createError('9992', 'Post not found');
             }
-
             if (existingPost.userId !== userId) {
                 throw createError('1009', 'Not authorized to update this post');
             }
@@ -108,28 +107,29 @@ class PostService {
                 throw createError('1008', `Maximum ${Post.MAX_IMAGES} images allowed`);
             }
 
-            // Create updated post with validation
-            // Convert dates to proper Date objects
-            const createdAt = existingPost.createdAt instanceof Date ? 
-                existingPost.createdAt : 
-                new Date(existingPost.createdAt);
+            // Ensure dates are properly formatted
+            const createdAt = existingPost.created ? new Date(existingPost.created) : new Date();
 
+            // Create updated post with validation
             const updatedPost = new Post({
-                ...existingPost,
+                postId,
+                userId,
                 content,
                 contentLowerCase: Array.isArray(contentLowerCase) ? contentLowerCase : content.toLowerCase().split(/\s+/).filter(Boolean),
                 images: [...existingImages, ...newImages],
                 createdAt,
-                updatedAt: new Date()
+                updatedAt: new Date(),
+                likes: existingPost.likes || 0,
+                comments: existingPost.comments || 0
             });
 
             // Validate the updated post
             updatedPost.validate();
 
             // Find images to delete (images in existing post that aren't in existingImages)
-            const imagesToDelete = existingPost.images.filter(
+            const imagesToDelete = existingPost.images?.filter(
                 url => !existingImages.includes(url)
-            );
+            ) || [];
 
             // Delete old images that are no longer needed
             if (imagesToDelete.length > 0) {
