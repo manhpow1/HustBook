@@ -149,16 +149,29 @@ export const useChatStore = defineStore('chat', {
 
                 console.debug('Messages response:', {
                     code: response.data.code,
-                    messageCount: response.data.data?.length || 0
+                    messageCount: response.data.data?.data?.length || 0
                 });
 
                 if (response.data.code === '1000') {
                     // Append new messages to existing ones for infinite scroll
-                    const newMessages = response.data.data || [];
+                    const newMessages = response.data.data?.data || [];
+                    const processedMessages = newMessages.map(msg => ({
+                        messageId: msg.messageId,
+                        message: msg.text,
+                        created: msg.createdAt || new Date().toISOString(),
+                        sender: {
+                            userId: msg.senderId,
+                            userName: msg.senderName || 'Unknown User',
+                            avatar: msg.senderAvatar
+                        },
+                        status: msg.status || 'sent',
+                        unread: msg.unread || '0'
+                    }));
+
                     if (options.append) {
-                        this.messages = [...this.messages, ...newMessages];
+                        this.messages = [...this.messages, ...processedMessages];
                     } else {
-                        this.messages = newMessages;
+                        this.messages = processedMessages;
                     }
                 } else {
                     throw new Error(response.data.message || 'Failed to load messages');
