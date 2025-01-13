@@ -114,6 +114,7 @@ class PostService {
                 content,
                 contentLowerCase: Array.isArray(contentLowerCase) ? contentLowerCase : content.toLowerCase().split(/\s+/).filter(Boolean),
                 images: [...existingImages, ...newImages],
+                createdAt: existingPost.createdAt || new Date(),
                 updatedAt: new Date()
             });
 

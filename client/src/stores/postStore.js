@@ -198,11 +198,11 @@ export const usePostStore = defineStore("post", () => {
         try {
             const formData = new FormData();
 
-            // Xử lý content và contentLowerCase
-            const content = postData.content.trim();
+            // Handle content and contentLowerCase
+            const content = postData.content?.trim() || '';
             formData.append('content', content);
 
-            // Chuyển đổi content thành mảng contentLowerCase
+            // Convert content to contentLowerCase array
             const contentWords = content.toLowerCase().split(/\s+/).filter(Boolean);
             contentWords.forEach(word => {
                 formData.append('contentLowerCase[]', word);

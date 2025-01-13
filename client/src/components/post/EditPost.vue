@@ -288,7 +288,7 @@ const handleSubmit = async () => {
         error.value = "";
         successMessage.value = "";
 
-        const content = description.value.trim();
+        const content = description.value?.trim() || '';
         const formData = new FormData();
         formData.append('content', content);
 
