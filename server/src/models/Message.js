@@ -21,7 +21,7 @@ class Message {
         if (!messageId) {
             throw new Error('Message ID is required');
         }
-        if (!sender || !sender.id) {
+        if (!sender || !sender.userId) {
             throw new Error('Sender information is required');
         }
 
@@ -31,7 +31,7 @@ class Message {
         this.unread = unread || '0';
         this.created = created || new Date().toISOString();
         this.sender = {
-            id: sender.id,
+            userId: sender.userId,
             userName: sender.userName || 'Unknown User',
             avatar: sender.avatar || ''
         };

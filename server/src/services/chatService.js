@@ -439,7 +439,7 @@ class ChatService {
                         unread: data.unreadBy?.includes(userId) ? '1' : '0',
                         created: data.createdAt?.toDate().toISOString() || new Date().toISOString(),
                         sender: {
-                            userId: senderId,  // Changed from id to userId to match client expectations
+                            userId: senderId,
                             userName: senderData.userName || senderData.username || 'Unknown User',
                             avatar: senderData.avatar || null
                         },
@@ -448,7 +448,16 @@ class ChatService {
                         conversationId: data.conversationId || conversationId
                     });
 
-                    const processedMessage = messageModel.toJSON();
+                    // Transform the message for client consumption after model validation
+                    const processedMessage = {
+                        ...messageModel.toJSON(),
+                        sender: {
+                            userId: messageModel.sender.userId,
+                            userName: messageModel.sender.userName,
+                            avatar: messageModel.sender.avatar
+                        }
+                    };
+
                     logger.debug('Processed message:', {
                         messageId: processedMessage.messageId,
                         content: processedMessage.message?.substring(0, 20),
