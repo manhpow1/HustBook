@@ -73,7 +73,8 @@ class PostController {
             }
 
             const { postId } = req.params;
-            const { content, existingImages = [] } = req.body;
+            const { content } = req.body;
+            const existingImages = JSON.parse(req.body.existingImages || '[]');
             const userId = req.user.userId;
 
             // Generate contentLowerCase array for search

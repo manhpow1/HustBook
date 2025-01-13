@@ -288,7 +288,7 @@ const handleSubmit = async () => {
         error.value = "";
         successMessage.value = "";
 
-        const content = description.value?.trim() || '';
+        const content = sanitizeInput(description.value?.trim() || '');
         const formData = new FormData();
         formData.append('content', content);
 
@@ -300,13 +300,17 @@ const handleSubmit = async () => {
 
         // Handle files
         if (files.value?.length > 0) {
+            const existingImages = [];
             files.value.forEach((file) => {
                 if (typeof file === 'string' && file.startsWith('http')) {
-                    formData.append('existingImages[]', file);
+                    existingImages.push(file);
                 } else {
                     formData.append('images', file);
                 }
             });
+            if (existingImages.length > 0) {
+                formData.append('existingImages', JSON.stringify(existingImages));
+            }
         }
 
         await postStore.updatePost(postId, formData);
