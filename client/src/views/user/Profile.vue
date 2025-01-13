@@ -211,9 +211,17 @@
                       <div class="space-y-2">
                         <h4 class="font-semibold">Details</h4>
                         <dl class="space-y-2">
+                          <div v-if="user?.address" class="flex">
+                            <dt class="w-24 text-muted-foreground">Address</dt>
+                            <dd>{{ user.address }}</dd>
+                          </div>
                           <div v-if="user?.city" class="flex">
-                            <dt class="w-24 text-muted-foreground">Location</dt>
+                            <dt class="w-24 text-muted-foreground">City</dt>
                             <dd>{{ user.city }}</dd>
+                          </div>
+                          <div v-if="user?.country" class="flex">
+                            <dt class="w-24 text-muted-foreground">Country</dt>
+                            <dd>{{ user.country }}</dd>
                           </div>
                           <div v-if="user?.joined" class="flex">
                             <dt class="w-24 text-muted-foreground">Joined</dt>
@@ -430,6 +438,11 @@ const initializeProfile = async () => {
 
 const fetchFriendsData = async () => {
   try {
+    if (!targetUserId.value) {
+      logger.warn("No target user ID available for fetching friends");
+      return;
+    }
+
     logger.debug("Fetching friends data for profile", {
       targetUserId: targetUserId.value,
       limit: props.limit || 6,
@@ -438,19 +451,21 @@ const fetchFriendsData = async () => {
     await friendStore.getUserFriends({
       userId: targetUserId.value,
       index: 0,
-      count: props.limit || 20,
+      count: props.limit || 6
     });
 
-    friends.value = friendStore.friends || [];
+    if (friendStore.error) {
+      throw new Error(friendStore.error);
+    }
 
-    console.log("Friends data fetched successfully", {
+    friends.value = friendStore.friends || [];
+    logger.debug("Friends data fetched successfully", {
       friendsCount: friends.value.length,
       total: friendStore.total,
     });
   } catch (err) {
     logger.error("Error fetching friends data:", err);
     friends.value = [];
-    error.value = "Failed to load friends";
     toast({
       title: "Error",
       description: "Failed to load friends list",
