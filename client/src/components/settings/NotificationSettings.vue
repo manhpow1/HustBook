@@ -41,38 +41,6 @@
                 </div>
             </div>
 
-            <Separator />
-
-            <!-- Sound settings -->
-            <div class="space-y-4">
-                <h3 class="text-lg font-medium">Notification Sound</h3>
-                <Select v-model="selectedSound" :disabled="loading">
-                    <SelectTrigger class="w-[200px]">
-                        <SelectValue placeholder="Select sound" />
-                    </SelectTrigger>
-                    <SelectContent>
-                        <SelectItem value="default">Default</SelectItem>
-                        <SelectItem value="none">None</SelectItem>
-                        <SelectItem value="custom">Custom</SelectItem>
-                    </SelectContent>
-                </Select>
-
-                <div v-if="selectedSound === 'custom'" class="space-y-2">
-                    <Input type="file" accept="audio/*" @change="handleSoundUpload" :disabled="loading" />
-                    <Button variant="outline" size="sm" @click="previewSound" :disabled="loading">
-                        <SpeakerIcon class="mr-2 h-4 w-4" />
-                        Preview Sound
-                    </Button>
-                </div>
-            </div>
-
-            <!-- Save button -->
-            <div class="flex justify-end">
-                <Button :disabled="loading" @click="saveSettings">
-                    <Loader2Icon v-if="loading" class="mr-2 h-4 w-4 animate-spin" />
-                    {{ loading ? 'Saving...' : 'Save Changes' }}
-                </Button>
-            </div>
         </CardContent>
     </Card>
 </template>
@@ -81,7 +49,7 @@
 import { ref, computed } from 'vue';
 import { useSettingsStore } from '@/stores/settingsStore';
 import { useToast } from '@/components/ui/toast';
-import { AlertCircleIcon, Loader2Icon, SpeakerIcon } from 'lucide-vue-next';
+import { AlertCircleIcon, Loader2Icon } from 'lucide-vue-next';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
@@ -94,9 +62,6 @@ import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 const settingsStore = useSettingsStore();
 const { toast } = useToast();
 
-// State
-const selectedSound = ref('default');
-const customSound = ref(null);
 
 // Computed
 const notificationSettings = computed(() => settingsStore.notificationSettings);
@@ -145,7 +110,9 @@ const handleUpdateSetting = async (key, value) => {
 
 const toggleDisableAllNotifications = async (value) => {
     try {
-        await settingsStore.toggleDisableAllNotifications(value);
+        await settingsStore.updatePushSettings({
+            notification_on: value ? '0' : '1'
+        });
         toast({
             title: 'Success',
             description: value ? 'All notifications disabled' : 'All notifications enabled',
@@ -159,54 +126,5 @@ const toggleDisableAllNotifications = async (value) => {
     }
 };
 
-const handleSoundUpload = (event) => {
-    const file = event.target.files[0];
-    if (file && file.type.startsWith('audio/')) {
-        customSound.value = file;
-    } else {
-        toast({
-            title: 'Error',
-            description: 'Please select a valid audio file',
-            variant: 'destructive',
-        });
-    }
-};
 
-const previewSound = async () => {
-    try {
-        if (selectedSound.value === 'custom' && customSound.value) {
-            const audio = new Audio(URL.createObjectURL(customSound.value));
-            await audio.play();
-        } else {
-            const audio = new Audio('/notification.mp3');
-            await audio.play();
-        }
-    } catch (error) {
-        toast({
-            title: 'Error',
-            description: 'Failed to play notification sound',
-            variant: 'destructive',
-        });
-    }
-};
-
-const saveSettings = async () => {
-    try {
-        const settings = {
-            sound: selectedSound.value,
-            ...(customSound.value && { customSound: customSound.value })
-        };
-        await settingsStore.updatePushSettings(settings);
-        toast({
-            title: 'Success',
-            description: 'Settings saved successfully'
-        });
-    } catch (error) {
-        toast({
-            title: 'Error',
-            description: 'Failed to save settings',
-            variant: 'destructive'
-        });
-    }
-};
 </script>

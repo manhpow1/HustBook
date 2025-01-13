@@ -7,7 +7,6 @@ export const DEFAULT_PUSH_SETTINGS = {
     requested_friend: '1',
     suggested_friend: '1',
     birthday: '1',
-    video: '1',
     report: '1',
     notification_on: '1',
 };
@@ -63,7 +62,7 @@ export class PushSettings {
                 }
             });
 
-            await settingsRef.set(sanitizedSettings, { merge: true });
+            await settingsRef.set(updatedSettings, { merge: true });
             return updatedSettings;
         } catch (error) {
             logger.error(`Failed to update push settings for user ${this.userId}:`, error);

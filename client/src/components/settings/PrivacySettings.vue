@@ -23,12 +23,14 @@
                             <CardContent class="p-3 flex items-center justify-between">
                                 <div class="flex items-center space-x-3">
                                     <Avatar>
-                                        <AvatarImage :src="user.avatar || defaultAvatar" :alt="user.name" />
-                                        <AvatarFallback>{{ getInitials(user.name) }}</AvatarFallback>
+                                        <AvatarImage :src="user.avatar || defaultAvatar" :alt="user.userName" />
+                                        <AvatarFallback>{{ getInitials(user.userName) }}</AvatarFallback>
                                     </Avatar>
                                     <div>
-                                        <p class="font-medium">{{ user.name }}</p>
-                                        <p class="text-sm text-muted-foreground">{{ user.email }}</p>
+                                        <p class="font-medium">{{ user.userName }}</p>
+                                        <p class="text-sm text-muted-foreground">
+                                            {{ user.same_friends }} mutual friends
+                                        </p>
                                     </div>
                                 </div>
                                 <Button variant="destructive" size="sm" :disabled="blockingUsers.has(user.userId)"
@@ -95,11 +97,15 @@ const userIdToBlock = ref(null);
 const isProcessing = ref(false);
 
 // Using searchStore's existing search functionality
-const searchResults = computed(() => searchStore.userSearchResults);
+const searchResults = computed(() => 
+    searchStore.userSearchResults.filter(user => 
+        !blockingUsers.value.has(user.userId)
+    )
+);
 
-const getInitials = (name) => {
-    return name
-        ?.split(' ')
+const getInitials = (userName) => {
+    return userName
+        ?.split(/[\s_-]/)
         .map(word => word[0])
         .join('')
         .toUpperCase()
@@ -107,18 +113,27 @@ const getInitials = (name) => {
 };
 
 // Using searchStore's existing search method
-const handleSearch = async () => {
-    if (!searchQuery.value.trim()) {
+// Watch for search query changes with debounce
+watch(searchQuery, useDebounce(async (newValue) => {
+    if (!newValue.trim()) {
+        searchStore.resetUserSearch();
         return;
     }
 
     loading.value = true;
     try {
-        await searchStore.searchUsers({
-            keyword: searchQuery.value,
+        const { users } = await searchStore.searchUsers({
+            keyword: newValue,
             index: 0,
             count: 20
         });
+
+        if (users.length === 0) {
+            toast({
+                title: "No Results",
+                description: "No users found matching your search",
+            });
+        }
     } catch (err) {
         toast({
             title: "Error",
@@ -128,11 +143,6 @@ const handleSearch = async () => {
     } finally {
         loading.value = false;
     }
-};
-
-// Watch for search query changes with debounce
-watch(searchQuery, useDebounce(() => {
-    handleSearch();
 }, 300));
 
 const blockUser = (userId) => {

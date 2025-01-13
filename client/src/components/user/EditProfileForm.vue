@@ -287,7 +287,7 @@ const handleAvatarUpload = debounce(async (event) => {
     }
 }, 500);
 
-const handleCoverUpload = async (event) => {
+const handleCoverUpload = debounce(async (event) => {
     const file = event.target.files?.[0];
     if (!file) return;
 
@@ -307,7 +307,7 @@ const handleCoverUpload = async (event) => {
     } finally {
         formState.value.pendingUploads = false;
     }
-};
+}, 500);
 
 const resetForm = () => {
     form.value = { ...initialForm.value };
