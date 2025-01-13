@@ -439,8 +439,9 @@ const initializeProfile = async () => {
 const fetchFriendsData = async () => {
   try {
     if (!targetUserId.value) {
-      logger.warn("No target user ID available for fetching friends");
-      return;
+      const error = new Error("No target user ID available for fetching friends");
+      logger.warn(error.message);
+      throw error;
     }
 
     logger.debug("Fetching friends data for profile", {
@@ -456,7 +457,9 @@ const fetchFriendsData = async () => {
     });
 
     if (friendStore.error) {
-      throw new Error(friendStore.error);
+      const storeError = new Error(friendStore.error);
+      storeError.code = 'STORE_ERROR';
+      throw storeError;
     }
 
     friends.value = friendStore.friends || [];
@@ -465,11 +468,27 @@ const fetchFriendsData = async () => {
       total: friendStore.total,
     });
   } catch (err) {
-    logger.error("Error fetching friends data:", err);
     friends.value = [];
+    
+    const errorDetails = {
+      code: err.code || 'UNKNOWN',
+      message: err.message,
+      targetUserId: targetUserId.value,
+      storeError: friendStore.error
+    };
+    
+    logger.error("Error fetching friends data:", errorDetails);
+
+    let errorMessage = "Failed to load friends list";
+    if (err.code === 'STORE_ERROR') {
+      errorMessage = friendStore.error;
+    } else if (!targetUserId.value) {
+      errorMessage = "User ID not available";
+    }
+
     toast({
       title: "Error",
-      description: "Failed to load friends list",
+      description: errorMessage,
       variant: "destructive",
     });
   }
