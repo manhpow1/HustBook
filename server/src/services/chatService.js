@@ -432,19 +432,29 @@ class ChatService {
                 });
 
                 try {
+                    // Map the message data to match the expected client format
                     const messageModel = new Message({
-                        text: data.text || '',
+                        message: data.text || '',  // Use text field for message content
                         messageId: doc.id,
                         unread: data.unreadBy?.includes(userId) ? '1' : '0',
-                        createdAt: data.createdAt?.toDate().toISOString() || new Date().toISOString(),
-                        senderId: senderId,
-                        senderName: senderData.userName || 'Unknown User',
-                        senderAvatar: senderData.avatar || '',
-                        isBlocked,
-                        status: data.status || 'sent'
+                        created: data.createdAt?.toDate().toISOString() || new Date().toISOString(),
+                        sender: {
+                            userId: senderId,  // Changed from id to userId to match client expectations
+                            userName: senderData.userName || senderData.username || 'Unknown User',
+                            avatar: senderData.avatar || null
+                        },
+                        isBlocked: isBlocked ? '1' : '0',
+                        status: data.status || 'sent',
+                        conversationId: data.conversationId || conversationId
                     });
 
-                    messages.push(messageModel.toJSON());
+                    const processedMessage = messageModel.toJSON();
+                    logger.debug('Processed message:', {
+                        messageId: processedMessage.messageId,
+                        content: processedMessage.message?.substring(0, 20),
+                        sender: processedMessage.sender
+                    });
+                    messages.push(processedMessage);
                 } catch (error) {
                     logger.error('Error processing message:', {
                         messageId: doc.id,
