@@ -90,7 +90,35 @@ class PostService {
 
     async updatePost(postId, userId, content, contentLowerCase, images) {
         try {
+            // Validate and fetch existing post
+            if (!postId || !userId || !content) {
+                logger.error('postService.updatePost: Missing required fields', {
+                    postId: !!postId,
+                    userId: !!userId,
+                    content: !!content
+                });
+                throw createError('1002', 'Missing required fields');
+            }
+
             const existingPost = await this.getPost(postId);
+            if (!existingPost) {
+                throw createError('9992', 'Post not found');
+            }
+            
+            // Ensure content is properly processed
+            const processedContent = String(content).trim();
+            if (processedContent.length === 0) {
+                throw createError('1002', 'Content cannot be empty after processing');
+            }
+            
+            logger.debug('postService.updatePost: Validation passed', {
+                postId,
+                userId,
+                contentLength: processedContent.length,
+                content: processedContent.substring(0, 50) + (processedContent.length > 50 ? '...' : ''),
+                imagesCount: images?.length || 0,
+                rawContent: content
+            });
             if (!existingPost) {
                 throw createError('9992', 'Post not found');
             }
@@ -98,25 +126,74 @@ class PostService {
                 throw createError('1009', 'Not authorized to update this post');
             }
 
-            // Identify which images are new vs existing
-            const existingImages = images.filter(url => url.startsWith('http'));
-            const newImages = images.filter(url => !url.startsWith('http'));
+            // Process images
+            let processedImages = [];
+            
+            // Parse existingImages from the request if present
+            const existingImages = Array.isArray(images) 
+                ? images.filter(url => typeof url === 'string' && url.startsWith('http'))
+                : [];
+
+            logger.debug('Processing images in updatePost:', {
+                totalImages: images?.length || 0,
+                existingImages: existingImages.length,
+                newImages: images?.filter(img => img?.buffer)?.length || 0
+            });
+
+            // Filter out new image files that need processing
+            const newImages = Array.isArray(images) 
+                ? images.filter(img => img?.buffer && img?.mimetype)
+                : [];
+
+            logger.debug('postService.updatePost: Image analysis', {
+                postId,
+                existingImagesCount: existingImages.length,
+                newImagesCount: newImages.length,
+                totalImages: existingImages.length + newImages.length
+            });
 
             // Validate total image count
             if (existingImages.length + newImages.length > Post.MAX_IMAGES) {
                 throw createError('1008', `Maximum ${Post.MAX_IMAGES} images allowed`);
             }
 
+            // Process new image uploads
+            if (newImages.length > 0) {
+                try {
+                    processedImages = await Promise.all(
+                        newImages.map(file => 
+                            handleImageUpload(file, `posts/${userId}`, {
+                                width: 1920,
+                                height: 1080,
+                                fit: 'inside'
+                            })
+                        )
+                    );
+                    logger.debug('postService.updatePost: Processed new images', {
+                        postId,
+                        processedCount: processedImages.length
+                    });
+                } catch (uploadError) {
+                    logger.error('postService.updatePost: Image processing failed', uploadError);
+                    throw createError('1007', 'Failed to process image uploads');
+                }
+            }
+
             // Ensure dates are properly formatted
             const createdAt = existingPost.created ? new Date(existingPost.created) : new Date();
+
+            if (!content || typeof content !== 'string') {
+                logger.error('Invalid content received:', { content });
+                throw createError('1002', 'Invalid content provided');
+            }
 
             // Create updated post with validation
             const updatedPost = new Post({
                 postId,
                 userId,
-                content,
+                content: content.trim(),
                 contentLowerCase: Array.isArray(contentLowerCase) ? contentLowerCase : content.toLowerCase().split(/\s+/).filter(Boolean),
-                images: [...existingImages, ...newImages],
+                images: [...existingImages, ...processedImages],
                 createdAt,
                 updatedAt: new Date(),
                 likes: existingPost.likes || 0,
@@ -143,8 +220,18 @@ class PostService {
                 }
             }
 
+            logger.debug('postService.updatePost: Saving to database', {
+                postId,
+                updatedContent: !!updatedPost.content,
+                contentPreview: updatedPost.content.substring(0, 50) + (updatedPost.content.length > 50 ? '...' : ''),
+                updatedImages: updatedPost.images.length,
+                contentChanged: existingPost.content !== updatedPost.content
+            });
+
             // Update in database
             await updateDocument(collections.posts, postId, updatedPost.toJSON());
+
+            logger.debug('postService.updatePost: Update successful', { postId });
 
             // Clear cache
             await redis.cache.del(`post:${postId}`);

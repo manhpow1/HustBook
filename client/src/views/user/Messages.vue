@@ -202,6 +202,7 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import logger from '@/services/logging';
+import { formatDate } from '@/utils/helpers';
 
 const chatStore = useChatStore();
 const userStore = useUserStore();
@@ -229,20 +230,6 @@ const getInitials = (name) => {
     .join('')
     .toUpperCase()
     .slice(0, 2);
-};
-
-const formatDate = (date) => {
-  if (!date) return '';
-  try {
-    const parsedDate = new Date(date);
-    if (isNaN(parsedDate.getTime())) {
-      return '';
-    }
-    return formatDistanceToNow(parsedDate, { addSuffix: true });
-  } catch (error) {
-    logger.error('Date formatting error:', { date, error });
-    return '';
-  }
 };
 
 const selectConversation = async (conversationId) => {

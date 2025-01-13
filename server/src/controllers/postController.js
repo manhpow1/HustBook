@@ -5,6 +5,7 @@ import { createError } from '../utils/customError.js';
 import { collections } from '../config/database.js';
 import { db } from '../config/firebase.js';
 import Post from '../models/Post.js';
+import logger from '../utils/logger.js';
 import { cleanupFiles, handleImageUpload } from '../utils/helpers.js';
 
 class PostController {
@@ -67,55 +68,61 @@ class PostController {
 
     async updatePost(req, res, next) {
         try {
-            const { error } = postValidator.validateUpdatePost(req.body);
+            logger.debug('updatePost: Received request', {
+                content: req.body.content,
+                filesCount: req.files?.length,
+                existingImages: req.body.existingImages
+            });
+
+            const validationData = {
+                content: req.body.content,
+                existingImages: req.body.existingImages ? JSON.parse(req.body.existingImages) : [],
+                images: req.files || []
+            };
+
+            const { error } = postValidator.validateUpdatePost(validationData);
             if (error) {
-                throw createError('1002', error.details.map(detail => detail.message).join(', '));
+                logger.error('Validation error:', error.details);
+                throw createError('1002', error.details[0].message);
             }
 
-            const { postId } = req.params;
-            const { content } = req.body;
-            const existingImages = JSON.parse(req.body.existingImages || '[]');
             const userId = req.user.userId;
+            const { postId } = req.params;
 
-            // Generate contentLowerCase array for search
-            const contentLowerCase = content.toLowerCase().split(/\s+/).filter(Boolean);
-
-            // Validate total number of images (existing + new)
-            const totalImages = (req.files?.length || 0) + existingImages.length;
-            if (totalImages > Post.MAX_IMAGES) {
-                throw createError('1008', `Maximum ${Post.MAX_IMAGES} images allowed`);
-            }
-
-            // Process new image uploads
-            let processedImages = [];
+            // Process images with Firebase Storage
+            const processedImages = [];
             if (req.files && req.files.length > 0) {
-                try {
-                    processedImages = await Promise.all(
-                        req.files.map(file => handleImageUpload(file, `posts/${userId}`, {
+                for (const file of req.files) {
+                    try {
+                        const imageUrl = await handleImageUpload(file, `posts/${userId}`, {
                             width: 1920,
                             height: 1080,
                             fit: 'inside'
-                        }))
-                    );
-                } catch (uploadError) {
-                    await cleanupFiles(req.files);
-                    throw createError('1007', 'Failed to process image uploads');
+                        });
+                        processedImages.push(imageUrl);
+                    } catch (uploadError) {
+                        logger.error('Image upload failed:', uploadError);
+                        throw createError('1007', 'Failed to upload image');
+                    }
                 }
             }
 
-            // Combine existing and new images
+            const existingImages = validationData.existingImages || [];
             const allImages = [...existingImages, ...processedImages];
 
-            const updatedPost = await postService.updatePost(postId, userId, content, contentLowerCase, allImages);
+            // Update post
+            const updatedPost = await postService.updatePost(
+                postId,
+                userId,
+                validationData.content,
+                validationData.content.toLowerCase().split(/\s+/).filter(Boolean),
+                allImages
+            );
 
-            // Clean up temp files after successful update
-            if (req.files) {
-                await cleanupFiles(req.files);
-            }
+            return sendResponse(res, '1000', updatedPost);
 
-            sendResponse(res, '1000', updatedPost);
         } catch (error) {
-            // Clean up files on error
+            // Clean up any uploaded files if error occurs
             if (req.files) {
                 await cleanupFiles(req.files);
             }

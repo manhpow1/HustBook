@@ -192,64 +192,88 @@ export const usePostStore = defineStore("post", () => {
         }
     }
 
-    // Update Post
-    async function updatePost(postId, postData) {
+    async function updatePost(postId, formData) {
+        if (!postId) {
+            logger.error('Invalid postId provided:', postId);
+            throw new Error('Invalid postId');
+        }
+
+        if (!(formData instanceof FormData)) {
+            logger.error('Invalid form data provided:', typeof formData);
+            throw new Error('Invalid form data');
+        }
+
         loading.value = true;
+        error.value = null;
+
         try {
-            const formData = new FormData();
+            // Kiểm tra và log nội dung form data
+            const content = formData.get('content');
+            const images = formData.getAll('images');
+            const existingImages = formData.get('existingImages');
 
-            // Handle content and contentLowerCase
-            const content = postData.content?.trim() || '';
-            formData.append('content', content);
-
-            // Convert content to contentLowerCase array
-            const contentWords = content.toLowerCase().split(/\s+/).filter(Boolean);
-            contentWords.forEach(word => {
-                formData.append('contentLowerCase[]', word);
+            logger.debug('Validating form data:', {
+                postId,
+                content: content?.substring(0, 50),
+                contentLength: content?.length,
+                newImagesCount: images?.length,
+                hasExistingImages: !!existingImages
             });
 
-            // Xử lý images hiện có
-            if (postData.existingImages?.length) {
-                postData.existingImages.forEach(url => {
-                    formData.append('existingImages[]', url);
-                });
+            // Validate content
+            if (!content || content === 'undefined' || content.trim().length === 0) {
+                if (!images.length && !existingImages) {
+                    throw new Error('Post must have either content or images');
+                }
             }
 
-            // Xử lý images mới
-            if (postData.media?.length) {
-                const processedImages = await Promise.all(
-                    postData.media.map(async (img) => {
-                        // Nếu là URL (ảnh hiện có), giữ nguyên
-                        if (typeof img === 'string') return img;
-                        // Nếu là file mới, xử lý và nén
-                        return await useImageProcessing().compressImage(img);
-                    })
-                );
+            // Validate tổng số ảnh
+            const totalImages = (images?.length || 0) +
+                (existingImages ? JSON.parse(existingImages).length : 0);
 
-                processedImages
-                    .filter(Boolean)
-                    .forEach(img => {
-                        if (typeof img === 'string' && img.startsWith('http')) {
-                            formData.append('existingImages[]', img);
-                    } else {
-                            formData.append('images', img);
-                        }
-                    });
+            if (totalImages > 4) {
+                throw new Error('Maximum 4 images allowed');
             }
 
             const response = await apiService.updatePost(postId, formData);
 
-            if (response.data.code === "1000") {
-                const updatedPost = validateAndProcessPost(response.data.data);
-                const index = posts.value.findIndex((p) => p.postId === postId);
-                if (index !== -1) posts.value[index] = updatedPost;
-                if (currentPost.value?.postId === postId)
+            if (response?.data?.code === "1000") {
+                const postData = response.data.data;
+
+                if (!postData || typeof postData !== 'object') {
+                    throw new Error('Invalid response format from server');
+                }
+
+                const updatedPost = validateAndProcessPost(postData);
+                if (!updatedPost) {
+                    throw new Error('Post validation failed');
+                }
+
+                const index = posts.value.findIndex(p => p?.postId === postId);
+                if (index !== -1) {
+                    posts.value[index] = updatedPost;
+                }
+
+                if (currentPost.value?.postId === postId) {
                     currentPost.value = updatedPost;
+                }
+
+                logger.debug('Post updated successfully:', {
+                    postId,
+                    contentLength: updatedPost.content?.length,
+                    imagesCount: updatedPost.images?.length
+                });
+
                 return response.data;
             }
-            throw new Error(response.data.message);
+
+            throw new Error(response?.data?.message || 'Update failed');
+
         } catch (err) {
-            await handleError(err);
+            logger.error('Update post failed:', {
+                error: err.message,
+                postId
+            });
             error.value = err.message;
             throw err;
         } finally {
@@ -321,98 +345,98 @@ export const usePostStore = defineStore("post", () => {
 
     // Validate and Process Post
     function validateAndProcessPost(post) {
-        if (!post) return null;
+        if (!post) {
+            logger.debug('Validation failed: post is null or undefined');
+            return null;
+        }
 
         try {
-            // Ensure the post has either content or media
-            const hasContent =
-                typeof post.content === "string" && post.content.trim() !== "";
-            const hasMedia =
-                (Array.isArray(post.images) && post.images.length > 0) ||
-                (typeof post.video === "string" && post.video?.trim() !== "");
+            logger.debug('Processing post data:', {
+                postId: post.postId,
+                hasContent: Boolean(post.content),
+                hasImages: Boolean(post.images?.length)
+            });
 
-            if (!hasContent && !hasMedia) return null;
+            // Content validation
+            const content = post.content === undefined ? '' : String(post.content).trim();
+            const hasContent = content !== '';
 
-            // Ensure the post has a valid author
-            if (!post.userId || !post.author || !post.author.userId) return null;
+            // Media validation
+            const images = Array.isArray(post.images) ? post.images : [];
+            const video = typeof post.video === 'string' ? post.video.trim() : null;
+            const hasMedia = images.length > 0 || Boolean(video);
 
-            // Process and validate URLs
-            if (Array.isArray(post.images)) {
-                post.images = post.images
-                    .filter((url) => url && typeof url === "string")
-                    .map((url) => {
-                        try {
-                            return url.trim();
-                        } catch (e) {
-                            console.warn("Invalid image URL:", url);
-                            return "";
-                        }
-                    })
-                    .filter((url) => url !== "");
-            } else {
-                post.images = [];
-            }
-
-            if (post.video) {
-                try {
-                    post.video =
-                        typeof post.video === "string" ? post.video.trim() : null;
-                } catch (e) {
-                    console.warn("Invalid video URL:", post.video);
-                    post.video = null;
-                }
-            }
-
-            if (post.author) {
-                try {
-                    post.author.avatar =
-                        typeof post.author.avatar === "string"
-                            ? post.author.avatar.trim()
-                            : "";
-                } catch (e) {
-                    console.warn("Invalid avatar URL:", post.author.avatar);
-                    post.author.avatar = "";
-                }
-            }
-
-            // Ensure 'likes' and 'comments' fields are non-negative integers
-            post.likes =
-                Number.isInteger(post.likes) && post.likes >= 0 ? post.likes : 0;
-            post.comments =
-                Number.isInteger(post.comments) && post.comments >= 0
-                    ? post.comments
-                    : 0;
-
-            // Ensure userId exists and is valid
-            post.userId = post.userId || null;
-            post.userName = post.userName || "Anonymous User";
-
-            // Validate inappropriate content
-            if (containsInappropriateContent(post.content)) {
-                logger.debug('Post contains inappropriate content');
+            if (!hasContent && !hasMedia) {
+                logger.debug('Validation failed: post has no content or media');
                 return null;
             }
 
-            // Check if the current user is the owner of the post
+            // Author validation
+            if (!post.userId) {
+                logger.debug('Validation failed: missing user data');
+                return null;
+            }
+
+            // Process images
+            const processedImages = images
+                .filter(url => url && typeof url === 'string')
+                .map(url => {
+                    try {
+                        return url.trim();
+                    } catch (e) {
+                        logger.warn('Invalid image URL:', { url, error: e.message });
+                        return '';
+                    }
+                })
+                .filter(url => url !== '');
+
+            // Process author data
+            const author = post.author ? {
+                ...post.author,
+                avatar: typeof post.author?.avatar === 'string'
+                    ? post.author.avatar.trim()
+                    : ''
+            } : null;
+
+            // User store for ownership check
             const userStore = useUserStore();
             const currentUserId = userStore.userData?.userId;
             const isOwner = currentUserId === post.userId;
 
-            logger.debug('Post ownership check:', { 
+            logger.debug('Post validation successful', {
                 postId: post.postId,
-                postUserId: post.userId,
-                currentUserId,
-                isOwner 
+                contentLength: content.length,
+                imagesCount: processedImages.length,
+                isOwner
             });
 
-            return {
-                ...post,
-                userId: post.userId,
-                userName: post.userName,
-                userAvatar: post.userAvatar || "",
+            // Construct validated post object with fallbacks
+            const validatedPost = {
+                postId: post.postId,
+                content,
+                images: processedImages,
+                video,
+                likes: Math.max(0, parseInt(post.likes) || 0),
+                comments: Math.max(0, parseInt(post.comments) || 0),
+                userId: post.userId || currentUserId,
+                userName: post.userName || userStore.userData?.userName || 'Anonymous User',
+                userAvatar: post.userAvatar || userStore.userData?.avatar || '',
+                author: author || {
+                    userId: post.userId || currentUserId,
+                    userName: post.userName || userStore.userData?.userName || 'Anonymous User',
+                    avatar: post.userAvatar || userStore.userData?.avatar || ''
+                },
                 isOwner,
                 lastModified: new Date().toISOString()
             };
+
+            // Final inappropriate content check
+            if (containsInappropriateContent(content)) {
+                logger.debug('Post contains inappropriate content');
+                return null;
+            }
+
+            return validatedPost;
         } catch (err) {
             console.error("Error validating post:", err);
             return null;

@@ -150,6 +150,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { defineAsyncComponent } from "vue";
 import { sanitizeInput, sanitizeOutput } from "../utils/sanitize";
 import { useErrorHandler } from "@/utils/errorHandler";
+import { formatDate } from "@/utils/helpers";
 
 const AddPost = defineAsyncComponent(() => import("../components/post/AddPost.vue"));
 const router = useRouter();
@@ -213,8 +214,6 @@ const showComments = (postId) => {
     hash: "#comments",
   });
 };
-
-const formatDate = (date) => formatDistanceToNow(new Date(date), { addSuffix: true, locale: vi });
 
 const isImage = (fileUrl) => {
   try {

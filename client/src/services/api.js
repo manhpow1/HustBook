@@ -142,27 +142,12 @@ const apiService = {
         return this.get(API_ENDPOINTS.GET_POST(postId));
     },
 
-    async updatePost(postId, postData) {
-        const formData = new FormData();
-        formData.append('content', postData.content);
-
-        // Handle existing images
-        if (postData.existingImages?.length) {
-            formData.append('existingImages', JSON.stringify(postData.existingImages));
-        }
-
-        // Handle new image files
-        if (postData.media?.length) {
-            postData.media.forEach(file => {
-                if (typeof file === 'string') return; // Skip existing image URLs
-                formData.append('images', file);
-            });
-        }
-
+    async updatePost(postId, formData) {
         return this.patch(API_ENDPOINTS.UPDATE_POST(postId), formData, {
             headers: {
                 'Content-Type': 'multipart/form-data'
-            }
+            },
+            transformRequest: []
         });
     },
 

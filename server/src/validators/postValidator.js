@@ -50,20 +50,31 @@ const updatePostSchema = Joi.object({
             'string.empty': 'Content cannot be empty',
             'string.min': 'Content must be at least 1 character long',
             'string.max': 'Content cannot exceed 1000 characters',
-            'string.pattern.base': 'Content contains invalid characters'
+            'string.pattern.base': 'Content contains invalid characters',
+            'any.required': 'Content is required'
         }),
     contentLowerCase: Joi.array()
         .items(Joi.string().lowercase().trim())
         .default(() => [])
-        .strip(), // This field will be generated server-side
+        .strip(),
     existingImages: Joi.array()
         .items(Joi.string().uri())
         .default([])
+        .allow(null)
         .messages({
             'array.base': 'Existing images must be an array'
         }),
+    // Update the images validation to handle Firebase paths
     images: Joi.array()
-        .items(Joi.string().uri())
+        .items(
+            Joi.object({
+                path: Joi.string(),
+                fieldname: Joi.string(),
+                originalname: Joi.string(),
+                mimetype: Joi.string().valid('image/jpeg', 'image/png', 'image/gif'),
+                size: Joi.number().max(5 * 1024 * 1024) // 5MB
+            }).unknown(true)
+        )
         .default([])
         .messages({
             'array.base': 'Images must be an array'

@@ -6,7 +6,7 @@
                 isDragging ? 'border-primary bg-primary/5' : 'border-muted-foreground/20',
                 modelValue.length >= maxFiles ? 'opacity-50 cursor-not-allowed' : 'hover:border-primary cursor-pointer',
                 className
-            ]" @click="triggerFileSelect">
+            ]" @click.stop.prevent="triggerFileSelect">
                 <slot name="trigger">
                     <div class="flex flex-col items-center justify-center space-y-2 p-4">
                         <div class="p-2 bg-background rounded-full ring-1 ring-border/10">

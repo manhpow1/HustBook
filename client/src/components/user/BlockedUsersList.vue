@@ -92,6 +92,7 @@ import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Skeleton } from '@/components/ui/skeleton';
 import { AlertCircleIcon, Loader2Icon } from 'lucide-vue-next';
+import { formatDate } from '@/utils/helpers';
 
 const friendStore = useFriendStore();
 const { toast } = useToast();
@@ -168,11 +169,6 @@ const getInitials = (name) => {
         .join('')
         .toUpperCase()
         .slice(0, 2) || '??';
-};
-
-const formatDate = (date) => {
-    if (!date) return '';
-    return new Date(date).toLocaleDateString('vi-VN');
 };
 
 onMounted(loadBlockedUsers);

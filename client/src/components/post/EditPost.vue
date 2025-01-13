@@ -10,14 +10,8 @@
             </CardHeader>
             <CardContent>
                 <form @submit.prevent="handleSubmit" class="space-y-6">
-                    <MarkdownEditor
-                        v-model="description"
-                        placeholder="What's on your mind?"
-                        :disabled="isLoading"
-                        :maxLength="1000"
-                        ref="editorRef"
-                        @input="validateDescription"
-                    />
+                    <MarkdownEditor v-model="description" placeholder="What's on your mind?" :disabled="isLoading"
+                        :maxLength="1000" ref="editorRef" @input="validateDescription" />
 
                     <div class="flex items-center gap-2">
                         <div class="flex-1">
@@ -203,8 +197,10 @@ const hasUnsavedChanges = computed(() => {
 });
 
 const handleFilesChange = async (newFiles) => {
+    console.log('handleFilesChange called with files:', newFiles);
     try {
         if (newFiles.length > 4) {
+            console.warn('File limit exceeded:', newFiles.length);
             mediaError.value = "Maximum 4 files allowed";
             return;
         }
@@ -213,21 +209,23 @@ const handleFilesChange = async (newFiles) => {
         files.value = newFiles;
         previewUrls.value = [];
 
+        console.log('Processing files...');
         for (const file of newFiles) {
             if (typeof file === 'string') {
-                // If it's a URL string (existing image), use it directly
+                console.log('Processing existing image URL:', file);
                 previewUrls.value.push(file);
             } else {
-                // If it's a File object, check size and create preview
+                console.log('Processing new file:', file.name, 'Size:', file.size);
                 if (file.size > 5 * 1024 * 1024) {
+                    console.warn('File size exceeds limit:', file.size);
                     mediaError.value = "Each file must be less than 5MB";
                     return;
                 }
-                
-                // Create preview URL
+
                 const reader = new FileReader();
                 await new Promise((resolve) => {
                     reader.onload = (e) => {
+                        console.log('File preview created successfully');
                         previewUrls.value.push(e.target.result);
                         resolve();
                     };
@@ -235,7 +233,9 @@ const handleFilesChange = async (newFiles) => {
                 });
             }
         }
+        console.log('All files processed successfully');
     } catch (err) {
+        console.error('Error in handleFilesChange:', err);
         logger.error("Media change error:", err);
         mediaError.value = "Failed to process media files";
         handleError(err);
@@ -252,76 +252,57 @@ const handleUploadError = (err) => {
     handleError(err);
 };
 
-const loadPostData = async () => {
-    try {
-        isLoading.value = true;
-        error.value = "";
-
-        const response = await postStore.fetchPost(postId);
-        if (!response || response.code !== "1000" || !response.data) {
-            throw new Error("Post not found");
-        }
-
-        const post = response.data;
-        
-        // Initialize form with post data
-        description.value = post.content || "";
-
-        // Handle images
-        if (Array.isArray(post.images) && post.images.length > 0) {
-            initialMedia.value = [...post.images];
-            files.value = [...post.images];
-            previewUrls.value = [...post.images];
-        } else {
-            initialMedia.value = [];
-            files.value = [];
-            previewUrls.value = [];
-        }
-
-        logger.debug("Post data loaded successfully");
-    } catch (err) {
-        error.value = "Failed to load post";
-        handleError(err);
-        router.push({ name: "Home" });
-    } finally {
-        isLoading.value = false;
-    }
-};
-
 const handleSubmit = async () => {
+    logger.debug('Submit handler triggered');
     try {
-        if (!isValid.value) return;
+        if (!isValid.value) {
+            logger.warn('Form validation failed');
+            return;
+        }
 
         isLoading.value = true;
         error.value = "";
         successMessage.value = "";
 
-        const content = sanitizeInput(description.value?.trim() || '');
-        const formData = new FormData();
-        formData.append('content', content);
+        // Trích xuất và validate content
+        const content = description.value?.trim();
 
-        // Convert content to lowercase words array
-        const contentWords = content.toLowerCase().split(/\s+/).filter(Boolean);
-        contentWords.forEach(word => {
-            formData.append('contentLowerCase[]', word);
+        // Create FormData
+        const formData = new FormData();
+        formData.set('content', content);
+
+        logger.debug('Processing content:', {
+            content: content.substring(0, 50),
+            length: content.length,
+            hasFiles: files.value.length > 0
         });
 
-        // Handle files
-        if (files.value?.length > 0) {
-            const existingImages = [];
-            files.value.forEach((file) => {
-                if (typeof file === 'string' && file.startsWith('http')) {
-                    existingImages.push(file);
-                } else {
-                    formData.append('images', file);
-                }
-            });
-            if (existingImages.length > 0) {
-                formData.append('existingImages', JSON.stringify(existingImages));
-            }
+        const existingImages = files.value
+            .filter(file => typeof file === 'string' && file.startsWith('http'));
+
+        const newFiles = files.value
+            .filter(file => file instanceof File);
+
+        if (existingImages.length > 0) {
+            formData.set('existingImages', JSON.stringify(existingImages));
         }
 
-        await postStore.updatePost(postId, formData);
+        newFiles.forEach(file => {
+            formData.append('images', file);
+        });
+
+        logger.debug('Submitting update:', {
+            postId,
+            contentLength: content.length,
+            existingImagesCount: existingImages.length,
+            newFilesCount: newFiles.length
+        });
+
+        const response = await postStore.updatePost(postId, formData);
+
+        if (!response || response.code !== '1000') {
+            throw new Error(response?.message || 'Failed to update post');
+        }
 
         successMessage.value = "Post updated successfully";
         toast({
@@ -333,6 +314,7 @@ const handleSubmit = async () => {
             params: { postId },
         });
     } catch (err) {
+        logger.error('Submit error:', err);
         error.value = err.message || "Failed to update post";
         handleError(err);
         toast({
@@ -364,11 +346,6 @@ const discardChanges = () => {
     previewUrls.value = [...initialMedia.value];
     router.back();
 };
-
-// Lifecycle Hooks
-onMounted(async () => {
-    await loadPostData();
-});
 
 onBeforeUnmount(() => {
     // Cleanup any resources if needed
