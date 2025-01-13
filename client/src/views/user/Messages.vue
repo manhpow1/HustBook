@@ -95,20 +95,20 @@
             </div>
             <div v-else class="space-y-4">
               <div v-for="message in chatStore.messages" :key="message.messageId" class="flex items-start space-x-4"
-                :class="{ 'justify-end': message.sender.userId === userStore.userData?.userId }">
-                <Avatar v-if="message.sender.userId !== userStore.userData?.userId">
+                :class="{ 'justify-end': message.sender.id === userStore.userData?.userId }">
+                <Avatar v-if="message.sender.id !== userStore.userData?.userId">
                   <AvatarImage :src="message.sender.avatar" :alt="message.sender.userName" />
                   <AvatarFallback>{{ getInitials(message.sender.userName) }}</AvatarFallback>
                 </Avatar>
                 <div class="rounded-lg p-4 max-w-[70%]" :class="[
-                  message.sender.userId === userStore.userData?.userId
+                  message.sender.id === userStore.userData?.userId
                     ? 'bg-primary text-primary-foreground'
                     : 'bg-muted'
                 ]">
-                  <p class="whitespace-pre-wrap break-words">{{ message.message }}</p>
+                  <p class="whitespace-pre-wrap break-words">{{ message.content || message.message }}</p>
                   <span class="text-xs opacity-70">{{ formatDate(message.created) }}</span>
                 </div>
-                <span v-if="message.sender.userId === userStore.userData?.userId"
+                <span v-if="message.sender.id === userStore.userData?.userId"
                   class="text-xs text-muted-foreground ml-2">
                   <CheckIcon v-if="message.status === 'sent'" class="h-4 w-4" />
                   <Loader2Icon v-else-if="message.status === 'sending'" class="h-4 w-4 animate-spin" />

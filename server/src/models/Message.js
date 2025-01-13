@@ -26,7 +26,8 @@ class Message {
         }
 
         // Core message data
-        this.message = message.trim();
+        this.content = message.trim();
+        this.message = this.content; // For backwards compatibility
         this.messageId = messageId;
         this.unread = unread || '0';
         this.created = created || new Date().toISOString();

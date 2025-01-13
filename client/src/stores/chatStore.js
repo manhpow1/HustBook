@@ -130,6 +130,8 @@ export const useChatStore = defineStore('chat', {
             const { toast } = useToast();
             try {
                 const { index = 0, count = 20 } = options;
+                logger.debug('Fetching messages:', { conversationId, index, count });
+                
                 const lastMessageId = this.messages.length > 0 ? 
                     this.messages[this.messages.length - 1].messageId : 
                     null;
@@ -153,19 +155,27 @@ export const useChatStore = defineStore('chat', {
                 });
 
                 if (response.data.code === '1000') {
+                    logger.debug('Raw messages response:', response.data.data);
                     // Append new messages to existing ones for infinite scroll
                     const newMessages = response.data.data?.data || [];
+                    logger.debug('Processing messages:', {
+                        count: newMessages.length,
+                        firstMessage: newMessages[0],
+                        lastMessage: newMessages[newMessages.length - 1]
+                    });
                     const processedMessages = newMessages.map(msg => ({
                         messageId: msg.messageId,
-                        message: msg.text,
-                        created: msg.createdAt || new Date().toISOString(),
+                        message: msg.message || msg.text || '', // Handle both message and text fields
+                        content: msg.message || msg.text || '', // Add content field for consistency
+                        created: msg.created || msg.createdAt || new Date().toISOString(),
                         sender: {
-                            userId: msg.senderId,
-                            userName: msg.senderName || 'Unknown User',
-                            avatar: msg.senderAvatar
+                            id: msg.sender?.userId || msg.senderId,
+                            userName: msg.sender?.userName || msg.senderName || 'Unknown User',
+                            avatar: msg.sender?.avatar || msg.senderAvatar
                         },
                         status: msg.status || 'sent',
-                        unread: msg.unread || '0'
+                        unread: msg.unread || '0',
+                        conversationId: msg.conversationId
                     }));
 
                     if (options.append) {
