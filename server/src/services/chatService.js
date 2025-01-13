@@ -433,15 +433,13 @@ class ChatService {
 
                 try {
                     const messageModel = new Message({
-                        message: data.text || '',
+                        text: data.text || '',
                         messageId: doc.id,
                         unread: data.unreadBy?.includes(userId) ? '1' : '0',
-                        created: data.createdAt?.toDate().toISOString() || new Date().toISOString(),
-                        sender: {
-                            id: senderId,
-                            userName: senderData.userName || 'Unknown User',
-                            avatar: senderData.avatar || ''
-                        },
+                        createdAt: data.createdAt?.toDate().toISOString() || new Date().toISOString(),
+                        senderId: senderId,
+                        senderName: senderData.userName || 'Unknown User',
+                        senderAvatar: senderData.avatar || '',
                         isBlocked,
                         status: data.status || 'sent'
                     });

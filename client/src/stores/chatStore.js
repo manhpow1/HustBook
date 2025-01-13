@@ -157,16 +157,21 @@ export const useChatStore = defineStore('chat', {
                     const newMessages = response.data.data?.data || [];
                     const processedMessages = newMessages.map(msg => ({
                         messageId: msg.messageId,
-                        message: msg.text,
-                        created: msg.createdAt || new Date().toISOString(),
+                        message: msg.text || msg.message || '',
+                        created: msg.created || msg.createdAt || new Date().toISOString(),
                         sender: {
                             userId: msg.senderId,
-                            userName: msg.senderName || 'Unknown User',
-                            avatar: msg.senderAvatar
+                            userName: msg.senderName || msg.sender?.userName || 'Unknown User',
+                            avatar: msg.senderAvatar || msg.sender?.avatar || ''
                         },
                         status: msg.status || 'sent',
                         unread: msg.unread || '0'
                     }));
+
+                    logger.debug('Processed message:', {
+                        original: newMessages[0],
+                        processed: processedMessages[0]
+                    });
 
                     if (options.append) {
                         this.messages = [...this.messages, ...processedMessages];
