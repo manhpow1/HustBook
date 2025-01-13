@@ -109,12 +109,17 @@ class PostService {
             }
 
             // Create updated post with validation
+            // Convert dates to proper Date objects
+            const createdAt = existingPost.createdAt instanceof Date ? 
+                existingPost.createdAt : 
+                new Date(existingPost.createdAt);
+
             const updatedPost = new Post({
                 ...existingPost,
                 content,
                 contentLowerCase: Array.isArray(contentLowerCase) ? contentLowerCase : content.toLowerCase().split(/\s+/).filter(Boolean),
                 images: [...existingImages, ...newImages],
-                createdAt: existingPost.createdAt || new Date(),
+                createdAt,
                 updatedAt: new Date()
             });
 

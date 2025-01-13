@@ -64,12 +64,22 @@ class Post {
         });
 
         // Validate dates
-        if (!(this.createdAt instanceof Date) || isNaN(this.createdAt)) {
+        // Ensure createdAt is a valid Date
+        if (!(this.createdAt instanceof Date)) {
+            this.createdAt = new Date(this.createdAt);
+        }
+        if (isNaN(this.createdAt.getTime())) {
             throw new Error('Invalid createdAt date');
         }
 
-        if (this.updatedAt !== null && (!(this.updatedAt instanceof Date) || isNaN(this.updatedAt))) {
-            throw new Error('Invalid updatedAt date');
+        // Ensure updatedAt is either null or a valid Date
+        if (this.updatedAt !== null) {
+            if (!(this.updatedAt instanceof Date)) {
+                this.updatedAt = new Date(this.updatedAt);
+            }
+            if (isNaN(this.updatedAt.getTime())) {
+                throw new Error('Invalid updatedAt date');
+            }
         }
 
         return true;
