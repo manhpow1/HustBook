@@ -11,7 +11,6 @@ import userRoutes from './routes/users.js';
 import friendRoutes from './routes/friends.js';
 import searchRoutes from './routes/search.js';
 import chatRoutes from './routes/chat.js';
-import videoRoutes from './routes/video.js';
 import notificationRoutes from './routes/notifications.js';
 import { handleError } from './utils/responseHandler.js';
 
@@ -38,7 +37,6 @@ function createApp() {
     app.use('/api/search', searchRoutes);
     app.use('/api/chat', chatRoutes);
     app.use('/api/notifications', notificationRoutes);
-    app.use('/api/video', videoRoutes);
     app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpecs));
 
     // Error handling middleware
