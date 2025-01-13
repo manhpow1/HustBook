@@ -341,7 +341,10 @@ const truncatedDescription = computed(() => {
 });
 
 const filteredPosts = computed(() => {
-  let posts = postStore.getUserPosts(targetUserId.value) || [];
+  let posts = postStore.getUserPosts(targetUserId.value);
+  if (!Array.isArray(posts)) {
+    posts = [];
+  }
   if (postSearchQuery.value) {
     const query = postSearchQuery.value.toLowerCase();
     posts = posts.filter(
