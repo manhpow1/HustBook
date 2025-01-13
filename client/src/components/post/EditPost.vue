@@ -257,17 +257,25 @@ const loadPostData = async () => {
         isLoading.value = true;
         error.value = "";
 
-        const post = await postStore.fetchPost(postId);
-        if (!post) throw new Error("Post not found");
+        const response = await postStore.fetchPost(postId);
+        if (!response || response.code !== "1000" || !response.data) {
+            throw new Error("Post not found");
+        }
 
+        const post = response.data;
+        
         // Initialize form with post data
         description.value = post.content || "";
 
         // Handle images
-        if (post.images?.length) {
-            initialMedia.value = post.images;
-            files.value = post.images;
-            previewUrls.value = post.images;
+        if (Array.isArray(post.images) && post.images.length > 0) {
+            initialMedia.value = [...post.images];
+            files.value = [...post.images];
+            previewUrls.value = [...post.images];
+        } else {
+            initialMedia.value = [];
+            files.value = [];
+            previewUrls.value = [];
         }
 
         logger.debug("Post data loaded successfully");
