@@ -36,6 +36,12 @@ class FriendController {
             if (!req.user?.userId) {
                 throw createError('1002', 'User not authenticated');
             }
+            
+            console.log('getUserFriends controller - Input params:', {
+                userId: req.user.userId,
+                count: parseInt(count),
+                index: parseInt(index)
+            });
 
             const result = await friendService.getUserFriends(
                 req.user.userId,

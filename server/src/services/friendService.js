@@ -87,6 +87,7 @@ class FriendService {
             throw createError('1004', 'Invalid userId');
         }
         try {
+            logger.info('getUserFriends service - Starting with params:', { userId, count, index });
             const friendsRef = db.collection(collections.friends)
                 .doc(userId)
                 .collection('userFriends')
@@ -95,6 +96,11 @@ class FriendService {
                 .limit(count);
 
             const snapshot = await friendsRef.get();
+            
+            logger.info('getUserFriends service - Friends snapshot:', {
+                empty: snapshot.empty,
+                size: snapshot.size
+            });
 
             // Return empty array if no friends
             if (snapshot.empty) {
@@ -137,6 +143,12 @@ class FriendService {
                 .doc(userId)
                 .collection('userFriends')
                 .get();
+
+            logger.info('getUserFriends service - Final result:', {
+                friendsCount: friends.length,
+                totalCount: totalCountSnapshot.size,
+                friends: friends
+            });
 
             return {
                 friends,
