@@ -2,6 +2,7 @@ import friendValidator from '../validators/friendValidator.js';
 import friendService from '../services/friendService.js';
 import { sendResponse } from '../utils/responseHandler.js';
 import { createError } from '../utils/customError.js';
+import logger from '../utils/logger.js';
 
 class FriendController {
     async getRequestedFriends(req, res, next) {
