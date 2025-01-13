@@ -400,7 +400,7 @@ class ChatService {
             logger.debug('Messages query result:', {
                 empty: messagesSnapshot.empty,
                 size: messagesSnapshot.size,
-                path: messagesQuery._query.path
+                path: messagesQuery._queryOptions?.collectionId || 'unknown'
             });
 
             if (messagesSnapshot.empty) {
