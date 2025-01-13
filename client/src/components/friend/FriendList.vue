@@ -178,12 +178,16 @@ const props = defineProps({
     },
     limit: {
         type: Number,
-        default: 6,
+        default: 20,
     },
     sortBy: {
         type: String,
         default: "recent",
     },
+    index: {
+        type: Number,
+        default: 0
+    }
 });
 
 const router = useRouter();
@@ -265,7 +269,7 @@ const fetchFriends = async () => {
         
         const params = {
             userId: effectiveUserId.value,
-            index: 0,
+            index: props.index,
             count: props.limit
         };
         

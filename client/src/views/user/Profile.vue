@@ -445,7 +445,8 @@ const fetchFriendsData = async () => {
 
     logger.debug("Fetching friends data for profile", {
       targetUserId: targetUserId.value,
-      limit: props.limit || 6,
+      limit: props.limit,
+      index: props.index
     });
 
     await friendStore.getUserFriends({
