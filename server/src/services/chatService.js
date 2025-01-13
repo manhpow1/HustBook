@@ -395,9 +395,16 @@ class ChatService {
 
             messagesQuery = messagesQuery.limit(count);
 
-            // Execute query
+            // Execute query and handle empty results
             const messagesSnapshot = await messagesQuery.get();
+            logger.debug('Messages query result:', {
+                empty: messagesSnapshot.empty,
+                size: messagesSnapshot.size,
+                path: messagesQuery._query.path
+            });
+
             if (messagesSnapshot.empty) {
+                logger.debug('No messages found for conversation');
                 return [];
             }
 
@@ -410,29 +417,49 @@ class ChatService {
 
             const senderDataMap = await this._fetchPartnerUsers(Array.from(senderIds));
 
-            // Process messages
+            // Process messages with detailed logging
             const messages = [];
             for (const doc of messagesSnapshot.docs) {
                 const data = doc.data();
                 const senderId = data.senderId;
                 const senderData = senderDataMap.get(senderId) || {};
 
-                const messageModel = new Message({
-                    message: data.text || '',
+                logger.debug('Processing message:', {
                     messageId: doc.id,
-                    unread: data.unreadBy?.includes(userId) ? '1' : '0',
-                    created: data.createdAt?.toDate().toISOString() || '',
-                    sender: {
-                        id: senderId,
-                        userName: senderData.userName || '',
-                        avatar: senderData.avatar || ''
-                    },
-                    isBlocked,
-                    status: data.status || 'sent'
+                    senderId,
+                    text: data.text?.substring(0, 20) + '...',
+                    timestamp: data.createdAt?.toDate()
                 });
 
-                messages.push(messageModel.toJSON());
+                try {
+                    const messageModel = new Message({
+                        message: data.text || '',
+                        messageId: doc.id,
+                        unread: data.unreadBy?.includes(userId) ? '1' : '0',
+                        created: data.createdAt?.toDate().toISOString() || new Date().toISOString(),
+                        sender: {
+                            id: senderId,
+                            userName: senderData.userName || 'Unknown User',
+                            avatar: senderData.avatar || ''
+                        },
+                        isBlocked,
+                        status: data.status || 'sent'
+                    });
+
+                    messages.push(messageModel.toJSON());
+                } catch (error) {
+                    logger.error('Error processing message:', {
+                        messageId: doc.id,
+                        error: error.message
+                    });
+                }
             }
+
+            logger.debug('Processed messages:', {
+                count: messages.length,
+                firstMessageId: messages[0]?.messageId,
+                lastMessageId: messages[messages.length - 1]?.messageId
+            });
 
             return messages;
         } catch (error) {
