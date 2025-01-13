@@ -96,11 +96,18 @@
             <Card class="mt-6">
               <CardHeader>
                 <CardTitle class="text-xl">Friends</CardTitle>
-                <CardDescription>{{ user?.friendsCount || 0 }} friends</CardDescription>
+                <CardDescription>{{ friendStore.total || 0 }} friends</CardDescription>
               </CardHeader>
               <CardContent>
-                <div class="grid grid-cols-3 gap-2">
-                  <div v-for="friend in friends?.slice(0, 6)" :key="friend.userId" class="flex flex-col items-center">
+                <div v-if="friendStore.loading" class="grid grid-cols-3 gap-2">
+                  <Skeleton v-for="i in 6" :key="i" class="h-24 w-full" />
+                </div>
+                <div v-else-if="friendStore.error" class="text-center text-red-500 p-4">
+                  {{ friendStore.error }}
+                </div>
+                <div v-else class="grid grid-cols-3 gap-2">
+                  <div v-for="friend in friendStore.friends?.slice(0, 6)" :key="friend.userId"
+                    class="flex flex-col items-center">
                     <Avatar class="h-16 w-16">
                       <AvatarImage :src="friend.avatar" :alt="friend.userName" />
                       <AvatarFallback>{{
@@ -346,15 +353,15 @@ const initializeProfile = async () => {
   error.value = null;
 
   try {
-    logger.debug('Initializing profile view', {
+    logger.debug("Initializing profile view", {
       targetUserId: targetUserId.value,
-      currentUser: userStore.userData
+      currentUser: userStore.userData,
     });
 
     // Verify auth state first
     const isAuthenticated = await userStore.verifyAuthState();
     if (!isAuthenticated) {
-      logger.debug('User not authenticated, redirecting to login');
+      logger.debug("User not authenticated, redirecting to login");
       router.push({
         name: "Login",
         query: { redirect: route.fullPath },
@@ -364,7 +371,7 @@ const initializeProfile = async () => {
 
     // If viewing own profile, ensure we have latest user data
     if (isCurrentUser.value) {
-      logger.debug('Fetching current user profile');
+      logger.debug("Fetching current user profile");
       const currentUserData = await userStore.fetchUserProfile();
       if (!currentUserData) {
         throw new Error("Failed to fetch current user data");
@@ -372,7 +379,9 @@ const initializeProfile = async () => {
       user.value = currentUserData;
     } else {
       // Fetch target user's profile
-      logger.debug('Fetching target user profile', { userId: targetUserId.value });
+      logger.debug("Fetching target user profile", {
+        userId: targetUserId.value,
+      });
       const profileData = await userStore.getUserProfile(targetUserId.value);
       if (!profileData) {
         throw new Error("Failed to fetch user profile");
@@ -381,24 +390,24 @@ const initializeProfile = async () => {
     }
 
     // Fetch additional data in parallel
-    logger.debug('Fetching additional profile data');
+    logger.debug("Fetching additional profile data");
     await Promise.all([
-      fetchFriendsData().catch(err => {
-        logger.warn('Failed to fetch friends data:', err);
+      fetchFriendsData().catch((err) => {
+        logger.warn("Failed to fetch friends data:", err);
         friends.value = [];
       }),
-      fetchPostsData().catch(err => {
-        logger.warn('Failed to fetch posts data:', err);
-        postError.value = 'Failed to load posts';
-      })
+      fetchPostsData().catch((err) => {
+        logger.warn("Failed to fetch posts data:", err);
+        postError.value = "Failed to load posts";
+      }),
     ]);
-
   } catch (err) {
-    const errorMessage = err.response?.data?.message || err.message || "An error occurred";
+    const errorMessage =
+      err.response?.data?.message || err.message || "An error occurred";
     error.value = errorMessage;
-    logger.error('Profile initialization failed:', {
+    logger.error("Profile initialization failed:", {
       error: err,
-      userId: targetUserId.value
+      userId: targetUserId.value,
     });
 
     if (err.response?.status === 401) {
@@ -421,11 +430,32 @@ const initializeProfile = async () => {
 
 const fetchFriendsData = async () => {
   try {
-    const friendsData = await friendStore.getUserFriends(targetUserId.value);
-    friends.value = friendsData || [];
+    logger.debug("Fetching friends data for profile", {
+      targetUserId: targetUserId.value,
+      limit: props.limit || 6,
+    });
+
+    await friendStore.getUserFriends({
+      userId: targetUserId.value,
+      index: 0,
+      count: props.limit || 20,
+    });
+
+    friends.value = friendStore.friends || [];
+
+    console.log("Friends data fetched successfully", {
+      friendsCount: friends.value.length,
+      total: friendStore.total,
+    });
   } catch (err) {
-    logger.warn("Error fetching friends:", err);
+    logger.error("Error fetching friends data:", err);
     friends.value = [];
+    error.value = "Failed to load friends";
+    toast({
+      title: "Error",
+      description: "Failed to load friends list",
+      variant: "destructive",
+    });
   }
 };
 
@@ -440,7 +470,6 @@ const fetchPostsData = async () => {
     loadingPosts.value = false;
   }
 };
-
 
 const handleFriendAction = async () => {
   try {
