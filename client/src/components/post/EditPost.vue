@@ -10,43 +10,37 @@
             </CardHeader>
             <CardContent>
                 <form @submit.prevent="handleSubmit" class="space-y-6">
-                    <!-- Description Field -->
-                    <FormField v-slot="{ messages }" name="description">
-                        <FormItem>
-                            <FormLabel>Content</FormLabel>
-                            <FormControl>
-                                <MarkdownEditor v-model="form.description" :maxLength="1000"
-                                    placeholder="What's on your mind?" @input="validateDescription"
-                                    :disabled="isLoading" />
-                            </FormControl>
-                            <FormMessage>{{ descriptionError }}</FormMessage>
-                        </FormItem>
-                    </FormField>
+                    <MarkdownEditor
+                        v-model="description"
+                        placeholder="What's on your mind?"
+                        :disabled="isLoading"
+                        :maxLength="1000"
+                        ref="editorRef"
+                        @input="validateDescription"
+                    />
 
-                    <!-- Media Upload -->
-                    <FormField v-slot="{ messages }" name="media">
-                        <FormItem>
-                            <FormLabel>Media</FormLabel>
-                            <FormControl>
-                                <FileUpload v-model="form.media" :maxFiles="4" accept="image/*"
-                                    :initialFiles="initialMedia" mode="edit" @change="handleMediaChange"
-                                    @error="handleUploadError" className="h-30" />
-                            </FormControl>
-                            <FormMessage>{{ mediaError }}</FormMessage>
-                            <FormDescription>
-                                Add up to 4 images. Maximum 5MB per image.
-                            </FormDescription>
-                        </FormItem>
-                    </FormField>
+                    <div class="flex items-center gap-2">
+                        <div class="flex-1">
+                            <FileUpload v-model="files" :maxFiles="4" accept="image/jpeg,image/png,image/gif"
+                                mode="edit" multiple @change="handleFilesChange" :initialFiles="initialMedia">
+                                <template #trigger>
+                                    <Button variant="outline" size="sm">
+                                        <ImageIcon class="h-4 w-4 mr-2" />
+                                        Add Images
+                                    </Button>
+                                </template>
+                            </FileUpload>
+                        </div>
+                    </div>
 
                     <!-- Media Preview -->
-                    <div v-if="form.media.length > 0" class="grid grid-cols-2 md:grid-cols-4 gap-4">
-                        <div v-for="(file, index) in mediaPreviews" :key="index" class="relative">
+                    <div v-if="files.length > 0" class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        <div v-for="(file, index) in previewUrls" :key="index" class="relative">
                             <AspectRatio ratio="{1}">
                                 <img :src="file" alt="Preview" class="rounded-md object-cover w-full h-full" />
                             </AspectRatio>
                             <Button variant="destructive" size="icon" class="absolute -top-2 -right-2 h-6 w-6"
-                                @click="removeMedia(index)">
+                                @click="removeFile(index)">
                                 <XIcon class="h-4 w-4" />
                             </Button>
                         </div>
@@ -71,7 +65,7 @@
                         <Button type="button" variant="outline" @click="handleCancel" :disabled="isLoading">
                             Cancel
                         </Button>
-                        <Button type="submit" :disabled="!isFormValid || isLoading">
+                        <Button type="submit" :disabled="!isValid || isLoading">
                             <Loader2Icon v-if="isLoading" class="mr-2 h-4 w-4 animate-spin" />
                             {{ isLoading ? "Saving..." : "Save Changes" }}
                         </Button>
@@ -119,6 +113,7 @@ import {
     AlertCircle,
     CheckCircleIcon,
     Loader2Icon,
+    ImageIcon,
 } from "lucide-vue-next";
 import {
     Card,
@@ -164,10 +159,8 @@ const currentPost = computed(() => postStore.currentPost);
 const editorRef = ref(null);
 
 // Form State
-const form = ref({
-    description: "",
-    media: [],
-});
+const description = ref("");
+const files = ref([]);
 
 // UI State
 const isLoading = ref(false);
@@ -176,49 +169,69 @@ const successMessage = ref("");
 const showUnsavedDialog = ref(false);
 const initialMedia = ref([]);
 const mediaPreviews = ref([]);
+const previewUrls = ref([]);
 const descriptionError = ref("");
 const mediaError = ref("");
 
 // Form Validation
-const { validateDescription } = useFormValidation();
+const validateDescription = () => {
+    const content = description.value.trim();
+    if (content.length === 0 && files.value.length === 0) {
+        descriptionError.value = "Post must have either text or images";
+    } else if (content.length > 1000) {
+        descriptionError.value = "Description must not exceed 1000 characters";
+    } else if (content.includes('```') && !content.match(/```[\w-]*\n[\s\S]*?\n```/g)) {
+        descriptionError.value = "Code blocks must specify a language";
+    } else {
+        descriptionError.value = "";
+    }
+};
 
-const isFormValid = computed(() => {
-    return form.value.description.trim().length > 0 && !descriptionError.value;
+const isValid = computed(() => {
+    return (
+        (description.value.trim().length > 0 || files.value.length > 0) &&
+        !descriptionError.value &&
+        !mediaError.value
+    );
 });
 
 const hasUnsavedChanges = computed(() => {
     if (!currentPost.value) return false;
-    
-    const contentChanged = form.value.description !== currentPost.value.content;
-    const mediaChanged = JSON.stringify(form.value.media) !== JSON.stringify(initialMedia.value);
-    
+
+    const contentChanged = description.value !== currentPost.value.content;
+    const mediaChanged = JSON.stringify(files.value) !== JSON.stringify(initialMedia.value);
+
     return contentChanged || mediaChanged;
 });
 
-const handleMediaChange = async (files) => {
+const handleFilesChange = async (newFiles) => {
     try {
-        if (files.length > 4) {
+        if (newFiles.length > 4) {
             mediaError.value = "Maximum 4 files allowed";
             return;
         }
 
         mediaError.value = "";
-        mediaPreviews.value = [];
+        previewUrls.value = [];
 
-        for (const file of files) {
+        for (const file of newFiles) {
             if (file.size > 5 * 1024 * 1024) {
                 mediaError.value = "Each file must be less than 5MB";
                 return;
             }
 
-            const reader = new FileReader();
-            reader.onload = (e) => {
-                mediaPreviews.value.push(e.target.result);
-            };
-            reader.readAsDataURL(file);
+            if (typeof file === 'string') {
+                previewUrls.value.push(file);
+            } else {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    previewUrls.value.push(e.target.result);
+                };
+                reader.readAsDataURL(file);
+            }
         }
 
-        form.value.media = files;
+        files.value = newFiles;
     } catch (err) {
         logger.error("Media change error:", err);
         mediaError.value = "Failed to process media files";
@@ -226,9 +239,9 @@ const handleMediaChange = async (files) => {
     }
 };
 
-const removeMedia = (index) => {
-    form.value.media = form.value.media.filter((_, i) => i !== index);
-    mediaPreviews.value = mediaPreviews.value.filter((_, i) => i !== index);
+const removeFile = (index) => {
+    files.value = files.value.filter((_, i) => i !== index);
+    previewUrls.value = previewUrls.value.filter((_, i) => i !== index);
 };
 
 const handleUploadError = (err) => {
@@ -245,11 +258,13 @@ const loadPostData = async () => {
         if (!post) throw new Error("Post not found");
 
         // Initialize form with post data
-        form.value.description = post.content || "";
+        description.value = post.content || "";
 
-        if (post.media?.length) {
-            initialMedia.value = post.media;
-            mediaPreviews.value = post.media.map((url) => url);
+        // Handle images
+        if (post.images?.length) {
+            initialMedia.value = post.images;
+            files.value = post.images;
+            previewUrls.value = post.images;
         }
 
         logger.debug("Post data loaded successfully");
@@ -264,50 +279,39 @@ const loadPostData = async () => {
 
 const handleSubmit = async () => {
     try {
-        if (!isFormValid.value) return;
+        if (!isValid.value) return;
 
         isLoading.value = true;
         error.value = "";
         successMessage.value = "";
 
-        // Validate content
-        const content = form.value.description.trim();
-        if (!content) {
-            error.value = "Post content cannot be empty";
-            return;
-        }
+        const content = description.value.trim();
+        const formData = new FormData();
+        formData.append('content', content);
 
-        const postData = {
-            content: content,
-            existingImages: [],
-            media: []
-        };
+        // Convert content to lowercase words array
+        const contentWords = content.toLowerCase().split(/\s+/).filter(Boolean);
+        contentWords.forEach(word => {
+            formData.append('contentLowerCase[]', word);
+        });
 
-        if (form.value.media.length > 0) {
-            form.value.media.forEach(file => {
-                // Nếu là URL (ảnh hiện có)
+        // Handle files
+        if (files.value?.length > 0) {
+            files.value.forEach((file) => {
                 if (typeof file === 'string' && file.startsWith('http')) {
-                    postData.existingImages.push(file);
+                    formData.append('existingImages[]', file);
                 } else {
-                    // Nếu là file mới
-                    postData.media.push(file);
+                    formData.append('images', file);
                 }
             });
         }
 
-        await postStore.updatePost(postId, postData);
+        await postStore.updatePost(postId, formData);
 
         successMessage.value = "Post updated successfully";
         toast({
-            title: "Success",
             description: "Post updated successfully",
         });
-        
-        // Clear the form and draft
-        form.value.description = '';
-        form.value.media = [];
-        mediaPreviews.value = [];
-        editorRef.value?.clearDraft();
 
         router.push({
             name: "PostDetail",
@@ -340,9 +344,9 @@ const closeUnsavedDialog = () => {
 
 const discardChanges = () => {
     showUnsavedDialog.value = false;
-    form.value.description = currentPost.value?.content || '';
-    form.value.media = [...initialMedia.value];
-    mediaPreviews.value = [...initialMedia.value];
+    description.value = currentPost.value?.content || "";
+    files.value = [...initialMedia.value];
+    previewUrls.value = [...initialMedia.value];
     router.back();
 };
 
