@@ -34,26 +34,31 @@ const reportLimiter = rateLimit({
  * /posts:
  *   post:
  *     summary: Create a new post
+ *     description: Create a new post with optional images
  *     tags: [Posts]
  *     security:
  *       - bearerAuth: []
  *     requestBody:
- *       description: Content and images for the post
  *       required: true
  *       content:
  *         multipart/form-data:
  *           schema:
  *             type: object
+ *             required:
+ *               - content
  *             properties:
  *               content:
  *                 type: string
- *                 example: "My new post content"
+ *                 minLength: 1
+ *                 maxLength: 1000
+ *                 description: Post content text
  *               images:
  *                 type: array
  *                 items:
  *                   type: string
  *                   format: binary
  *                 maxItems: 4
+ *                 description: Image files (JPG, PNG, GIF only, max 5MB each)
  *     responses:
  *       200:
  *         description: Post created successfully
@@ -70,31 +75,47 @@ const reportLimiter = rateLimit({
  *                   properties:
  *                     postId:
  *                       type: string
- *                       example: "abc123"
+ *                       example: "post_123abc"
  *       400:
- *         description: Validation error
+ *         description: Invalid input data
+ *       401:
+ *         description: Unauthorized
+ *       413:
+ *         description: File size too large
  */
 router.post('/', authenticateToken, upload.array('images', 4), postController.createPost);
 
 /**
  * @swagger
- * /posts/{postId}:
+ * /posts/get_list_posts:
  *   get:
- *     summary: Get a post by ID
+ *     summary: Get list of posts
+ *     description: Retrieve a paginated list of posts with optional filters
  *     tags: [Posts]
  *     security:
  *       - bearerAuth: []
  *     parameters:
- *       - in: path
- *         name: postId
- *         description: ID of the post to retrieve
- *         required: true
+ *       - in: query
+ *         name: userId
  *         schema:
  *           type: string
- *           example: "post123"
+ *         description: Filter posts by user ID
+ *       - in: query
+ *         name: lastVisible
+ *         schema:
+ *           type: string
+ *         description: Last post ID for pagination (Base64 encoded)
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           maximum: 100
+ *           default: 20
+ *         description: Number of posts to return
  *     responses:
  *       200:
- *         description: Post retrieved successfully
+ *         description: List of posts retrieved successfully
  *         content:
  *           application/json:
  *             schema:
@@ -102,56 +123,47 @@ router.post('/', authenticateToken, upload.array('images', 4), postController.cr
  *               properties:
  *                 code:
  *                   type: string
+ *                   example: "1000"
  *                 data:
  *                   type: object
  *                   properties:
- *                     postId:
- *                       type: string
- *                     content:
- *                       type: string
- *                     images:
+ *                     posts:
  *                       type: array
  *                       items:
- *                         type: string
- *                     userId:
+ *                         type: object
+ *                         properties:
+ *                           postId:
+ *                             type: string
+ *                           content:
+ *                             type: string
+ *                           images:
+ *                             type: array
+ *                             items:
+ *                               type: string
+ *                           created:
+ *                             type: string
+ *                             format: date-time
+ *                           likes:
+ *                             type: integer
+ *                           comments:
+ *                             type: integer
+ *                           isLiked:
+ *                             type: string
+ *                             enum: ["0", "1"]
+ *                           author:
+ *                             type: object
+ *                             properties:
+ *                               userId:
+ *                                 type: string
+ *                               userName:
+ *                                 type: string
+ *                               avatar:
+ *                                 type: string
+ *                     lastVisible:
  *                       type: string
- *                     createdAt:
- *                       type: string
- *                     updatedAt:
- *                       type: string
- *       404:
- *         description: Post not found
- */
-/**
- * @swagger
- * /posts/get_list_posts:
- *   get:
- *     summary: Get a list of posts with optional filters
- *     tags: [Posts]
- *     security:
- *       - bearerAuth: []
- *     parameters:
- *       - in: query
- *         name: userId
- *         description: Filter posts by userId
- *         schema:
- *           type: string
- *       - in: query
- *         name: lastVisible
- *         description: Base64 encoded lastVisible id for pagination
- *         schema:
- *           type: string
- *       - in: query
- *         name: limit
- *         description: Number of posts to return
- *         schema:
- *           type: integer
- *           default: 20
- *     responses:
- *       200:
- *         description: Posts retrieved successfully
- *       404:
- *         description: No posts found
+ *                       description: Base64 encoded ID for next page
+ *       401:
+ *         description: Unauthorized
  */
 router.get('/get_list_posts', authenticateToken, postController.getListPosts);
 
@@ -160,7 +172,8 @@ router.get('/get_list_posts', authenticateToken, postController.getListPosts);
  * @swagger
  * /posts/{postId}:
  *   get:
- *     summary: Get a post by ID
+ *     summary: Get a specific post
+ *     description: Retrieve detailed information about a specific post
  *     tags: [Posts]
  *     security:
  *       - bearerAuth: []
@@ -168,7 +181,6 @@ router.get('/get_list_posts', authenticateToken, postController.getListPosts);
  *       - in: path
  *         name: postId
  *         required: true
- *         description: ID of the post to retrieve
  *         schema:
  *           type: string
  *     responses:
@@ -183,49 +195,9 @@ router.get('/get_list_posts', authenticateToken, postController.getListPosts);
  *                   type: string
  *                   example: "1000"
  *                 data:
- *                   type: object
- *                   properties:
- *                     postId:
- *                       type: string
- *                       description: Post ID
- *                     content:
- *                       type: string
- *                       description: Post content
- *                     images:
- *                       type: array
- *                       items:
- *                         type: string
- *                       description: Array of image URLs
- *                     author:
- *                       type: object
- *                       properties:
- *                         userId:
- *                           type: string
- *                           description: Author's user ID
- *                         userName:
- *                           type: string
- *                           description: Author's username
- *                         avatar:
- *                           type: string
- *                           description: Author's avatar URL
- *                     created:
- *                       type: string
- *                       format: date-time
- *                       description: Post creation timestamp
- *                     likes:
- *                       type: integer
- *                       description: Number of likes
- *                     comments:
- *                       type: integer
- *                       description: Number of comments
- *                     isLiked:
- *                       type: string
- *                       enum: ["0", "1"]
- *                       description: Whether the current user has liked the post
+ *                   $ref: '#/components/schemas/Post'
  *       404:
  *         description: Post not found
- *       401:
- *         description: Unauthorized - Invalid or missing token
  */
 router.get('/:postId', authenticateToken, postController.getPost);
 
@@ -233,38 +205,44 @@ router.get('/:postId', authenticateToken, postController.getPost);
  * @swagger
  * /posts/{postId}:
  *   patch:
- *     summary: Update a post by ID
+ *     summary: Update a post
+ *     description: Update post content and/or images
  *     tags: [Posts]
  *     security:
  *       - bearerAuth: []
  *     parameters:
  *       - in: path
  *         name: postId
- *         description: ID of the post to update
  *         required: true
  *         schema:
  *           type: string
- *           example: "post123"
  *     requestBody:
- *       description: Updated content and/or images
  *       required: true
  *       content:
  *         multipart/form-data:
  *           schema:
  *             type: object
+ *             required:
+ *               - content
  *             properties:
  *               content:
  *                 type: string
- *                 example: "Updated post content"
+ *                 minLength: 1
+ *                 maxLength: 1000
  *               images:
  *                 type: array
  *                 items:
  *                   type: string
  *                   format: binary
- *                 maxItems: 4
+ *               existingImages:
+ *                 type: array
+ *                 items:
+ *                   type: string
  *     responses:
  *       200:
  *         description: Post updated successfully
+ *       400:
+ *         description: Invalid input data
  *       403:
  *         description: Not authorized to update this post
  *       404:
@@ -276,18 +254,17 @@ router.patch('/:postId', authenticateToken, upload.array('images', 4), postContr
  * @swagger
  * /posts/{postId}:
  *   delete:
- *     summary: Delete a post by ID
+ *     summary: Delete a post
+ *     description: Delete a post and all associated data
  *     tags: [Posts]
  *     security:
  *       - bearerAuth: []
  *     parameters:
  *       - in: path
  *         name: postId
- *         description: ID of the post to delete
  *         required: true
  *         schema:
  *           type: string
- *           example: "post123"
  *     responses:
  *       200:
  *         description: Post deleted successfully
@@ -303,31 +280,55 @@ router.delete('/:postId', authenticateToken, postController.deletePost);
  * /posts/{postId}/comment:
  *   post:
  *     summary: Add a comment to a post
+ *     description: Create a new comment on a specific post
  *     tags: [Posts]
  *     security:
  *       - bearerAuth: []
  *     parameters:
  *       - in: path
  *         name: postId
- *         description: ID of the post to comment on
  *         required: true
  *         schema:
  *           type: string
- *           example: "post123"
  *     requestBody:
- *       description: Comment content
  *       required: true
  *       content:
  *         application/json:
  *           schema:
  *             type: object
+ *             required:
+ *               - content
  *             properties:
  *               content:
  *                 type: string
- *                 example: "Nice post!"
+ *                 maxLength: 500
  *     responses:
  *       200:
  *         description: Comment added successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 code:
+ *                   type: string
+ *                   example: "1000"
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     commentId:
+ *                       type: string
+ *                     user:
+ *                       type: object
+ *                       properties:
+ *                         userId:
+ *                           type: string
+ *                         userName:
+ *                           type: string
+ *                         avatar:
+ *                           type: string
+ *       400:
+ *         description: Invalid comment content
  *       404:
  *         description: Post not found
  */
@@ -337,32 +338,75 @@ router.post('/:postId/comment', authenticateToken, postController.addComment);
  * @swagger
  * /posts/user/{userId}:
  *   get:
- *     summary: Get posts created by a specific user
+ *     summary: Get posts by user
+ *     description: Retrieve paginated list of posts created by a specific user
  *     tags: [Posts]
  *     security:
  *       - bearerAuth: []
  *     parameters:
  *       - in: path
  *         name: userId
- *         description: ID of the user whose posts to retrieve
  *         required: true
  *         schema:
  *           type: string
- *           example: "user123"
+ *         description: ID of the user whose posts to retrieve
  *       - in: query
  *         name: limit
- *         description: Number of posts to return
  *         schema:
  *           type: integer
+ *           minimum: 1
+ *           maximum: 100
  *           default: 20
+ *         description: Number of posts to return
  *       - in: query
  *         name: lastVisible
- *         description: Base64 encoded lastVisible id for pagination
  *         schema:
  *           type: string
+ *         description: Base64 encoded last post ID for pagination
  *     responses:
  *       200:
  *         description: User's posts retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 code:
+ *                   type: string
+ *                   example: "1000"
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     posts:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                         properties:
+ *                           postId:
+ *                             type: string
+ *                           content:
+ *                             type: string
+ *                           images:
+ *                             type: array
+ *                             items:
+ *                               type: string
+ *                           created:
+ *                             type: string
+ *                             format: date-time
+ *                           likes:
+ *                             type: integer
+ *                           comments:
+ *                             type: integer
+ *                           isLiked:
+ *                             type: string
+ *                             enum: ["0", "1"]
+ *                     lastVisible:
+ *                       type: string
+ *                       description: Base64 encoded ID for next page
+ *       401:
+ *         description: Unauthorized
+ *       404:
+ *         description: User not found
  */
 router.get('/user/:userId', authenticateToken, postController.getUserPosts);
 
@@ -371,38 +415,39 @@ router.get('/user/:userId', authenticateToken, postController.getUserPosts);
  * /posts/{postId}/report-post:
  *   post:
  *     summary: Report a post
+ *     description: Submit a report for inappropriate content
  *     tags: [Posts]
  *     security:
  *       - bearerAuth: []
  *     parameters:
  *       - in: path
  *         name: postId
- *         description: ID of the post to report
  *         required: true
  *         schema:
  *           type: string
- *           example: "post123"
  *     requestBody:
- *       description: Reason for reporting and additional details
  *       required: true
  *       content:
  *         application/json:
  *           schema:
  *             type: object
- *             required: [reason]
+ *             required:
+ *               - reason
  *             properties:
  *               reason:
  *                 type: string
  *                 enum: [spam, inappropriateContent, harassment, hateSpeech, violence, other]
- *                 example: "spam"
  *               details:
  *                 type: string
- *                 example: "This post is spamming links."
+ *                 maxLength: 500
+ *                 description: Required when reason is 'other'
  *     responses:
  *       200:
  *         description: Report submitted successfully
- *       404:
- *         description: Post not found
+ *       400:
+ *         description: Invalid report data
+ *       429:
+ *         description: Too many reports submitted
  */
 router.post('/:postId/report-post', authenticateToken, reportLimiter, postController.reportPost);
 
@@ -410,21 +455,35 @@ router.post('/:postId/report-post', authenticateToken, reportLimiter, postContro
  * @swagger
  * /posts/{postId}/like:
  *   post:
- *     summary: Toggle like status on a post
+ *     summary: Toggle like on a post
+ *     description: Like or unlike a post
  *     tags: [Posts]
  *     security:
  *       - bearerAuth: []
  *     parameters:
  *       - in: path
  *         name: postId
- *         description: ID of the post to like/unlike
  *         required: true
  *         schema:
  *           type: string
- *           example: "post123"
  *     responses:
  *       200:
  *         description: Like status updated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 code:
+ *                   type: string
+ *                   example: "1000"
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     liked:
+ *                       type: boolean
+ *                     likeCount:
+ *                       type: integer
  *       404:
  *         description: Post not found
  */
@@ -434,34 +493,67 @@ router.post('/:postId/like', authenticateToken, postController.toggleLike);
  * @swagger
  * /posts/{postId}/comments:
  *   get:
- *     summary: Get comments for a post
+ *     summary: Get post comments
+ *     description: Retrieve paginated list of comments for a post
  *     tags: [Posts]
  *     security:
  *       - bearerAuth: []
  *     parameters:
  *       - in: path
  *         name: postId
- *         description: Post ID to fetch comments for
  *         required: true
  *         schema:
  *           type: string
- *           example: "post123"
  *       - in: query
  *         name: limit
- *         description: Number of comments to return
  *         schema:
  *           type: integer
  *           default: 20
+ *         description: Number of comments to return
  *       - in: query
  *         name: lastVisible
- *         description: Base64 encoded lastVisible id for pagination
  *         schema:
  *           type: string
+ *         description: Last comment ID for pagination
  *     responses:
  *       200:
  *         description: Comments retrieved successfully
- *       404:
- *         description: No comments found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 code:
+ *                   type: string
+ *                   example: "1000"
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     comments:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                         properties:
+ *                           commentId:
+ *                             type: string
+ *                           content:
+ *                             type: string
+ *                           created:
+ *                             type: string
+ *                             format: date-time
+ *                           user:
+ *                             type: object
+ *                             properties:
+ *                               userId:
+ *                                 type: string
+ *                               userName:
+ *                                 type: string
+ *                               avatar:
+ *                                 type: string
+ *                     lastVisible:
+ *                       type: string
+ *                     totalComments:
+ *                       type: integer
  */
 router.get('/:postId/comments', authenticateToken, postController.getComments);
 

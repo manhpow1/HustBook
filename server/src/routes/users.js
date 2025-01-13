@@ -28,23 +28,23 @@ const upload = multer({
 const router = Router();
 /**
  * @swagger
- * /users/get_user_info/{userId}:
+ * /users/profile/{userId}:
  *   get:
- *     summary: Get user information by ID
- *     tags: [User]
+ *     summary: Get user profile
+ *     description: Retrieve detailed profile information for a user
+ *     tags: [Users]
  *     security:
  *       - bearerAuth: []
  *     parameters:
  *       - in: path
  *         name: userId
- *         description: The user ID (optional). If not provided, the current user's info is returned.
- *         required: false
  *         schema:
  *           type: string
- *           example: "some-user-id"
+ *         required: false
+ *         description: User ID (if not provided, returns current user's profile)
  *     responses:
  *       200:
- *         description: User information retrieved successfully
+ *         description: User profile retrieved successfully
  *         content:
  *           application/json:
  *             schema:
@@ -56,82 +56,57 @@ const router = Router();
  *                 data:
  *                   type: object
  *                   properties:
- *                     userId:
- *                       type: string
- *                     userName:
- *                       type: string
- *                     created:
- *                       type: string
- *                       format: date-time
- *                     description:
- *                       type: string
- *                     avatar:
- *                       type: string
- *                     cover_image:
- *                       type: string
- *                     link:
- *                       type: string
- *                     address:
- *                       type: string
- *                     city:
- *                       type: string
- *                     country:
- *                       type: string
- *                     listing:
- *                       type: string
- *                       description: Number of friends
- *                     isFriend:
- *                       type: string
- *                       enum: ["0", "1"]
- *                     online:
- *                       type: string
- *                       enum: ["0", "1"]
- *       400:
- *         description: Validation error or missing parameters
- *       404:
- *         description: User not found
- */
-/**
- * @swagger
- * /users/profile/{userId}:
- *   get:
- *     summary: Get user profile by ID
- *     tags: [User]
- *     security:
- *       - bearerAuth: []
- *     parameters:
- *       - in: path
- *         name: userId
- *         description: The user ID (optional). If not provided, returns current user's profile
- *         required: false
- *         schema:
- *           type: string
- *     responses:
- *       200:
- *         description: Profile retrieved successfully
+ *                     user:
+ *                       type: object
+ *                       properties:
+ *                         userId:
+ *                           type: string
+ *                         userName:
+ *                           type: string
+ *                         avatar:
+ *                           type: string
+ *                         coverPhoto:
+ *                           type: string
+ *                         bio:
+ *                           type: string
+ *                         address:
+ *                           type: string
+ *                         city:
+ *                           type: string
+ *                         country:
+ *                           type: string
+ *                         createdAt:
+ *                           type: string
+ *                           format: date-time
+ *                         friendsCount:
+ *                           type: integer
+ *                         postsCount:
+ *                           type: integer
+ *                         isVerified:
+ *                           type: boolean
+ *                         lastSeen:
+ *                           type: string
+ *                           format: date-time
+ *                         online:
+ *                           type: boolean
+ *                         version:
+ *                           type: integer
+ *       401:
+ *         description: Unauthorized - Invalid token
  *       404:
  *         description: User not found
  */
 router.get('/profile/:userId?', authenticateToken, userController.getUserInfo);
-
-// Legacy endpoint maintained for backward compatibility
-// router.get('/get_user_info/:userId?', authenticateToken, userController.getUserInfo);
 
 /**
  * @swagger
  * /users/profile/{userId}:
  *   put:
  *     summary: Update user profile
+ *     description: Update user profile information including avatar and cover photo
  *     tags: [Users]
  *     security:
  *       - bearerAuth: []
- *     parameters:
- *       - in: path
- *         name: userId
- *         required: true
- *         schema:
- *           type: string
- *         description: User ID
  *     requestBody:
  *       required: true
  *       content:
@@ -141,14 +116,21 @@ router.get('/profile/:userId?', authenticateToken, userController.getUserInfo);
  *             properties:
  *               userName:
  *                 type: string
+ *                 minLength: 3
+ *                 maxLength: 30
+ *                 pattern: ^[a-zA-ZÀ-ỹ0-9\s,.-]*$
  *               bio:
  *                 type: string
+ *                 maxLength: 200
  *               address:
  *                 type: string
+ *                 maxLength: 100
  *               city:
- *                 type: string  
+ *                 type: string
+ *                 maxLength: 50
  *               country:
  *                 type: string
+ *                 maxLength: 50
  *               avatar:
  *                 type: string
  *                 format: binary
@@ -158,12 +140,37 @@ router.get('/profile/:userId?', authenticateToken, userController.getUserInfo);
  *     responses:
  *       200:
  *         description: Profile updated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 code:
+ *                   type: string
+ *                   example: "1000"
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     message:
+ *                       type: string
+ *                       example: "Profile updated successfully"
+ *                     user:
+ *                       type: object
+ *                       properties:
+ *                         userId:
+ *                           type: string
+ *                         userName:
+ *                           type: string
+ *                         avatar:
+ *                           type: string
+ *                         version:
+ *                           type: integer
  *       400:
- *         description: Invalid request
+ *         description: Invalid input data
  *       401:
  *         description: Unauthorized
- *       404:
- *         description: User not found
+ *       413:
+ *         description: File size too large
  */
 router.put('/profile/:userId', authenticateToken, upload.fields([ { name: 'avatar', maxCount: 1 }, { name: 'coverPhoto', maxCount: 1 }]), userController.setUserInfo );
 
@@ -171,25 +178,27 @@ router.put('/profile/:userId', authenticateToken, upload.fields([ { name: 'avata
  * @swagger
  * /users/change_password:
  *   put:
- *     summary: Change the authenticated user's password
- *     tags: [User]
+ *     summary: Change user password
+ *     description: Change the authenticated user's password
+ *     tags: [Users]
  *     security:
  *       - bearerAuth: []
  *     requestBody:
- *       description: Current and new password
  *       required: true
  *       content:
  *         application/json:
  *           schema:
  *             type: object
- *             required: [password, new_password]
+ *             required:
+ *               - password
+ *               - new_password
  *             properties:
  *               password:
  *                 type: string
- *                 example: "CurrentPass1"
+ *                 description: Current password
  *               new_password:
  *                 type: string
- *                 example: "NewPass1"
+ *                 description: New password (must meet strength requirements)
  *     responses:
  *       200:
  *         description: Password changed successfully
@@ -206,11 +215,11 @@ router.put('/profile/:userId', authenticateToken, upload.fields([ { name: 'avata
  *                   properties:
  *                     message:
  *                       type: string
- *                       example: "Password changed successfully."
+ *                       example: "Password changed successfully"
  *       400:
- *         description: Validation error or new password same as current
- *       404:
- *         description: User not found
+ *         description: Invalid password format or same as old password
+ *       401:
+ *         description: Current password incorrect
  */
 router.put('/change_password', authenticateToken, userController.changePassword);
 
@@ -219,30 +228,31 @@ router.put('/change_password', authenticateToken, userController.changePassword)
  * /users/set_block:
  *   put:
  *     summary: Block or unblock a user
- *     tags: [User]
+ *     description: Toggle block status for another user
+ *     tags: [Users]
  *     security:
  *       - bearerAuth: []
  *     requestBody:
- *       description: Specify which user to block/unblock
  *       required: true
  *       content:
  *         application/json:
  *           schema:
  *             type: object
- *             required: [userId, type]
+ *             required:
+ *               - userId
+ *               - type
  *             properties:
  *               userId:
  *                 type: string
  *                 format: uuid
- *                 example: "b3d4f7e4-c111-4d54-b44b-123456789abc"
+ *                 description: ID of the user to block/unblock
  *               type:
- *                 type: integer
+ *                 type: number
  *                 enum: [0, 1]
  *                 description: 0 to block, 1 to unblock
- *                 example: 0
  *     responses:
  *       200:
- *         description: Block/unblock operation successful
+ *         description: Block status updated successfully
  *         content:
  *           application/json:
  *             schema:
@@ -256,13 +266,15 @@ router.put('/change_password', authenticateToken, userController.changePassword)
  *                   properties:
  *                     message:
  *                       type: string
- *                       example: "User blocked successfully."
+ *                       example: "User blocked successfully"
  *       400:
- *         description: Validation error
+ *         description: Invalid input
+ *       401:
+ *         description: Unauthorized
  *       403:
- *         description: Attempt to block self
- *       404:
- *         description: User not found
+ *         description: Cannot block yourself
+ *       429:
+ *         description: Too many block requests
  */
 router.put('/set_block', authenticateToken, setBlockLimiter, userController.setBlock);
 
@@ -270,13 +282,14 @@ router.put('/set_block', authenticateToken, setBlockLimiter, userController.setB
  * @swagger
  * /users/status:
  *   get:
- *     summary: Check the authenticated user's status
- *     tags: [User]
+ *     summary: Get user status
+ *     description: Get current user's status including notifications and messages
+ *     tags: [Users]
  *     security:
  *       - bearerAuth: []
  *     responses:
  *       200:
- *         description: User status retrieved successfully
+ *         description: Status retrieved successfully
  *         content:
  *           application/json:
  *             schema:
@@ -298,13 +311,15 @@ router.put('/set_block', authenticateToken, setBlockLimiter, userController.setB
  *                           enum: ["0", "1"]
  *                     badge:
  *                       type: string
- *                       example: "0"
+ *                       description: Number of unread notifications
  *                     unread_message:
  *                       type: string
- *                       example: "0"
+ *                       description: Number of unread messages
  *                     now:
  *                       type: string
  *                       format: date-time
+ *       401:
+ *         description: Unauthorized
  *       404:
  *         description: User not found
  */
