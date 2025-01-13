@@ -124,6 +124,7 @@ import { ref, computed, onMounted, watch } from "vue";
 import { useRouter } from "vue-router";
 import { useToast } from "@/components/ui/toast";
 import { useFriendStore } from "@/stores/friendStore";
+import { useUserStore } from "@/stores/userStore";
 import { useDebounce } from "@/composables/useDebounce";
 import {
     AlertCircleIcon,
