@@ -106,7 +106,7 @@ class SearchController {
                 data: savedSearches.map(search => ({
                     id: search.id,
                     keyword: search.keyword,
-                    created: search.created.toISOString(),
+                    created: search.created instanceof Date ? search.created.toISOString() : search.created,
                 })),
             });
         } catch (error) {
