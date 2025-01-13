@@ -139,7 +139,7 @@
                     <CardTitle>Posts</CardTitle>
                     <div class="flex items-center space-x-2">
                       <Input v-model="postSearchQuery" placeholder="Search posts..." class="max-w-sm" />
-                      <Button variant="outline" @click="searchStore.searchPosts">
+                      <Button variant="outline" @click="() => searchStore.searchPosts({ keyword: postSearchQuery })">
                         <Search class="h-4 w-4" />
                       </Button>
                     </div>
