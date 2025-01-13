@@ -150,17 +150,10 @@ import { AspectRatio } from "@/components/ui/aspect-ratio";
 import MarkdownEditor from "@/components/shared/MarkdownEditor.vue";
 import FileUpload from "@/components/shared/FileUpload.vue";
 
-// Props & Route
-const props = defineProps({
-    postId: {
-        type: String,
-        required: true,
-    },
-});
-
 // Router & Store Setup
 const router = useRouter();
 const route = useRoute();
+const postId = route.params.postId;
 const postStore = usePostStore();
 const { toast } = useToast();
 const { handleError } = useErrorHandler();
@@ -195,10 +188,11 @@ const isFormValid = computed(() => {
 
 const hasUnsavedChanges = computed(() => {
     if (!currentPost.value) return false;
-    return (
-        form.value.description !== currentPost.value.content ||
-        form.value.media.length !== initialMedia.value.length
-    );
+    
+    const contentChanged = form.value.description !== currentPost.value.content;
+    const mediaChanged = JSON.stringify(form.value.media) !== JSON.stringify(initialMedia.value);
+    
+    return contentChanged || mediaChanged;
 });
 
 const handleMediaChange = async (files) => {
@@ -247,7 +241,7 @@ const loadPostData = async () => {
         isLoading.value = true;
         error.value = "";
 
-        const post = await postStore.fetchPost(props.postId);
+        const post = await postStore.fetchPost(postId);
         if (!post) throw new Error("Post not found");
 
         // Initialize form with post data
@@ -301,7 +295,7 @@ const handleSubmit = async () => {
             });
         }
 
-        await postStore.updatePost(props.postId, postData);
+        await postStore.updatePost(postId, postData);
 
         successMessage.value = "Post updated successfully";
         toast({
@@ -317,7 +311,7 @@ const handleSubmit = async () => {
 
         router.push({
             name: "PostDetail",
-            params: { postId: props.postId },
+            params: { postId },
         });
     } catch (err) {
         error.value = err.message || "Failed to update post";
@@ -346,7 +340,10 @@ const closeUnsavedDialog = () => {
 
 const discardChanges = () => {
     showUnsavedDialog.value = false;
-    router.push('/');
+    form.value.description = currentPost.value?.content || '';
+    form.value.media = [...initialMedia.value];
+    mediaPreviews.value = [...initialMedia.value];
+    router.back();
 };
 
 // Lifecycle Hooks
@@ -360,7 +357,7 @@ onBeforeUnmount(() => {
 
 // Route Guard
 const handleBeforeRouteLeave = (to, from, next) => {
-    if (hasUnsavedChanges.value) {
+    if (hasUnsavedChanges.value && !showUnsavedDialog.value) {
         showUnsavedDialog.value = true;
         next(false);
     } else {
@@ -368,7 +365,13 @@ const handleBeforeRouteLeave = (to, from, next) => {
     }
 };
 
-router.beforeEach(handleBeforeRouteLeave);
+onMounted(() => {
+    router.beforeEach(handleBeforeRouteLeave);
+});
+
+onBeforeUnmount(() => {
+    router.beforeEach(() => true); // Clean up route guard
+});
 </script>
 
 <style scoped>

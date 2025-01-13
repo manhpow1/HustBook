@@ -9,10 +9,10 @@
                 </DialogClose>
 
                 <!-- Media Content -->
-                <div v-if="currentMedia.type === 'image'" class="flex items-center justify-center">
+                <div v-if="currentMedia.type === 'image'" class="flex items-center justify-center h-screen">
                     <img :src="currentMedia.url"
                         :alt="currentMedia.alt || 'Post Media'"
-                        class="max-w-full max-h-[90vh] object-contain transition-transform duration-300 group-hover:scale-105" 
+                        class="w-auto h-auto max-w-[90vw] max-h-[90vh] object-contain transition-transform duration-300 group-hover:scale-105" 
                         loading="lazy" 
                         @click="handleImageClick" />
                 </div>
