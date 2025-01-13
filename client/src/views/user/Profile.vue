@@ -303,6 +303,16 @@ const friendStore = useFriendStore();
 const postStore = usePostStore();
 const { toast } = useToast();
 const { handleError } = useErrorHandler();
+const props = defineProps({
+    limit: {
+        type: Number,
+        default: 20
+    },
+    index: {
+        type: Number,
+        default: 0
+    }
+});
 
 // States
 const loading = ref(true);
