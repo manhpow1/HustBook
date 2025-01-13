@@ -37,7 +37,7 @@ class FriendController {
                 throw createError('1002', 'User not authenticated');
             }
             
-            console.log('getUserFriends controller - Input params:', {
+            logger.debug('getUserFriends controller - Input params:', {
                 userId: req.user.userId,
                 count: parseInt(count),
                 index: parseInt(index)
