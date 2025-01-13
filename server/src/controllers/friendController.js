@@ -49,7 +49,7 @@ class FriendController {
 
             sendResponse(res, '1000', {
                 friends: result.friends,
-                total: result.total.toString(),                
+                total: result.total.toString(),
             });
         } catch (error) {
             next(error);

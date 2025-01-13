@@ -72,7 +72,7 @@ class FriendService {
             const friendsRef = db.collection(collections.friends)
                 .doc(userId)
                 .collection('userFriends');
-    
+
             const snapshot = await friendsRef.count().get();
             return snapshot.data().count;
         } catch (error) {
@@ -95,7 +95,7 @@ class FriendService {
                 .limit(count);
 
             const snapshot = await friendsRef.get();
-            
+
             // Return empty array if no friends
             if (snapshot.empty) {
                 return {
@@ -106,7 +106,7 @@ class FriendService {
 
             // Get user documents for each friend
             const userDocs = await Promise.all(
-                snapshot.docs.map(doc => 
+                snapshot.docs.map(doc =>
                     db.collection(collections.users).doc(doc.id).get()
                 )
             );
@@ -125,7 +125,7 @@ class FriendService {
             const friends = snapshot.docs.map(doc => {
                 const friendData = doc.data();
                 const userData = userMap.get(doc.id) || {};
-                
+
                 return {
                     userId: doc.id,
                     userName: userData.userName || '',
@@ -217,10 +217,10 @@ class FriendService {
             const mutualFriendsPromises = [];
 
             for (const userDoc of usersRef.docs) {
-                if (!userFriendIds.has(userDoc.userId)) {
+                if (!userFriendIds.has(userDoc.id)) {
                     const mutualFriendsPromise = async () => {
                         const theirFriendsRef = await db.collection(collections.friends)
-                            .doc(userDoc.userId)
+                            .doc(userDoc.id)
                             .collection('userFriends')
                             .get();
 
@@ -233,13 +233,11 @@ class FriendService {
                             mutualFriends,
                         };
                     };
-
                     mutualFriendsPromises.push(mutualFriendsPromise());
                 }
             }
 
             const mutualFriendsResults = await Promise.all(mutualFriendsPromises);
-
             mutualFriendsResults.sort((a, b) => b.mutualFriends - a.mutualFriends);
 
             for (const result of mutualFriendsResults) {
