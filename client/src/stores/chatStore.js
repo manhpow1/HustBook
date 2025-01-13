@@ -131,21 +131,21 @@ export const useChatStore = defineStore('chat', {
             try {
                 const { index = 0, count = 20 } = options;
                 logger.debug('Fetching messages:', { conversationId, index, count });
-                
-                const lastMessageId = this.messages.length > 0 ? 
-                    this.messages[this.messages.length - 1].messageId : 
+
+                const lastMessageId = this.messages.length > 0 ?
+                    this.messages[this.messages.length - 1].messageId :
                     null;
 
-                console.debug('Fetching messages:', { 
-                    conversationId, 
-                    index, 
+                console.debug('Fetching messages:', {
+                    conversationId,
+                    index,
                     count,
-                    lastMessageId 
+                    lastMessageId
                 });
 
                 this.selectedConversationId = conversationId;
                 const response = await apiService.getConversationMessages(
-                    conversationId, 
+                    conversationId,
                     { index, count, lastMessageId }
                 );
 
@@ -179,9 +179,9 @@ export const useChatStore = defineStore('chat', {
                     }));
 
                     if (options.append) {
-                        this.messages = [...this.messages, ...processedMessages];
+                        this.messages = [...this.messages, ...processedMessages.reverse()];
                     } else {
-                        this.messages = processedMessages;
+                        this.messages = processedMessages.reverse();
                     }
                 } else {
                     throw new Error(response.data.message || 'Failed to load messages');
