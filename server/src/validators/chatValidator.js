@@ -21,7 +21,8 @@ const getListConversationSchema = Joi.object({
 });
 
 const getConversationSchema = Joi.object({
-    ...paginationSchema
+    ...paginationSchema,
+    lastMessageId: Joi.string().optional()
 });
 
 const setReadMessageSchema = Joi.object({

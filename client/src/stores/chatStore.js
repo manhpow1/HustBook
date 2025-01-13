@@ -125,19 +125,41 @@ export const useChatStore = defineStore('chat', {
             }
         },
 
-        async fetchMessages(conversationId, index = 0, count = 20) {
+        async fetchMessages(conversationId, options = {}) {
             this.loadingMessages = true;
             const { toast } = useToast();
             try {
-                console.debug('Fetching messages:', { conversationId, index, count });
+                const { index = 0, count = 20 } = options;
+                const lastMessageId = this.messages.length > 0 ? 
+                    this.messages[this.messages.length - 1].messageId : 
+                    null;
+
+                console.debug('Fetching messages:', { 
+                    conversationId, 
+                    index, 
+                    count,
+                    lastMessageId 
+                });
+
                 this.selectedConversationId = conversationId;
-                const response = await apiService.getConversationMessages(conversationId, { index, count });
+                const response = await apiService.getConversationMessages(
+                    conversationId, 
+                    { index, count, lastMessageId }
+                );
+
                 console.debug('Messages response:', {
                     code: response.data.code,
                     messageCount: response.data.data?.length || 0
                 });
+
                 if (response.data.code === '1000') {
-                    this.messages = response.data.data || [];
+                    // Append new messages to existing ones for infinite scroll
+                    const newMessages = response.data.data || [];
+                    if (options.append) {
+                        this.messages = [...this.messages, ...newMessages];
+                    } else {
+                        this.messages = newMessages;
+                    }
                 } else {
                     throw new Error(response.data.message || 'Failed to load messages');
                 }

@@ -50,7 +50,7 @@ class ChatController {
         }
     }
 
-    async getConversation(req, res, next) {
+    async getConversationMessages(req, res, next) {
         try {
             const conversationId = req.params.conversationId;
             if (!conversationId) {
@@ -63,18 +63,39 @@ class ChatController {
                 throw createError('1002', messages);
             }
 
-            const { index, count } = value;
+            const { index, count, lastMessageId } = value;
             const userId = req.user.userId;
 
-            const messagesData = await chatService.getConversation(userId, {
+            logger.debug('Fetching messages:', {
                 conversationId,
+                userId,
                 index,
-                count
+                count,
+                lastMessageId
             });
 
-            sendResponse(res, '1000', { data: messagesData });
+            const messagesData = await chatService.getConversationMessage(userId, {
+                conversationId,
+                index,
+                count,
+                lastMessageId
+            });
+
+            logger.debug('Messages retrieved:', {
+                count: messagesData.length,
+                firstMessageId: messagesData[0]?.messageId,
+                lastMessageId: messagesData[messagesData.length - 1]?.messageId
+            });
+
+            sendResponse(res, '1000', {
+                data: messagesData,
+                pagination: {
+                    hasMore: messagesData.length === count,
+                    lastMessageId: messagesData[messagesData.length - 1]?.messageId
+                }
+            });
         } catch (err) {
-            logger.error('Error in getConversation controller:', err);
+            logger.error('Error in getConversationMessages controller:', err);
             next(err);
         }
     }

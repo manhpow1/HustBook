@@ -260,7 +260,7 @@ router.post('/conversations', authenticateToken, chatController.createConversati
  *       404:
  *         description: Conversation or messages not found
  */
-router.get('/conversations/:conversationId/messages', authenticateToken, chatController.getConversation);
+router.get('/conversations/:conversationId/messages', authenticateToken, chatController.getConversationMessages);
 
 /**
  * @swagger

@@ -341,12 +341,14 @@ class ChatService {
         }
     }
 
-    async getConversation(userId, options) {
+    async getConversationMessage(userId, options) {
         try {
+            const { conversationId, partnerId, index = 0, count = 20, lastMessageId } = options;
             let convRef;
 
-            if (options.conversationId) {
-                const convDoc = await db.collection('conversations').doc(options.conversationId).get();
+            // Get conversation reference
+            if (conversationId) {
+                const convDoc = await db.collection('conversations').doc(conversationId).get();
                 if (!convDoc.exists) {
                     throw createError('9994', 'No data or end of list data');
                 }
@@ -356,11 +358,11 @@ class ChatService {
                 if (!data.participants.includes(userId)) {
                     throw createError('1009', 'Not authorized');
                 }
-            }
-            else if (options.partnerId) {
-                const participants = [userId, options.partnerId].sort();
+            } else if (partnerId) {
+                const participants = [userId, partnerId].sort();
                 const convSnapshot = await db.collection(collections.conversations)
                     .where('participants', '==', participants)
+                    .offset(index)
                     .limit(1)
                     .get();
 
@@ -368,55 +370,48 @@ class ChatService {
                     return [];
                 }
                 convRef = convSnapshot.docs[0].ref;
-            }
-            else {
+            } else {
                 throw createError('1002', 'Either conversationId or partnerId must be provided');
             }
 
-            // Get partnerId from conversation data
+            // Get conversation data
             const convData = await convRef.get();
-            const partnerId = convData.data().participants.find(p => p !== userId);
+            const conversationPartnerId = convData.data().participants.find(p => p !== userId);
 
-            const isUserBlocked = await userService.isUserBlocked(userId, partnerId);
+            // Check if user is blocked
+            const isUserBlocked = await userService.isUserBlocked(userId, conversationPartnerId);
             const isBlocked = isUserBlocked ? '1' : '0';
 
-            const { index = 0, count = 20 } = options;
+            // Build query
             let messagesQuery = convRef.collection('messages')
-                .orderBy('createdAt', 'asc')
-                .offset(index)
-                .limit(count);
+                .orderBy('createdAt', 'desc');
 
+            if (lastMessageId) {
+                const lastMessageDoc = await convRef.collection('messages').doc(lastMessageId).get();
+                if (lastMessageDoc.exists) {
+                    messagesQuery = messagesQuery.startAfter(lastMessageDoc);
+                }
+            }
+
+            messagesQuery = messagesQuery.limit(count);
+
+            // Execute query
             const messagesSnapshot = await messagesQuery.get();
             if (messagesSnapshot.empty) {
                 return [];
             }
 
+            // Get sender data
             const senderIds = new Set();
             messagesSnapshot.docs.forEach(doc => {
                 const data = doc.data();
                 senderIds.add(data.senderId);
             });
 
-            const senderIdList = Array.from(senderIds);
-            const senderDataMap = new Map();
-            if (senderIdList.length > 0) {
-                const chunks = [];
-                for (let i = 0; i < senderIdList.length; i += 10) {
-                    chunks.push(senderIdList.slice(i, i + 10));
-                }
-                for (const chunk of chunks) {
-                    const usersSnap = await db.collection(collections.users)
-                        .where('__name__', 'in', chunk)
-                        .get();
-                    for (const userDoc of usersSnap.docs) {
-                        senderDataMap.set(userDoc.id, userDoc.data());
-                    }
-                }
-            }
+            const senderDataMap = await this._fetchPartnerUsers(Array.from(senderIds));
 
-            const readMessages = [];
-            const unreadMessages = [];
-
+            // Process messages
+            const messages = [];
             for (const doc of messagesSnapshot.docs) {
                 const data = doc.data();
                 const senderId = data.senderId;
@@ -425,24 +420,21 @@ class ChatService {
                 const messageModel = new Message({
                     message: data.text || '',
                     messageId: doc.id,
-                    unread: data.unreadBy && data.unreadBy.includes(userId) ? '1' : '0',
-                    created: data.createdAt ? data.createdAt.toDate().toISOString() : '',
+                    unread: data.unreadBy?.includes(userId) ? '1' : '0',
+                    created: data.createdAt?.toDate().toISOString() || '',
                     sender: {
                         id: senderId,
                         userName: senderData.userName || '',
                         avatar: senderData.avatar || ''
                     },
-                    isBlocked
+                    isBlocked,
+                    status: data.status || 'sent'
                 });
 
-                if (messageModel.unread === '1') {
-                    unreadMessages.push(messageModel.toJSON());
-                } else {
-                    readMessages.push(messageModel.toJSON());
-                }
+                messages.push(messageModel.toJSON());
             }
 
-            return readMessages.concat(unreadMessages);
+            return messages;
         } catch (error) {
             logger.error('Error in getConversation service:', error);
             if (error.code) {
