@@ -52,11 +52,10 @@
 <script setup>
 import { ref, computed } from 'vue'
 import { useToast } from '@/components/ui/toast'
-import { formatDate } from '@/utils/helpers'
+import { formatTimeAgo } from '@/utils/helpers'
 import defaultAvatar from '@/assets/avatar-default.svg'
 import { MoreVertical, AlertCircle } from 'lucide-vue-next'
 import AdvancedOptionsModal from './AdvancedOptionsModal.vue'
-
 import { Card, CardHeader } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -90,7 +89,7 @@ const shareUrlInput = ref(null)
 // Computed
 const formattedDate = computed(() => {
     try {
-        return formatDate(props.post.created)
+        return formatTimeAgo(props.post.created)
     } catch (err) {
         error.value = 'Invalid date format'
         return 'Unknown date'

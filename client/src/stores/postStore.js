@@ -44,30 +44,52 @@ export const usePostStore = defineStore("post", () => {
 
             const queryParams = {
                 lastVisible: lastVisible.value,
-                limit: 20,
-                ...params,
+                limit: params.limit || 20
             };
 
-            const response = await apiService.getListPosts(queryParams);
+            if (params.userId) {
+                const response = await apiService.getUserPosts(params.userId, queryParams);
+                if (response.data.code === "1000") {
+                    const newPosts = response.data.data.posts
+                        .map(validateAndProcessPost)
+                        .filter(Boolean);
 
-            if (response.data.code === "1000") {
-                const newPosts = response.data.data.posts
-                    .map(validateAndProcessPost)
-                    .filter(Boolean);
+                    if (params.reset) {
+                        posts.value = newPosts;
+                        hasMorePosts.value = true;
+                    } else {
+                        posts.value.push(...newPosts);
+                    }
 
-                if (params.reset) {
-                    posts.value = newPosts;
-                    hasMorePosts.value = true;
+                    lastVisible.value = response.data.data.lastVisible;
+                    hasMorePosts.value = newPosts.length === (params.limit || 20);
                 } else {
-                    posts.value.push(...newPosts);
+                    hasMorePosts.value = false;
+                    if (response.data.code !== "9994") {
+                        throw new Error(response.data.message || "Failed to fetch posts");
+                    }
                 }
-
-                lastVisible.value = response.data.data.lastVisible;
-                hasMorePosts.value = newPosts.length === 20;
             } else {
-                hasMorePosts.value = false;
-                if (response.data.code !== "9994") {
-                    throw new Error(response.data.message || "Failed to fetch posts");
+                const response = await apiService.getListPosts(queryParams);
+                if (response.data.code === "1000") {
+                    const newPosts = response.data.data.posts
+                        .map(validateAndProcessPost)
+                        .filter(Boolean);
+
+                    if (params.reset) {
+                        posts.value = newPosts;
+                        hasMorePosts.value = true;
+                    } else {
+                        posts.value.push(...newPosts);
+                    }
+
+                    lastVisible.value = response.data.data.lastVisible;
+                    hasMorePosts.value = newPosts.length === (params.limit || 20);
+                } else {
+                    hasMorePosts.value = false;
+                    if (response.data.code !== "9994") {
+                        throw new Error(response.data.message || "Failed to fetch posts");
+                    }
                 }
             }
         } catch (err) {

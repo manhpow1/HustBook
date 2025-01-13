@@ -53,7 +53,7 @@
                             {{ sanitizeOutput(post.userName) }}
                           </h3>
                           <time :datetime="post.created" class="text-sm text-muted-foreground">
-                            {{ formatDate(post.created) }}
+                            {{ formatTimeAgo(post.created) }}
                           </time>
                         </div>
                       </RouterLink>
@@ -136,7 +136,6 @@ import { onMounted, watch, computed } from "vue";
 import { useRouter, RouterLink } from "vue-router";
 import ErrorBoundary from "@/components/shared/ErrorBoundary.vue";
 import { AlertCircle, ThumbsUp, MessageCircle, Play, RefreshCw } from "lucide-vue-next";
-import { formatDistanceToNow } from "date-fns";
 import { vi } from "date-fns/locale";
 import { usePostStore } from "../stores/postStore";
 import { useUserStore } from "../stores/userStore";
@@ -150,7 +149,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { defineAsyncComponent } from "vue";
 import { sanitizeInput, sanitizeOutput } from "../utils/sanitize";
 import { useErrorHandler } from "@/utils/errorHandler";
-import { formatDate } from "@/utils/helpers";
+import { formatTimeAgo } from "@/utils/helpers";
 
 const AddPost = defineAsyncComponent(() => import("../components/post/AddPost.vue"));
 const router = useRouter();

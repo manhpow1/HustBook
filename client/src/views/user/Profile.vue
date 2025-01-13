@@ -305,16 +305,15 @@ const postStore = usePostStore();
 const { toast } = useToast();
 const { handleError } = useErrorHandler();
 const props = defineProps({
-    limit: {
-        type: Number,
-        default: 20
-    },
-    index: {
-        type: Number,
-        default: 0
-    }
+  limit: {
+    type: Number,
+    default: 20
+  },
+  index: {
+    type: Number,
+    default: 0
+  }
 });
-
 // States
 const loading = ref(true);
 const loadingPosts = ref(false);
@@ -480,14 +479,14 @@ const fetchFriendsData = async () => {
     });
   } catch (err) {
     friends.value = [];
-    
+
     const errorDetails = {
       code: err.code || 'UNKNOWN',
       message: err.message,
       targetUserId: targetUserId.value,
       storeError: friendStore.error
     };
-    
+
     logger.error("Error fetching friends data:", errorDetails);
 
     let errorMessage = "Failed to load friends list";
@@ -537,7 +536,11 @@ const fetchPostsForUser = async (userId) => {
   try {
     loadingPosts.value = true;
     postStore.resetPosts();
-    await postStore.fetchPosts(userId);
+    await postStore.fetchPosts({
+      userId: userId,
+      limit: props.limit || 20,
+      index: props.index || 0
+    });
   } catch (err) {
     postError.value = "Failed to load user posts";
     logger.error("Error fetching user posts:", err);

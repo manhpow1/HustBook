@@ -39,8 +39,8 @@
                   <div class="flex-1 min-w-0">
                     <div class="flex items-center justify-between">
                       <p class="font-medium truncate">{{ conversation.Partner.userName }}</p>
-                      <span v-if="conversation.LastMessage" class="text-xs text-muted-foreground">
-                        {{ formatDate(conversation.LastMessage.created) }}
+                      <span v-if="conversation.LastMessage?.created" class="text-xs text-muted-foreground">
+                        {{ formatTimeAgo(conversation.LastMessage.created) }}
                       </span>
                     </div>
                     <p class="text-sm text-muted-foreground truncate">
@@ -202,7 +202,7 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import logger from '@/services/logging';
-import { formatDate } from '@/utils/helpers';
+import { formatDate, formatTimeAgo } from '@/utils/helpers';
 
 const chatStore = useChatStore();
 const userStore = useUserStore();
