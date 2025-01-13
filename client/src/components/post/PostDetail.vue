@@ -116,7 +116,6 @@ import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "../ui/skeleton";
-import { useMediaUtils } from '@/composables/useMediaUtils';
 import { useCommentStore } from "@/stores/commentStore";
 
 const ErrorBoundary = defineAsyncComponent(() =>
