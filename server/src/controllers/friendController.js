@@ -30,16 +30,19 @@ class FriendController {
         try {
             const { error, value } = friendValidator.validateGetUserFriends(req.body);
             if (error) {
+                logger.error('getUserFriends validation error:', error.details);
                 throw createError('1002', error.details.map(detail => detail.message).join(', '));
             }
 
-            const { index, count } = value;
+            const { userId, index, count } = value;
             if (!req.user?.userId) {
+                logger.error('getUserFriends: User not authenticated');
                 throw createError('1002', 'User not authenticated');
             }
             
             logger.debug('getUserFriends controller - Input params:', {
-                userId: req.user.userId,
+                requestedUserId: userId,
+                currentUserId: req.user.userId,
                 count: parseInt(count),
                 index: parseInt(index)
             });

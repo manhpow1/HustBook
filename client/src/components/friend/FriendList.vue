@@ -255,13 +255,29 @@ const fetchFriends = async () => {
 
         loading.value = true;
         error.value = null;
+        if (!effectiveUserId.value) {
+            console.error('fetchFriends: No effectiveUserId available');
+            error.value = "User ID not available";
+            return;
+        }
+
+        console.log('fetchFriends: Fetching friends for user:', effectiveUserId.value);
+        
         const params = {
             userId: effectiveUserId.value,
             index: 0,
             count: props.limit
         };
+        
         await friendStore.getUserFriends(params);
-        friends.value = friendStore.friends;
+        
+        if (friendStore.error) {
+            error.value = friendStore.error;
+            return;
+        }
+        
+        friends.value = friendStore.friends || [];
+        console.log('fetchFriends: Loaded friends:', friends.value.length);
     } catch (err) {
         error.value = "Failed to load friends";
         console.error("Error fetching friends:", err);
