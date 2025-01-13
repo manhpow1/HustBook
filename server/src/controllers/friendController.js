@@ -28,7 +28,7 @@ class FriendController {
 
     async getUserFriends(req, res, next) {
         try {
-            const { error, value } = friendValidator.validateGetUserFriends(req.body);
+            const { error, value } = friendValidator.validateGetUserFriends(req.query);
             if (error) {
                 logger.error('getUserFriends validation error:', error.details);
                 throw createError('1002', error.details.map(detail => detail.message).join(', '));
@@ -44,7 +44,8 @@ class FriendController {
                 requestedUserId: userId,
                 currentUserId: req.user.userId,
                 count: parseInt(count),
-                index: parseInt(index)
+                index: parseInt(index),
+                rawQuery: req.query
             });
 
             const result = await friendService.getUserFriends(
