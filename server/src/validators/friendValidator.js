@@ -11,9 +11,19 @@ const setAcceptFriendSchema = Joi.object({
 });
 
 const getUserFriendsSchema = Joi.object({
-    userId: Joi.string().optional(),
-    index: Joi.number().integer().min(0).required(),
-    count: Joi.number().integer().min(1).max(100).required()
+    userId: Joi.string().trim().required().messages({
+        'string.empty': 'userId cannot be empty',
+        'any.required': 'userId is required'
+    }),
+    index: Joi.number().integer().min(0).required().messages({
+        'number.base': 'index must be a number',
+        'number.min': 'index must be greater than or equal to 0'
+    }),
+    count: Joi.number().integer().min(1).max(100).required().messages({
+        'number.base': 'count must be a number',
+        'number.min': 'count must be at least 1',
+        'number.max': 'count cannot exceed 100'
+    })
 });
 
 const getListSuggestedFriendsSchema = Joi.object({
