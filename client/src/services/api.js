@@ -244,7 +244,7 @@ const apiService = {
 
     async getUserFriends(params = {}) {
         // Might be GET or POST depending on backend. Currently using POST:
-        return axiosInstance.post(API_ENDPOINTS.GET_USER_FRIENDS, params);
+        return axiosInstance.get(API_ENDPOINTS.GET_USER_FRIENDS, params);
     },
 
     async setAcceptFriend(userId, isAccept) {

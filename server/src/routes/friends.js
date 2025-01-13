@@ -13,7 +13,7 @@ const router = express.Router();
 /**
  * @swagger
  * /friend/get_user_friends:
- *   post:
+ *   get:
  *     summary: Get a list of friends for a given user
  *     tags: [Friends]
  *     security:
@@ -69,7 +69,7 @@ const router = express.Router();
  *       400:
  *         description: Validation error
  */
-router.post('/get_user_friends', authenticateToken, friendController.getUserFriends);
+router.get('/get_user_friends', authenticateToken, friendController.getUserFriends);
 
 /**
  * @swagger

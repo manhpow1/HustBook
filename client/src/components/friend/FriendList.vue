@@ -243,7 +243,7 @@ const fetchFriends = async () => {
     try {
         loading.value = true;
         error.value = null;
-        await friendStore.getUserFriends({ userId: props.userId, count: 50 });
+        await friendStore.getUserFriends({ userId: props.userId });
         friends.value = friendStore.friends;
     } catch (err) {
         error.value = "Failed to load friends";
