@@ -239,12 +239,23 @@ const limitedFriends = computed(() => {
 });
 
 // Methods
+const userStore = useUserStore();
+
+const effectiveUserId = computed(() => {
+    return props.userId || userStore.userData?.userId;
+});
+
 const fetchFriends = async () => {
     try {
+        if (!effectiveUserId.value) {
+            error.value = "No user ID available";
+            return;
+        }
+
         loading.value = true;
         error.value = null;
         const params = {
-            userId: props.userId,
+            userId: effectiveUserId.value,
             index: 0,
             count: props.limit
         };

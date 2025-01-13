@@ -304,7 +304,7 @@ const postError = ref(null);
 const user = ref(null);
 const friends = ref([]);
 const postSearchQuery = ref("");
-const targetUserId = computed(() => route.params.userId || userStore.userId);
+const targetUserId = computed(() => route.params.userId || userStore.userData?.userId);
 
 const isCurrentUser = computed(() => {
   const targetUserId = route.params.userId;
