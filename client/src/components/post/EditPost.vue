@@ -35,10 +35,8 @@
 
                     <!-- Media Preview -->
                     <div v-if="files.length > 0" class="grid grid-cols-2 md:grid-cols-4 gap-4">
-                        <div v-for="(file, index) in previewUrls" :key="index" class="relative">
-                            <AspectRatio ratio="{1}">
-                                <img :src="file" alt="Preview" class="rounded-md object-cover w-full h-full" />
-                            </AspectRatio>
+                        <div v-for="(file, index) in previewUrls" :key="index" class="relative aspect-square">
+                            <img :src="file" alt="Preview" class="rounded-md object-cover w-full h-full" />
                             <Button variant="destructive" size="icon" class="absolute -top-2 -right-2 h-6 w-6"
                                 @click="removeFile(index)">
                                 <XIcon class="h-4 w-4" />
@@ -212,26 +210,31 @@ const handleFilesChange = async (newFiles) => {
         }
 
         mediaError.value = "";
+        files.value = newFiles;
         previewUrls.value = [];
 
         for (const file of newFiles) {
-            if (file.size > 5 * 1024 * 1024) {
-                mediaError.value = "Each file must be less than 5MB";
-                return;
-            }
-
             if (typeof file === 'string') {
+                // If it's a URL string (existing image), use it directly
                 previewUrls.value.push(file);
             } else {
+                // If it's a File object, check size and create preview
+                if (file.size > 5 * 1024 * 1024) {
+                    mediaError.value = "Each file must be less than 5MB";
+                    return;
+                }
+                
+                // Create preview URL
                 const reader = new FileReader();
-                reader.onload = (e) => {
-                    previewUrls.value.push(e.target.result);
-                };
-                reader.readAsDataURL(file);
+                await new Promise((resolve) => {
+                    reader.onload = (e) => {
+                        previewUrls.value.push(e.target.result);
+                        resolve();
+                    };
+                    reader.readAsDataURL(file);
+                });
             }
         }
-
-        files.value = newFiles;
     } catch (err) {
         logger.error("Media change error:", err);
         mediaError.value = "Failed to process media files";
