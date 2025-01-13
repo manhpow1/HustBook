@@ -173,8 +173,8 @@ const mediaError = ref("");
 
 // Form Validation
 const validateDescription = () => {
-    const content = description.value.trim();
-    if (content.length === 0 && files.value.length === 0) {
+    const content = description.value?.trim() || '';
+    if (content.length === 0 && (!files.value || files.value.length === 0)) {
         descriptionError.value = "Post must have either text or images";
     } else if (content.length > 1000) {
         descriptionError.value = "Description must not exceed 1000 characters";
