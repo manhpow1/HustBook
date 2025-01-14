@@ -170,9 +170,14 @@ export const useFriendStore = defineStore('friend', () => {
             const data = response.data;
 
             if (data.code === '1000') {
-                blockedUsers.value = [...blockedUsers.value, ...data.data.data];
-                blockedUsersIndex.value += data.data.data.length;
-                hasMoreBlockedUsers.value = data.data.data.length === count;
+                const formattedBlocks = data.data.data.map(block => ({
+                    ...block,
+                    userName: block.userName,
+                    blockedAt: new Date().toISOString()
+                }));
+                blockedUsers.value = [...blockedUsers.value, ...formattedBlocks];
+                blockedUsersIndex.value += formattedBlocks.length;
+                hasMoreBlockedUsers.value = formattedBlocks.length === count;
             } else if (data.code === '9994') {
                 hasMoreBlockedUsers.value = false;
             } else {

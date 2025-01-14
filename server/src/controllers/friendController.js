@@ -144,10 +144,6 @@ class FriendController {
 
             const result = await friendService.getListBlocks(userId, parseInt(index), parseInt(count));
 
-            if (result.blocks.length === 0) {
-                throw createError('9994', 'No data or end of list data');
-            }
-
             sendResponse(res, '1000', {
                 data: result.blocks,
             });

@@ -129,7 +129,7 @@ class User {
                 updatedAt: new Date().toISOString()
             });
 
-            await redis.deleteKey(`user:${this.userId}`);
+            await redis.cache.del(`user:${this.userId}`)
             logger.info(`User ${this.userId} blocked user ${targetUserId}`);
         } catch (error) {
             logger.error(`Error blocking user ${targetUserId} by user ${this.userId}:`, error);
@@ -151,7 +151,7 @@ class User {
                 updatedAt: new Date().toISOString()
             });
 
-            await redis.deleteKey(`user:${this.userId}`);
+            await redis.cache.del(`user:${this.userId}`);
             logger.info(`User ${this.userId} unblocked user ${targetUserId}`);
         } catch (error) {
             logger.error(`Error unblocking user ${targetUserId} by user ${this.userId}:`, error);

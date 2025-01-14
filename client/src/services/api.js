@@ -248,7 +248,7 @@ const apiService = {
     },
 
     async setBlock(userId, type) {
-        return axiosInstance.post(API_ENDPOINTS.SET_BLOCK, { userId, type });
+        return axiosInstance.put(API_ENDPOINTS.SET_BLOCK, { userId, type });
     },
 
     // ─────────────────────────────────────────────────────────

@@ -359,7 +359,7 @@ class FriendService {
                 .filter(user => user !== null)
                 .map(user => ({
                     userId: user.userId,
-                    name: user.userName || '',
+                    userName: user.userName || '',
                     avatar: user.avatar || '',
                 }));
 
