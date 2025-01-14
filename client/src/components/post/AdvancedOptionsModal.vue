@@ -66,7 +66,7 @@
     </DialogContent>
   </Dialog>
 
-  <ReportPostModal v-if="showReportModal" :postId="post.postId" @close="showReportModal = false"
+  <ReportPost v-if="showReportModal" :postId="post.postId" @close="showReportModal = false"
     @report-submitted="handleReportSubmitted" @post-removed="handlePostRemoved" />
 </template>
 
@@ -80,7 +80,7 @@ import { Button } from '@/components/ui/button'
 import { PencilIcon, TrashIcon, Flag, AlertCircleIcon, Loader2Icon } from 'lucide-vue-next'
 import { usePostStore } from '@/stores/postStore'
 import { useToast } from '@/components/ui/toast'
-import ReportPostModal from './ReportPostModal.vue'
+import ReportPost from './ReportPost.vue'
 
 const router = useRouter()
 const showDeleteConfirmation = ref(false)

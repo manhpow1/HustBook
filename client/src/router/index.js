@@ -110,12 +110,6 @@ const routes = [
         meta: { requiresAuth: true }
     },
     {
-        path: '/report-post/:postId',
-        name: 'ReportPost',
-        component: () => import('../components/post/ReportPostModal.vue'),
-        meta: { requiresAuth: true }
-    },
-    {
         path: '/search',
         name: 'Search',
         component: () => import('../components/search/SearchPosts.vue'),

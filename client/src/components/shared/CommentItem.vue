@@ -98,7 +98,7 @@
 import { ref, computed } from "vue";
 import { useUserStore } from "@/stores/userStore";
 import { renderMarkdown } from "@/utils/markdown";
-import { formatRelativeTime } from "@/utils/helpers";
+import { formatTimeAgo } from "@/utils/helpers";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
@@ -172,7 +172,7 @@ const canEditDelete = computed(
 
 const formattedDate = computed(() => {
     try {
-        return formatRelativeTime(commentData.value.created);
+        return formatTimeAgo(commentData.value.created);
     } catch (err) {
         console.error('Error formatting date:', err);
         return 'Unknown date';

@@ -74,8 +74,22 @@ const authenticateToken = async (req, res, next) => {
                 ignoreExpiration: false // Ensure token expiration is checked
             });
 
-            const { userId, tokenVersion, exp } = decoded;
-
+            const { userId, tokenVersion, exp, tokenFamily } = decoded;
+            
+            // Check if token is approaching expiration
+            const currentTime = Math.floor(Date.now() / 1000);
+            const timeUntilExpiry = exp - currentTime;
+            const REFRESH_THRESHOLD = 300; // 5 minutes
+            
+            // If token is close to expiring but not yet expired, generate a new one
+            if (timeUntilExpiry > 0 && timeUntilExpiry < REFRESH_THRESHOLD) {
+                const newToken = jwt.sign(
+                    { userId, tokenVersion, tokenFamily },
+                    config.get('jwt.secret'),
+                    { expiresIn: '1h' }
+                );
+                res.set('X-New-Token', newToken);
+            }
 
             // Rate limiting check from Redis
             const requestCount = await cache.incr(`auth:${userId}:requests`);
@@ -128,9 +142,21 @@ const authenticateToken = async (req, res, next) => {
         } catch (jwtError) {
             // Handle specific JWT errors
             if (jwtError.name === 'TokenExpiredError') {
-                throw createError('9998', 'Token has expired');
+                const decoded = jwt.decode(token);
+                if (decoded) {
+                    const expiredAt = new Date(decoded.exp * 1000);
+                    const now = new Date();
+                    const GRACE_PERIOD = 60 * 1000; // 1 minute grace period
+                    
+                    if (now.getTime() - expiredAt.getTime() < GRACE_PERIOD) {
+                        // Token expired very recently, allow one final request
+                        req.tokenNeedsRefresh = true;
+                        return next();
+                    }
+                }
+                throw createError('9998', 'Token has expired. Please log in again.');
             } else if (jwtError.name === 'JsonWebTokenError') {
-                throw createError('9998', 'Invalid token');
+                throw createError('9998', 'Invalid token format');
             } else {
                 throw jwtError;
             }
