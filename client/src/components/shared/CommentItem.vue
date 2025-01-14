@@ -98,7 +98,7 @@
 import { ref, computed } from "vue";
 import { useUserStore } from "@/stores/userStore";
 import { renderMarkdown } from "@/utils/markdown";
-import { formatDistanceToNow } from "date-fns";
+import { formatRelativeTime } from "@/utils/helpers";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
@@ -172,16 +172,10 @@ const canEditDelete = computed(
 
 const formattedDate = computed(() => {
     try {
-        const date = new Date(props.post.created)
-        const now = new Date()
-        const diffInHours = (now - date) / (1000 * 60 * 60)
-
-        return diffInHours < 24
-            ? formatDistanceToNow(date, { addSuffix: true })
-            : format(date, 'PPP')
+        return formatRelativeTime(commentData.value.created);
     } catch (err) {
-        error.value = 'Invalid date format'
-        return 'Unknown date'
+        console.error('Error formatting date:', err);
+        return 'Unknown date';
     }
 })
 

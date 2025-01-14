@@ -142,16 +142,38 @@ const onInput = () => {
 };
 
 const insertMarkdown = (syntax) => {
-    const textareaEl = textarea.value;
-    const start = textareaEl.selectionStart;
-    const end = textareaEl.selectionEnd;
-    const text = localContent.value;
-    const before = text.substring(0, start);
-    const after = text.substring(end);
-    const selection = text.substring(start, end);
-    let insertText;
+    const textareaEl = textarea.value.$el;
+    let start = textareaEl.selectionStart;
+    let end = textareaEl.selectionEnd;
+    let text = localContent.value;
+    let before, selection, after, insertText;
     let newSelectionStart;
     let newSelectionEnd;
+
+    // Nếu có text nhưng không có selection, tự động chọn từ tại vị trí con trỏ
+    if (start === end && text.length > 0) {
+        // Tìm điểm bắt đầu của từ
+        while (start > 0 && !/\s/.test(text[start - 1])) {
+            start--;
+        }
+        // Tìm điểm kết thúc của từ  
+        while (end < text.length && !/\s/.test(text[end])) {
+            end++;
+        }
+    }
+
+    before = text.substring(0, start);
+    selection = text.substring(start, end); 
+    after = text.substring(end);
+
+    logger.debug('Markdown insertion:', {
+        syntax,
+        cursorStart: start,
+        cursorEnd: end,
+        selectedText: selection,
+        beforeText: before,
+        afterText: after
+    });
 
     if (syntax === '[](url)') {
         insertText = '[' + (selection || '') + '](https://)';
@@ -163,23 +185,16 @@ const insertMarkdown = (syntax) => {
             newSelectionStart = start;
             newSelectionEnd = end + (syntax.length * 2);
         } else {
-            const cursorPos = start;
-            const beforeCursor = text.substring(0, cursorPos);
-            const afterCursor = text.substring(cursorPos);
-            
-            insertText = syntax + afterCursor;
-            newSelectionStart = cursorPos + syntax.length;
+            insertText = syntax + syntax;
+            newSelectionStart = start + syntax.length;
             newSelectionEnd = newSelectionStart;
         }
     }
 
     localContent.value = before + insertText + after;
     nextTick(() => {
-        const nativeTextarea = textareaEl.$el;
-        if (nativeTextarea) {
-            nativeTextarea.focus();
-            nativeTextarea.setSelectionRange(newSelectionStart, newSelectionEnd);
-        }
+        textareaEl.focus();
+        textareaEl.setSelectionRange(newSelectionStart, newSelectionEnd);
     });
     onInput();
 };
