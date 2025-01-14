@@ -305,10 +305,11 @@ export const useUserStore = defineStore('user', () => {
     const logout = async (suppressRedirect = false) => {
         try {
             isLoading.value = true;
+            const currentDeviceId = deviceId.value;
 
             if (isLoggedIn.value) {
                 try {
-                    await apiService.logout({ deviceId: deviceId.value });
+                    await apiService.logout({ deviceId: currentDeviceId });
                 } catch (err) {
                     logger.error('Logout error:', err);
                 }

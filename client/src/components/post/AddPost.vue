@@ -216,6 +216,10 @@ const handleSubmit = async () => {
         files.value = []
         previewUrls.value = []
         descriptionError.value = ''
+        
+        // Refetch posts to get the latest data
+        await postStore.resetPosts()
+        await postStore.fetchPosts()
 
     } catch (err) {
         console.error('Error creating post:', err)

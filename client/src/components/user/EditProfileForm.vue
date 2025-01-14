@@ -383,13 +383,17 @@ const handleSubmit = async () => {
         }
 
         if (result) {
-            // Reset form state
+            // Reset form state with updated data
             form.value = {
-                ...form.value,
+                userName: result.data.userName || "",
+                bio: result.data.bio || "",
+                address: result.data.address || "",
+                city: result.data.city || "",
+                country: result.data.country || "",
                 avatar: null,
                 coverPhoto: null,
-                existingAvatar: result.data.avatar || '',
-                existingAvatar: result.data.avatar || '',
+                existingAvatar: result.data.avatar || "",
+                existingCoverPhoto: result.data.coverPhoto || "",
             };
 
             currentVersion.value = result.data.version;

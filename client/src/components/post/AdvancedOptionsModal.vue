@@ -20,11 +20,11 @@
           </Alert>
 
           <AlertDialogFooter>
-            <AlertDialogCancel :disabled="isDeleting" @click="closeDeleteModal">
+            <AlertDialogCancel :disabled="isDeleting || isLoading" @click="closeDeleteModal">
               Cancel
             </AlertDialogCancel>
-            <AlertDialogAction variant="destructive" :disabled="isDeleting" @click="confirmDelete">
-              <Loader2Icon v-if="isDeleting" class="mr-2 h-4 w-4 animate-spin" />
+            <AlertDialogAction variant="destructive" :disabled="isDeleting || isLoading" @click="confirmDelete">
+              <Loader2Icon v-if="isDeleting || isLoading" class="mr-2 h-4 w-4 animate-spin" />
               {{ isDeleting ? 'Deleting...' : 'Delete' }}
             </AlertDialogAction>
           </AlertDialogFooter>
@@ -51,7 +51,7 @@
             </Button>
           </div>
 
-          <div class="mt-2">
+          <div class="mt-2" v-if="!post.isOwner">
             <Button variant="ghost" class="w-full justify-start text-destructive" @click="showReportModal = true">
               <Flag class="mr-2 h-4 w-4" />
               Report Post
@@ -85,6 +85,7 @@ import ReportPostModal from './ReportPostModal.vue'
 const router = useRouter()
 const showDeleteConfirmation = ref(false)
 const isDeleting = ref(false)
+const isLoading = ref(false)
 const error = ref('')
 const postStore = usePostStore()
 const { toast } = useToast()
@@ -138,9 +139,10 @@ const handleDeleteDialogChange = (value) => {
 }
 
 const confirmDelete = async () => {
-  if (isDeleting.value) return
+  if (isDeleting.value || isLoading.value) return
 
   isDeleting.value = true
+  isLoading.value = true
   error.value = ''
 
   try {
@@ -153,7 +155,8 @@ const confirmDelete = async () => {
       })
 
       emit('post-deleted')
-      router.push({ name: 'Home' })
+      closeModal()
+      router.push('/')
     } else {
       throw new Error(response?.message || 'Failed to delete post')
     }
@@ -166,6 +169,7 @@ const confirmDelete = async () => {
     })
   } finally {
     isDeleting.value = false
+    isLoading.value = false
 
     // Only close on success
     if (!error.value) {

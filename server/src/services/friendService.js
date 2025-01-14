@@ -318,13 +318,15 @@ class FriendService {
                 });
             });
 
-            const pendingRequests = await queryDocuments(collections.friendRequests, (ref) =>
-                ref.where('recipientId', '==', recipientId)
-                    .where('status', '==', 'pending')
-            );
+            // Get count of pending requests
+            const pendingRequestsSnapshot = await db.collection(collections.friendRequests)
+                .where('recipientId', '==', recipientId)
+                .where('status', '==', 'pending')
+                .count()
+                .get();
 
             return {
-                requested_friends: pendingRequests.length.toString(),
+                requested_friends: pendingRequestsSnapshot.data().count.toString(),
             };
         } catch (error) {
             logger.error('Error in setRequestFriend service:', error);
