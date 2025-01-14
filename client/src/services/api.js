@@ -40,27 +40,27 @@ const apiService = {
     // AUTHENTICATION APIs
     // ─────────────────────────────────────────────────────────
     async login(data) {
-        return axiosInstance.post(API_ENDPOINTS.LOGIN, data);
+        return this.post(API_ENDPOINTS.LOGIN, data);
     },
 
     async register(data) {
-        return axiosInstance.post(API_ENDPOINTS.SIGNUP, data);
+        return this.post(API_ENDPOINTS.SIGNUP, data);
     },
 
     async logout(data) {
-        return axiosInstance.post(API_ENDPOINTS.LOGOUT, data);
+        return this.post(API_ENDPOINTS.LOGOUT, data);
     },
 
     async getVerifyCode(data) {
-        return axiosInstance.post(API_ENDPOINTS.GET_VERIFY_CODE, data);
+        return this.post(API_ENDPOINTS.GET_VERIFY_CODE, data);
     },
 
     async verifyCode(data) {
-        return axiosInstance.post(API_ENDPOINTS.CHECK_VERIFY_CODE, data);
+        return this.post(API_ENDPOINTS.CHECK_VERIFY_CODE, data);
     },
 
     async changePassword(data) {
-        return axiosInstance.put(API_ENDPOINTS.CHANGE_PASSWORD, data);
+        return this.put(API_ENDPOINTS.CHANGE_PASSWORD, data);
     },
 
     /**
@@ -69,14 +69,14 @@ const apiService = {
      * - If phoneNumber, code, and newPassword are provided, finalize reset
      */
     async forgotPassword(data) {
-        return axiosInstance.post(API_ENDPOINTS.FORGOT_PASSWORD, data);
+        return this.post(API_ENDPOINTS.FORGOT_PASSWORD, data);
     },
 
     /**
      * Check if current token is valid (server-side).
      */
     async authCheck() {
-        return axiosInstance.get(API_ENDPOINTS.AUTH_CHECK);
+        return this.get(API_ENDPOINTS.AUTH_CHECK);
     },
 
     /**
@@ -111,7 +111,7 @@ const apiService = {
     // Legacy methods maintained for backward compatibility
     async getUserInfo(userId = null) {
         const url = API_ENDPOINTS.GET_USER_INFO(userId);
-        return axiosInstance.get(url);
+        return this.get(url);
     },
 
     async setUserInfo(data) {
@@ -126,7 +126,7 @@ const apiService = {
     // POST APIs
     // ─────────────────────────────────────────────────────────
     async createPost(postData, config) {
-        return axiosInstance.post(API_ENDPOINTS.ADD_POST, postData, {
+        return this.post(API_ENDPOINTS.ADD_POST, postData, {
             ...config,
             headers: {
                 ...config?.headers,
@@ -153,7 +153,7 @@ const apiService = {
     },
 
     async reportPost(postId, reason, details) {
-        return axiosInstance.post(API_ENDPOINTS.REPORT_POST(postId), { reason, details });
+        return this.post(API_ENDPOINTS.REPORT_POST(postId), { reason, details });
     },
 
     async likePost(postId) {
@@ -168,7 +168,7 @@ const apiService = {
      * Get posts by a specific user
      */
     async getUserPosts(userId, params = {}) {
-        return axiosInstance.get(API_ENDPOINTS.GET_USER_POSTS(userId), { params });
+        return this.get(API_ENDPOINTS.GET_USER_POSTS(userId), { params });
     },
 
     // ─────────────────────────────────────────────────────────
@@ -186,7 +186,7 @@ const apiService = {
     // SEARCH APIs
     // ─────────────────────────────────────────────────────────
     async searchPosts(keyword, index = 0, count = 20) {
-        return axiosInstance.get(API_ENDPOINTS.SEARCH_POSTS, {
+        return this.get(API_ENDPOINTS.SEARCH_POSTS, {
             params: {  // Thêm params object
                 keyword,
                 index,
@@ -196,90 +196,90 @@ const apiService = {
     },
 
     async searchUsers(keyword, index = 0, count = 20) {
-        return axiosInstance.get(API_ENDPOINTS.SEARCH_USERS, { params: { keyword, index, count } });
+        return this.get(API_ENDPOINTS.SEARCH_USERS, { params: { keyword, index, count } });
     },
 
     async getSavedSearches(params = {}) {
-        return axiosInstance.get(API_ENDPOINTS.GET_SAVED_SEARCH, { params });
+        return this.get(API_ENDPOINTS.GET_SAVED_SEARCH, { params });
     },
 
     async deleteSavedSearch(searchId, all = false) {
-        return axiosInstance.delete(API_ENDPOINTS.DELETE_SAVED_SEARCH(searchId), {
+        return this.delete(API_ENDPOINTS.DELETE_SAVED_SEARCH(searchId), {
             params: { all: all ? '1' : '0' },
         });
     },
 
     getTrendingHashtags: async (count = 10) => {
-        return axiosInstance.get('/trending-hashtags', { params: { count } });
+        return this.get('/trending-hashtags', { params: { count } });
     },
 
     saveSearch: async (searchData) => {
-        return axiosInstance.post('/save-search', searchData);
+        return this.post('/save-search', searchData);
     },
 
     // ─────────────────────────────────────────────────────────
     // FRIEND APIs
     // ─────────────────────────────────────────────────────────
     async getRequestedFriends(params = {}) {
-        return axiosInstance.get(API_ENDPOINTS.GET_REQUESTED_FRIENDS, { params });
+        return this.get(API_ENDPOINTS.GET_REQUESTED_FRIENDS, { params });
     },
 
     async getUserFriends(params = {}) {
-        return axiosInstance.get(API_ENDPOINTS.GET_USER_FRIENDS, { params });
+        return this.get(API_ENDPOINTS.GET_USER_FRIENDS, { params });
     },
 
     async setAcceptFriend(userId, isAccept) {
-        return axiosInstance.post(API_ENDPOINTS.SET_ACCEPT_FRIEND, { userId, isAccept });
+        return this.post(API_ENDPOINTS.SET_ACCEPT_FRIEND, { userId, isAccept });
     },
 
     async getListSuggestedFriends(index = 0, count = 20) {
-        return axiosInstance.get(API_ENDPOINTS.GET_LIST_SUGGESTED_FRIENDS, { params: { index, count } });
+        return this.get(API_ENDPOINTS.GET_LIST_SUGGESTED_FRIENDS, { params: { index, count } });
     },
 
     async sendFriendRequest(userId) {
-        return axiosInstance.post(API_ENDPOINTS.SET_REQUEST_FRIEND, { userId });
+        return this.post(API_ENDPOINTS.SET_REQUEST_FRIEND, { userId });
     },
 
     async getListBlocks(params = {}) {
-        return axiosInstance.get(API_ENDPOINTS.GET_LIST_BLOCKS, { params });
+        return this.get(API_ENDPOINTS.GET_LIST_BLOCKS, { params });
     },
 
     async setBlock(userId, type) {
-        return axiosInstance.put(API_ENDPOINTS.SET_BLOCK, { userId, type });
+        return this.put(API_ENDPOINTS.SET_BLOCK, { userId, type });
     },
 
     // ─────────────────────────────────────────────────────────
     // NOTIFICATION APIs
     // ─────────────────────────────────────────────────────────
     async getPushSettings() {
-        return axiosInstance.get(API_ENDPOINTS.GET_PUSH_SETTINGS);
+        return this.get(API_ENDPOINTS.GET_PUSH_SETTINGS);
     },
 
     async updatePushSettings(settings) {
-        return axiosInstance.put(API_ENDPOINTS.UPDATE_PUSH_SETTINGS, settings);
+        return this.put(API_ENDPOINTS.UPDATE_PUSH_SETTINGS, settings);
     },
 
     async checkNewItems(lastId, categoryId = '0') {
-        return axiosInstance.post(API_ENDPOINTS.CHECK_NEW_ITEM, { lastId, categoryId });
+        return this.post(API_ENDPOINTS.CHECK_NEW_ITEM, { lastId, categoryId });
     },
 
     async getNotifications(index = 0, count = 20) {
-        return axiosInstance.get(API_ENDPOINTS.GET_NOTIFICATIONS, { params: { index, count } });
+        return this.get(API_ENDPOINTS.GET_NOTIFICATIONS, { params: { index, count } });
     },
 
     async setReadNotification(notificationId) {
-        return axiosInstance.patch(API_ENDPOINTS.SET_READ_NOTIFICATION(notificationId));
+        return this.patch(API_ENDPOINTS.SET_READ_NOTIFICATION(notificationId));
     },
 
     async deleteNotification(notificationId) {
-        return axiosInstance.delete(API_ENDPOINTS.DELETE_NOTIFICATION(notificationId));
+        return this.delete(API_ENDPOINTS.DELETE_NOTIFICATION(notificationId));
     },
 
     // ─────────────────────────────────────────────────────────
     // VIDEO APIs
     // ─────────────────────────────────────────────────────────
     async getListVideos(params = {}) {
-        return axiosInstance.post(API_ENDPOINTS.GET_LIST_VIDEOS, params);
+        return this.post(API_ENDPOINTS.GET_LIST_VIDEOS, params);
     },
 
     // ─────────────────────────────────────────────────────────
@@ -313,7 +313,7 @@ const apiService = {
     // FILE UPLOAD
     // ─────────────────────────────────────────────────────────
     async upload(url, formData, onUploadProgress) {
-        return axiosInstance.post(url, formData, {
+        return this.post(url, formData, {
             headers: { 'Content-Type': 'multipart/form-data' },
             onUploadProgress: (progressEvent) => {
                 const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);

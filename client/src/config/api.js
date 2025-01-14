@@ -22,7 +22,7 @@ export const API_ENDPOINTS = {
     GET_POST: (postId) => `${API_BASE_URL}/api/posts/${postId}`,
     UPDATE_POST: (postId) => `${API_BASE_URL}/api/posts/${postId}`,
     DELETE_POST: (postId) => `${API_BASE_URL}/api/posts/${postId}`,
-    REPORT_POST: (postId) => `${API_BASE_URL}/api/posts/${postId}/report-post`,
+    REPORT_POST: (postId) => `${API_BASE_URL}/api/posts/${postId}/report`,
     LIKE_POST: (postId) => `${API_BASE_URL}/api/posts/${postId}/like`,
     GET_LIST_POSTS: () => `${API_BASE_URL}/api/posts/get_list_posts`,
     // Comment Endpoints

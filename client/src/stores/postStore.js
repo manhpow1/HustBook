@@ -365,6 +365,20 @@ export const usePostStore = defineStore("post", () => {
         }
     }
 
+    async function reportPost(postId, reason, details) {
+        try {
+            const response = await apiService.reportPost(postId, reason, details);
+            if (response.data.code !== "1000") {
+                throw new Error(response.data.message || 'Failed to report post');
+            }
+            return response.data;
+        } catch (err) {
+            await handleError(err);
+            error.value = err.message;
+            throw err;
+        }
+    }
+
     // Reset Posts
     function resetPosts() {
         posts.value = [];
@@ -510,6 +524,7 @@ export const usePostStore = defineStore("post", () => {
         toggleLike,
         updatePost,
         removePost,
+        reportPost,
         setLastKnownCoordinates,
         validateAndProcessPost,
         containsInappropriateContent,

@@ -412,7 +412,7 @@ router.get('/user/:userId', authenticateToken, postController.getUserPosts);
 
 /**
  * @swagger
- * /posts/{postId}/report-post:
+ * /posts/{postId}/report:
  *   post:
  *     summary: Report a post
  *     description: Submit a report for inappropriate content
@@ -449,7 +449,7 @@ router.get('/user/:userId', authenticateToken, postController.getUserPosts);
  *       429:
  *         description: Too many reports submitted
  */
-router.post('/:postId/report-post', authenticateToken, reportLimiter, postController.reportPost);
+router.post('/:postId/report', authenticateToken, reportLimiter, postController.reportPost);
 
 /**
  * @swagger
