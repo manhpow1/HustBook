@@ -257,10 +257,14 @@ class UserController {
     async logout(req, res, next) {
         try {
             const userId = req.user.userId;
-            const deviceId = req.get('X-Device-ID');
+            const deviceId = req.get('X-Device-ID') || req.get('Device-ID');
+            
+            if (!deviceId) {
+                throw createError('1004', 'Device ID is required');
+            }
 
             await Promise.all([
-                userService.clearUserDeviceToken(userId, deviceId),
+                userService.clearUserDeviceToken(userId, deviceId.toString()),
                 req.app.locals.auditLog.logAction(userId, null, 'logout', {
                     deviceId,
                     ip: req.ip,

@@ -344,16 +344,17 @@ onMounted(async () => {
         logger.error("Error fetching initial comments:", err);
 
         if (err.response?.status === 404 || err.code === "9992") {
-            notificationStore.showNotification("Post not found", "error");
+            const errorMsg = "Post not found";
+            commentError.value = errorMsg;
+            notificationStore.showNotification(errorMsg, "error");
             emit("close");
             return;
         }
 
         if (err.response?.status === 401) {
-            notificationStore.showNotification(
-                "Please login to view comments",
-                "error"
-            );
+            const errorMsg = "Please login to view comments";
+            commentError.value = errorMsg;
+            notificationStore.showNotification(errorMsg, "error");
             return;
         }
 

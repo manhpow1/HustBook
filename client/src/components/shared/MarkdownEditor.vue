@@ -163,8 +163,12 @@ const insertMarkdown = (syntax) => {
             newSelectionStart = start;
             newSelectionEnd = end + (syntax.length * 2);
         } else {
-            insertText = syntax + syntax;
-            newSelectionStart = start + syntax.length;
+            const cursorPos = start;
+            const beforeCursor = text.substring(0, cursorPos);
+            const afterCursor = text.substring(cursorPos);
+            
+            insertText = syntax + afterCursor;
+            newSelectionStart = cursorPos + syntax.length;
             newSelectionEnd = newSelectionStart;
         }
     }
