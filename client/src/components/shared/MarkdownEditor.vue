@@ -352,10 +352,8 @@ defineExpose({ clearDraft, submit });
 
 // Lifecycle
 onMounted(() => {
-    const savedContent = localStorage.getItem('markdown-editor-content');
-    if (savedContent) {
-        localContent.value = savedContent;
-    }
+    localStorage.removeItem('markdown-editor-content');
+    localContent.value = '';
 });
 
 onBeforeUnmount(() => {

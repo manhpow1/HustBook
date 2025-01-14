@@ -305,33 +305,45 @@ export const usePostStore = defineStore("post", () => {
 
     // Toggle Like
     async function toggleLike(postId) {
+        const post = posts.value.find((p) => p.postId === postId);
+        const currentPostMatch = currentPost.value?.postId === postId ? currentPost.value : null;
+        
+        // Store original state for rollback
+        const originalState = {
+            post: post ? { isLiked: post.isLiked, likes: post.likes } : null,
+            currentPost: currentPostMatch ? { isLiked: currentPostMatch.isLiked, likes: currentPostMatch.likes } : null
+        };
+
         try {
-            const post = posts.value.find((p) => p.postId === postId);
-            const isLiked = post?.isLiked === "1";
+            const response = await apiService.likePost(postId);
+            
+            if (response.data.code === "1000") {
+                const { liked, likeCount } = response.data.data;
+                
+                if (post) {
+                    post.isLiked = liked ? "1" : "0";
+                    post.likes = likeCount;
+                }
 
-            if (post) {
-                post.isLiked = isLiked ? "0" : "1";
-                post.likes += isLiked ? -1 : 1;
+                if (currentPostMatch) {
+                    currentPostMatch.isLiked = liked ? "1" : "0";
+                    currentPostMatch.likes = likeCount;
+                }
+            } else {
+                throw new Error(response.data.message || "Failed to toggle like");
             }
-
-            if (currentPost.value?.postId === postId) {
-                currentPost.value.isLiked = isLiked ? "0" : "1";
-                currentPost.value.likes += isLiked ? -1 : 1;
-            }
-
-            await apiService.likePost(postId);
         } catch (err) {
+            // Rollback to original state on error
+            if (originalState.post && post) {
+                post.isLiked = originalState.post.isLiked;
+                post.likes = originalState.post.likes;
+            }
+            if (originalState.currentPost && currentPostMatch) {
+                currentPostMatch.isLiked = originalState.currentPost.isLiked;
+                currentPostMatch.likes = originalState.currentPost.likes;
+            }
+            
             await handleError(err);
-            const post = posts.value.find((p) => p.postId === postId);
-            if (post) {
-                post.isLiked = post.isLiked === "1" ? "0" : "1";
-                post.likes += post.isLiked === "1" ? 1 : -1;
-            }
-            if (currentPost.value?.postId === postId) {
-                currentPost.value.isLiked =
-                    currentPost.value.isLiked === "1" ? "0" : "1";
-                currentPost.value.likes += currentPost.value.isLiked === "1" ? 1 : -1;
-            }
             throw err;
         }
     }

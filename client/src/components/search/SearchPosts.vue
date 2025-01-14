@@ -323,7 +323,7 @@ const highlightMatch = (text, searchTerm) => {
 const debouncedSearch = useDebounce(handleSearch, 300);
 
 const viewPost = (postId) => {
-  router.push(`/posts/${postId}`);
+  router.push(`/post/${postId}`);
 };
 
 const viewProfile = (userId) => {
