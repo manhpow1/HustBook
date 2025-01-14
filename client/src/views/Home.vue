@@ -66,18 +66,10 @@
                     <div v-if="post.media.length" class="mt-4">
                       <div class="grid gap-2 media-grid" :class="mediaGridClass(post.media.length)">
                         <div v-for="(media, index) in post.media" :key="index"
-                          class="relative rounded-lg overflow-hidden media-item aspect-[4/3]">
+                          class="relative rounded-lg overflow-hidden media-item">
                           <AspectRatio :ratio="16 / 9">
                             <img v-if="isImage(media)" :src="media" :alt="`Post image ${index + 1}`"
                               class="w-full h-full object-contain min-h-[200px] max-h-[512px]" loading="lazy" />
-                            <div v-else @click="goToWatchPage(post.postId, index)"
-                              class="relative h-full cursor-pointer">
-                              <video :src="media" class="w-full h-full object-cover max-h-[512px]"
-                                preload="metadata"></video>
-                              <div class="absolute inset-0 flex items-center justify-center bg-black/50">
-                                <Play class="w-12 h-12 text-white" />
-                              </div>
-                            </div>
                           </AspectRatio>
                         </div>
                       </div>
