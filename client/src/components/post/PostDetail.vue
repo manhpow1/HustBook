@@ -73,7 +73,8 @@
 
                         <Separator />
 
-                        <PostActions :post="post" @like="handleLike" @comment="focusCommentInput" @updateComments="updateCommentCount" />
+                        <PostActions :post="post" @like="handleLike" @comment="focusCommentInput"
+                            @updateComments="updateCommentCount" />
 
                         <PostBanWarning v-if="post.banned && post.banned !== '0'" :banStatus="post.banned" />
 
@@ -84,12 +85,7 @@
                                 <Loader2 class="h-6 w-6 animate-spin text-muted-foreground" />
                                 <span class="sr-only">Loading comments...</span>
                             </div>
-
-                            <CommentSection v-else :postId="post.postId" :comments="comments"
-                                @addComment="handleComment" @updateComment="handleCommentUpdate"
-                                @deleteComment="handleCommentDelete" @loadMore="loadMoreComments"
-                                :loading="loadingMoreComments" :error="commentError" @retry="retryLoadComments"
-                                @update:comments="updateCommentCount" />
+                            <CommentSection :postId="post.postId" @update:comments="updateCommentCount" />
                         </div>
                     </CardContent>
                 </Card>
@@ -142,8 +138,6 @@ const currentMediaIndex = ref(0);
 
 // Store refs
 const { currentPost: post, loading, error } = storeToRefs(postStore);
-const { comments, loadingComments, commentError, loadingMoreComments } =
-    storeToRefs(postStore);
 
 const mediaList = computed(() => {
     if (!post.value) return [];
@@ -198,62 +192,10 @@ const handleLike = async () => {
     }
 };
 
-const handleComment = async (content) => {
-    try {
-        const newComment = await commentStore.addComment(post.value.postId, content);
-        if (newComment && post.value) {
-            const newCount = (parseInt(post.value.comments) || 0) + 1;
-            post.value.comments = newCount;
-            updateCommentCount(newCount);
-        }
-    } catch (err) {
-        toast({
-            title: "Error",
-            description: "Failed to add comment",
-            variant: "destructive",
-        });
-    }
-};
-
 const updateCommentCount = (newCount) => {
     if (post.value) {
         post.value.comments = newCount;
     }
-};
-
-const handleCommentUpdate = async (commentId, content) => {
-    try {
-        await commentStore.updateComment(post.value.postId, commentId, content);
-    } catch (err) {
-        toast({
-            title: "Error",
-            description: "Failed to update comment",
-            variant: "destructive",
-        });
-    }
-};
-
-const handleCommentDelete = async (commentId) => {
-    try {
-        await commentStore.deleteComment(post.value.postId, commentId);
-        toast({
-            description: "Comment deleted successfully",
-        });
-    } catch (err) {
-        toast({
-            title: "Error",
-            description: "Failed to delete comment",
-            variant: "destructive",
-        });
-    }
-};
-
-const loadMoreComments = async () => {
-    await commentStore.fetchComments(post.value.postId);
-};
-
-const retryLoadComments = () => {
-    commentStore.resetComments();
 };
 
 const handleUncoverMedia = async (mediaId) => {
