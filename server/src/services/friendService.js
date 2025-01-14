@@ -43,7 +43,7 @@ class FriendService {
                 const userData = userMap.get(requestData.senderId) || {};
 
                 return {
-                    id: requestData.senderId,
+                    userId: requestData.senderId,
                     userName: userData.userName || '',
                     avatar: userData.avatar || '',
                     created: requestData.createdAt.toDate().toISOString()

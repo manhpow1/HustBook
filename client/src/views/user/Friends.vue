@@ -3,15 +3,12 @@
     <h1 class="text-3xl font-bold mb-6">Friends</h1>
     <div v-if="userStore.isLoggedIn">
       <div class="mb-8">
-        <h2 class="text-2xl font-semibold mb-4">Friend Requests</h2>
         <FriendRequestList />
       </div>
       <div class="mb-8">
-        <h2 class="text-2xl font-semibold mb-4">Friend Suggestions</h2>
         <FriendSuggestionList />
       </div>
       <div>
-        <h2 class="text-2xl font-semibold mb-4">Your Friends</h2>
         <FriendList />
       </div>
     </div>

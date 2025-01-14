@@ -95,11 +95,12 @@ export const useFriendStore = defineStore('friend', () => {
         loading.value = true;
         error.value = null;
         try {
+            console.debug('friendRequests:', friendRequests.value)
             const response = await apiService.setAcceptFriend(userId, isAccept);
             const data = response.data;
 
             if (data.code === '1000') {
-                friendRequests.value = friendRequests.value.filter(request => request.id !== userId);
+                friendRequests.value = friendRequests.value.filter(request => request.userId !== userId);
                 if (isAccept === '1') {
                     // Optionally update friends list
                 }
