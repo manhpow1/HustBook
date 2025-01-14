@@ -6,7 +6,7 @@ import logger from './logger.js';
 import crypto from 'crypto';
 
 const SALT_ROUNDS = 12; // Increased from default 10
-export const TOKEN_EXPIRY = '15m'; // Shorter access token lifetime
+export const TOKEN_EXPIRY = config.get('jwt.expiration');
 const VERIFICATION_CODE_LENGTH = 6;
 export const MIN_PASSWORD_LENGTH = 8;
 

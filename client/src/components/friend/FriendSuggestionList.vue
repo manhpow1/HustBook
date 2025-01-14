@@ -30,7 +30,8 @@
             <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 <Card v-for="suggestion in friendSuggestions" :key="suggestion.userId" class="relative">
                     <CardContent class="pt-6">
-                        <div class="flex items-center gap-4 mb-4">
+                        <div class="flex items-center gap-4 mb-4 cursor-pointer"
+                            @click="navigateToProfile(suggestion.userId)">
                             <Avatar class="h-12 w-12">
                                 <AvatarImage :src="suggestion.avatar || defaultAvatar" :alt="suggestion.userName" />
                                 <AvatarFallback>{{ suggestion.userName.charAt(0) }}</AvatarFallback>
@@ -70,7 +71,8 @@
             <AlertDialogHeader>
                 <AlertDialogTitle>Block User</AlertDialogTitle>
                 <AlertDialogDescription>
-                    Are you sure you want to block this user? You won't receive any messages or friend requests from them.
+                    Are you sure you want to block this user? You won't receive any messages or friend requests from
+                    them.
                 </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
@@ -90,7 +92,7 @@ import { useFriendStore } from '@/stores/friendStore';
 import { useToast } from '@/components/ui/toast';
 import defaultAvatar from '@/assets/avatar-default.svg';
 import { AlertCircleIcon, Loader2Icon, ShieldIcon } from 'lucide-vue-next';
-
+import { useRouter } from 'vue-router';
 // Import UI Components
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
@@ -102,6 +104,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 // Store and composables setup
 const friendStore = useFriendStore();
 const { toast } = useToast();
+const router = useRouter();
 
 // State
 const friendSuggestions = ref([]);
@@ -175,6 +178,10 @@ const blockConfirmed = async () => {
 const cancelBlock = () => {
     confirmDialog.value = false;
     userToBlock.value = null;
+};
+
+const navigateToProfile = (userId) => {
+    router.push(`/profile/${userId}`);
 };
 
 // Initialize
