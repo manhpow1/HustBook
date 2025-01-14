@@ -142,41 +142,27 @@ const loadMore = async () => {
 };
 
 const confirmUnblock = (userId) => {
-    console.log('[DEBUG] confirmUnblock called with userId:', userId);
     userIdToUnblock.value = userId;
 };
 
 const unblockConfirmed = async () => {
-    console.log('[DEBUG] unblockConfirmed triggered');
-    console.log('[DEBUG] Current userIdToUnblock:', userIdToUnblock.value);
-
-    // 1) Early return check
     if (!userIdToUnblock.value) {
         console.warn('[WARN] unblockConfirmed called but userIdToUnblock is null. Aborting...');
         return;
     }
 
-    // 2) Set processing states
-    console.log('[DEBUG] Setting isProcessing to true and adding userId to processingIds set...');
     isProcessing.value = true;
     processingIds.value.add(userIdToUnblock.value);
 
     try {
-        // 3) Actual unblock logic
-        console.log('[DEBUG] Calling friendStore.setBlock for userId:', userIdToUnblock.value, 'with isBlock = 1 (unblock)');
         await friendStore.setBlock(userIdToUnblock.value, 1);
-
-        console.log('[DEBUG] friendStore.setBlock resolved successfully. Showing success toast...');
         toast({
             title: 'Success',
             description: 'User has been unblocked',
         });
-
-        // 4) Refresh the blocked users list after successful unblock
         console.log('[DEBUG] Reloading the blocked users list...');
         await loadBlockedUsers();
     } catch (err) {
-        // 5) Error handling
         console.error('[ERROR] An error occurred while unblocking user:', err);
         toast({
             title: 'Error',
@@ -184,7 +170,6 @@ const unblockConfirmed = async () => {
             variant: 'destructive',
         });
     } finally {
-        // 6) Cleanup
         console.log('[DEBUG] Cleanup: isProcessing set to false, removing userId from processingIds, resetting userIdToUnblock...');
         isProcessing.value = false;
         processingIds.value.delete(userIdToUnblock.value);

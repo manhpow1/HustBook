@@ -542,8 +542,8 @@ export const useUserStore = defineStore('user', () => {
             }
 
             const response = await apiService.changePassword({
-                currentPassword,
-                newPassword,
+                password: currentPassword,
+                new_password: newPassword,
                 deviceId: deviceId.value
             });
 
