@@ -638,7 +638,7 @@ router.get('/check', authenticateToken, userController.checkAuth);
  *                 type: string
  *                 minLength: 3
  *                 maxLength: 30
- *                 pattern: '^[a-zA-Z0-9_]+
+ *                 pattern: '^[a-zA-Z0-9_]+'
  */
 router.post('/change_info_after_signup', authenticateToken, profileUpdateLimiter, upload.single('avatar'), userController.changeInfoAfterSignup);
 

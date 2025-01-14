@@ -68,9 +68,6 @@ class NotificationController {
             const { index, count } = value;
             const userId = req.user.userId; // set by authenticateToken middleware
             const { notifications, badge, last_update } = await notificationService.getNotifications(userId, index, count);
-            if (notifications.length === 0) {
-                throw createError('9994', 'No data or end of list data');
-            }
             const responseData = {
                 data: notifications,
                 badge,
