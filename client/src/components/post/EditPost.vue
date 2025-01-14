@@ -253,7 +253,7 @@ const loadPostData = async () => {
         }
 
         const post = response.data;
-        
+
         // Initialize form with post data
         description.value = post.content || "";
 
@@ -300,10 +300,8 @@ const handleSubmit = async () => {
         error.value = "";
         successMessage.value = "";
 
-        // Trích xuất và validate content
         const content = description.value?.trim();
 
-        // Create FormData
         const formData = new FormData();
         formData.set('content', content);
 
@@ -345,12 +343,16 @@ const handleSubmit = async () => {
             description: "Post updated successfully",
         });
 
-        // Clear unsaved changes state before navigation
-        showUnsavedDialog.value = false;
         description.value = "";
         files.value = [];
         previewUrls.value = [];
-        
+        editorRef.value?.clearDraft();
+        emit('update:modelValue', '');
+        showUnsavedDialog.value = false;
+
+
+        // Navigate to post detail
+
         // Navigate to post detail
         await router.push({
             name: "PostDetail",

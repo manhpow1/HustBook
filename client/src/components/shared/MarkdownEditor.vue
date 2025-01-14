@@ -3,19 +3,19 @@
         <div class="space-y-2">
             <div class="flex flex-wrap gap-2 items-center border-b pb-2">
                 <TooltipProvider>
-                <Tooltip v-for="action in actions" :key="action.label" :delayDuration="0">
-                    <TooltipTrigger asChild>
-                        <Button variant="ghost" size="sm" @click="insertMarkdown(action.syntax)"
-                            :aria-label="action.label" class="h-8 w-8 p-0" data-testid="toolbar-button">
-                            <component :is="action.icon" class="h-4 w-4" />
-                        </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                        <p>{{ action.label }}</p>
-                        <p v-if="action.shortcut" class="text-xs text-muted-foreground">{{ action.shortcut }}</p>
-                    </TooltipContent>
-                </Tooltip>
-            </TooltipProvider>
+                    <Tooltip v-for="action in actions" :key="action.label" :delayDuration="0">
+                        <TooltipTrigger asChild>
+                            <Button variant="ghost" size="sm" @click="insertMarkdown(action.syntax)"
+                                :aria-label="action.label" class="h-8 w-8 p-0" data-testid="toolbar-button">
+                                <component :is="action.icon" class="h-4 w-4" />
+                            </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                            <p>{{ action.label }}</p>
+                            <p v-if="action.shortcut" class="text-xs text-muted-foreground">{{ action.shortcut }}</p>
+                        </TooltipContent>
+                    </Tooltip>
+                </TooltipProvider>
 
                 <Separator orientation="vertical" class="h-6" />
 
@@ -141,31 +141,32 @@ const onInput = () => {
     debouncedSaveDraft();
 };
 
-const clearContent = () => {
-    localContent.value = '';
-    emit('update:modelValue', '');
-};
-
 const insertMarkdown = (syntax) => {
     const textareaEl = textarea.value;
     const start = textareaEl.selectionStart;
     const end = textareaEl.selectionEnd;
     const text = localContent.value;
     const before = text.substring(0, start);
-    const selection = text.substring(start, end);
     const after = text.substring(end);
+    const selection = text.substring(start, end);
     let insertText;
     let newSelectionStart;
     let newSelectionEnd;
 
     if (syntax === '[](url)') {
-        insertText = syntax.replace('url', selection || 'https://');
-        newSelectionStart = start + syntax.indexOf('url');
-        newSelectionEnd = end + syntax.indexOf('url') + (selection ? selection.length : 8);
+        insertText = '[' + (selection || '') + '](https://)';
+        newSelectionStart = start + (selection ? insertText.length - 1 : 1);
+        newSelectionEnd = newSelectionStart + (selection ? 0 : 0);
     } else {
-        insertText = syntax + selection + syntax;
-        newSelectionStart = start + syntax.length;
-        newSelectionEnd = end + syntax.length;
+        if (selection) {
+            insertText = syntax + selection + syntax;
+            newSelectionStart = start;
+            newSelectionEnd = end + (syntax.length * 2);
+        } else {
+            insertText = syntax + syntax;
+            newSelectionStart = start + syntax.length;
+            newSelectionEnd = newSelectionStart;
+        }
     }
 
     localContent.value = before + insertText + after;
@@ -313,7 +314,8 @@ const debouncedSaveDraft = debounce(() => {
 
 const clearDraft = () => {
     localStorage.removeItem('markdown-editor-content');
-    clearContent();
+    localContent.value = '';
+    emit('update:modelValue', '');
 };
 
 // Watchers
@@ -323,7 +325,11 @@ watch(() => props.modelValue, (newValue) => {
     }
 });
 
-defineExpose({ clearDraft });
+const submit = () => {
+    clearDraft();
+};
+
+defineExpose({ clearDraft, submit });
 
 // Lifecycle
 onMounted(() => {

@@ -175,14 +175,17 @@ const onAddComment = async () => {
         );
         
         if (addedComment) {
+            newComment.value = "";
             commentInput.value?.clearDraft();
+            emit('update:modelValue', '');
+
             notificationStore.showNotification(
                 "Comment posted successfully",
                 "success"
             );
-            logger.info("Comment posted successfully", { 
+            logger.info("Comment posted successfully", {
                 postId: props.postId,
-                commentId: addedComment.commentId 
+                commentId: addedComment.commentId
             });
         } else {
             throw new Error("Failed to add comment - invalid response");
