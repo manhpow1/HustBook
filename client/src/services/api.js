@@ -60,7 +60,7 @@ const apiService = {
     },
 
     async changePassword(currentPassword, newPassword) {
-        return axiosInstance.post(API_ENDPOINTS.CHANGE_PASSWORD, {
+        return axiosInstance.put(API_ENDPOINTS.CHANGE_PASSWORD, {
             password: currentPassword,
             new_password: newPassword,
         });

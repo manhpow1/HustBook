@@ -9,7 +9,7 @@ export const API_ENDPOINTS = {
     CHECK_VERIFY_CODE: `${API_BASE_URL}/api/auth/check_verify_code`,
     CHANGE_INFO_AFTER_SIGNUP: `${API_BASE_URL}/api/auth/change_info_after_signup`,
     AUTH_CHECK: `${API_BASE_URL}/api/auth/check`,
-    CHANGE_PASSWORD: `${API_BASE_URL}/api/auth/change_password`,
+    CHANGE_PASSWORD: `${API_BASE_URL}/api/users/change_password`,
     FORGOT_PASSWORD: `${API_BASE_URL}/api/auth/forgot-password`,
     // Profile endpoints
     GET_PROFILE: (userId) => userId ? `${API_BASE_URL}/api/users/profile/${userId}` : `${API_BASE_URL}/api/users/profile`,
