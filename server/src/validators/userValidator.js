@@ -169,7 +169,13 @@ const changePasswordSchema = Joi.object({
             'string.empty': 'Current password cannot be empty.',
             'any.required': 'Current password is required.',
         }),
-    new_password: passwordComplexity
+    new_password: passwordComplexity,
+    deviceId: Joi.string()
+        .required()
+        .messages({
+            'string.empty': 'Device ID cannot be empty.',
+            'any.required': 'Device ID is required.',
+        })
 }).required();
 
 /**
@@ -443,9 +449,9 @@ const validateSetUserInfo = (data) => {
         return acc;
     }, {});
 
-    return setUserInfoSchema.validate(sanitizedData, { 
+    return setUserInfoSchema.validate(sanitizedData, {
         abortEarly: false,
-        stripUnknown: true 
+        stripUnknown: true
     });
 };
 

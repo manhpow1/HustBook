@@ -56,7 +56,7 @@ class UserController {
 
             await userService.updatePassword(req, userId, password, new_password);
 
-            const currentDeviceId = req.get('X-Device-ID');
+            const currentDeviceId = req.get('Device-ID');
 
             await req.app.locals.auditLog.logAction(userId, null, 'password_change', {
                 deviceId: currentDeviceId,
@@ -257,7 +257,7 @@ class UserController {
     async logout(req, res, next) {
         try {
             const userId = req.user.userId;
-            const deviceId = req.get('X-Device-ID') || req.get('Device-ID');
+            const deviceId = req.get('Device-ID');
             
             if (!deviceId) {
                 throw createError('1004', 'Device ID is required');

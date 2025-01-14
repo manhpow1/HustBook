@@ -59,10 +59,18 @@ const authenticateToken = async (req, res, next) => {
 //        }
 
         const authHeader = req.headers.authorization;
+        const currentDeviceId = req.get('Device-ID');
 
         if (!authHeader || !authHeader.startsWith('Bearer ')) {
             throw createError('9998', 'Missing or invalid authorization header');
         }
+
+        if (!currentDeviceId || typeof currentDeviceId !== 'string' || currentDeviceId.trim() === '') {
+            throw createError('9998', 'Valid Device ID is required');
+        }
+
+        // Store deviceId in request for use in other middleware/routes
+        req.deviceId = currentDeviceId.trim();
 
         const token = authHeader.slice(7);
 

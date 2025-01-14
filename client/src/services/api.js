@@ -47,8 +47,8 @@ const apiService = {
         return axiosInstance.post(API_ENDPOINTS.SIGNUP, data);
     },
 
-    async logout() {
-        return axiosInstance.post(API_ENDPOINTS.LOGOUT);
+    async logout(data) {
+        return axiosInstance.post(API_ENDPOINTS.LOGOUT, data);
     },
 
     async getVerifyCode(data) {
@@ -59,11 +59,8 @@ const apiService = {
         return axiosInstance.post(API_ENDPOINTS.CHECK_VERIFY_CODE, data);
     },
 
-    async changePassword(currentPassword, newPassword) {
-        return axiosInstance.put(API_ENDPOINTS.CHANGE_PASSWORD, {
-            password: currentPassword,
-            new_password: newPassword,
-        });
+    async changePassword(data) {
+        return axiosInstance.put(API_ENDPOINTS.CHANGE_PASSWORD, data);
     },
 
     /**

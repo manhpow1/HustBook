@@ -419,7 +419,7 @@ router.post('/forgot-password', userController.forgotPassword);
  *       - bearerAuth: []
  *     parameters:
  *       - in: header
- *         name: X-Device-ID
+ *         name: Device-ID
  *         schema:
  *           type: string
  *         required: true

@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia';
 import { ref, computed, watch } from 'vue';
 import apiService from '../services/api';
+import { DEVICE_ID } from '../services/axiosInstance';
 import Cookies from 'js-cookie';
 import { useRouter } from 'vue-router';
 import logger from '../services/logging';
@@ -32,7 +33,7 @@ export const useUserStore = defineStore('user', () => {
     const sessionTimeout = ref(null);
     const inactivityTimer = ref(null);
     const deviceCleanupInterval = ref(null);
-    const deviceId = ref(localStorage.getItem('deviceId') || crypto.randomUUID());
+    const deviceId = ref(DEVICE_ID);
     const isLocked = ref(false);
     const failedAttempts = ref(0);
     const forgotPasswordStep = ref(1);
@@ -216,7 +217,6 @@ export const useUserStore = defineStore('user', () => {
     };
 
 
-    // Auth Methods
     const register = async (phoneNumber, password) => {
         if (isLocked.value) {
             toast({ type: 'error', message: 'Account is temporarily locked. Please try again later.' });
@@ -302,14 +302,16 @@ export const useUserStore = defineStore('user', () => {
         }
     };
 
-    const logout = async (suppressRedirect = false) => {
+    const logout = async (silent = false) => {
         try {
             isLoading.value = true;
-            const currentDeviceId = deviceId.value;
 
-            if (isLoggedIn.value) {
+            if (isLoggedIn.value && !silent) {
                 try {
-                    await apiService.logout({ deviceId: currentDeviceId });
+                    const currentDeviceId = localStorage.getItem('deviceId');
+                    await apiService.logout({
+                        deviceId: currentDeviceId
+                    });
                 } catch (err) {
                     logger.error('Logout error:', err);
                 }
@@ -318,7 +320,7 @@ export const useUserStore = defineStore('user', () => {
             clearAuthState();
             socket.disconnect();
 
-            if (!suppressRedirect) {
+            if (!silent) {
                 router.push('/login');
             }
             return true;

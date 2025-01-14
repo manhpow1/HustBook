@@ -16,10 +16,6 @@ const VERIFICATION_CODE_COOLDOWN = 60 * 1000;
 const MAX_VERIFICATION_ATTEMPTS = 5;
 const PASSWORD_HISTORY_SIZE = 5;
 
-// Constants for retry mechanism
-const MAX_RETRIES = 3;
-const BASE_DELAY = 1000; // 1 second base delay
-
 class UserService {
     async createUser(phoneNumber, password, uuid, verificationCode, deviceId) {
         try {
@@ -85,27 +81,31 @@ class UserService {
                 throw createError('9995', 'User not found');
             }
 
+            if (!deviceId || typeof deviceId !== 'string' || deviceId.trim() === '') {
+                throw createError('9998', 'Valid Device ID is required');
+            }
+
             if (user.deviceIds.length >= MAX_DEVICES_PER_USER && !user.deviceIds.includes(deviceId)) {
                 throw createError('9994', 'Maximum number of devices reached');
             }
 
-            // Update device details
+            // Update device details with validation
             const updatedDevices = user.deviceDetails.filter(d => d.deviceId !== deviceId);
             updatedDevices.push({
-                deviceId: deviceId,
+                deviceId: deviceId.trim(),
                 token: deviceToken,
                 lastUsed: new Date().toISOString(),
             });
 
-            // Update user device information
+            // Update user device information with validation
             user.deviceDetails = updatedDevices;
             user.deviceTokens = Array.from(new Set([
-                ...(user.deviceTokens || []),
+                ...(user.deviceTokens || []).filter(Boolean),
                 deviceToken
             ]));
             user.deviceIds = Array.from(new Set([
-                ...(user.deviceIds || []),
-                deviceId
+                ...(user.deviceIds || []).filter(Boolean),
+                deviceId.trim()
             ]));
 
             await user.save();
@@ -702,6 +702,46 @@ class UserService {
             logger.info(`Updated online status for user ${userId} to ${isOnline}`);
         } catch (error) {
             logger.error('Error updating online status:', error);
+            throw error;
+        }
+    }
+
+    async removeUserDevice(userId, deviceId, req = null) {
+        try {
+            const user = await this.getUserById(userId);
+            if (!user) {
+                throw createError('9995', 'User not found');
+            }
+
+            if (!deviceId || typeof deviceId !== 'string') {
+                throw createError('9998', 'Valid Device ID is required');
+            }
+
+            // Remove device from arrays
+            user.deviceDetails = user.deviceDetails.filter(d => d.deviceId !== deviceId);
+            user.deviceIds = user.deviceIds.filter(d => d !== deviceId);
+            
+            // Remove associated token
+            const deviceInfo = user.deviceDetails.find(d => d.deviceId === deviceId);
+            if (deviceInfo) {
+                user.deviceTokens = user.deviceTokens.filter(t => t !== deviceInfo.token);
+            }
+
+            await user.save();
+
+            // Log the device removal if request object is provided
+            if (req) {
+                await req.app.locals.auditLog.logAction(userId, null, 'device_removed', {
+                    deviceId,
+                    ip: req.ip,
+                    timestamp: new Date().toISOString()
+                });
+            }
+
+            logger.info(`Removed device ${deviceId} for user ${userId}`);
+            return true;
+        } catch (error) {
+            logger.error('Error removing device:', error);
             throw error;
         }
     }

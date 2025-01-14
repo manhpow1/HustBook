@@ -4,7 +4,15 @@ import Cookies from 'js-cookie';
 import logger from './logging';
 import router from '@/router';
 
+// Initialize deviceId first
+let deviceId = localStorage.getItem('deviceId');
+if (!deviceId) {
+    deviceId = crypto.randomUUID();
+    localStorage.setItem('deviceId', deviceId);
+}
+
 // Constants
+export const DEVICE_ID = deviceId;
 const MAX_RETRY_ATTEMPTS = 3;
 const REQUEST_TIMEOUT = 30000; // 30 seconds
 const { handleError } = useErrorHandler();
@@ -34,6 +42,10 @@ axiosInstance.interceptors.request.use(
         const accessToken = Cookies.get('accessToken');
         if (accessToken) {
             config.headers['Authorization'] = `Bearer ${accessToken}`;
+        }
+        
+        if (deviceId) {
+            config.headers['Device-ID'] = deviceId;
         }
 
         // Comment out CSRF token check
