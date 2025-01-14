@@ -4,15 +4,22 @@ import Cookies from 'js-cookie';
 import logger from './logging';
 import router from '@/router';
 
-// Initialize deviceId first
-let deviceId = localStorage.getItem('deviceId');
-if (!deviceId) {
-    deviceId = crypto.randomUUID();
-    localStorage.setItem('deviceId', deviceId);
-}
+// Initialize deviceId
+let deviceId = null;
+
+const initializeDeviceId = () => {
+    if (deviceId) return deviceId;
+    
+    deviceId = localStorage.getItem('deviceId');
+    if (!deviceId) {
+        deviceId = crypto.randomUUID();
+        localStorage.setItem('deviceId', deviceId);
+    }
+    return deviceId;
+};
 
 // Constants
-export const DEVICE_ID = deviceId;
+export const DEVICE_ID = initializeDeviceId();
 const MAX_RETRY_ATTEMPTS = 3;
 const REQUEST_TIMEOUT = 30000; // 30 seconds
 const { handleError } = useErrorHandler();
