@@ -60,9 +60,16 @@
                     </div>
                   </CardHeader>
                   <CardContent>
-                    <p class="text-card-foreground whitespace-pre-wrap break-words">
-                      {{ sanitizeOutput(post.described) }}
-                    </p>
+                    <div class="relative">
+                      <p class="text-card-foreground whitespace-pre-wrap break-words"
+                        :class="{ 'line-clamp-3': !expandedPosts[post.postId] }">
+                        {{ sanitizeOutput(post.described) }}
+                      </p>
+                      <Button v-if="post.described.length > 300" @click="togglePostExpansion(post.postId)"
+                        variant="link" class="px-0 text-sm font-medium">
+                        {{ expandedPosts[post.postId] ? 'Show Less' : 'Show More' }}
+                      </Button>
+                    </div>
                     <div v-if="post.media.length" class="mt-4">
                       <div class="grid gap-2 media-grid" :class="mediaGridClass(post.media.length)">
                         <div v-for="(media, index) in post.media" :key="index"
@@ -213,6 +220,12 @@ const isImage = (fileUrl) => {
   } catch {
     return false;
   }
+};
+
+const expandedPosts = ref({});
+
+const togglePostExpansion = (postId) => {
+  expandedPosts.value[postId] = !expandedPosts.value[postId];
 };
 
 const goToWatchPage = (postId, mediaIndex) => {
