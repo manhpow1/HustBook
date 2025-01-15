@@ -74,10 +74,8 @@
                       <div class="grid gap-2 media-grid" :class="mediaGridClass(post.media.length)">
                         <div v-for="(media, index) in post.media" :key="index"
                           class="relative rounded-lg overflow-hidden media-item">
-                          <AspectRatio :ratio="16 / 9">
                             <img v-if="isImage(media)" :src="media" :alt="`Post image ${index + 1}`"
                               class="w-full h-full object-contain max-h-[512px]" loading="lazy" />
-                          </AspectRatio>
                         </div>
                       </div>
                     </div>
@@ -143,7 +141,6 @@ import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardContent, CardFooter } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { AspectRatio } from "@/components/ui/aspect-ratio";
 import { Skeleton } from "@/components/ui/skeleton";
 import { defineAsyncComponent } from "vue";
 import { sanitizeInput, sanitizeOutput } from "../utils/sanitize";
