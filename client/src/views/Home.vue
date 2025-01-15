@@ -76,7 +76,7 @@
                           class="relative rounded-lg overflow-hidden media-item">
                           <AspectRatio :ratio="16 / 9">
                             <img v-if="isImage(media)" :src="media" :alt="`Post image ${index + 1}`"
-                              class="w-full h-full object-contain min-h-[200px] max-h-[512px]" loading="lazy" />
+                              class="w-full h-full object-contain max-h-[512px]" loading="lazy" />
                           </AspectRatio>
                         </div>
                       </div>
