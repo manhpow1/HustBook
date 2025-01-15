@@ -121,8 +121,10 @@ class FriendService {
             const userMap = new Map();
             userDocs.forEach(doc => {
                 if (doc.exists) {
+                    const userData = doc.data();
                     userMap.set(doc.id, {
-                        userName: doc.data().userName || ''
+                        userName: userData.userName || '',
+                        avatar: userData.avatar || ''
                     });
                 }
             });
@@ -136,6 +138,7 @@ class FriendService {
                 return {
                     userId: doc.id,
                     userName: userData.userName || '',
+                    avatar: userData.avatar || '',
                     ...friendData
                 };
             });
