@@ -16,7 +16,7 @@
                 aria-label="Notifications">
                 <CardHeader class="flex flex-row items-center justify-between">
                     <CardTitle>Notifications</CardTitle>
-                    <Button v-if="notifications.length > 0" variant="ghost" size="sm" @click="markAllAsRead">
+                    <Button v-if="notifications?.length > 0" variant="ghost" size="sm" @click="markAllAsRead">
                         Mark all as read
                     </Button>
                 </CardHeader>
@@ -33,7 +33,7 @@
                         </Alert>
                     </div>
 
-                    <div v-else-if="notifications.length === 0" class="p-4 text-center text-muted-foreground">
+                    <div v-else-if="!notifications?.length" class="p-4 text-center text-muted-foreground">
                         No notifications
                     </div>
 

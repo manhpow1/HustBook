@@ -83,7 +83,7 @@ const handleRemove = async () => {
 const handleMarkAsRead = async () => {
     if (props.notification.read === '0') {
         try {
-            await notificationStore.markNotificationAsRead(props.notification.notificationId);
+            await notificationStore.markAsRead(props.notification.notificationId);
         } catch (error) {
             toast({
                 title: "Error",

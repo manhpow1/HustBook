@@ -19,7 +19,7 @@ export const useNotificationStore = defineStore('notification', () => {
 
     // Computed 
     const unreadCount = computed(() => {
-        return notifications.value.filter((n) => n.read === '0').length;
+        return notifications.value?.filter((n) => n.read === '0')?.length || 0;
     });
 
     // Actions
