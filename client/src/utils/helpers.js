@@ -60,11 +60,20 @@ export function formatDate(date) {
     }
 }
 
-export function formatTimeAgo(dateString) {
-    if (!dateString) return 'Unknown date';
+export function formatTimeAgo(dateInput) {
+    if (!dateInput) return 'Unknown date';
     
     try {
-        const date = parseISO(dateString);
+        let date;
+        if (typeof dateInput === 'object' && '_seconds' in dateInput) {
+            // Handle Firestore timestamp
+            date = new Date(dateInput._seconds * 1000);
+        } else if (typeof dateInput === 'string') {
+            date = parseISO(dateInput);
+        } else {
+            date = new Date(dateInput);
+        }
+        
         if (isNaN(date.getTime())) return 'Invalid date';
         
         const now = new Date();
