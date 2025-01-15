@@ -476,9 +476,15 @@ export const usePostStore = defineStore("post", () => {
                     avatar: post.userAvatar || userStore.userData?.avatar || ''
                 },
                 isOwner,
-                created: post.created || post.createdAt?.seconds 
-                    ? new Date(post.createdAt.seconds * 1000).toISOString()
-                    : new Date().toISOString(),
+                created: (() => {
+                    if (post.created) {
+                        return new Date(post.created).toISOString();
+                    }
+                    if (post.createdAt?.seconds) {
+                        return new Date(post.createdAt.seconds * 1000).toISOString();
+                    }
+                    return new Date().toISOString();
+                })(),
                 lastModified: new Date().toISOString()
             };
 
