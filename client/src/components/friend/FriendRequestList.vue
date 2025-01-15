@@ -126,6 +126,8 @@ const acceptRequest = async (userId) => {
                 description: 'Friend request accepted',
                 variant: 'default'
             })
+            // Refresh suggestions after accepting
+            await friendStore.getListSuggestedFriends()
         } else {
             throw new Error('Failed to accept friend request')
         }
@@ -154,6 +156,8 @@ const rejectRequest = async (userId) => {
                 description: 'Friend request rejected',
                 variant: 'default'
             })
+            // Refresh suggestions after rejecting
+            await friendStore.getListSuggestedFriends()
         } else {
             throw new Error('Failed to reject friend request')
         }
