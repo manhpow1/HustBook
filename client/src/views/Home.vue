@@ -236,7 +236,13 @@ const goToWatchPage = (postId, mediaIndex) => {
 onMounted(async () => {
   if (userStore.isLoggedIn) {
     try {
+      console.log('Fetching posts on mount...');
       await postStore.fetchPosts({ reset: true });
+      console.log('Posts fetched:', {
+        totalPosts: postStore.posts.length,
+        mappedPosts: mappedPosts.value.length,
+        hasMore: postStore.hasMorePosts
+      });
     } catch (error) {
       handleError(error);
     }

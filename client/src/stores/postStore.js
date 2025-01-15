@@ -403,7 +403,10 @@ export const usePostStore = defineStore("post", () => {
             logger.debug('Processing post data:', {
                 postId: post.postId,
                 hasContent: Boolean(post.content),
-                hasImages: Boolean(post.images?.length)
+                hasImages: Boolean(post.images?.length),
+                created: post.created,
+                createdAt: post.createdAt,
+                timestamp: post.createdAt?.seconds ? new Date(post.createdAt.seconds * 1000).toISOString() : null
             });
 
             // Content validation
