@@ -552,8 +552,9 @@ export const useUserStore = defineStore('user', () => {
             if (response.data.code === '1000') {
                 successMessage.value = 'Password changed successfully!';
                 toast({ type: 'success', message: successMessage.value });
-                router.push('/login');
                 await logout(true);
+                // Small delay to ensure server processes token version update
+                await new Promise(resolve => setTimeout(resolve, 1000));
                 router.push('/login');
                 return true;
             }

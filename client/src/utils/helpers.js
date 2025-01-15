@@ -61,34 +61,29 @@ export function formatDate(date) {
 }
 
 export function formatTimeAgo(dateString) {
-    const date = new Date(dateString);
-    const now = new Date();
-    const seconds = Math.floor((now - date) / 1000);
-
-    // Dynamically calculate intervals
-    const yearInSeconds = 365 * 24 * 60 * 60; // Approximate for simplicity
-    const monthInSeconds = (365 / 12) * 24 * 60 * 60; // Average month length
-    const weekInSeconds = 7 * 24 * 60 * 60;
-    const dayInSeconds = 24 * 60 * 60;
-    const hourInSeconds = 60 * 60;
-    const minuteInSeconds = 60;
-
-    const intervals = [
-        { label: 'year', seconds: yearInSeconds },
-        { label: 'month', seconds: monthInSeconds },
-        { label: 'week', seconds: weekInSeconds },
-        { label: 'day', seconds: dayInSeconds },
-        { label: 'hour', seconds: hourInSeconds },
-        { label: 'minute', seconds: minuteInSeconds },
-        { label: 'second', seconds: 1 },
-    ];
-
-    for (const interval of intervals) {
-        const count = Math.floor(seconds / interval.seconds);
-        if (count > 0) {
-            return `${count} ${interval.label}${count !== 1 ? 's' : ''} ago`;
+    if (!dateString) return 'Unknown date';
+    
+    try {
+        const date = parseISO(dateString);
+        if (isNaN(date.getTime())) return 'Invalid date';
+        
+        const now = new Date();
+        const diffInSeconds = Math.floor((now - date) / 1000);
+        
+        if (diffInSeconds < 30) return 'just now';
+        if (diffInSeconds < 60) return 'less than a minute ago';
+        if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)} minutes ago`;
+        if (diffInSeconds < 7200) return '1 hour ago';
+        if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)} hours ago`;
+        if (diffInSeconds < 172800) return 'yesterday';
+        
+        // For older dates, use a more detailed format
+        if (isThisYear(date)) {
+            return format(date, 'MMM d');
         }
+        return format(date, 'MMM d, yyyy');
+    } catch (error) {
+        console.error('Error formatting date:', error);
+        return 'Invalid date';
     }
-
-    return 'just now';
 }

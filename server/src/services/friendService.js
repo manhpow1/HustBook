@@ -131,6 +131,7 @@ class FriendService {
             const friends = snapshot.docs.map(doc => {
                 const friendData = doc.data();
                 const userData = userMap.get(doc.id) || {};
+                logger.debug('getUserFriends service - Friend data:', friendData);
 
                 return {
                     userId: doc.id,

@@ -145,9 +145,11 @@ class UserService {
             user.password = hashedPassword;
             user.passwordHistory = [hashedPassword, ...user.passwordHistory].slice(0, PASSWORD_HISTORY_SIZE);
             user.lastPasswordChange = new Date().toISOString();
-            user.tokenVersion += 1;
-
-            await user.save();
+            // Increment token version and save
+            user.tokenVersion = (user.tokenVersion || 0) + 1;
+            await user.save();            
+            // Force cache clear
+            await redis.cache.del(`user:${userId}`);
 
             await req.app.locals.auditLog.logAction(userId, null, 'password_change', {
                 timestamp: new Date().toISOString()

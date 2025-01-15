@@ -53,7 +53,7 @@
                         <CardContent class="pt-6">
                             <div class="flex items-center gap-4 mb-4">
                                 <Avatar class="h-10 w-10">
-                                    <AvatarImage :src="friend.avatar || '@/assets/avatar-default.svg'" :alt="friend.userName" />
+                                    <AvatarImage :src="friend.avatar" :alt="friend.userName" />
                                     <AvatarFallback>{{
                                         friend.userName.charAt(0)
                                         }}</AvatarFallback>
@@ -176,13 +176,14 @@ const props = defineProps({
         type: String,
         default: null,
     },
-    limit: {
+    count: {
         type: Number,
         default: 20,
     },
     sortBy: {
         type: String,
-        default: "recent",
+        default: "name",
+        validator: (value) => ["name", "recent", "mutual"].includes(value)
     },
     index: {
         type: Number,
@@ -240,7 +241,7 @@ const filteredFriends = computed(() => {
 });
 
 const limitedFriends = computed(() => {
-    return filteredFriends.value.slice(0, props.limit);
+    return filteredFriends.value.slice(0, props.count);
 });
 
 // Methods
@@ -270,8 +271,11 @@ const fetchFriends = async () => {
         const params = {
             userId: effectiveUserId.value,
             index: props.index,
-            count: props.limit
+            count: props.count
         };
+        
+        // Set the sort order in the store
+        friendStore.setSortBy(sortByInternal.value);
         
         await friendStore.getUserFriends(params);
         
@@ -290,12 +294,12 @@ const fetchFriends = async () => {
     }
 };
 
-const viewProfile = (friend) => {
-    if (!friend?.userId) {
-        console.error("Missing userId for friend:", friend);
+const viewProfile = (userId) => {
+    if (!userId) {
+        console.error("Missing userId");
         return;
     }
-    router.push({ name: "UserProfile", params: { userId: friend.userId } });
+    router.push({ name: "UserProfile", params: { userId } });
 };
 
 const sendMessage = (userId) => {
