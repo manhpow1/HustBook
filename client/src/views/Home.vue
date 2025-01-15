@@ -75,7 +75,7 @@
                         <div v-for="(media, index) in post.media" :key="index"
                           class="relative rounded-lg overflow-hidden media-item">
                             <img v-if="isImage(media)" :src="media" :alt="`Post image ${index + 1}`"
-                              class="w-full h-full object-contain max-h-[512px]" loading="lazy" />
+                              class="h-full object-contain max-h-[512px]" loading="lazy" />
                         </div>
                       </div>
                     </div>
