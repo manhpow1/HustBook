@@ -71,9 +71,17 @@ export const useFriendStore = defineStore('friend', () => {
             if (data.code === '1000') {
                 friends.value = data.data.friends;
                 total.value = parseInt(data.data.total);
+                return {
+                    friends: data.data.friends,
+                    total: parseInt(data.data.total)
+                };
             } else if (data.code === '9994') {
                 friends.value = [];
                 total.value = 0;
+                return {
+                    friends: [],
+                    total: 0
+                };
             } else {
                 throw new Error(data.message || 'Failed to load friends');
             }

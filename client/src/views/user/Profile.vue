@@ -96,17 +96,17 @@
             <Card class="mt-6">
               <CardHeader>
                 <CardTitle class="text-xl">Friends</CardTitle>
-                <CardDescription>{{ friendStore.total || 0 }} friends</CardDescription>
+                <CardDescription>{{ friends.length || 0 }} friends</CardDescription>
               </CardHeader>
               <CardContent>
-                <div v-if="friendStore.loading" class="grid grid-cols-3 gap-2">
+                <div v-if="loading" class="grid grid-cols-3 gap-2">
                   <Skeleton v-for="i in 6" :key="i" class="h-24 w-full" />
                 </div>
-                <div v-else-if="friendStore.error" class="text-center text-red-500 p-4">
-                  {{ friendStore.error }}
+                <div v-else-if="error" class="text-center text-red-500 p-4">
+                  {{ error }}
                 </div>
                 <div v-else class="grid grid-cols-3 gap-2">
-                  <div v-for="friend in friendStore.friends?.slice(0, 6)" :key="friend.userId"
+                  <div v-for="friend in friends?.slice(0, 6)" :key="friend.userId"
                     class="flex flex-col items-center">
                     <Avatar class="h-16 w-16">
                       <AvatarImage :src="friend.avatar" :alt="friend.userName" />
@@ -463,19 +463,17 @@ const fetchFriendsData = async () => {
       index: props.index
     });
 
-    await friendStore.getUserFriends({
+    const response = await friendStore.getUserFriends({
       userId: targetUserId.value,
       index: 0,
       count: props.limit || 6
     });
 
-    if (friendStore.error) {
-      const storeError = new Error(friendStore.error);
-      storeError.code = 'STORE_ERROR';
-      throw storeError;
+    if (response && response.friends) {
+      friends.value = response.friends;
+    } else {
+      throw new Error('Failed to fetch friends data');
     }
-
-    friends.value = friendStore.friends || [];
     logger.debug("Friends data fetched successfully", {
       friendsCount: friends.value.length,
       total: friendStore.total,
