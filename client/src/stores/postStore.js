@@ -307,7 +307,7 @@ export const usePostStore = defineStore("post", () => {
     async function toggleLike(postId) {
         const post = posts.value.find((p) => p.postId === postId);
         const currentPostMatch = currentPost.value?.postId === postId ? currentPost.value : null;
-        
+
         // Store original state for rollback
         const originalState = {
             post: post ? { isLiked: post.isLiked, likes: post.likes } : null,
@@ -316,10 +316,10 @@ export const usePostStore = defineStore("post", () => {
 
         try {
             const response = await apiService.likePost(postId);
-            
+
             if (response.data.code === "1000") {
                 const { liked, likeCount } = response.data.data;
-                
+
                 if (post) {
                     post.isLiked = liked ? "1" : "0";
                     post.likes = likeCount;
@@ -342,7 +342,7 @@ export const usePostStore = defineStore("post", () => {
                 currentPostMatch.isLiked = originalState.currentPost.isLiked;
                 currentPostMatch.likes = originalState.currentPost.likes;
             }
-            
+
             await handleError(err);
             throw err;
         }
@@ -507,10 +507,8 @@ export const usePostStore = defineStore("post", () => {
     // Check for Inappropriate Content
     function containsInappropriateContent(text) {
         if (!text) return false;
-        const lowerCaseText = text.toLowerCase();
-        return inappropriateWords.some((word) =>
-            lowerCaseText.includes(word.toLowerCase())
-        );
+        const words = text.toLowerCase().split(/\b\W+\b/);
+        return inappropriateWords.some((word) => words.includes(word.toLowerCase()));
     }
 
     // Validate Coordinate
