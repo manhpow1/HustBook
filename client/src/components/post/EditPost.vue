@@ -350,11 +350,8 @@ const handleSubmit = async () => {
         editorRef.value?.clearDraft();
         emit('update:modelValue', '');
         showUnsavedDialog.value = false;
-
-
-        // Navigate to post detail
-
-        // Navigate to post detail
+        await new Promise(resolve => setTimeout(resolve, 500));
+        await postStore.fetchPost(postId);
         await router.push({
             name: "PostDetail",
             params: { postId },

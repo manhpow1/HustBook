@@ -281,6 +281,8 @@ const sendMessage = async () => {
       message: messageContent.value.trim()
     });
     messageContent.value = '';
+    await chatStore.fetchConversations();
+    await chatStore.fetchMessages(chatStore.selectedConversationId);
     scrollToBottom();
   } catch (error) {
     logger.error('Failed to send message:', {
@@ -324,6 +326,7 @@ const startConversation = async (user) => {
   try {
     const conversationId = await chatStore.createConversation(user.userId);
     showNewMessageDialog.value = false;
+    await chatStore.fetchConversations();
     await selectConversation(conversationId);
   } catch (error) {
     logger.error('Failed to start conversation:', error);

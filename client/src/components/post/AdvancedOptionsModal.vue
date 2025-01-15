@@ -79,7 +79,7 @@
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="spam">Spam</SelectItem>
-                  <SelectItem value="inappropriate">Inappropriate Content</SelectItem>
+                  <SelectItem value="inappropriateContent">Inappropriate Content</SelectItem>
                   <SelectItem value="harassment">Harassment</SelectItem>
                   <SelectItem value="hateSpeech">Hate Speech</SelectItem>
                   <SelectItem value="violence">Violence</SelectItem>
@@ -278,10 +278,12 @@ const handleReportSubmit = async () => {
   reportForm.value.error = null
 
   try {
+    const details = reportForm.value.reason === 'other' ? reportForm.value.details : '';
+
     await postStore.reportPost(
       props.post.postId,
       reportForm.value.reason,
-      reportForm.value.details
+      details
     );
 
     toast({
