@@ -131,7 +131,7 @@
 </template>
 
 <script setup>
-import { onMounted, watch, computed } from "vue";
+import { onMounted, watch, computed, ref } from "vue";
 import { useRouter, RouterLink } from "vue-router";
 import ErrorBoundary from "@/components/shared/ErrorBoundary.vue";
 import { AlertCircle, ThumbsUp, MessageCircle, Play, RefreshCw } from "lucide-vue-next";
