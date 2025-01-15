@@ -54,19 +54,6 @@
                             </Button>
                         </div>
                     </div>
-                    <div class="flex items-center space-x-4 pt-2">
-                        <Button variant="ghost" size="sm" :class="{ 'text-primary': commentData.isLiked }"
-                            @click="toggleLike" :disabled="isLikeLoading">
-                            <ThumbsUpIcon class="h-4 w-4 mr-2" :class="{ 'fill-current': commentData.isLiked }" />
-                            <span>{{ commentData.likes }}
-                                {{ commentData.likes === 1 ? "Like" : "Likes" }}</span>
-                            <Loader2Icon v-if="isLikeLoading" class="ml-2 h-4 w-4 animate-spin" />
-                        </Button>
-                        <Button variant="ghost" size="sm" @click="toggleReply">
-                            <ReplyIcon class="h-4 w-4 mr-2" />
-                            Reply
-                        </Button>
-                    </div>
                 </div>
             </div>
         </CardContent>
@@ -123,8 +110,6 @@ import {
     MoreVerticalIcon,
     PencilIcon,
     TrashIcon,
-    ThumbsUpIcon,
-    ReplyIcon,
     Loader2Icon,
 } from "lucide-vue-next";
 
@@ -256,9 +241,6 @@ const toggleLike = async () => {
     } finally {
         isLikeLoading.value = false;
     }
-};
-const toggleReply = () => {
-    console.log("Reply clicked");
 };
 </script>
 <style scoped>

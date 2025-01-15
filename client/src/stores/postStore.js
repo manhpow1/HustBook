@@ -355,6 +355,7 @@ export const usePostStore = defineStore("post", () => {
             if (response.data.code === "1000") {
                 posts.value = posts.value.filter((p) => p.postId !== postId);
                 if (currentPost.value?.postId === postId) currentPost.value = null;
+                return response.data;
             } else {
                 throw new Error(response.data.message);
             }

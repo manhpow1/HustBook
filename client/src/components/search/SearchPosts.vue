@@ -178,7 +178,6 @@
       </ScrollArea>
     </div>
   </div>
-  <p v-else class="text-muted-foreground">Please log in to search.</p>
 </template>
 
 <script setup>

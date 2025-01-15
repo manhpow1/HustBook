@@ -86,7 +86,7 @@ const handleLike = async () => {
         const currentLikeStatus = props.post.isLiked === "1";
         const newLikeStatus = currentLikeStatus ? "0" : "1";
         const newLikeCount = parseInt(props.post.likes || 0) + (currentLikeStatus ? -1 : 1);
-        
+
         emit('like', {
             postId: props.post.postId,
             isLiked: newLikeStatus,
@@ -99,9 +99,9 @@ const handleLike = async () => {
             description: "Unable to process like action. Please try again.",
             variant: "destructive"
         });
-        logger.error('Like action failed:', { 
+        logger.error('Like action failed:', {
             postId: props.post.postId,
-            error: error.message 
+            error: error.message
         });
     } finally {
         isLiking.value = false;
@@ -119,7 +119,6 @@ const handleShare = async () => {
         logger.warn('Share attempted with invalid post');
         return;
     }
-
     try {
         const postUrl = `${window.location.origin}/post/${props.post.postId}`;
         const shareData = {
@@ -127,16 +126,18 @@ const handleShare = async () => {
             text: props.post.content?.substring(0, 100) + (props.post.content?.length > 100 ? '...' : ''),
             url: postUrl
         };
-
         if (navigator.share && navigator.canShare(shareData)) {
             await navigator.share(shareData);
+            toast({
+                title: "Success",
+                description: "Post shared successfully!",
+            });
             logger.info('Post shared successfully', { postId: props.post.postId });
         } else {
             await navigator.clipboard.writeText(postUrl);
             toast({
                 title: "Success",
                 description: "Post link copied to clipboard",
-                duration: 2000
             });
             logger.info('Post URL copied to clipboard', { postId: props.post.postId });
         }

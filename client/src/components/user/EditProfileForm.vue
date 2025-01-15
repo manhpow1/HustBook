@@ -400,6 +400,8 @@ const handleSubmit = async () => {
             initialForm.value = { ...form.value };
             formState.value.isDirty = false;
 
+            await userStore.fetchUserProfile();
+
             toast({
                 title: "Success",
                 description: "Profile updated successfully",

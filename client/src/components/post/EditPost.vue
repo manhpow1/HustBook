@@ -153,6 +153,7 @@ const editorRef = ref(null);
 // Form State
 const description = ref("");
 const files = ref([]);
+const emit = defineEmits(['update:modelValue', 'update']);
 
 // UI State
 const isLoading = ref(false);

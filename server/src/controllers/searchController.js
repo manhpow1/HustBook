@@ -54,10 +54,6 @@ class SearchController {
                 firstPost: matchingPosts[0]?.postId
             });
 
-            if (matchingPosts.length === 0) {
-                throw createError('9994', 'No data or end of list data');
-            }
-
             sendResponse(res, '1000', matchingPosts);
         } catch (error) {
             console.error('Search controller error:', error);
@@ -81,10 +77,6 @@ class SearchController {
             const userId = req.user.userId;
 
             const users = await searchService.searchUsers(userId, keyword, index, count);
-
-            if (users.length === 0) {
-                throw createError('9994', 'No data or end of list data');
-            }
 
             sendResponse(res, '1000', users);
         } catch (error) {
