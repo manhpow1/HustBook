@@ -1,20 +1,18 @@
 <template>
     <Dialog :open="isOpen" @update:open="close">
-        <DialogContent class="max-w-7xl w-full bg-transparent border-none shadow-none" data-testid="media-viewer">
-            <div class="relative max-w-4xl max-h-full w-full">
+        <DialogContent class="max-w-none w-full h-full bg-transparent border-none shadow-none p-0">
+            <div class="relative w-full h-full flex items-center justify-center">
                 <DialogClose
-                    class="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground">
+                    class="fixed right-4 top-4 z-50 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground">
                     <X class="h-8 w-8 text-white" />
                     <span class="sr-only">Close</span>
                 </DialogClose>
 
                 <!-- Media Content -->
-                <div v-if="currentMedia.type === 'image'" class="flex items-center justify-center h-screen">
-                    <img :src="currentMedia.url"
-                        :alt="currentMedia.alt || 'Post Media'"
-                        class="w-auto h-auto max-w-[90vw] max-h-[90vh] object-contain transition-transform duration-300 group-hover:scale-105" 
-                        loading="lazy" 
-                        @click="handleImageClick" />
+                <div v-if="currentMedia.type === 'image'" class="flex items-center justify-center w-full h-full px-4">
+                    <img :src="currentMedia.url" :alt="currentMedia.alt || 'Post Media'"
+                        class="w-auto h-auto max-w-[95vw] max-h-[90vh] object-contain transition-transform duration-300"
+                        loading="lazy" @click="handleImageClick" />
                 </div>
 
                 <!-- Navigation Buttons -->
@@ -65,7 +63,7 @@ const props = defineProps({
         type: Array,
         required: true,
         validator: (value) => {
-            return value.every(item => 
+            return value.every(item =>
                 (item.type === 'image' || item.type === 'video') &&
                 typeof item.url === 'string'
             );

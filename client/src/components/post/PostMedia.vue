@@ -3,52 +3,62 @@
         <div v-if="post.images?.length" class="mb-4">
             <div v-if="post.images.length === 1" class="mb-4">
                 <Card class="overflow-hidden">
-                    <AspectRatio :ratio="16/9">
-                        <div @click="openLightbox(0)"
-                            class="relative w-full h-full cursor-pointer group">
-                            <img :src="post.images[0]"
-                                :alt="post.content || 'Post image'"
-                                class="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                    <AspectRatio :ratio="16 / 9">
+                        <div @click="openLightbox(0)" class="relative w-full h-full cursor-pointer group">
+                            <img :src="post.images[0]" :alt="post.content || 'Post image'"
+                                class="w-full h-full object-contain min-h-[200px] max-h-[512px] transition-transform duration-300 group-hover:scale-105"
                                 loading="lazy" />
                         </div>
                     </AspectRatio>
                 </Card>
             </div>
-            <!-- Two Images Layout -->
+            <!-- 2 Images -->
             <div v-else-if="post.images.length === 2" class="grid grid-cols-2 gap-2">
                 <Card v-for="(img, index) in post.images" :key="index" class="overflow-hidden">
-                    <AspectRatio :ratio="1">
-                        <div @click="openLightbox(index)"
-                            class="relative w-full h-full cursor-pointer group">
-                            <img :src="img"
-                                :alt="post.content || 'Post image'"
-                                class="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                    <AspectRatio :ratio="4 / 3">
+                        <div @click="openLightbox(index)" class="relative w-full h-full cursor-pointer group">
+                            <img :src="img" :alt="post.content || 'Post image'"
+                                class="w-full h-full object-contain min-h-[150px] max-h-[400px] transition-transform duration-300 group-hover:scale-105"
                                 loading="lazy" />
                         </div>
                     </AspectRatio>
                 </Card>
             </div>
-            <!-- Three Images Layout -->
-            <div v-else-if="post.images.length === 3" class="grid grid-cols-2 gap-2">
-                <Card class="overflow-hidden row-span-2">
+
+            <!-- 3 Images -->
+            <div v-else-if="post.images.length === 3" class="grid grid-rows-2 grid-cols-2 gap-2">
+                <Card class="row-span-2 overflow-hidden">
                     <AspectRatio :ratio="1">
-                        <div @click="openLightbox(0)"
-                            class="relative w-full h-full cursor-pointer group">
-                            <img :src="post.images[0]"
-                                :alt="post.content || 'Post image'"
-                                class="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                        <div @click="openLightbox(0)" class="relative w-full h-full cursor-pointer group">
+                            <img :src="post.images[0]" :alt="post.content || 'Post image'"
+                                class="w-full h-full object-contain min-h-[200px] max-h-[500px] transition-transform duration-300 group-hover:scale-105"
                                 loading="lazy" />
                         </div>
                     </AspectRatio>
                 </Card>
                 <Card v-for="index in [1, 2]" :key="index" class="overflow-hidden">
-                    <AspectRatio :ratio="1">
-                        <div @click="openLightbox(index)"
-                            class="relative w-full h-full cursor-pointer group">
-                            <img :src="post.images[index]"
-                                :alt="post.content || 'Post image'"
-                                class="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                    <AspectRatio :ratio="4 / 3">
+                        <div @click="openLightbox(index)" class="relative w-full h-full cursor-pointer group">
+                            <img :src="post.images[index]" :alt="post.content || 'Post image'"
+                                class="w-full h-full object-contain min-h-[150px] max-h-[250px] transition-transform duration-300 group-hover:scale-105"
                                 loading="lazy" />
+                        </div>
+                    </AspectRatio>
+                </Card>
+            </div>
+
+            <!-- 4 Images -->
+            <div v-else class="grid grid-cols-2 gap-2">
+                <Card v-for="(img, index) in post.images.slice(0, 4)" :key="index" class="overflow-hidden">
+                    <AspectRatio :ratio="4 / 3">
+                        <div @click="openLightbox(index)" class="relative w-full h-full cursor-pointer group">
+                            <img :src="img" :alt="post.content || 'Post image'"
+                                class="w-full h-full object-contain min-h-[150px] max-h-[300px] transition-transform duration-300 group-hover:scale-105"
+                                loading="lazy" />
+                            <div v-if="index === 3 && post.images.length > 4"
+                                class="absolute inset-0 flex items-center justify-center bg-black/60 text-white">
+                                <span class="text-2xl font-bold">+{{ post.images.length - 4 }}</span>
+                            </div>
                         </div>
                     </AspectRatio>
                 </Card>
@@ -57,10 +67,8 @@
             <div v-else class="grid grid-cols-2 gap-2">
                 <Card v-for="(img, index) in post.images.slice(0, 4)" :key="index" class="overflow-hidden">
                     <AspectRatio :ratio="1">
-                        <div @click="openLightbox(index)"
-                            class="relative w-full h-full cursor-pointer group">
-                            <img :src="img"
-                                :alt="post.content || 'Post image'"
+                        <div @click="openLightbox(index)" class="relative w-full h-full cursor-pointer group">
+                            <img :src="img" :alt="post.content || 'Post image'"
                                 class="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
                                 loading="lazy" />
                             <div v-if="index === 3 && post.images.length > 4"
@@ -186,4 +194,3 @@ const handleComment = () => {
     cursor: pointer;
 }
 </style>
-
