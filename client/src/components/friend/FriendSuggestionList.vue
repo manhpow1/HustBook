@@ -47,10 +47,11 @@
 
                         <div class="flex gap-2">
                             <Button class="flex-1" variant="default" size="sm"
-                                :disabled="isProcessing(suggestion.userId)"
+                                :disabled="isProcessing(suggestion.userId) || friendStore.sentRequests.has(suggestion.userId)"
                                 @click="sendFriendRequest(suggestion.userId)">
                                 <Loader2Icon v-if="isProcessing(suggestion.userId)" class="mr-2 h-4 w-4 animate-spin" />
-                                {{ isProcessing(suggestion.userId) ? 'Sending...' : 'Add Friend' }}
+                                {{ isProcessing(suggestion.userId) ? 'Sending...' : 
+                                   friendStore.sentRequests.has(suggestion.userId) ? 'Request Sent' : 'Add Friend' }}
                             </Button>
 
                             <Button variant="outline" size="sm" :disabled="isProcessing(suggestion.userId)"

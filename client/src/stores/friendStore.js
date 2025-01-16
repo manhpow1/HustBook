@@ -18,6 +18,7 @@ export const useFriendStore = defineStore('friend', () => {
     const hasMoreBlockedUsers = ref(true);
     const blockedUsersIndex = ref(0);
     const blockedUsersCount = ref(20);
+    const sentRequests = ref(new Set());
     const { toast } = useToast();
     const { handleError } = useErrorHandler();
 
@@ -154,7 +155,7 @@ export const useFriendStore = defineStore('friend', () => {
             const response = await apiService.sendFriendRequest(userId);
             const data = response.data;
             if (data.code === '1000') {
-                // Optionally update UI or state
+                sentRequests.value.add(userId);
                 toast({ type: 'success', message: 'Friend request sent' });
                 return data.data;
             } else {
@@ -251,6 +252,7 @@ export const useFriendStore = defineStore('friend', () => {
         loading,
         error,
         sortedFriends,
+        sentRequests,
         total,
         blockedUsers,
         blockedUsersLoading,
