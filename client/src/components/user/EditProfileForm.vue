@@ -349,7 +349,7 @@ const handleSubmit = async () => {
             address: form.value.address,
             city: form.value.city,
             country: form.value.country,
-            version: currentVersion.value
+            version: form.value.version || currentVersion.value,
         };
 
         // Chỉ thêm files nếu có thay đổi
@@ -436,6 +436,7 @@ const loadUserData = async () => {
                 coverPhoto: null,
                 existingAvatar: userData.avatar || "",
                 existingCoverPhoto: userData.coverPhoto || "",
+                version: userData.version || 0,
             };
 
             currentVersion.value = userData.version || 0;
