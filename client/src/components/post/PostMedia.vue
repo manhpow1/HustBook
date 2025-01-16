@@ -6,7 +6,7 @@
                     <AspectRatio :ratio="16 / 9">
                         <div @click="openLightbox(0)" class="relative w-full h-full cursor-pointer group">
                             <img :src="post.images[0]" :alt="post.content || 'Post image'"
-                                class="h-full object-contain min-h-[200px] max-h-[512px] transition-transform duration-300 group-hover:scale-105"
+                                class="w-full h-full object-contain min-h-[200px] max-h-[512px] transition-transform duration-300 group-hover:scale-105"
                                 loading="lazy" />
                         </div>
                     </AspectRatio>
@@ -18,7 +18,7 @@
                     <AspectRatio :ratio="4 / 3">
                         <div @click="openLightbox(index)" class="relative w-full h-full cursor-pointer group">
                             <img :src="img" :alt="post.content || 'Post image'"
-                                class="h-full object-contain min-h-[150px] max-h-[400px] transition-transform duration-300 group-hover:scale-105"
+                                class="w-full h-full object-contain min-h-[150px] max-h-[400px] transition-transform duration-300 group-hover:scale-105"
                                 loading="lazy" />
                         </div>
                     </AspectRatio>
@@ -31,7 +31,7 @@
                     <AspectRatio :ratio="1">
                         <div @click="openLightbox(0)" class="relative w-full h-full cursor-pointer group">
                             <img :src="post.images[0]" :alt="post.content || 'Post image'"
-                                class="h-full object-contain min-h-[200px] max-h-[500px] transition-transform duration-300 group-hover:scale-105"
+                                class="w-full h-full object-contain min-h-[200px] max-h-[500px] transition-transform duration-300 group-hover:scale-105"
                                 loading="lazy" />
                         </div>
                     </AspectRatio>
@@ -40,7 +40,7 @@
                     <AspectRatio :ratio="4 / 3">
                         <div @click="openLightbox(index)" class="relative w-full h-full cursor-pointer group">
                             <img :src="post.images[index]" :alt="post.content || 'Post image'"
-                                class="h-full object-contain min-h-[150px] max-h-[250px] transition-transform duration-300 group-hover:scale-105"
+                                class="w-full h-full object-contain min-h-[150px] max-h-[250px] transition-transform duration-300 group-hover:scale-105"
                                 loading="lazy" />
                         </div>
                     </AspectRatio>
