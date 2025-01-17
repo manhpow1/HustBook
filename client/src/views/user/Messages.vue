@@ -333,39 +333,54 @@ const startConversation = async (user) => {
   }
 };
 
+const setupSocketEvents = (conversationId) => {
+  const socket = getSocket();
+  if (!socket) return;
+
+  // Clean up existing listeners
+  socket.off('onmessage');
+  socket.off('message_sent');
+  socket.off('message_error');
+  socket.off('conversation_updated');
+
+  // Set up new listeners
+  socket.on('onmessage', (data) => {
+    if (data.message.conversationId === conversationId) {
+      chatStore.addMessage(data.message);
+      chatStore.fetchConversations(); // Refresh conversations list
+      nextTick(() => {
+        scrollToBottom();
+      });
+    }
+  });
+
+  socket.on('message_sent', (data) => {
+    if (data.conversationId === conversationId) {
+      chatStore.confirmMessageSent(data.messageId);
+      nextTick(() => {
+        scrollToBottom();
+      });
+    }
+  });
+
+  socket.on('message_error', (error) => {
+    if (error.conversationId === conversationId) {
+      chatStore.handleMessageError(error);
+    }
+  });
+
+  socket.on('conversation_updated', () => {
+    chatStore.fetchConversations();
+  });
+};
+
 async function loadMessages(conversationId) {
   try {
     await chatStore.fetchMessages(conversationId);
     await chatStore.markAsRead();
-    const socket = getSocket();
-    if (socket) {
-      socket.off('onmessage');
-      socket.on('onmessage', (data) => {
-        if (data.message.conversationId === conversationId) {
-          chatStore.addMessage(data.message);
-          nextTick(() => {
-            scrollToBottom();
-          });
-        }
-      });
-
-      socket.on('message_sent', (data) => {
-        if (data.conversationId === conversationId) {
-          chatStore.confirmMessageSent(data.messageId);
-          nextTick(() => {
-            scrollToBottom();
-          });
-        }
-      });
-
-      socket.on('message_error', (error) => {
-        if (error.conversationId === conversationId) {
-          chatStore.handleMessageError(error);
-        }
-      });
-    }
+    setupSocketEvents(conversationId);
   } catch (error) {
-    console.error('Failed to load messages:', error);
+    logger.error('Failed to load messages:', error);
   }
 }
 
@@ -381,5 +396,28 @@ onMounted(async () => {
     await loadMessages(chatStore.selectedConversationId);
   }
   await chatStore.initSocket();
+  
+  const socket = getSocket();
+  if (socket) {
+    // Clean up any existing listeners
+    socket.off('conversation_updated');
+    socket.off('onmessage');
+    
+    // Set up global listeners
+    socket.on('conversation_updated', () => {
+      chatStore.fetchConversations();
+    });
+    
+    socket.on('onmessage', async (data) => {
+      const { message } = data;
+      // Add message to current conversation if it matches
+      if (message.conversationId === chatStore.selectedConversationId) {
+        chatStore.addMessage(message);
+        scrollToBottom();
+      }
+      // Refresh conversations list to update last message
+      await chatStore.fetchConversations();
+    });
+  }
 });
 </script>

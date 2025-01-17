@@ -203,15 +203,33 @@ export const useChatStore = defineStore('chat', {
                 this.messages = [];
             }
 
-            // Add or update a message in the message list
-            const exists = this.messages.find(m => m.messageId === message.messageId);
+            // Format the message to match our expected structure
+            const formattedMessage = {
+                messageId: message.messageId,
+                message: message.message || message.text || '',
+                content: message.message || message.text || '',
+                created: message.created || message.createdAt || new Date().toISOString(),
+                sender: {
+                    id: message.sender?.userId || message.senderId,
+                    userName: message.sender?.userName || message.senderName || 'Unknown User',
+                    avatar: message.sender?.avatar || message.senderAvatar
+                },
+                status: message.status || 'sent',
+                unread: message.unread || '0',
+                conversationId: message.conversationId
+            };
+
+            // Add or update message in the list
+            const exists = this.messages.find(m => m.messageId === formattedMessage.messageId);
             if (!exists) {
-                this.messages.push(message);
+                this.messages.push(formattedMessage);
+                // Sort messages by creation date
+                this.messages.sort((a, b) => new Date(a.created) - new Date(b.created));
             } else {
                 // Update existing message
-                const index = this.messages.findIndex(m => m.messageId === message.messageId);
+                const index = this.messages.findIndex(m => m.messageId === formattedMessage.messageId);
                 if (index !== -1) {
-                    this.messages[index] = { ...this.messages[index], ...message };
+                    this.messages[index] = { ...this.messages[index], ...formattedMessage };
                 }
             }
         },
