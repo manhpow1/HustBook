@@ -402,6 +402,8 @@ onMounted(async () => {
     // Clean up any existing listeners
     socket.off('conversation_updated');
     socket.off('onmessage');
+    socket.off('message_sent');
+    socket.off('message_error');
     
     // Set up global listeners
     socket.on('conversation_updated', () => {
@@ -414,9 +416,23 @@ onMounted(async () => {
       if (message.conversationId === chatStore.selectedConversationId) {
         chatStore.addMessage(message);
         scrollToBottom();
+        // Mark message as read since we're viewing it
+        await chatStore.markAsRead();
+      } else {
+        // Update unread count for other conversations
+        chatStore.incrementUnreadCount();
       }
       // Refresh conversations list to update last message
       await chatStore.fetchConversations();
+    });
+
+    socket.on('message_sent', async (data) => {
+      await chatStore.confirmMessageSent(data.messageId);
+      scrollToBottom();
+    });
+
+    socket.on('message_error', (error) => {
+      chatStore.handleMessageError(error);
     });
   }
 });

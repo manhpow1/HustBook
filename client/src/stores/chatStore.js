@@ -225,6 +225,16 @@ export const useChatStore = defineStore('chat', {
                 this.messages.push(formattedMessage);
                 // Sort messages by creation date
                 this.messages.sort((a, b) => new Date(a.created) - new Date(b.created));
+                
+                // Update conversation's last message if needed
+                const conversation = this.conversations.find(c => c.conversationId === formattedMessage.conversationId);
+                if (conversation) {
+                    conversation.LastMessage = {
+                        message: formattedMessage.message,
+                        created: formattedMessage.created,
+                        unread: formattedMessage.unread
+                    };
+                }
             } else {
                 // Update existing message
                 const index = this.messages.findIndex(m => m.messageId === formattedMessage.messageId);
@@ -232,6 +242,10 @@ export const useChatStore = defineStore('chat', {
                     this.messages[index] = { ...this.messages[index], ...formattedMessage };
                 }
             }
+        },
+
+        incrementUnreadCount() {
+            this.unreadCount++;
         },
 
         removeMessage(messageId) {
