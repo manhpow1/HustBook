@@ -337,14 +337,30 @@ async function loadMessages(conversationId) {
   try {
     await chatStore.fetchMessages(conversationId);
     await chatStore.markAsRead();
-
     const socket = getSocket();
     if (socket) {
       socket.off('onmessage');
       socket.on('onmessage', (data) => {
         if (data.message.conversationId === conversationId) {
           chatStore.addMessage(data.message);
-          scrollToBottom();
+          nextTick(() => {
+            scrollToBottom();
+          });
+        }
+      });
+
+      socket.on('message_sent', (data) => {
+        if (data.conversationId === conversationId) {
+          chatStore.confirmMessageSent(data.messageId);
+          nextTick(() => {
+            scrollToBottom();
+          });
+        }
+      });
+
+      socket.on('message_error', (error) => {
+        if (error.conversationId === conversationId) {
+          chatStore.handleMessageError(error);
         }
       });
     }
