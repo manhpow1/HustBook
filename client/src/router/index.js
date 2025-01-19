@@ -2,6 +2,9 @@ import { createRouter, createWebHistory } from 'vue-router';
 import { useUserStore } from '../stores/userStore';
 import { useCommentStore } from '../stores/commentStore';
 import logger from '../services/logging';
+import { ref } from 'vue';
+
+export const isLoading = ref(false);
 
 const routes = [
     {
@@ -141,11 +144,15 @@ router.beforeEach(async (to, from, next) => {
 
 router.beforeResolve((to, from, next) => {
     logger.debug(`Resolving navigation from ${from.name} to ${to.name}`);
+    isLoading.value = true;
     next();
 });
 
 router.afterEach((to, from) => {
     logger.debug(`Navigation completed to: ${to.name}`);
+    setTimeout(() => {
+        isLoading.value = false;
+    }, 100); // Small delay to prevent flash
 });
 
 export default router;

@@ -1,5 +1,6 @@
 <template>
   <div class="min-h-screen flex flex-col bg-background">
+    <LoadingSpinner v-if="isLoading" />
     <header
       class="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <nav class="container flex h-16 items-center">
@@ -165,6 +166,8 @@
 
 <script setup>
 import { computed } from "vue";
+import { isLoading } from "@/router";
+import LoadingSpinner from "@/components/ui/LoadingSpinner.vue";
 import { storeToRefs } from "pinia";
 import { useUserStore } from "@/stores/userStore";
 import { useRouter, useRoute } from "vue-router";
