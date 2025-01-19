@@ -15,7 +15,8 @@ export const useChatStore = defineStore('chat', {
         unreadCount: 0,
         sendingMessage: false,
         socket: null,
-        isSocketInitialized: false
+        isSocketInitialized: false,
+        currentRoom: null
     }),
     actions: {
         async initSocket() {
@@ -203,28 +204,28 @@ export const useChatStore = defineStore('chat', {
                 this.messages = [];
             }
 
-            // Format the message to match our expected structure
+            // Format message consistently
             const formattedMessage = {
                 messageId: message.messageId,
-                message: message.message || message.text || '',
-                content: message.message || message.text || '',
+                message: message.message || message.content || '',
+                content: message.message || message.content || '',
                 created: message.created || message.createdAt || new Date().toISOString(),
                 sender: {
-                    id: message.sender?.userId || message.senderId,
-                    userName: message.sender?.userName || message.senderName || 'Unknown User',
-                    avatar: message.sender?.avatar || message.senderAvatar
+                    id: message.sender?.id || message.sender?.userId,
+                    userName: message.sender?.userName || 'Unknown User',
+                    avatar: message.sender?.avatar
                 },
                 status: message.status || 'sent',
                 unread: message.unread || '0',
                 conversationId: message.conversationId
             };
 
-            // Add or update message in the list
-            const exists = this.messages.find(m => m.messageId === formattedMessage.messageId);
-            if (!exists) {
+            // Check if message already exists
+            const existingIndex = this.messages.findIndex(m => m.messageId === formattedMessage.messageId);
+            
+            if (existingIndex === -1) {
+                // Add new message
                 this.messages.push(formattedMessage);
-                // Sort messages by creation date
-                this.messages.sort((a, b) => new Date(a.created) - new Date(b.created));
                 
                 // Update conversation's last message if needed
                 const conversation = this.conversations.find(c => c.conversationId === formattedMessage.conversationId);
@@ -237,11 +238,11 @@ export const useChatStore = defineStore('chat', {
                 }
             } else {
                 // Update existing message
-                const index = this.messages.findIndex(m => m.messageId === formattedMessage.messageId);
-                if (index !== -1) {
-                    this.messages[index] = { ...this.messages[index], ...formattedMessage };
-                }
+                this.messages[existingIndex] = { ...this.messages[existingIndex], ...formattedMessage };
             }
+
+            // Sort messages by creation date
+            this.messages.sort((a, b) => new Date(a.created) - new Date(b.created));
         },
 
         incrementUnreadCount() {
@@ -262,42 +263,6 @@ export const useChatStore = defineStore('chat', {
                 return;
             }
 
-            let socket = getSocket();
-            if (!socket?.connected) {
-                logger.warn('Socket not connected, attempting to reconnect...', {
-                    currentSocketId: socket?.id,
-                    connectionState: socket?.connected
-                });
-
-                try {
-                    const cleanup = await this.initSocket();
-                    socket = getSocket();
-
-                    if (!socket?.connected) {
-                        throw new Error('Socket failed to connect after initialization');
-                    }
-
-                    logger.info('Socket reconnected successfully', {
-                        newSocketId: socket.id
-                    });
-
-                    // Store cleanup function for later
-                    if (cleanup && typeof cleanup === 'function') {
-                        this.socketCleanup = cleanup;
-                    }
-                } catch (error) {
-                    logger.error('Socket reconnection failed:', {
-                        error: error.message,
-                        stack: error.stack
-                    });
-                    throw new Error('Unable to connect to chat server');
-                }
-            }
-
-            if (!socket?.connected) {
-                throw new Error('No active socket connection available');
-            }
-
             this.sendingMessage = true;
             logger.debug('Preparing to send message:', { conversationId });
 
@@ -308,57 +273,72 @@ export const useChatStore = defineStore('chat', {
                     throw new Error('Conversation not found');
                 }
 
-                const messageData = {
-                    conversationId,
-                    message: message.trim(),
-                    partnerId: conversation.Partner.userId,
-                    timestamp: new Date().toISOString()
-                };
-
-                logger.debug('Sending message data:', {
-                    conversationId,
-                    partnerId: conversation.Partner.userId,
-                    messageLength: message.trim().length
-                });
-
-                logger.debug('Emitting socket message:', messageData);
-                const socket = getSocket();
-                if (!socket?.connected) {
-                    throw new Error('Socket not connected');
-                }
-                socket.emit('send', messageData);
-
-                logger.debug('Creating temporary message for optimistic update');
+                // Create temporary message for optimistic update
                 const tempMessage = {
-                    message,
-                    messageId: 'temp_' + Date.now(),
-                    unread: '0',
+                    messageId: `temp_${Date.now()}`,
+                    message: message.trim(),
+                    content: message.trim(),
                     created: new Date().toISOString(),
                     sender: {
                         id: userStore.userData?.userId,
                         userName: userStore.userData?.userName || '',
                         avatar: userStore.userData?.avatar || ''
                     },
-                    isBlocked: '0',
-                    status: 'sending'
+                    status: 'sending',
+                    conversationId,
+                    unread: '0'
                 };
 
+                // Add message optimistically
                 this.addMessage(tempMessage);
 
-                // Update conversation list with new message
+                // Ensure socket connection
+                let socket = getSocket();
+                if (!socket?.connected) {
+                    const cleanup = await this.initSocket();
+                    socket = getSocket();
+                    if (!socket?.connected) {
+                        throw new Error('Unable to connect to chat server');
+                    }
+                }
+
+                // Join correct room if needed
+                if (!this.currentRoom || this.currentRoom !== `conversation_${conversationId}`) {
+                    socket.emit('join_room', {
+                        conversationId,
+                        partnerId: conversation.Partner.userId
+                    });
+                    this.currentRoom = `conversation_${conversationId}`;
+                }
+
+                // Send message
+                socket.emit('send', {
+                    conversationId,
+                    message: message.trim(),
+                    partnerId: conversation.Partner.userId,
+                    timestamp: tempMessage.created
+                });
+
+                // Update conversation's last message
                 conversation.LastMessage = {
-                    message,
+                    message: message.trim(),
                     created: tempMessage.created,
                     unread: '0'
                 };
+
             } catch (error) {
                 logger.error('Error sending message:', error);
+                // Update message status to error
+                const failedMessage = this.messages.find(m => m.status === 'sending');
+                if (failedMessage) {
+                    failedMessage.status = 'error';
+                    failedMessage.error = error.message;
+                }
                 toast({
                     title: "Error",
                     description: "Failed to send message",
                     variant: "destructive"
                 });
-                throw error;
             } finally {
                 this.sendingMessage = false;
             }

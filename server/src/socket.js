@@ -72,15 +72,46 @@ export function initSocketIO(server) {
 
             // Handle joinchat event:
             // client sends { partnerId, conversationId } in data
-            socket.on('joinchat', async (data) => {
+            socket.on('join_room', async (data) => {
                 try {
                     const { partnerId, conversationId } = data;
                     let roomName = await chatService.getConversationRoomName(socket.userId, partnerId, conversationId);
+                    
+                    // Leave previous rooms
+                    const currentRooms = Array.from(socket.rooms).filter(room => room !== socket.id);
+                    currentRooms.forEach(room => socket.leave(room));
+                    
+                    // Join new room
                     socket.join(roomName);
                     logger.info(`User ${socket.userId} joined room ${roomName}`);
+                    
+                    // Notify room of user presence
+                    socket.to(roomName).emit('user_joined', {
+                        userId: socket.userId,
+                        timestamp: new Date().toISOString()
+                    });
                 } catch (error) {
-                    logger.error('joinchat error:', error);
-                    socket.emit('connection_error', { message: 'Could not join chat' });
+                    logger.error('join_room error:', error);
+                    socket.emit('connection_error', { message: 'Could not join chat room' });
+                }
+            });
+
+            socket.on('leave_room', async (data) => {
+                try {
+                    const { conversationId } = data;
+                    if (conversationId) {
+                        const roomName = `conversation_${conversationId}`;
+                        socket.leave(roomName);
+                        logger.info(`User ${socket.userId} left room ${roomName}`);
+                        
+                        // Notify room of user departure
+                        socket.to(roomName).emit('user_left', {
+                            userId: socket.userId,
+                            timestamp: new Date().toISOString()
+                        });
+                    }
+                } catch (error) {
+                    logger.error('leave_room error:', error);
                 }
             });
 

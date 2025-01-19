@@ -101,9 +101,28 @@ export function initSocket() {
         try {
             const chatStore = useChatStore();
             chatStore.addMessage(data.message);
+            
+            // If this is for the current conversation, mark as read
+            if (data.message.conversationId === chatStore.selectedConversationId) {
+                chatStore.markAsRead();
+            }
         } catch (error) {
             logger.error('Error handling incoming message:', error);
             toast({ type: 'error', message: 'Error displaying new message' });
+        }
+    });
+
+    socket.on('message_sent', (data) => {
+        try {
+            const chatStore = useChatStore();
+            // Update temp message status
+            const message = chatStore.messages.find(m => m.status === 'sending');
+            if (message) {
+                message.status = 'sent';
+                message.messageId = data.messageId; // Update with real ID from server
+            }
+        } catch (error) {
+            logger.error('Error handling message sent confirmation:', error);
         }
     });
 
@@ -175,7 +194,7 @@ export function joinChat(partnerId, conversationId) {
     if (!socket?.connected) {
         throw new Error('Socket not connected');
     }
-    socket.emit('joinchat', { partnerId, conversationId }, (error) => {
+    socket.emit('join_room', { partnerId, conversationId }, (error) => {
         if (error) {
             logger.error('Error joining chat:', error);
             throw error;

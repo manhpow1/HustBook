@@ -333,9 +333,24 @@ const startConversation = async (user) => {
   }
 };
 
-const setupSocketEvents = (conversationId) => {
+const setupSocketEvents = async (conversationId) => {
   const socket = getSocket();
   if (!socket) return;
+
+  // Leave previous room if any
+  if (chatStore.currentRoom) {
+    socket.emit('leave_room', { conversationId: chatStore.currentRoom.split('_')[1] });
+  }
+
+  // Join new room with both conversationId and partnerId
+  const conversation = chatStore.conversations.find(c => c.conversationId === conversationId);
+  if (conversation) {
+    socket.emit('join_room', {
+      conversationId,
+      partnerId: conversation.Partner.userId
+    });
+    chatStore.currentRoom = `conversation_${conversationId}`;
+  }
 
   // Clean up existing listeners
   socket.off('onmessage');
