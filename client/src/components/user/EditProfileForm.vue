@@ -50,7 +50,7 @@
                             class="w-full h-full object-cover" />
                         <div class="absolute inset-0 flex items-center justify-center">
                             <div class="flex gap-2">
-                                <Button variant="secondary">
+                                <Button variant="secondary" type="button">
                                     <label class="cursor-pointer">
                                         <Input type="file" accept="image/*" @change="handleCoverUpload"
                                             :disabled="isLoading" class="hidden" />
